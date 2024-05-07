@@ -25,36 +25,65 @@ function chebyshev_poly(d::Int, x::Float64)
 end
 
 
+
+
+# function support_gen(n, d)
+#     ranges = [0:d for _ in 1:n]
+#     iter = Iterators.product(ranges...)
+#     L = collect(iter)
+#     lambda_list = []  # Temporary list to store valid tuples as arrays
+#     for tuple in L
+#         if sum(tuple) <= d
+#             push!(lambda_list, collect(tuple))  # Convert each tuple to an array
+#         end
+#     end
+#     # Convert the list of arrays to a 2D array where each row is an array from lambda_list
+#     return hcat(lambda_list...)'
+# end
+
+function support_gen(n, d)
+    # Generate ranges for each dimension
+    ranges = [0:d for _ in 1:n]
+    # Create the Cartesian product over the ranges
+    iter = Iterators.product(ranges...)
+    # Initialize a list to hold valid tuples
+    lambda_list = []
+    # Loop through the Cartesian product, filtering valid tuples
+    for tuple in iter
+        if sum(tuple) <= d
+            push!(lambda_list, collect(tuple))  # Convert each tuple to an array
+        end
+    end
+    # Check if lambda_list is empty to handle edge cases
+    if length(lambda_list) == 0
+        lambda_matrix = zeros(0, n)  # Return an empty matrix with 0 rows and n columns
+    else
+        # Convert the list of arrays to an N x n matrix
+        lambda_matrix = hcat(lambda_list...)'
+    end
+    # Return a NamedTuple containing the matrix and its size attributes
+    return (data=lambda_matrix, size=size(lambda_matrix))
+end
+
 function lambda_vandermonde(Lambda, S)
     # Generate Vandermonde like matrix in Chebyshev tensored basis. 
+    m, N = Lambda.size
     n, N = size(S)
-    print(n, N)
-    m = length(Lambda)
-    V = zeros(N, m)
-    for i in eachindex(S)
-        for j in eachindex(Lambda)
+    print("\n")
+    print("dimension Vector space: ", m)
+    print("\n")
+    print("sample size: ", n)
+    print("\n")
+    print("Dimension samples: ", N)
+    V = zeros(n, m)
+    for i in 1:n # Number of samples
+        for j in 1:m # Dimension of vector space of polynomials
             P = 1.0
-            for k in eachindex(S[i])
-                print(Lambda[j][k], S[k][i])
-                P *= chebyshev_poly(Lambda[j][k], S[k][i])
+            for k in 1:N # Dimension of each sample
+                P *= chebyshev_poly(Lambda.data[j, k], S[i, k])
             end
-            print(P)
             V[i, j] = P
         end
     end
     return V
-end
-
-function support_gen(n, d)
-    # generate the monomial support of a dense polynomial approximant. 
-    ranges = [0:d for _ in 1:n]
-    iter = Iterators.product(ranges...) #cartesian product
-    L = collect(iter)
-    lambda = []
-    for i in eachindex(L)
-        if sum(L[i]) <= d
-            push!(lambda, L[i])
-        end
-    end
-    return lambda
 end
