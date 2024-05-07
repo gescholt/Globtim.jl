@@ -1,5 +1,6 @@
 # main.jl
 include("construct_lib.jl")
+using LinearSolve
 
 # Parameters
 const d1 = 2  # start degree
@@ -34,8 +35,6 @@ for d in d1:ds:d2
     L2 = []
     ET = []
 
-
-
     # Generate the grid
     ChebyshevNodes = [cos((2i + 1) * π / (2*GN + 2)) for i in 0:GN]
     cart_cheb = [ChebyshevNodes for _ in 1:n]
@@ -64,17 +63,17 @@ for d in d1:ds:d2
     print("\n")
     print([i for i in 0:3])
     # Scaled down to account for f being tough
-    # RHS = VL' * F
+    RHS = VL' * F
 
     # # Solve linear system
-    # st = time()
-    # cheb_ori = G_original \ RHS
-    # et = time() - st
-    # push!(ET, et)
-
+    st = time()
+    cheb_ori = G_original \ RHS
+    et = time() - st
+    push!(ET, et)
+    print(cheb_ori)
     # # Convert solution to rational
-    # rat_sol_cheb = convert.(Rational, cheb_ori)
-    # push!(L2, norm(VL * cheb_ori - F) / k)
+    rat_sol_cheb = convert.(Rational, cheb_ori)
+    push!(L2, norm(VL * cheb_ori - F) / k)
 
     # println("Number of samples used: ", K)
     # println("Condition number of Gram:", cond(G_original))
