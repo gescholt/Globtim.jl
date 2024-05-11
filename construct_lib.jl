@@ -24,28 +24,21 @@ function chebyshev_poly(d::Int, x::Float64)
     end
 end
 
+# Function to calculate the required number of samples
+function calculate_samples(m, delta, alph)
+    K = 1
+    condition = m^(log(3) / log(2)) / zeta(delta)
+    while condition > K / (log(K) + log(6 * alph^(-1)))
+        K += m
+    end
+    return K
+end
 
 
-
-# function support_gen(n, d)
-#     ranges = [0:d for _ in 1:n]
-#     iter = Iterators.product(ranges...)
-#     L = collect(iter)
-#     lambda_list = []  # Temporary list to store valid tuples as arrays
-#     for tuple in L
-#         if sum(tuple) <= d
-#             push!(lambda_list, collect(tuple))  # Convert each tuple to an array
-#         end
-#     end
-#     # Convert the list of arrays to a 2D array where each row is an array from lambda_list
-#     return hcat(lambda_list...)'
-# end
-
+# Function to compute the support of polynomial of total degree at most $d$. 
 function support_gen(n, d)
-    # Generate ranges for each dimension
-    ranges = [0:d for _ in 1:n]
-    # Create the Cartesian product over the ranges
-    iter = Iterators.product(ranges...)
+    ranges = [0:d for _ in 1:n]     # Generate ranges for each dimension
+    iter = Iterators.product(ranges...) # Create the Cartesian product over the ranges
     # Initialize a list to hold valid tuples
     lambda_list = []
     # Loop through the Cartesian product, filtering valid tuples
