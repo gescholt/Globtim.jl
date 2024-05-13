@@ -126,3 +126,39 @@ function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
     return symb_approx
 end
 
+# return the symbolic approxiamnt with expanded chebyshev polynomials in variables 1 through n 
+function generateApproximant(Lambda, rat_sol_cheb)
+    m, n = size(Lambda)
+    # m: dimension of polynomial vector space we project onto. 
+    # n: number of variables
+
+    ## Validate input sizes and consistency
+    if isempty(Lambda)
+        error("Lambda must not be empty")
+    end
+
+    # Ensure the number of coefficients matches the number of polynomial terms
+    if length(rat_sol_cheb) != m
+        print("\n")
+        error("The length of rat_sol_cheb must match the dimension of the space we project onto")
+    end
+
+    @polyvar(x[1:n])     # Dynamically create symbolic variables based on n
+    S_rat = 0 * x[1]      # Initialize the sum S_rat
+
+    # Iterate over each index of Lambda and rat_sol_cheb using only the length of rat_sol_cheb
+    for i in 1:m # for each term of the orthonormal basis.        
+        prd = 1 + 0 * x[1] # Initialize product prd for each i
+        # Loop over each variable index in the row
+        for j in 1:n
+            # Multiply prd by the Chebyshev polynomial T evaluated at x[j]
+            prd *= chebyshev_poly(Lambda[i, j], x[j])
+        end
+
+        # Add the product scaled by the corresponding rational solution coefficient to S_rat
+        S_rat += rationalize(BigInt, rat_sol_cheb[i]) * prd
+    end
+
+    return S_rat
+end
+
