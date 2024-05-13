@@ -143,7 +143,7 @@ function generateApproximant(Lambda, rat_sol_cheb)
         error("The length of rat_sol_cheb must match the dimension of the space we project onto")
     end
 
-    @polyvar(x[1:n])     # Dynamically create symbolic variables based on n
+    # @polyvar(x[1:n])     # Dynamically create symbolic variables based on n
     S_rat = 0 * x[1]      # Initialize the sum S_rat
 
     # Iterate over each index of Lambda and rat_sol_cheb using only the length of rat_sol_cheb

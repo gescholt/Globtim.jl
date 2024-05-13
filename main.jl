@@ -16,12 +16,12 @@ const delta, alph = 1 / 2, 9 / 10  # Sampling parameters
 results = main_computation(n, d1, d2, ds)
 sol = results[end][1]
 lambda = support_gen(n, d2)[1]
-print(size(sol))
-print("\n")
-print("Lambda:", lambda)
-print("\n")
-print(first(lambda))
-print("\n")
+
+# Compute the approximant 
+@polyvar(x[1:n]) # Define polynomial ring 
 R = generateApproximant(lambda, sol)
 
-print(R)
+P1 = differentiate(R, x[1])
+P2 = differentiate(R, x[2])
+
+print(P1)
