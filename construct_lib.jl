@@ -9,14 +9,14 @@ zeta(x) = x + (1 - x) * log(1 - x)
 
 function chebyshev_poly(d::Int, x)
     if d == 0
-        return 1.0
+        return rationalize(1.0)
     elseif d == 1
         return x
     else
-        T_prev = 1.0
+        T_prev = rationalize(1.0)
         T_curr = x
         for n in 2:d
-            T_next = 2 * x * T_curr - T_prev
+            T_next = rationalize(2.0) * x * T_curr - T_prev
             T_prev = T_curr
             T_curr = T_next
         end

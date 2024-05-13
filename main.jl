@@ -54,7 +54,7 @@ function generateApproximant(Lambda, rat_sol_cheb)
         end
 
         # Add the product scaled by the corresponding rational solution coefficient to S_rat
-        S_rat += rat_sol_cheb[i] * prd
+        S_rat += rationalize(BigInt, rat_sol_cheb[i]) * prd
     end
 
     return S_rat
