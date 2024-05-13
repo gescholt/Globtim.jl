@@ -1,7 +1,6 @@
 
 
-using LinearAlgebra
-using Statistics
+using LinearAlgebra, LinearSolve, Statistics
 
 
 tref(x, y) = exp(sin(50x)) + sin(60exp(y)) + sin(70sin(x)) + sin(sin(80y)) - sin(10(x + y)) + (x^2 + y^2) / 4
@@ -110,7 +109,7 @@ function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
         # Solve linear system using an appropriate LinearSolve function
         linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
         # Now solve the problem with proper choice of compute method. 
-        sol = solve(linear_prob, method=:gmres, verbose=true)
+        sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
 
         # Calculate execution time
         st = time()
