@@ -1,54 +1,75 @@
 # main.jl
 include("construct_lib.jl")
-using LinearSolve
+using LinearSolve, DynamicPolynomials, MultivariatePolynomials
+
 
 # Constants and Parameters
-const d1, d2, ds = 2, 3, 1  # Degree range and step
+const d1, d2, ds = 2, 8, 1  # Degree range and step
 const n, a, b = 2, 1, 3
 const C = a / b  # Scaling constant
 const delta, alph = 1 / 2, 9 / 10  # Sampling parameters
 
 
+function chebyshevMonomialExpansion(d, var)
+    # Get the Chebyshev polynomial of the first kind of degree d
+    T = ChebyshevT(d)
 
-# Function to generate the sampling grid
-function generate_grid(n, GN)
-    ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
-    cart_cheb = [ChebyshevNodes for _ in 1:n]
-    grid = Iterators.product(cart_cheb...)
-    return collect(grid)
+    # Convert the Chebyshev polynomial to a string expression in terms of 'var'
+    # This involves substituting 'x' (default variable in SpecialPolynomials) with 'var'
+    T_expanded = subs(T, x => var)
+
+    return T_expanded
 end
 
-# Main computation function
-function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
-    symb_approx = []
-    for d in d1:ds:d2
-        m = binomial(n + d, d)  # Dimension of vector space
-        K = calculate_samples(m, delta, alph)
-        GN = round(sqrt(K)) + 1
-        Lambda = support_gen(n, d)
-        grid = generate_grid(n, GN)
-        matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
+# return the symbolic approxiamnt with expanded chebyshev polynomials in variables 1 through n 
+function generateApproximant(Lambda, rat_sol_cheb)
+    m, n = size(Lambda)
+    # m: dimension of polynomial vector space we project onto. 
+    # n: number of variables
 
-        VL = lambda_vandermonde(Lambda, matrix_from_grid)
-        G_original = VL' * VL
-        F = [tref(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
-        RHS = VL' * F
-
-        # Solve linear system using an appropriate LinearSolve function
-        linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
-        # Now solve the problem with proper choice of compute method. 
-        sol = solve(linear_prob, method=:gmres, verbose=true)
-
-        # Calculate execution time
-        st = time()
-        cheb_coeffs = sol.u
-        et = time() - st
-
-        push!(symb_approx, (cheb_coeffs, et))
+    ## Validate input sizes and consistency
+    if isempty(Lambda)
+        error("Lambda must not be empty")
     end
-    return symb_approx
+
+    # Ensure the number of coefficients matches the number of polynomial terms
+    if length(rat_sol_cheb) != m
+        print("\n")
+        error("The length of rat_sol_cheb must match the dimension of the space we project onto")
+    end
+
+    @polyvar(x[1:n])     # Dynamically create symbolic variables based on n
+    S_rat = 0 *x[1]      # Initialize the sum S_rat
+
+    # Iterate over each index of Lambda and rat_sol_cheb using only the length of rat_sol_cheb
+    for i in 1:m # for each term of the orthonormal basis.        
+        prd = 1 + 0 * x[1] # Initialize product prd for each i
+        # Loop over each variable index in the row
+        for j in 1:n
+            # Multiply prd by the Chebyshev polynomial T evaluated at vars[j]
+            print("\n")
+            print("variable:", x[j])
+            print("\n")
+            prd *= chebyshev_poly(Lambda[i, j], x[j])
+        end
+
+        # Add the product scaled by the corresponding rational solution coefficient to S_rat
+        S_rat += rat_sol_cheb[i] * prd
+    end
+
+    return S_rat
 end
 
 # Execute the computation
 results = main_computation(n, d1, d2, ds)
-print(results)
+sol = results[1][1]
+lambda = support_gen(n, d1)[1]
+print(size(sol)[1])
+print("\n")
+print("Lambda:", lambda)
+print("\n")
+print(first(lambda))
+print("\n")
+R = generateApproximant(lambda, sol)
+
+print(R)

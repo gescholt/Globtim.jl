@@ -7,7 +7,7 @@ using Statistics
 tref(x, y) = exp(sin(50x)) + sin(60exp(y)) + sin(70sin(x)) + sin(sin(80y)) - sin(10(x + y)) + (x^2 + y^2) / 4
 zeta(x) = x + (1 - x) * log(1 - x)
 
-function chebyshev_poly(d::Int, x::Float64)
+function chebyshev_poly(d::Int, x)
     if d == 0
         return 1.0
     elseif d == 1
@@ -24,6 +24,8 @@ function chebyshev_poly(d::Int, x::Float64)
     end
 end
 
+
+
 # Function to calculate the required number of samples
 function calculate_samples(m, delta, alph)
     K = 1
@@ -34,6 +36,13 @@ function calculate_samples(m, delta, alph)
     return K
 end
 
+# Function to generate the sampling grid
+function generate_grid(n, GN)
+    ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
+    cart_cheb = [ChebyshevNodes for _ in 1:n]
+    grid = Iterators.product(cart_cheb...)
+    return collect(grid)
+end
 
 # Function to compute the support of polynomial of total degree at most $d$. 
 function support_gen(n, d)
@@ -68,6 +77,7 @@ function lambda_vandermonde(Lambda, S)
     print("sample size: ", n)
     print("\n")
     print("Dimension samples: ", N)
+    print("\n")
     V = zeros(n, m)
     for i in 1:n # Number of samples
         for j in 1:m # Dimension of vector space of polynomials
@@ -80,3 +90,39 @@ function lambda_vandermonde(Lambda, S)
     end
     return V
 end
+
+# Main computation function
+function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
+    symb_approx = []
+    for d in d1:ds:d2
+        m = binomial(n + d, d)  # Dimension of vector space
+        K = calculate_samples(m, delta, alph)
+        GN = round(sqrt(K)) + 1
+        Lambda = support_gen(n, d)
+        grid = generate_grid(n, GN)
+        matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
+
+        VL = lambda_vandermonde(Lambda, matrix_from_grid)
+        G_original = VL' * VL
+        F = [tref(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
+        RHS = VL' * F
+
+        # Solve linear system using an appropriate LinearSolve function
+        linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
+        # Now solve the problem with proper choice of compute method. 
+        sol = solve(linear_prob, method=:gmres, verbose=true)
+
+        # Calculate execution time
+        st = time()
+        cheb_coeffs = sol.u
+        et = time() - st
+        print("\n")
+        print("degree:", d)
+        print("\n")
+        print("compute time:", et)
+        print("\n")
+        push!(symb_approx, (cheb_coeffs, et))
+    end
+    return symb_approx
+end
+
