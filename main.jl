@@ -1,29 +1,6 @@
 # main.jl
 include("construct_lib.jl")
-using DynamicPolynomials, MultivariatePolynomials, AlgebraicSolving
-# , HomotopyContinuation
-
-function rational_bigint_to_int(r::Rational{BigInt})
-    # Convert BigInt to Int safely
-    function safe_convert_to_int(x::BigInt)
-        if x <= typemax(Int) && x >= typemin(Int)
-            return Int(x)
-        else
-            # Scale down by the greatest power of 10 that maintains the number above Int's min/max
-            scale = 10^(floor(log10(abs(x))) - floor(log10(typemax(Int))))
-            return Int(x / scale)
-        end
-    end
-
-    # Apply safe conversion to both numerator and denominator
-    num_int = safe_convert_to_obsidian(r.num)
-    den_int = safe_convert_to_int(r.den)
-
-    # Ensure the fraction is reduced
-    gcd_val = gcd(num_int, den_int)
-    return Rational(num_int ÷ gcd_val, den_int ÷ gcd_val)
-end
-
+using DynamicPolynomials, MultivariatePolynomials, AlgebraicSolving, HomotopyContinuation
 
 
 # Constants and Parameters
