@@ -28,11 +28,4 @@ for (i, d) in enumerate(d1:ds:d2)
     local S = RRsolve(n,p1_rat, p2_rat)
     println("Homotopy real solutions at degree d=", d)
     println(S)
-    # # Solve homotopy continuation system with reduced rational fractions. 
-    # # @var(x[1:n]) # Define polynomial ring for HomotopyContinuation
-    # # Z  = System([P1, P2])
-    # Z  = System([p1_converted, p2_converted])
-
-    # Real_sol_lstsq = HomotopyContinuation.solve(Z)
-    # real_pts = HomotopyContinuation.real_solutions(Real_sol_lstsq; only_real=true, multiple_results=false)
 end
