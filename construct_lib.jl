@@ -1,6 +1,6 @@
 
 
-using LinearAlgebra, LinearSolve, Statistics
+using LinearAlgebra, LinearSolve, Statistics, HomotopyContinuation
 
 
 tref(x, y) = exp(sin(50x)) + sin(60exp(y)) + sin(70sin(x)) + sin(sin(80y)) - sin(10(x + y)) + (x^2 + y^2) / 4
@@ -169,3 +169,14 @@ function rational_bigint_to_int(r::Rational{BigInt}, tol::Float64=1e-12)
 
 end
 
+function RRsolve(n, p1, p2)
+    p1_str = string(p1)
+    p2_str = string(p2)
+    @var(x[1:n])
+    p1_converted = eval(Meta.parse(p1_str))
+    p2_converted = eval(Meta.parse(p2_str))
+    Z = System([p1_converted, p2_converted])
+    Real_sol_lstsq = HomotopyContinuation.solve(Z)
+    real_pts = HomotopyContinuation.real_solutions(Real_sol_lstsq; only_real=true, multiple_results=false)
+    return real_pts
+end 
