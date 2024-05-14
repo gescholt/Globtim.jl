@@ -23,8 +23,6 @@ function chebyshev_poly(d::Int, x)
     end
 end
 
-
-
 # Function to calculate the required number of samples
 function calculate_samples(m, delta, alph)
     K = 1
@@ -159,5 +157,15 @@ function generateApproximant(Lambda, rat_sol_cheb)
     end
 
     return S_rat
+end
+
+
+function rational_bigint_to_int(r::Rational{BigInt}, tol::Float64=1e-12)
+    # Convert Rational{BigInt} to Float64
+    float_approximation = Float64(r)
+    # Use rationalize to convert Float64 to Rational{Int}
+    rational_approx = rationalize(float_approximation)
+    return Rational{Int}(numerator(rational_approx), denominator(rational_approx))
+
 end
 
