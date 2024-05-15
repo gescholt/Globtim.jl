@@ -1,6 +1,39 @@
 
 
-using LinearAlgebra, LinearSolve, Statistics, HomotopyContinuation
+using LinearAlgebra, LinearSolve, Statistics, HomotopyContinuation, Plots
+using Base: parse
+using Printf
+
+function read_and_parse_file(d, a, b)
+    # Construct the file path
+    file_path_pts = expanduser(@sprintf("data/pts_rat_msolve_d%d_C_%d_%d.txt", d, a, b))
+
+    # Try to read and parse the file
+    try
+        # Read points from the file
+        data_pts = read(file_path_pts, String)
+
+        # Process the data
+        trimmed_content = strip(data_pts, ['[', ']'])  # Trim brackets
+        rows = split(trimmed_content, "], [")  # Split into rows
+
+        # Collect the two arrays of msolve points
+        data_array = [parse.(Float64, split(strip(row, ['[', ']']), ", ")) for row in rows]
+
+        return data_array
+
+    catch e
+        if isa(e, SystemError) && occursin("No such file or directory", e.message)
+            error("File $file_path_pts does not exist.")
+        else
+            rethrow(e)
+        end
+    end
+end
+
+# Example usage
+# data_array = read_and_parse_file(1, 2, 3)
+# println(data_array)
 
 
 tref(x, y) = exp(sin(50x)) + sin(60exp(y)) + sin(70sin(x)) + sin(sin(80y)) - sin(10(x + y)) + (x^2 + y^2) / 4
@@ -107,24 +140,18 @@ function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
         # Solve linear system using an appropriate LinearSolve function
         linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
         # Now solve the problem with proper choice of compute method. 
+        
         sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-
-        # Calculate execution time
-        st = time()
         cheb_coeffs = sol.u
-        et = time() - st
-        print("\n")
-        print("degree:", d)
-        print("\n")
-        print("compute time:", et)
-        print("\n")
-        push!(symb_approx, (cheb_coeffs, et))
+
+        push!(symb_approx, cheb_coeffs)
     end
     return symb_approx
 end
 
 # return the symbolic approxiamnt with expanded chebyshev polynomials in variables 1 through n 
-function generateApproximant(Lambda, rat_sol_cheb)
+function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
+    ## Important note, the @polyvar variables should not be defined inside the function but in the main execution file.
     m, n = size(Lambda)
     # m: dimension of polynomial vector space we project onto. 
     # n: number of variables
@@ -134,15 +161,13 @@ function generateApproximant(Lambda, rat_sol_cheb)
         error("Lambda must not be empty")
     end
 
-    # Ensure the number of coefficients matches the number of polynomial terms
+    ## Ensure the number of coefficients matches the number of polynomial terms
     if length(rat_sol_cheb) != m
         print("\n")
         error("The length of rat_sol_cheb must match the dimension of the space we project onto")
     end
-
-    # @polyvar(x[1:n])     # Dynamically create symbolic variables based on n
+    
     S_rat = 0 * x[1]      # Initialize the sum S_rat
-
     # Iterate over each index of Lambda and rat_sol_cheb using only the length of rat_sol_cheb
     for i in 1:m # for each term of the orthonormal basis.        
         prd = 1 + 0 * x[1] # Initialize product prd for each i
@@ -151,13 +176,18 @@ function generateApproximant(Lambda, rat_sol_cheb)
             # Multiply prd by the Chebyshev polynomial T evaluated at x[j]
             prd *= chebyshev_poly(Lambda[i, j], x[j])
         end
-
         # Add the product scaled by the corresponding rational solution coefficient to S_rat
-        S_rat += rationalize(BigInt, rat_sol_cheb[i]) * prd
+        if coeff_type == :RationalBigInt
+            S_rat += rationalize(BigInt, rat_sol_cheb[i]) * prd
+        elseif coeff_type == :BigFloat
+            S_rat += BigFloat(rat_sol_cheb[i]) * prd
+        else
+            error("Unsupported coefficient type. Use :RationalBigInt or :BigFloat.")
+        end
     end
-
     return S_rat
 end
+
 
 
 function rational_bigint_to_int(r::Rational{BigInt}, tol::Float64=1e-12)
@@ -169,6 +199,7 @@ function rational_bigint_to_int(r::Rational{BigInt}, tol::Float64=1e-12)
 
 end
 
+# Homotopy continuation solves the polynomial system over the reals.
 function RRsolve(n, p1, p2)
     p1_str = string(p1)
     p2_str = string(p2)
@@ -181,7 +212,8 @@ function RRsolve(n, p1, p2)
     return real_pts
 end 
 
-function RR_xy_solve(n, p1, p2)
+# same as previous but only for 2d with x and y as variables
+function RR_xy_solve(n, p1, p2) 
     p1_str = string(p1)
     p2_str = string(p2)
     @var(x, y)
@@ -192,3 +224,26 @@ function RR_xy_solve(n, p1, p2)
     real_pts = HomotopyContinuation.real_solutions(Real_sol_lstsq; only_real=true, multiple_results=false)
     return real_pts
 end
+
+# Function to plot the data
+function plot_data(data_array, h_x, h_y, title)
+    plt = scatter(data_array[1], data_array[2], seriestype=:scatter, label="msolve points",
+        xlabel="x", ylabel="y", color=:red, marker=(:diamond, 8), title=title)
+    scatter!(plt, h_x, h_y, seriestype=:scatter, label="homotopy points",
+        marker=(:circle, 4), markerstrokecolor=:blue, markerstrokewidth=1.5)
+    display(plt)
+end
+
+
+function For_Msolve(n, coeff, Lambda)
+    @polyvar(x[1:n]) # Define polynomial ring 
+    P = generateApproximant(Lambda, rat_sol_cheb, coeff_type::BigInt)
+    # Compute the partial derivatives
+    for i in 1:n
+        partials[i] = differentiate(P, x[i])
+    end
+
+    
+
+
+end 
