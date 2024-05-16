@@ -23,7 +23,7 @@ for (i, d) in enumerate(d1:ds:d2)
     local P1 = differentiate(R, x[1])
     local P2 = differentiate(R, x[2])
     local S = RRsolve(n, P1, P2) # HomotopyContinuation
-    
+
     # Define the condition for filtering
     condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
 
@@ -34,7 +34,7 @@ for (i, d) in enumerate(d1:ds:d2)
 
     # Plot the data
     plot_data(data_array, h_x, h_y, "Degree $(d)")
-    
+
 end
 
 

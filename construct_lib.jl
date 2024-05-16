@@ -36,8 +36,95 @@ end
 # println(data_array)
 
 
-tref(x, y) = exp(sin(50x)) + sin(60exp(y)) + sin(70sin(x)) + sin(sin(80y)) - sin(10(x + y)) + (x^2 + y^2) / 4
 zeta(x) = x + (1 - x) * log(1 - x)
+
+# Define the function tref
+function tref(x, y)
+    return exp(sin(50 * x)) + sin(60 * exp(y)) + sin(70 * sin(x)) + sin(sin(80 * y)) - sin(10 * (x + y)) + (x^2 + y^2) / 4
+end
+
+# Create a grid over the domain [-C, C]^2
+function create_grid(C, N)
+    x_vals = range(-C, stop=C, length=N)
+    y_vals = range(-C, stop=C, length=N)
+    return x_vals, y_vals
+end
+
+# Evaluate tref on the grid
+function evaluate_tref_on_grid(tref, x_vals, y_vals)
+    Z = [tref(x, y) for y in y_vals, x in x_vals]
+    return Z
+end
+
+# Function to check if a point is a local extremum
+function is_local_extremum(Z, i, j)
+    neighbors = [
+        Z[i-1, j-1], Z[i-1, j], Z[i-1, j+1],
+        Z[i, j-1], Z[i, j+1],
+        Z[i+1, j-1], Z[i+1, j], Z[i+1, j+1]
+    ]
+    center = Z[i, j]
+    return all(center .> neighbors) || all(center .< neighbors)
+end
+
+# Find local maxima and minima
+function find_local_extrema(Z, x_vals, y_vals, N)
+    local_maxima = []
+    local_minima = []
+    for i in 2:(N-1)
+        for j in 2:(N-1)
+            if is_local_extremum(Z, i, j)
+                if Z[i, j] > maximum(Z[i-1:i+1, j-1:j+1]) - Z[i, j]
+                    push!(local_maxima, (x_vals[j], y_vals[i]))
+                elseif Z[i, j] < minimum(Z[i-1:i+1, j-1:j+1]) - Z[i, j]
+                    push!(local_minima, (x_vals[j], y_vals[i]))
+                end
+            end
+        end
+    end
+    return local_maxima, local_minima
+end
+
+# Compute the minimum pairwise distance
+function compute_min_distance(points)
+    min_distance = Inf
+    for i in 1:length(points)-1
+        for j in i+1:length(points)
+            dist = norm(points[i] .- points[j])
+            if dist < min_distance
+                min_distance = dist
+            end
+        end
+    end
+    return min_distance
+end
+
+# Compute the closest distances for each point in extrema_points to a given set of points
+function compute_closest_distances(extrema_points, given_points)
+    closest_distances = []
+    for extremum in extrema_points
+        min_distance = Inf
+        for point in given_points
+            dist = norm(extremum .- point)
+            if dist < min_distance
+                min_distance = dist
+            end
+        end
+        push!(closest_distances, min_distance)
+    end
+    return closest_distances
+end
+
+# Draw transparent circles around local maxima and minima
+function plot_filled_circles!(centers, radii, colors; marker_size=600)
+    if length(centers) != length(radii) || length(centers) != length(colors)
+        error("Lengths of centers, radii, and colors arrays must be equal.")
+    end
+    plot!()
+    for (center, radius, color) in zip(centers, radii, colors)
+        scatter!([center[1]], [center[2]], markersize=radius * marker_size, markercolor=color, markerstrokewidth=0, alpha=0.5, label="")
+    end
+end
 
 function chebyshev_poly(d::Int, x)
     if d == 0
@@ -188,8 +275,7 @@ function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
     return S_rat
 end
 
-
-
+# Maybe not needed for homotopy continuation anymore. 
 function rational_bigint_to_int(r::Rational{BigInt}, tol::Float64=1e-12)
     # Convert Rational{BigInt} to Float64
     float_approximation = Float64(r)
@@ -232,6 +318,20 @@ function plot_data(data_array, h_x, h_y, title)
     scatter!(plt, h_x, h_y, seriestype=:scatter, label="homotopy points",
         marker=(:circle, 4), markerstrokecolor=:blue, markerstrokewidth=1.5)
     display(plt)
+end
+
+# Generate the system of partials 
+function gen_sys(Lambda, rat_sol_cheb, coeff_type::Symbol)
+    P = generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
+    # Compute the partial derivatives
+    partials = Vector{DynamicPolynomials.Polynomial}(undef, n)
+    for i in 1:n
+        partials[i] = differentiate(P, x[i])
+    end
+    # Convert each partial derivative to a string
+    partials_as_strings = [string(p) for p in partials]
+
+    return partials_as_strings
 end
 
 
