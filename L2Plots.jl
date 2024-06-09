@@ -31,7 +31,10 @@ function main()
     println("Minimum pairwise distance: $min_distance")
     println("Radius for disjoint balls: $radius")
 
-    for d in d1:ds:d2
+    degrees = d1:ds:d2
+    avg_distances = []
+
+    for d in degrees
         file_path_pts = expanduser("data/pts_rat_msolve_d$(d)_C_$(a)_$b.txt")
         data_pts = read(file_path_pts, String)
         trimmed_content = strip(data_pts, ['[', ']']) # trim brackets
@@ -43,7 +46,12 @@ function main()
 
         avg_closest_distance = mean(closest_distances)
         println("Average closest distance for degree $d: $avg_closest_distance")
+        push!(avg_distances, avg_closest_distance)
     end
+
+    # Plot the average distances
+    plot(degrees, avg_distances, xlabel="Degree", ylabel="Average Closest Distance", title="Average Closest Distance vs. Degree", legend=false, marker=:o)
+
 end
 
 main()

@@ -31,10 +31,6 @@ function read_and_parse_file(d, a, b)
     end
 end
 
-# Example usage
-# data_array = read_and_parse_file(1, 2, 3)
-# println(data_array)
-
 
 zeta(x) = x + (1 - x) * log(1 - x)
 
@@ -208,8 +204,8 @@ function lambda_vandermonde(Lambda, S)
     return V
 end
 
-# Main computation function
-function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
+# Main computation function, 
+function main_computation(f, n::Int, d1::Int, d2::Int, ds::Int)
     symb_approx = []
     for d in d1:ds:d2
         m = binomial(n + d, d)  # Dimension of vector space
@@ -221,7 +217,7 @@ function main_computation(n::Int, d1::Int, d2::Int, ds::Int)
 
         VL = lambda_vandermonde(Lambda, matrix_from_grid)
         G_original = VL' * VL
-        F = [tref(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
+        F = [f(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
         RHS = VL' * F
 
         # Solve linear system using an appropriate LinearSolve function
