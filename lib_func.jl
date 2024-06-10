@@ -1,5 +1,10 @@
 ## Library of functions to approximate ##
 
+# Define the function tref
+function tref(x)
+    return exp(sin(50 * x[1])) + sin(60 * exp(x[2])) + sin(70 * sin(x[1])) + sin(sin(80 * x[2])) - sin(10 * (x[1] + x[2])) + (x[1]^2 + x[2]^2) / 4
+end
+
 # Define the function
 alpine = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) + 
                abs(x[2] * sin(x[2]) + 0.1 * x[2]) + 
@@ -18,10 +23,10 @@ function schubert(xx)
 end
 
 # Example usage
-x = [1.0, 2.0, 3.0]
-result = alpine(x)
-println("Result: $result")
+# x = [1.0, 2.0, 3.0]
+# result = alpine(x)
+# println("Result: $result")
 
-xx = [1.0, 2.0]
-result = schubert(xx)
-println("Result: $result")
+# x = [1.0, 2.0]
+# result = schubert(x)
+# println("Result: $result")

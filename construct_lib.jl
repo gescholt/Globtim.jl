@@ -1,6 +1,7 @@
 
 
-using LinearAlgebra, LinearSolve, Statistics, HomotopyContinuation, Plots
+using LinearAlgebra, LinearSolve, Statistics
+# HomotopyContinuation, Plots
 using Base: parse
 using Printf
 
@@ -34,10 +35,7 @@ end
 
 zeta(x) = x + (1 - x) * log(1 - x)
 
-# Define the function tref
-function tref(x, y)
-    return exp(sin(50 * x)) + sin(60 * exp(y)) + sin(70 * sin(x)) + sin(sin(80 * y)) - sin(10 * (x + y)) + (x^2 + y^2) / 4
-end
+
 
 # Create a grid over the domain [-C, C]^2
 function create_grid(C, N)
@@ -210,14 +208,15 @@ function main_computation(f, n::Int, d1::Int, d2::Int, ds::Int)
     for d in d1:ds:d2
         m = binomial(n + d, d)  # Dimension of vector space
         K = calculate_samples(m, delta, alph)
-        GN = round(sqrt(K)) + 1
+        GN = round(K^(1/n)) + 1
         Lambda = support_gen(n, d)
         grid = generate_grid(n, GN)
         matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
 
         VL = lambda_vandermonde(Lambda, matrix_from_grid)
         G_original = VL' * VL
-        F = [f(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
+        # F = [f(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
+        F = [f([C * matrix_from_grid[Int(i), :]...]) for i in 1:(GN+1)^n]
         RHS = VL' * F
 
         # Solve linear system using an appropriate LinearSolve function
@@ -231,6 +230,7 @@ function main_computation(f, n::Int, d1::Int, d2::Int, ds::Int)
     end
     return symb_approx
 end
+
 
 # return the symbolic approxiamnt with expanded chebyshev polynomials in variables 1 through n 
 function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
