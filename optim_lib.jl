@@ -84,7 +84,6 @@ function lambda_vandermonde(Lambda, S)
     return V
 end
 
-
 # Geneate the approximants in the new optim file, more parameters are added to the function.
 function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64)
     symb_approx = []
