@@ -85,12 +85,13 @@ function lambda_vandermonde(Lambda, S)
 end
 
 # Geneate the approximants in the new optim file, more parameters are added to the function.
-function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64)
+function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)
     symb_approx = []
     for d in d1:ds:d2
         m = binomial(n + d, d)  # Dimension of vector space
         K = calculate_samples(m, delta, alph)
-        GN = Int(round(K^(1 / n)) + 1)
+        # GN = Int(round(K^(1 / n)) + 1)
+        GN = Int(round(K^(1 / n)*scl) + 1) # need fewe points for high degre stuff # 
         Lambda = support_gen(n, d)
         grid = generate_grid(n, GN)
         matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
