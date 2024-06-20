@@ -1,12 +1,12 @@
 # Functions for homotopy continuation, to call when the HomotopyContinuation package is already loaded#
+# The variables x[1], x[2], ... must be defined in the main execution file.
 
-# return the symbolic approxiamnt with expanded chebyshev polynomials in variables 1 through n 
+
+# return the symbolic approxiamnt with expanded chebyshev polynomials in variables x[1], ...,  x[n] 
 function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
-    ## Important note, the @polyvar variables should not be defined inside the function but in the main execution file.
     m, n = size(Lambda)
     # m: dimension of polynomial vector space we project onto. 
     # n: number of variables
-
     ## Validate input sizes and consistency
     if isempty(Lambda)
         error("Lambda must not be empty")
@@ -18,7 +18,7 @@ function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
         error("The length of rat_sol_cheb must match the dimension of the space we project onto")
     end
 
-    S_rat = 0 * x[1]      # Initialize the sum S_rat
+    S_rat = 0 * x[1]      # Initialize the sum S_rat, this is hacky and should be fixed ... 
     # Iterate over each index of Lambda and rat_sol_cheb using only the length of rat_sol_cheb
     for i in 1:m # for each term of the orthonormal basis.        
         prd = 1 + 0 * x[1] # Initialize product prd for each i
@@ -39,38 +39,50 @@ function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
     return S_rat
 end
 
-
-# # Homotopy continuation solves the polynomial system over the reals.
-# function RRsolve(n, p1, p2, p3)
-#     p1_str = string(p1)
-#     p2_str = string(p2)
-#     p3_str = string(p3)
-#     @var(x[1:n])
-#     p1_converted = eval(Meta.parse(p1_str))
-#     p2_converted = eval(Meta.parse(p2_str))
-#     p3_converted = eval(Meta.parse(p3_str))
-#     Z = System([p1_converted, p2_converted, p3_converted])
-#     Real_sol_lstsq = HomotopyContinuation.solve(Z)
-#     real_pts = HomotopyContinuation.real_solutions(Real_sol_lstsq; only_real=true, multiple_results=false)
-#     return real_pts
-# end
-
 # Generalized Homotopy continuation solver for polynomial systems over the reals
 function RRsolve(n, polys)
+    
     # Convert polynomial strings to symbolic expressions
     polys_converted = [eval(Meta.parse(string(p))) for p in polys]
-
-    # Define the variables
-    @polyvar x[1:n]
-
     # Construct the system
     Z = System(polys_converted)
-
     # Solve the system
     Real_sol_lstsq = HomotopyContinuation.solve(Z)
-
     # Extract the real solutions
     real_pts = HomotopyContinuation.real_solutions(Real_sol_lstsq; only_real=true, multiple_results=false)
 
     return real_pts
+end
+
+# Define the main function
+function main_2d(n, d1, d2, ds, coeffs_poly_approx)
+    
+    h_x = Float64[]
+    h_y = Float64[]
+    col = Int[]  # Initialize the color vector
+
+    for (i, d) in enumerate(d1:ds:d2)
+        lambda = support_gen(n, d)[1] # Take support
+        R = generateApproximant(lambda, coeffs_poly_approx[i], :BigFloat) # Compute the approximant
+
+        # Generate the system for HomotopyContinuation
+        P1 = differentiate(R, x[1])
+        P2 = differentiate(R, x[2])
+
+        S = RRsolve(n, [P1, P2]) # HomotopyContinuation
+
+        # Define the condition for filtering
+        condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
+
+        # Filter points using the filter function
+        filtered_points = filter(condition, S)
+        println("Degree: ", d)
+        println("Number of solutions: ", length(filtered_points))
+
+        append!(h_x, [point[1] for point in filtered_points]) # For plotting
+        append!(h_y, [point[2] for point in filtered_points])
+        append!(col, fill(i, length(filtered_points)))
+    end
+
+    return h_x, h_y, col
 end
