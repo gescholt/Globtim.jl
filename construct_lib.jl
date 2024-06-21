@@ -1,7 +1,6 @@
 
 
-using LinearAlgebra, LinearSolve, Statistics
-# HomotopyContinuation, Plots
+using LinearAlgebra, LinearSolve, Statistics, HomotopyContinuation
 using Base: parse
 using Printf
 
@@ -81,7 +80,7 @@ end
 
 # Compute the minimum pairwise distance
 function compute_min_distance(points)
-    min_distance = Inf
+    min_distance = I
     for i in 1:length(points)-1
         for j in i+1:length(points)
             dist = norm(points[i] .- points[j])
@@ -136,6 +135,7 @@ function chebyshev_poly(d::Int, x)
         return T_curr
     end
 end
+
 
 # Function to calculate the required number of samples
 function calculate_samples(m, delta, alph)

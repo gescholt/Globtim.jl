@@ -55,7 +55,7 @@ function RRsolve(n, polys)
 end
 
 # Define the main function
-function main_2d(n, d1, d2, ds, coeffs_poly_approx)
+function main_2d(n::Int, d1::Int, d2::Int, ds::Int, coeffs_poly_approx::Vector{Vector{Float64}})
     
     h_x = Float64[]
     h_y = Float64[]
@@ -81,7 +81,7 @@ function main_2d(n, d1, d2, ds, coeffs_poly_approx)
 
         append!(h_x, [point[1] for point in filtered_points]) # For plotting
         append!(h_y, [point[2] for point in filtered_points])
-        append!(col, fill(i, length(filtered_points)))
+        append!(col, fill(d, length(filtered_points)))
     end
 
     return h_x, h_y, col

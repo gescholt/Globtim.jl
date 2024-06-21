@@ -85,7 +85,8 @@ function lambda_vandermonde(Lambda, S)
 end
 
 # Geneate the approximants in the new optim file, more parameters are added to the function.
-function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)
+function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)::Vector{Vector{Float64}}
+    # slc is a scaling factor to reduce the number of points in the grid.
     symb_approx = []
     for d in d1:ds:d2
         m = binomial(n + d, d)  # Dimension of vector space
@@ -95,9 +96,7 @@ function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Fl
         Lambda = support_gen(n, d)
         grid = generate_grid(n, GN)
         matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
-        print("\n")
         println("dimension Vector space: ", m)
-        print("\n")
         println("sample size: ", size(matrix_from_grid)[1])
         VL = lambda_vandermonde(Lambda, matrix_from_grid)
         G_original = VL' * VL
