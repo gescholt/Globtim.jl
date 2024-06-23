@@ -40,7 +40,7 @@ function generateApproximant(Lambda, rat_sol_cheb, coeff_type::Symbol)
 end
 
 # Generalized Homotopy continuation solver for polynomial systems over the reals
-function RRsolve(n, polys)
+function RRsolve(polys)
     
     # Convert polynomial strings to symbolic expressions
     polys_converted = [eval(Meta.parse(string(p))) for p in polys]
@@ -69,7 +69,7 @@ function main_2d(n::Int, d1::Int, d2::Int, ds::Int, coeffs_poly_approx::Vector{V
         P1 = differentiate(R, x[1])
         P2 = differentiate(R, x[2])
 
-        S = RRsolve(n, [P1, P2]) # HomotopyContinuation
+        S = RRsolve([P1, P2]) # HomotopyContinuation
 
         # Define the condition for filtering
         condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
@@ -85,4 +85,39 @@ function main_2d(n::Int, d1::Int, d2::Int, ds::Int, coeffs_poly_approx::Vector{V
     end
 
     return h_x, h_y, col
+end
+
+function main_3d(n::Int, d1::Int, d2::Int, ds::Int, coeffs_poly_approx::Vector{Vector{Float64}})
+
+    h_x = Float64[]
+    h_y = Float64[]
+    h_z = Float64[]
+    col = Int[]  # Initialize the color vector
+
+    for (i, d) in enumerate(d1:ds:d2)
+        lambda = support_gen(n, d)[1] # Take support
+        R = generateApproximant(lambda, coeffs_poly_approx[i], :BigFloat) # Compute the approximant
+
+        # Generate the system for HomotopyContinuation
+        P1 = differentiate(R, x[1])
+        P2 = differentiate(R, x[2])
+        P3 = differentiate(R, x[3])
+
+        S = RRsolve([P1, P2, P3]) # HomotopyContinuation
+
+        # Define the condition for filtering
+        condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1 && -1 < point[3] < 1
+
+        # Filter points using the filter function
+        filtered_points = filter(condition, S)
+        println("Degree: ", d)
+        println("Number of solutions: ", length(filtered_points))
+
+        append!(h_x, [point[1] for point in filtered_points]) # For plotting
+        append!(h_y, [point[2] for point in filtered_points])
+        append!(h_z, [point[3] for point in filtered_points])
+        append!(col, fill(d, length(filtered_points)))
+    end
+
+    return h_x, h_y, h_z, col
 end

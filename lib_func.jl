@@ -21,7 +21,7 @@ end
 
 
 # ======================================================= 3D Functions =======================================================
-# Define the function
+# Define the function on domain [-10, 10]^3.
 alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
                  abs(x[2] * sin(x[2]) + 0.1 * x[2]) +
                  abs(x[3] * sin(x[3]) + 0.1 * x[3])
