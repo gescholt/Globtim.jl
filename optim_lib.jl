@@ -115,3 +115,35 @@ function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Fl
     end
     return symb_approx
 end
+
+# Geneate the approximants in the new optim file, more parameters are added to the function.
+# Solve the linear algebra problem over BigFloats instead of Float64
+## Not Tested yet ##
+function precise_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)::Vector{Vector{BigFloat}}
+    # slc is a scaling factor to reduce the number of points in the grid.
+    symb_approx = []
+    for d in d1:ds:d2
+        m = binomial(n + d, d)  # Dimension of vector space
+        K = calculate_samples(m, delta, alph)
+        GN = Int(round(K^(1 / n) * scl) + 1) # need fewe points for high degre stuff # 
+        Lambda = support_gen(n, d)
+        grid = generate_grid(n, GN)
+        matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
+        println("dimension Vector space: ", m)
+        println("sample size: ", size(matrix_from_grid)[1])
+        VL = lambda_vandermonde(Lambda, matrix_from_grid)
+        G_original = BigFloat.(VL') * BigFloat.(VL)
+        F = [f([C * matrix_from_grid[Int(i), :]...]) for i in 1:(GN+1)^n]
+        RHS = BigFloat.(VL') * BigFloat.(F)
+
+        # Solve linear system using an appropriate LinearSolve function
+        linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
+        # Now solve the problem with proper choice of compute method. 
+
+        sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
+        cheb_coeffs = sol.u
+
+        push!(symb_approx, cheb_coeffs)
+    end
+    return symb_approx
+end
