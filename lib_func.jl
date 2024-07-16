@@ -5,7 +5,14 @@ function tref(x)
     return exp(sin(50 * x[1])) + sin(60 * exp(x[2])) + sin(70 * sin(x[1])) + sin(sin(80 * x[2])) - sin(10 * (x[1] + x[2])) + (x[1]^2 + x[2]^2) / 4
 end
 
-
+function camel(x) 
+    # =======================================================
+    #   Not Rescaled
+    #   Camel six humps function
+    #   Domain: [-5, 5]^2.
+    # =======================================================
+    return (4-2.1*x[1]^2 + x[1]^4/3)*x[1]^2 + x[1]*x[2] + (-4 + 4*x[2]^2)*x[2]^2
+end
 
 
 # Define the Schubert function
@@ -25,7 +32,7 @@ function dejong5(xx::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
     #   De Jong 5 function
-    #   Domain: [50, 50]^2.
+    #   Domain: [-50, 50]^2.
     # =======================================================
     sum = 0.0
     a = [-32, -16, 0, 16, 32]
