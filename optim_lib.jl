@@ -118,7 +118,7 @@ end
 
 # Geneate the approximants in the new optim file, more parameters are added to the function.
 # Solve the linear algebra problem over BigFloats instead of Float64
-## Not Tested yet ##
+## Tested ##
 function precise_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)::Vector{Vector{BigFloat}}
     # slc is a scaling factor to reduce the number of points in the grid.
     symb_approx = []
@@ -146,4 +146,22 @@ function precise_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph:
         push!(symb_approx, cheb_coeffs)
     end
     return symb_approx
+end
+
+## Process the crtitcal points ##
+
+# Compute the smallest distances between the minima of the function and the critical points of the approximant.
+function compute_closest_distances(extrema_points, given_points)
+    closest_distances = []
+    for extremum in extrema_points
+        min_distance = Inf
+        for point in given_points
+            dist = norm(extremum .- point)
+            if dist < min_distance
+                min_distance = dist
+            end
+        end
+        push!(closest_distances, min_distance)
+    end
+    return closest_distances
 end

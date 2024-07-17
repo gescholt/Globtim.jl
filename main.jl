@@ -1,7 +1,8 @@
 # main.jl
 include("construct_lib.jl")
 include("functions_eval.jl")
-using DynamicPolynomials, MultivariatePolynomials, AlgebraicSolving, HomotopyContinuation, JSON
+using DynamicPolynomials, MultivariatePolynomials, AlgebraicSolving, HomotopyContinuation
+# , JSON
 
 
 # Constants and Parameters
@@ -15,28 +16,28 @@ const delta, alph = 1/2, 6 / 10  # Sampling parameters
 results = main_computation(f26d, n, d1, d2, ds)
 
 
-# @polyvar(x[1:n]) # Define polynomial ring 
-# for (i, d) in enumerate(d1:ds:d2)
+@polyvar(x[1:n]) # Define polynomial ring 
+for (i, d) in enumerate(d1:ds:d2)
 
-#     local data_array = read_and_parse_file(d, a, b) # Read data from Maple/Msolve outputs
-#     local lambda = support_gen(n, d)[1] #take support  
-#     local R = generateApproximant(lambda, results[i], :BigFloat) # Compute the approximant
-#     # Generate the system for homotopy HomotopyContinuation
-#     local P1 = differentiate(R, x[1])
-#     local P2 = differentiate(R, x[2])
-#     local S = RRsolve(n, P1, P2) # HomotopyContinuation
+    local data_array = read_and_parse_file(d, a, b) # Read data from Maple/Msolve outputs
+    local lambda = support_gen(n, d)[1] #take support  
+    local R = generateApproximant(lambda, results[i], :BigFloat) # Compute the approximant
+    # Generate the system for homotopy HomotopyContinuation
+    local P1 = differentiate(R, x[1])
+    local P2 = differentiate(R, x[2])
+    local S = RRsolve(n, P1, P2) # HomotopyContinuation
 
-#     # Define the condition for filtering
-#     condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
+    # Define the condition for filtering
+    condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
 
-#     # Filter points using the filter function
-#     filtered_points = filter(condition, S)
-#     h_x = [point[1] for point in filtered_points] # for plotting
-#     h_y = [point[2] for point in filtered_points]
+    # Filter points using the filter function
+    filtered_points = filter(condition, S)
+    h_x = [point[1] for point in filtered_points] # for plotting
+    h_y = [point[2] for point in filtered_points]
 
-#     # Plot the data
-#     plot_data(data_array, h_x, h_y, "Degree $(d)")
+    # Plot the data
+    plot_data(data_array, h_x, h_y, "Degree $(d)")
 
-# end
+end
 
 

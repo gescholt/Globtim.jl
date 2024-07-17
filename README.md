@@ -1,9 +1,15 @@
 # globtim
 
 
-Now I need to test homotopy continuation on 3D and 4D examples.  
+Now I need to test homotopy continuation on 2D, 3D and 4D examples.
 
 ## Getting started
+
+Needs main.ipynb for each dimension.
+
+Needs to store outputs of homotopy continuation in dataframe.
+
+See if we can benefit from staying in tensorized orthogonal basis when doing homotopy continuation.
 
 ## Project status
 

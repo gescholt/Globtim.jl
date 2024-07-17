@@ -75,6 +75,15 @@ function shubert_4d(xx::Vector{Float64})::Float64
 
 end
 
+function camel_4d(x)
+    # =======================================================
+    #   Not Rescaled
+    #   double copy of Camel six humps function
+    #   Domain: [-5, 5]^4.
+    # =======================================================
+    return camel(x[1:2]) + camel(x[3:4])
+end
+
 
 # Example usage
 # x = [1.0, 2.0, 3.0]

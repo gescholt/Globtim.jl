@@ -80,7 +80,7 @@ end
 
 # Compute the minimum pairwise distance
 function compute_min_distance(points)
-    min_distance = I
+    min_distance = Inf
     for i in 1:length(points)-1
         for j in i+1:length(points)
             dist = norm(points[i] .- points[j])

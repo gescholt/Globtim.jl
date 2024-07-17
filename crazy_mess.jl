@@ -4,7 +4,7 @@ using Plots, LinearAlgebra
 
 
 # Constants and Parameters
-const d1, d2, ds = 2, 30, 1  # Degree range and step
+const d1, d2, ds = 2, 5, 1  # Degree range and step
 const n, a, b = 2, 1, 3
 const C = a / b  # Scaling constant
 const delta, alph = 1 / 2, 9 / 10  # Sampling parameters
