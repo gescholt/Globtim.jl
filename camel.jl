@@ -6,7 +6,7 @@ include("hom_solve.jl") # Include the homotopy solver and main function
 
 
 # Constants and Parameters
-d1, d2, ds = 3, 18, 1  # Degree range and step
+d1, d2, ds = 3, 8, 1  # Degree range and step
 const n, a, b = 2, 5, 1 
 const C = a / b  # Scaling constant, C is appears in `main_computation`, maybe it should be a parameter.
 const delta, alph = .9 , 2 / 10  # Sampling parameters
@@ -37,19 +37,29 @@ col_to_color = Dict(unique_cols .=> color_palette)
 # Create individual scatter traces for each unique `col` value
 scatter_traces = [scatter(x=df[df.col.==c, :x], y=df[df.col.==c, :y], mode="markers", marker=attr(color=col_to_color[c], size=5), name="Degree $c") for c in unique_cols]
 
-# Create the contour plot
-cp = contour(x=x, y=y, z=z, ncontours=80, colorscale="Viridis", showscale=false)
+# Define custom contour levels focusing on 0 < z < 10
+clip_value = 8.0
+z_clipped = map(x -> min(x, clip_value), z)  # clip values at 10
+min_z_clipped = minimum(z_clipped)
+max_z_clipped = maximum(z_clipped)
+
+# Define custom contour levels for 0 < z < 10 and group values > 10
+levels = exp10.(range(log10(max(min_z_clipped, 1e-10)), log10(clip_value), length=80))
+
+
+# Create the contour plot with custom levels
+cp = contour(x=x, y=y, z=z_clipped, levels=levels, ncontours=length(levels),
+    colorscale="Viridis", showscale=false)
 
 # Combine contour plot and scatter traces
 all_traces = [cp; scatter_traces...]
-
 # Customize layout to handle legend groups
 layout = Layout(
     title="Scatter and Contour Plot",
     xaxis_title="X-axis",
     yaxis_title="Y-axis",
-    legend=(tracegroupgap=10, groupclick="toggleitem")
+    legend=(tracegroupgap=10, groupclick="toggleitem"),
+    height=800 # Increase the height to make room for the legend
 )
-
 # Display the combined plot with legend
 display(plot(all_traces, layout))
