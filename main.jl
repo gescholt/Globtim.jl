@@ -2,7 +2,6 @@
 include("construct_lib.jl")
 include("functions_eval.jl")
 using DynamicPolynomials, MultivariatePolynomials, AlgebraicSolving, HomotopyContinuation
-# , JSON
 
 
 # Constants and Parameters
