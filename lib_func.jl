@@ -5,6 +5,15 @@ function tref(x)
     return exp(sin(50 * x[1])) + sin(60 * exp(x[2])) + sin(70 * sin(x[1])) + sin(sin(80 * x[2])) - sin(10 * (x[1] + x[2])) + (x[1]^2 + x[2]^2) / 4
 end
 
+function camel_3(x)
+    # =======================================================
+    #   Not Rescaled
+    #   Camel three humps function
+    #   Domain: [-5, 5]^2.
+    # =======================================================  
+    return 2*x[1]^2 - 1.05*x[1]^4 + x[1]^6/6 + x[1]*x[2] + x[2]^2
+end
+
 function camel(x) 
     # =======================================================
     #   Not Rescaled
@@ -82,6 +91,15 @@ function camel_4d(x)
     #   Domain: [-5, 5]^4.
     # =======================================================
     return camel(x[1:2]) + camel(x[3:4])
+end
+
+function camel_3_by_3(x)
+    # =======================================================
+    #   Not Rescaled
+    #   double copy of Camel six humps function
+    #   Domain: [-5, 5]^4.
+    # =======================================================
+    return camel_3(x[1:2]) + camel_3(x[3:4])
 end
 
 
