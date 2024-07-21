@@ -96,8 +96,8 @@ function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Fl
         Lambda = support_gen(n, d)
         grid = generate_grid(n, GN)
         matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
-        println("dimension Vector space: ", m)
-        println("sample size: ", size(matrix_from_grid)[1])
+        # println("dimension Vector space: ", m)
+        # println("sample size: ", size(matrix_from_grid)[1])
         VL = lambda_vandermonde(Lambda, matrix_from_grid)
         G_original = VL' * VL
         # F = [f(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]

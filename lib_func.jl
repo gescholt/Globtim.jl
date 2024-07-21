@@ -102,6 +102,27 @@ function camel_3_by_3(x)
     return camel_3(x[1:2]) + camel_3(x[3:4])
 end
 
+function cosine_mixture(x)
+    # =======================================================
+    #   Not Rescaled
+    #   Mixture of cosine functions
+    #   Domain: [-1, 1]^4.
+    # =======================================================
+    return -0.1*sum(5*pi*cos(x[i]) for i in 1:4) - sum(x[i]^2 for i in 1:4)
+end
+
+# ======================================================= nD Functions =======================================================
+
+function Csendes(x, dims=4)
+    # =======================================================
+    #   Not Rescaled
+    #   Csendes function
+    #   Domain: [-1, 1]^n.
+    # =======================================================
+    return sum(x[i]^6*(2+sin(1/x[i])) for i in 1:dims)
+
+    
+end
 
 # Example usage
 # x = [1.0, 2.0, 3.0]
