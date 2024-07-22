@@ -42,10 +42,11 @@ function support_gen(n, d)
 end
 
 # Function to generate the sampling grid
-function generate_grid(n::Int, GN::Int)
+function generate_grid(n::Int, GN::Int, center::Vector{Float64}=fill(0.0, n))
     ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
     cart_cheb = [ChebyshevNodes for _ in 1:n]
     grid = Iterators.product(cart_cheb...)
+    # shifted_grid = [(Tuple(node) .+ center) for node in grid]
     return collect(grid)
 end
 
@@ -85,8 +86,15 @@ function lambda_vandermonde(Lambda, S)
 end
 
 # Geneate the approximants in the new optim file, more parameters are added to the function.
-function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)::Vector{Vector{Float64}}
-    # slc is a scaling factor to reduce the number of points in the grid.
+function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::Vector{Vector{Float64}}
+    # =======================================================
+    #   Computation of the coefficients of the polynomial approximant in the Chebyshev basis.
+    #   slc is a scaling factor to reduce the number of points in the grid.
+    #   The center parameter only affects the domain of the function.
+    #   We want to construct the Vandermonde like matrix wth monomials centered at the origin for stability and applicability of the theorems.
+    #   We then rescale the critical points to put them at the right spot in the domain.
+    # =======================================================
+    
     symb_approx = []
     for d in d1:ds:d2
         m = binomial(n + d, d)  # Dimension of vector space
@@ -100,8 +108,7 @@ function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Fl
         # println("sample size: ", size(matrix_from_grid)[1])
         VL = lambda_vandermonde(Lambda, matrix_from_grid)
         G_original = VL' * VL
-        # F = [f(C * matrix_from_grid[Int(i), 1], C * matrix_from_grid[Int(i), 2]) for i in 1:(GN+1)^2]
-        F = [f([C * matrix_from_grid[Int(i), :]...]) for i in 1:(GN+1)^n]
+        F = [f([C * matrix_from_grid[Int(i), :]...]+center) for i in 1:(GN+1)^n]
         RHS = VL' * F
 
         # Solve linear system using an appropriate LinearSolve function

@@ -67,6 +67,15 @@ function dejong5(xx::Vector{Float64})::Float64
     return y
 end
 
+function easom(x::Vector{Float64})::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Easom function
+    #   Domain: [-100, 100]^2.
+    # =======================================================
+    return -cos(x[1]) * cos(x[2]) * exp(-((x[1] - pi)^2 + (x[2] - pi)^2))
+end
+
 
 # ======================================================= 3D Functions =======================================================
 # Define the function on domain [-10, 10]^3.
