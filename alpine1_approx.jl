@@ -85,8 +85,8 @@ for i in 1:nrow(df)
     println(summary(res))
 end
 
-filtered_df = df[df.col.==6, :]
+# Save the DataFrame to a CSV file
 for i in d1:ds:d2
-    filtered_df = vcat(filtered_df, df[df.col.==i, :])
+    local filtered_df = vcat(df[df.col.==i, :])
     CSV.write("data/alpine1_d$i.csv", filtered_df)
 end
