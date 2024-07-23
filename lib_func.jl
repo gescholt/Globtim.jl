@@ -79,7 +79,7 @@ end
 
 # ======================================================= 3D Functions =======================================================
 # Define the function on domain [-10, 10]^3.
-alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
+old_alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
                  abs(x[2] * sin(x[2]) + 0.1 * x[2]) +
                  abs(x[3] * sin(x[3]) + 0.1 * x[3])
 
@@ -128,8 +128,26 @@ function Csendes(x, dims=4)
     #   Csendes function
     #   Domain: [-1, 1]^n.
     # =======================================================
-    return sum(x[i]^6*(2+sin(1/x[i])) for i in 1:dims)
+    return sum(x[i]^6*(2+sin(1/x[i])) for i in 1:dims)    
+end
 
+
+function alpine1(x::Vector{Float64}; ndim::Int=2)::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Alpine1 function
+    #   Domain: [-10, 10]^n.
+    # =======================================================
+    return sum(abs(x[i] * sin(x[i]) + 0.1 * x[i]) for i in 1:ndim)
+end
+
+function alpine2(x::Vector{Float64}, ndim::Int)::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Alpine2 function
+    #   Domain: [-10, 10]^n.
+    # =======================================================
+    return prod(sqrt(x[i]) * sin(x[i]) for i in 1:ndim)
     
 end
 

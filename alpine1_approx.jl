@@ -1,7 +1,7 @@
 include("optim_lib.jl")
 include("lib_func.jl")
 include("hom_solve.jl") # Include the homotopy solver and main function
-using DynamicPolynomials, MultivariatePolynomials, HomotopyContinuation, ProgressLogging, DataFrames, PlotlyJS, Colors, Optim
+using DynamicPolynomials, MultivariatePolynomials, HomotopyContinuation, ProgressLogging, DataFrames, PlotlyJS, Colors, Optim, CSV
 
 
 # Constants and Parameters
@@ -11,7 +11,7 @@ const C = a / b  # Scaling constant, C is appears in `main_computation`, maybe i
 const delta, alph = .5 , 9 / 10  # Sampling parameters
 const cntr = Vector([3.14, 3.14]) # Center of the domain
 # const cntr = Vector(2*[-3.14, -3.14]) # Center of the domain
-f = easom # Objective function
+f = alpine1 # Objective function
 # Compute the coefficients of the polynomial approximation
 
 coeffs_poly_approx = main_gen(f, n, d1, d2, ds, delta, alph, C, 0.1, center=cntr)
@@ -75,7 +75,6 @@ for i in 1:nrow(df)
     min_value = Optim.minimum(res)
     steps = res.iterations
     converged = Optim.converged(res)
-
     distance = norm(x0 - minimizer)
 
     df.local_minima[i] = min_value
@@ -83,10 +82,11 @@ for i in 1:nrow(df)
     df.steps[i] = steps
     df.converged[i] = converged
 
-    println("Initial point: ", x0)
-    println("Minimizer: ", minimizer)
-    println("Distance to minima: ", distance)
-    println("Number of steps: ", steps)
-    println("Converged: ", converged)
     println(summary(res))
+end
+
+filtered_df = df[df.col.==6, :]
+for i in d1:ds:d2
+    filtered_df = vcat(filtered_df, df[df.col.==i, :])
+    CSV.write("data/alpine1_d$i.csv", filtered_df)
 end
