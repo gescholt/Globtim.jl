@@ -1,14 +1,39 @@
-# Optim library for construction of the notebook# 
-# General version of the algorithm running on arbitrary number of variables # 
+module Globtim
 
-using LinearAlgebra, LinearSolve, Statistics
+# Import LinearAlgebra
+using CSV
+using Colors
+using DataFrames
+using DynamicPolynomials
+using HomotopyContinuation
+using MultivariatePolynomials
+using Optim
+using PlotlyJS
+using ProgressLogging
+
+
+# Import necessary packages
+using LinearAlgebra
+include("lib_func.jl")
+
+# Your code here
+
+
+
+# ======================================================= Structures ======================================================
+struct ApproxResult
+    coeffs::Vector{Vector{Float64}}
+    nrm::Vector{Float64}
+end
+
+# ======================================================= Functions =======================================================
 
 function zeta(x::Float64)::Float64
     # =======================================================
     # Relative tolearance function for the number of samples
     # =======================================================
     return x + (1 - x) * log(1 - x)
-end 
+end
 
 
 # Function to calculate the required number of samples
@@ -26,7 +51,6 @@ function calculate_samples(m::Int, delta::Float64, alph::Float64)::Int
     end
     return K
 end
-
 
 function support_gen(n::Int, d::Int)::NamedTuple
     # =======================================================
@@ -65,7 +89,7 @@ end
 
 function chebyshev_poly(d::Int, x)
     # =======================================================
-    # Function to generate Chebyshev polynomial of degree d in the variable x.
+    # Function to generate Chebyshev polynomial of degree d in the variable x 
     # =======================================================
     if d == 0
         return rationalize(1.0)
@@ -113,36 +137,7 @@ function main_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Fl
     #   We then rescale the critical points to put them at the right spot in the domain.
     # =======================================================
     symb_approx = []
-    for d in d1:ds:d2
-        m = binomial(n + d, d)  # Dimension of vector space
-        K = calculate_samples(m, delta, alph)
-        GN = Int(round(K^(1 / n)*scl) + 1) # need fewe points for high degre stuff # 
-        Lambda = support_gen(n, d)
-        grid = generate_grid(n, GN)
-        matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
-        VL = lambda_vandermonde(Lambda, matrix_from_grid)
-        G_original = VL' * VL
-        F = [f([C * matrix_from_grid[Int(i), :]...]+center) for i in 1:(GN+1)^n]
-        RHS = VL' * F
-
-        # Solve linear system using an appropriate LinearSolve function
-        linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
-        # Now solve the problem with proper choice of compute method. 
-
-        sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-        NRM = norm(VL.sol.u - F)
-
-        push!(symb_approx, sol.u)
-    end
-    return symb_approx
-end
-
-# Geneate the approximants in the new optim file, more parameters are added to the function.
-# Solve the linear algebra problem over BigFloats instead of Float64
-## Tested ##
-function precise_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64)::Vector{Vector{BigFloat}}
-    # slc is a scaling factor to reduce the number of points in the grid.
-    symb_approx = []
+    NRM = []
     for d in d1:ds:d2
         m = binomial(n + d, d)  # Dimension of vector space
         K = calculate_samples(m, delta, alph)
@@ -150,52 +145,25 @@ function precise_gen(f, n::Int, d1::Int, d2::Int, ds::Int, delta::Float64, alph:
         Lambda = support_gen(n, d)
         grid = generate_grid(n, GN)
         matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
-        println("dimension Vector space: ", m)
-        println("sample size: ", size(matrix_from_grid)[1])
         VL = lambda_vandermonde(Lambda, matrix_from_grid)
-        G_original = BigFloat.(VL') * BigFloat.(VL)
-        F = [f([C * matrix_from_grid[Int(i), :]...]) for i in 1:(GN+1)^n]
-        RHS = BigFloat.(VL') * BigFloat.(F)
+        G_original = VL' * VL
+        F = [f([C * matrix_from_grid[Int(i), :]...] + center) for i in 1:(GN+1)^n]
+        RHS = VL' * F
 
         # Solve linear system using an appropriate LinearSolve function
         linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
         # Now solve the problem with proper choice of compute method. 
 
         sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-        cheb_coeffs = sol.u
+        nrm = norm(VL.sol.u - F)
 
-        push!(symb_approx, cheb_coeffs)
+        push!(symb_approx, sol.u)
+        push!(NRM, nrm)
     end
-    return symb_approx
+    return ApproxResult(symb_approx, NRM)
 end
 
-## Process the crtitcal points ##
+# Export the primary functions and types
+export main_gen, ApproxResult
 
-# Compute the smallest distances between the minima of the function and the critical points of the approximant.
-function compute_closest_distances(extrema_points, given_points)
-    closest_distances = []
-    for extremum in extrema_points
-        min_distance = Inf
-        for point in given_points
-            dist = norm(extremum .- point)
-            if dist < min_distance
-                min_distance = dist
-            end
-        end
-        push!(closest_distances, min_distance)
-    end
-    return closest_distances
-end
-
-function local_minima(data::DataFrame, mode::Symbol)
-    # =======================================================
-    #   Computes the local minima
-    # =======================================================
-    if mode == :basic
-        return basic_processing(data)
-    elseif mode == :advanced
-        return advanced_processing(data)
-    else
-        throw(ArgumentError("Unknown mode: $mode"))
-    end
 end

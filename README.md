@@ -1,16 +1,11 @@
-# globtim
+# Globtim
 
 
-Now I need to test homotopy continuation on 2D, 3D and 4D examples.
+## Global optimization of continuous functions over compact domains
 
-## Getting started
+The purpose of this package is to compute the set of all local minima of a real continuous function over a rectangular domain in $\\R^n$.
 
-Needs main.ipynb for each dimension.
-
-Needs to store outputs of homotopy continuation in dataframe.
-
-See if we can benefit from staying in tensorized orthogonal basis when doing homotopy continuation.
 
 ## Project status
 
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+In active development. 
