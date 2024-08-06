@@ -22,9 +22,6 @@ include("ApproxConstruct.jl")
 
 
 
-
-# main should be modified to only do one degree at a time. 
-
 function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
     # =======================================================
     #   Computation of the coefficients of the polynomial approximant of degree d in the Chebyshev basis.
@@ -59,8 +56,10 @@ end
 
 function main_2d(d::Int, coeffs_poly_approx::Vector{Float64}, x, coeff_type=:BigFloat)
     # =======================================================
-    # Compute the coefficients of the polynomial in the standard monomial basis through an expansion in BigFloat format 
+    # Computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in BigFloat format 
+    # coeffs_poly_approx is the vector of coefficients of the polynomial approximant in the Chebyshev basis
     # x: DynamicPolynomials variables
+    # Has to be used inside of a DynamicPolynomial environment where the variables x are defined (@polyvar)
     # =======================================================
     lambda = SupportGen(2, d).data  # Assuming support_gen is defined elsewhere
     m, n = size(lambda)

@@ -23,7 +23,6 @@ function camel(x)
     return (4-2.1*x[1]^2 + x[1]^4/3)*x[1]^2 + x[1]*x[2] + (-4 + 4*x[2]^2)*x[2]^2
 end
 
-
 # Define the Schubert function
 function schubert(xx)
     #   Domain: [-10, 10]^2.
