@@ -1,6 +1,6 @@
 include("optim_lib.jl")
-include("lib_func.jl")
-include("hom_solve.jl") # Include the homotopy solver and main function
+include("src/lib_func.jl")
+include("src/hom_solve.jl") # Include the homotopy solver and main function
 using DynamicPolynomials, MultivariatePolynomials, HomotopyContinuation, ProgressLogging, DataFrames, PlotlyJS, Colors, Optim
 
 
