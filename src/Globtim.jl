@@ -44,12 +44,10 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float
     RHS = VL' * F
 
     # Solve linear system using an appropriate LinearSolve function
-    linear_prob = LinearProblem(G_original, RHS) # Define a linear problem
+    linear_prob = LinearProblem(G_original, RHS) # Define the linear problem
     # Now solve the problem with proper choice of compute method. 
-
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-    nrm = norm(VL * sol.u - F)
-
+    nrm = norm(VL * sol.u - F)/GN # Watch out, we divide by GN to get the discrete norm
     return ApproxPoly(sol, nrm)
 end
 
@@ -92,7 +90,46 @@ function main_2d(d::Int, coeffs_poly_approx::Vector{Float64}, x, coeff_type=:Big
     return coefficients(S_rat)
 end
 
+function main_nd(n::Int, d::Int, coeffs_poly_approx::Vector{Float64}, x, coeff_type=:BigFloat)
+    # =======================================================
+    # Computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in BigFloat format 
+    # coeffs_poly_approx is the vector of coefficients of the polynomial approximant in the Chebyshev basis
+    # n: number of variables
+    # x: DynamicPolynomials variables
+    # Has to be used inside of a DynamicPolynomial environment where the variables x are defined (@polyvar)
+    # =======================================================
+    lambda = SupportGen(n, d).data  # Assuming support_gen is defined elsewhere
+    m = size(lambda)[1]
+    if coeff_type == :RationalBigInt
+        coeffs = convert.(Rational, coeffs_poly_approx)
+    else
+        coeffs = convert.(BigFloat, coeffs_poly_approx)
+        println("Check")
+    end
+    if length(coeffs) != m
+        println(coeffs)
+        println("\n")
+        error("The length of coeffs_poly_approx must match the dimension of the space we project onto")
+    end
+
+    S_rat = zero(x[1])
+    for j in 1:m
+        prd = one(x[1])
+        for k in 1:n
+            prd *= BigFloatChebyshevPoly(lambda[j, k], x[k])
+        end
+        if coeff_type == :RationalBigInt
+            S_rat += coeffs[j] * prd
+        elseif coeff_type == :BigFloat
+            S_rat += coeffs[j] * prd
+        else
+            error("Unsupported coefficient type. Use :RationalBigInt or :BigFloat.")
+        end
+    end
+    return coefficients(S_rat)
+end
+
 # Export the primary functions and types
-export MainGenerate, ApproxPoly, camel, main_2d
+export MainGenerate, ApproxPoly, camel, main_2d, main_nd
 
 end

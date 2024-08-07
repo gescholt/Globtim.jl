@@ -1,5 +1,5 @@
 include("optim_lib.jl")
-include("lib_func.jl")
+include("src/lib_func.jl")
 include("hom_solve.jl") # Include the homotopy solver and main function
 using DynamicPolynomials, MultivariatePolynomials, HomotopyContinuation, ProgressLogging, DataFrames, PlotlyJS, Colors, Optim, CSV
 
@@ -86,7 +86,7 @@ for i in 1:nrow(df)
 end
 
 # Save the DataFrame to a CSV file
-for i in d1:ds:d2
-    local filtered_df = vcat(df[df.col.==i, :])
-    CSV.write("data/alpine1_d$i.csv", filtered_df)
-end
+# for i in d1:ds:d2
+#     local filtered_df = vcat(df[df.col.==i, :])
+#     CSV.write("data/alpine1_d$i.csv", filtered_df)
+# end
