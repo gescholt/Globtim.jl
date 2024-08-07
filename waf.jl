@@ -1,11 +1,12 @@
 using HomotopyContinuation
-using DynamicPolynomials
+# using DynamicPolynomials
 using Random
 
 # Set random seed 
 Random.seed!(1874)
 
-@polyvar x[1:2]
+# @polyvar x[1:2]
+@var x[1:2]
 
 # Function to generate a random polynomial with BigFloat coefficients
 function random_polynomial(variables, degree::Int, num_terms::Int)
@@ -24,6 +25,12 @@ poly1 = random_polynomial(x, 4, 10)
 poly2 = poly1 + BigFloat(1.0) * x[1] + BigFloat(1.0) * x[2]
 grad_p1 = differentiate.(poly1, x)
 grad_p2 = differentiate.(poly2, x)
+
+
+dump(poly1)
+dump(poly2)
+dump(grad_p1)
+dump(grad_p2)
 # Define the system of equations
 system_1 = System(grad_p1)
 system_2 = System(grad_p2)
@@ -36,11 +43,12 @@ system_2 = System(grad_p2)
 
 # Solve the system
 R1 = HomotopyContinuation.solve(system_1)
-R2 = HomotopyContinuation.solve(system_2)
-
+println("Result: ", R1)
+# R2 = HomotopyContinuation.solve(system_2)
+R2 = HomotopyContinuation.solve(system_2; start_system=:total_degree)
+println("Result: ", R2)
 
 # R1 = HomotopyContinuation.solve(system_1)
-println("Result: ", R1)
+
 
 # R2 = HomotopyContinuation.solve(system_2)
-println("Result: ", R2)

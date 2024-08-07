@@ -6,19 +6,10 @@ using DynamicPolynomials
 using HomotopyContinuation
 using LinearSolve
 using LinearAlgebra
-# using Statistics
-# using Colors
-# using Optim
-# using PlotlyJS
-# using ProgressLogging
-
-
-# Import necessary packages
 
 include("lib_func.jl")
 include("Samples.jl")
 include("ApproxConstruct.jl")
-# include("hom_solve.jl")
 
 
 
@@ -34,7 +25,7 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float
     NRM = []
     m = binomial(n + d, d)  # Dimension of vector space
     K = calculate_samples(m, delta, alph)
-    GN = Int(round(K^(1 / n) * scl) + 1) # need fewe points for high degre stuff # 
+    GN = Int(round(K^(1 / n) * scl) + 1) # need fewer points for high degre stuff # 
     Lambda = SupportGen(n, d)
     grid = generate_grid(n, GN)
     matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
@@ -47,8 +38,8 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float
     linear_prob = LinearProblem(G_original, RHS) # Define the linear problem
     # Now solve the problem with proper choice of compute method. 
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-    nrm = norm(VL * sol.u - F)/GN # Watch out, we divide by GN to get the discrete norm
-    return ApproxPoly(sol, nrm)
+    nrm = norm(VL * sol.u - F)/(GN^n) # Watch out, we divide by GN to get the discrete norm
+    return ApproxPoly(sol, nrm, GN)
 end
 
 
