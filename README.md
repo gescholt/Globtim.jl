@@ -5,13 +5,22 @@ The purpose of the Globtim package is to compute the set of all local minima of 
 
 1. The input function $f$ is sampled on a tensorized Chebyshev grid
 2. A polynomial approximant is constructed via a discrete least squares
-3. The polynomial system of Partial derivatives is solved by either homotopy continuation (numerical  method) or through exact polynomial system solving (symbolic method).
-
-
-## Installation
-
-One needs to add the “Pkg” Julia module
+3. The polynomial system of Partial derivatives is solved by either homotopy continuation (numerical  method) or through exact polynomial system solving (symbolic method)
 
 ## Project Status
 
 In active development.
+
+## Installation
+
+Git clone this repository and using the `Pkg` Julia module,  activate this module with
+
+```julia
+using Pkg 
+Pkg.activate(".")
+Pkg.test()
+```
+
+## Examples
+
+See the description page for this package at \[Globtim\](<https://gescholt.github.io/globtim/>).
