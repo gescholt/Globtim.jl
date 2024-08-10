@@ -1,6 +1,7 @@
 using DynamicPolynomials
 using HomotopyContinuation
 using DataFrames
+using CSV
 using Globtim
 include("../src/lib_func.jl")
 
@@ -45,7 +46,6 @@ filtered_points = filter(condition, real_pts) # Filter points using the filter f
 h_x = Float64[point[1] for point in filtered_points] # Initialize the x vector for critical points of approximant
 h_y = Float64[point[2] for point in filtered_points] # Initialize the y vector
 experimental_df = DataFrame(x=scale_factor * h_x, y=scale_factor * h_y)
-println(experimental_df)
 
 #-------------------# BigFloat coefficients #-------------------#
 PolynomialApproximant_BF = sum(ap .* MonomialVector(x, 0:d))
@@ -57,7 +57,8 @@ Real_sol_lstsq_BF = HomotopyContinuation.solve(sys_BF; start_system=:total_degre
 real_pts_BF = HomotopyContinuation.real_solutions(Real_sol_lstsq_BF; only_real=true, multiple_results=false)
 filtered_points_BF = filter(condition, real_pts_BF) # Filter points using the filter function
 
-h_x_BF = Float64[point[1] for point in filtered_points_BF] # Initialize the x vector for critical points of approximant
-h_y_BF = Float64[point[2] for point in filtered_points_BF] # Initialize the y vector
-BF_df = DataFrame(x=scale_factor * h_x_BF, y=scale_factor * h_y_BF)
-println(BF_df)
+h_x_BF = scale_factor * Float64[point[1] for point in filtered_points_BF] # Initialize the x vector for critical points of approximant
+h_y_BF = scale_factor * Float64[point[2] for point in filtered_points_BF] # Initialize the y vector
+BF_df = DataFrame(x= h_x_BF, y= h_y_BF)
+
+CSV.write("easom_d$d.csv", BF_df)

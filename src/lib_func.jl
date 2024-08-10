@@ -24,8 +24,12 @@ function camel(x)
 end
 
 # Define the Schubert function
-function schubert(xx)
+function shubert(xx::Vector{Float64})::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Shubert function
     #   Domain: [-10, 10]^2.
+    # =======================================================
     x1 = xx[1]
     x2 = xx[2]
 
