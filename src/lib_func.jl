@@ -80,6 +80,25 @@ function easom(x::Vector{Float64})::Float64
     return -cos(x[1]) * cos(x[2]) * exp(-((x[1] - pi)^2 + (x[2] - pi)^2))
 end
 
+function rand_gaussian(x::Vector{Float64}; N::Int=10)::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Sum of N Gaussian function centered at random points in the domain with random variance.
+    #   Domain: [-1, 1]^2.
+    # =======================================================
+    centers = 2 .* rand(N, 2) .- 1  # Preallocate random center points
+    variances = rand(N)  # Preallocate random variances
+    sum = 0.0
+
+    for i in 1:N
+        diff = x .- centers[i, :]
+        gaussian = exp(-sum(diff .^ 2) / (2 * variances[i]^2))
+        sum += gaussian
+    end
+
+    return sum
+end
+
 
 # ======================================================= 3D Functions =======================================================
 # Define the function on domain [-10, 10]^3.
