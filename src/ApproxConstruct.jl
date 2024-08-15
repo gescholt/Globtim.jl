@@ -30,6 +30,23 @@ function ChebyshevPoly(d::Int, x)
     end
 end
 
+function ChebyshevPolyExact(d::Int)::Vector{Int}
+    # =======================================================
+    # Function to generate vector of integer coefficients of Chebyshev polynomial of degree d. 
+    # In one variable. 
+    # =======================================================
+    if d == 0
+        return [1]
+    elseif d == 1
+        return [0, 1]
+    else
+        Tn_1 = ChebyshevPolyExact(d - 1)
+        Tn_2 = ChebyshevPolyExact(d - 2)
+        Tn = [0; 2 * Tn_1] - vcat(Tn_2, [0, 0])
+        return Tn
+    end
+end
+
 function BigFloatChebyshevPoly(d::Int, x)
     # =======================================================
     # Function to generate Chebyshev polynomial with BigFLoat coefficients 
