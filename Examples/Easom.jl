@@ -9,9 +9,11 @@ include("../src/lib_func.jl")
 
 # @polyvar x[1:2] # Define the variables
 f = easom # Define the function to be approximated (from lib_func.jl)
-global d = 15           # Define the degree of the polynomial approximant
+global d = 3 #15           # Define the degree of the polynomial approximant
 scale_factor = 3.0         # Define the scaling factor
-tol_l2 = 5e-2    # Define the tolerance for the L2-norm
+tol_l2 = 2
+
+# 5e-2    # Define the tolerance for the L2-norm
 
 
 while true # Potential infinite loop
@@ -26,6 +28,7 @@ while true # Potential infinite loop
 end
 
 ap = expansion_main_2d(d, poly_approx.coeffs) 
+println("coeff type:" , typeof(ap))
 # converts the polynomial approximant to the standard monomial basis in the Lexicographic order.
 # By default, the conversion is carried out over BigFloats, but it can be done over Rational numbers as well.
 
@@ -35,8 +38,8 @@ ap = expansion_main_2d(d, poly_approx.coeffs)
 @polyvar x[1:2]
 
 # Convert the system to Float64 coefficients because problem with homotopy continuation
-PolynomialApproximant = sum(ap .* MonomialVector(x, 0:d))
-println("Float64 coeffs: ", PolynomialApproximant)
+PolynomialApproximant = sum(Float64.(ap) .* MonomialVector(x, 0:d)) # Convert coefficients to Float64 for homotopy continuation
+println("Polynomial L2 Approximant floats: ", PolynomialApproximant)
 grad = differentiate.(PolynomialApproximant, x)
 sys = System(grad)
 Real_sol_lstsq = HomotopyContinuation.solve(sys) # Solve the system of equations with Float64 coefficients

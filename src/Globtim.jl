@@ -81,7 +81,7 @@ function main_2d(d::Int, coeffs_poly_approx::Vector{Float64}, x, coeff_type=:Big
     return coefficients(S_rat)
 end
 
-function expansion_main_2d(d::Int, coeffs::Vector{Float64})
+function expansion_main_2d(d::Int, coeffs::Vector{Float64})::Vector{Rational{BigInt}}
     # =======================================================
     # Computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in BigFloat format 
     # coeffs_poly_approx is the vector of coefficients of the polynomial approximant in the Chebyshev basis
@@ -95,6 +95,7 @@ function expansion_main_2d(d::Int, coeffs::Vector{Float64})
         println("\n")
         error("The length of coeffs_poly_approx must match the dimension of the space we project onto")
     end
+    coeffs = convert.(Rational{BigInt}, coeffs)
     @polyvar x[1:2]
     S_rat = zero(x[1])
     for j in 1:m
@@ -110,14 +111,12 @@ function expansion_main_2d(d::Int, coeffs::Vector{Float64})
 end
 
 """
- Computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in BigFloat format 
-    coeffs_poly_approx is the vector of coefficients of the polynomial approximant in the Chebyshev basis
+ Computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in Rational{BigInt} format. 
     n: number of variables
-    x: DynamicPolynomials variables
-    Has to be used inside of a DynamicPolynomial environment where the variables x are defined (@polyvar)
-   
+    d: Degree of the polynomial approximant   
+    coeffs: Vector of Floats64; coefficients of the polynomial approximant in the Chebyshev basis.
 """
-function main_nd(n::Int, d::Int, coeffs::Vector{Float64})
+function main_nd(n::Int, d::Int, coeffs::Vector{Float64})::Vector{Rational{BigInt}}
     lambda = SupportGen(n, d).data  # Assuming support_gen is defined elsewhere
     m = size(lambda)[1]
     if length(coeffs) != m
@@ -125,6 +124,7 @@ function main_nd(n::Int, d::Int, coeffs::Vector{Float64})
         println("\n")
         error("The length of coeffs_poly_approx must match the dimension of the space we project onto")
     end
+    coeffs = convert.(Rational{BigInt}, coeffs)
     @polyvar x[1:n]
     S_rat = zero(x[1])
     for j in 1:m
