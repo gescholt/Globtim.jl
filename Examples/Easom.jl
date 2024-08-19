@@ -7,7 +7,7 @@ include("../src/lib_func.jl")
 
 
 
-@polyvar x[1:2] # Define the variables
+# @polyvar x[1:2] # Define the variables
 f = easom # Define the function to be approximated (from lib_func.jl)
 global d = 15           # Define the degree of the polynomial approximant
 scale_factor = 3.0         # Define the scaling factor
@@ -25,13 +25,17 @@ while true # Potential infinite loop
     end
 end
 
-ap = main_2d(d, poly_approx.coeffs, x) 
+ap = expansion_main_2d(d, poly_approx.coeffs) 
 # converts the polynomial approximant to the standard monomial basis in the Lexicographic order.
 # By default, the conversion is carried out over BigFloats, but it can be done over Rational numbers as well.
 
 #-------------------# Float64 coefficients #-------------------#
+""" redefine the variables x to be used in the DynamicPolynomials environment """
+
+@polyvar x[1:2]
+
 # Convert the system to Float64 coefficients because problem with homotopy continuation
-PolynomialApproximant = sum(Float64.(ap) .* MonomialVector(x, 0:d))
+PolynomialApproximant = sum(ap .* MonomialVector(x, 0:d))
 println("Float64 coeffs: ", PolynomialApproximant)
 grad = differentiate.(PolynomialApproximant, x)
 sys = System(grad)
@@ -61,4 +65,4 @@ h_x_BF = scale_factor * Float64[point[1] for point in filtered_points_BF] # Init
 h_y_BF = scale_factor * Float64[point[2] for point in filtered_points_BF] # Initialize the y vector
 BF_df = DataFrame(x= h_x_BF, y= h_y_BF)
 
-CSV.write("easom_d$d.csv", BF_df)
+# CSV.write("easom_d$d.csv", BF_df)

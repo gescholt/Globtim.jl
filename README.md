@@ -1,6 +1,6 @@
 ## Global optimization of continuous functions over compact domains
 
-The purpose of the Globtim package is to compute the set of all local minima of a real continuous function over a rectangular domain in $\\R^n$. This is carried out in 3 main steps:
+The purpose of the Globtim package is to compute the set of all local minima of a real continuous function over a rectangular domain in $\R^n$. This is carried out in 3 main steps:
 
 
 1. The input function $f$ is sampled on a tensorized Chebyshev grid
@@ -23,4 +23,4 @@ Pkg.test()
 
 ## Examples
 
-See the description page for this package at \[Globtim\](<https://gescholt.github.io/globtim/>).
+See the description page for this package at [Globtim](https://gescholt.github.io/globtim).
