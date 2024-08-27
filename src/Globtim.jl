@@ -140,6 +140,6 @@ function main_nd(n::Int, d::Int, coeffs::Vector{Float64})::Vector{Rational{BigIn
 end
 
 # Export the primary functions and types
-export MainGenerate, ApproxPoly, camel, main_2d, expansion_main_2d,  main_nd
+export MainGenerate, ApproxPoly, camel, main_2d, expansion_main_2d, main_nd, process_output_file, parse_point
 
 end
