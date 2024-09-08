@@ -21,6 +21,9 @@ Pkg.activate(".")
 Pkg.test()
 ```
 
+The `exact` examples require [Msolve](https://msolve.lip6.fr/) to be installed. 
+The other examples rely on HomotopyContinuation.jl for the resolution of the polynomial system encoding the critical points of the objective function. 
+
 ## Examples
 
 See the description page for this package at [Globtim](https://gescholt.github.io/globtim).

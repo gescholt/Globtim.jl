@@ -12,11 +12,21 @@ include("Samples.jl")
 include("ApproxConstruct.jl")
 
 
+# ======================================================= Structures ======================================================
+struct ApproxPoly
+    coeffs::Vector
+    nrm::Float64
+    N::Int
+    scale_factor::Float64
+    grid::Matrix{Float64}
+    z::Vector{Float64}
+end
 
-function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
+
+function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
     # =======================================================
     #   Computation of the coefficients of the polynomial approximant of degree d in the Chebyshev basis.
-    #   slc is a scaling factor to reduce the number of points in the grid.
+    #   scl is a scaling factor to reduce the number of points in the grid.
     #   The center parameter only affects the domain of the function.
     #   We want to construct the Vandermonde like matrix wth monomials centered at the origin for stability and applicability of the theorems.
     #   We then rescale the critical points to put them at the right spot in the domain.
@@ -27,11 +37,11 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float
     K = calculate_samples(m, delta, alph)
     GN = Int(round(K^(1 / n) * scl) + 1) # need fewer points for high degre stuff # 
     Lambda = SupportGen(n, d)
-    grid = generate_grid(n, GN)
-    matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))'
+    grid = generate_grid(n, GN) # Intermediate grid
+    matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))' # the tensor we return in matrix form. 
     VL = lambda_vandermonde(Lambda, matrix_from_grid)
     G_original = VL' * VL
-    F = [f([C * matrix_from_grid[Int(i), :]...] + center) for i in 1:(GN+1)^n]
+    F = [f([scale_factor * matrix_from_grid[Int(i), :]...] + center) for i in 1:(GN+1)^n]
     RHS = VL' * F
 
     # Solve linear system using an appropriate LinearSolve function
@@ -39,7 +49,7 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, C::Float
     # Now solve the problem with proper choice of compute method. 
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
     nrm = norm(VL * sol.u - F)/(GN^n) # Watch out, we divide by GN to get the discrete norm
-    return ApproxPoly(sol, nrm, GN)
+    return ApproxPoly(sol, nrm, GN, scale_factor, matrix_from_grid, F)
 end
 
 
@@ -140,6 +150,6 @@ function main_nd(n::Int, d::Int, coeffs::Vector{Float64})::Vector{Rational{BigIn
 end
 
 # Export the primary functions and types
-export MainGenerate, ApproxPoly, camel, main_2d, expansion_main_2d, main_nd, process_output_file, parse_point
+export MainGenerate, ApproxPoly, main_nd, process_output_file, parse_point
 
 end

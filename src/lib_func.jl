@@ -1,8 +1,46 @@
 ## Library of functions to approximate ##
 
+# Define a struct to hold the Gaussian parameters
+struct GaussianParams
+    centers::Matrix{Float64}
+    variances::Vector{Float64}
+end
+
+# ======================================================= Random noise =======================================================
+
+function random_noise(x::Vector{Float64})::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Random noise function
+    # =======================================================
+    return rand()
+end
+
+
+function bivariate_gaussian_noise(params::GaussianParams)::Vector{Float64}
+    # =======================================================
+    #   Not Rescaled
+    #   Bivariate Gaussian noise function
+    #   params: GaussianParams struct containing centers and variances
+    # =======================================================
+    mean = params.centers[:, 1]
+    cov = Diagonal(params.variances)
+    dist = MvNormal(mean, cov)
+    return rand(dist)
+end
+
 # ======================================================= 2D Functions =======================================================
 function tref(x)
     return exp(sin(50 * x[1])) + sin(60 * exp(x[2])) + sin(70 * sin(x[1])) + sin(sin(80 * x[2])) - sin(10 * (x[1] + x[2])) + (x[1]^2 + x[2]^2) / 4
+end
+
+function Ackley(xx::Vector{Float64}; a=20, b=.2, c=2*pi):Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Ackley function
+    #   Domain: [-32, 32]^2.
+    # =======================================================  
+    return -a * exp(-b * sqrt(sum(xx .^ 2) / length(xx))) - exp(sum(cos.(c .* xx) / length(xx))) + a + exp(1)
 end
 
 function camel_3(x)
@@ -80,11 +118,7 @@ function easom(x::Vector{Float64})::Float64
     return -cos(x[1]) * cos(x[2]) * exp(-((x[1] - pi)^2 + (x[2] - pi)^2))
 end
 
-# Define a struct to hold the Gaussian parameters
-struct GaussianParams
-    centers::Matrix{Float64}
-    variances::Vector{Float64}
-end
+
 
 # Function to initialize the Gaussian parameters
 function init_gaussian_params(N::Int, scale::Float64)::GaussianParams
@@ -111,6 +145,23 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams)::Float64
     return total_sum
 end
 
+function HolderTable(xx::Vector{Float64})::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Holder Table function
+    #   Domain: [-10, 10]^2.
+    # =======================================================
+    return -abs(sin(xx[1]) * cos(xx[2]) * exp(abs(1 - sqrt(xx[1]^2 + xx[2]^2) / pi)))
+end
+
+function CrossInTray(xx::Vector{Float64})::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Cross-in-Tray function
+    #   Domain: [-10, 10]^2.
+    # =======================================================
+    return -0.001 * (abs(sin(xx[1]) * sin(xx[2]) * exp(abs(100 - sqrt(xx[1]^2 + xx[2]^2) / pi))) + 1)^(1 / 10)
+end
 
 # ======================================================= 3D Functions =======================================================
 # Define the function on domain [-10, 10]^3.
@@ -140,10 +191,10 @@ end
 function camel_3_by_3(x)
     # =======================================================
     #   Not Rescaled
-    #   double copy of Camel six humps function
+    #   double copy of Camel three humps function
     #   Domain: [-5, 5]^4.
     # =======================================================
-    return camel_3(x[1:2]) + camel_3(x[3:4])
+    return camel_3(x[1:2]) * camel_3(x[3:4])
 end
 
 function cosine_mixture(x)
@@ -153,6 +204,17 @@ function cosine_mixture(x)
     #   Domain: [-1, 1]^4.
     # =======================================================
     return -0.1*sum(5*pi*cos(x[i]) for i in 1:4) - sum(x[i]^2 for i in 1:4)
+end
+
+# ======================================================= 6D Functions =======================================================
+
+function camel_3_6d(x)
+    # =======================================================
+    #   Not Rescaled
+    #   Triple copy of Camel three humps function
+    #   Domain: [-5, 5]^6.
+    # =======================================================
+    return camel_3(x[1:2]) + camel_3(x[3:4]) + camel_3(x[5:6])
 end
 
 # ======================================================= nD Functions =======================================================
