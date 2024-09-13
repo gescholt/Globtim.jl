@@ -1,12 +1,13 @@
 name = "Globtim"
 uuid = "00da9514-6261-47e9-8848-33640cb1e528"
-license = "MIT"
+license = "GNU GENERAL PUBLIC LICENSE"
 authors = ["Georgy Scholten <scholtengeorgy@gmail.com>"]
 version = "0.1.0"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+CompatHelper = "aa819f21-2bde-4658-8897-bab36330d9b7"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
@@ -19,3 +20,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 julia = "1.10"
+HomotopyContinuation = "~2.0"
