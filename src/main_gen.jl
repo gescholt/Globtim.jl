@@ -1,9 +1,6 @@
-module Globtim
-
 using CSV
 using DataFrames
 using DynamicPolynomials
-# using HomotopyContinuation
 using LinearSolve
 using LinearAlgebra
 
