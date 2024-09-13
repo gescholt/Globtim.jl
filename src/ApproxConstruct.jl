@@ -2,11 +2,24 @@
 
 # ======================================================= Functions =======================================================
 
+"""
+    ChebyshevPoly(d::Int, x)
+
+Generate the Chebyshev polynomial of degree `d` in the variable `x` with rational coefficients.
+
+# Arguments
+- `d::Int`: Degree of the Chebyshev polynomial.
+- `x`: Variable for the polynomial.
+
+# Returns
+- The Chebyshev polynomial of degree `d` in the variable `x`.
+
+# Example
+```julia
+ChebyshevPoly(3, x)
+```
+"""
 function ChebyshevPoly(d::Int, x)
-    # =======================================================
-    # Function to generate Chebyshev polynomial of degree d in the variable x,
-    # Float64 coefficients 
-    # =======================================================
     if d == 0
         return rationalize(1.0)
     elseif d == 1
@@ -23,11 +36,23 @@ function ChebyshevPoly(d::Int, x)
     end
 end
 
+"""
+    ChebyshevPolyExact(d::Int)::Vector{Int}
+
+Generate a vector of integer coefficients of the Chebyshev polynomial of degree `d` in one variable.
+
+# Arguments
+- `d::Int`: Degree of the Chebyshev polynomial.
+
+# Returns
+- A vector of integer coefficients of the Chebyshev polynomial of degree `d`.
+
+# Example
+```julia
+ChebyshevPolyExact(3)
+```
+"""
 function ChebyshevPolyExact(d::Int)::Vector{Int}
-    # =======================================================
-    # Function to generate vector of integer coefficients of Chebyshev polynomial of degree d. 
-    # In one variable. 
-    # =======================================================
     if d == 0
         return [1]
     elseif d == 1
@@ -40,11 +65,24 @@ function ChebyshevPolyExact(d::Int)::Vector{Int}
     end
 end
 
+"""
+    BigFloatChebyshevPoly(d::Int, x)
+
+Generate the Chebyshev polynomial with `BigFloat` coefficients of degree `d` in the variable `x`.
+
+# Arguments
+- `d::Int`: Degree of the Chebyshev polynomial.
+- `x`: Variable for the polynomial.
+
+# Returns
+- The Chebyshev polynomial of degree `d` in the variable `x` with `BigFloat` coefficients.
+
+# Example
+```julia
+BigFloatChebyshevPoly(3, x)
+```
+"""
 function BigFloatChebyshevPoly(d::Int, x)
-    # =======================================================
-    # Function to generate Chebyshev polynomial with BigFLoat coefficients 
-    # of degree d in the variable x 
-    # =======================================================
     if d == 0
         return BigFloat(1.0)
     elseif d == 1
@@ -61,31 +99,24 @@ function BigFloatChebyshevPoly(d::Int, x)
     end
 end
 
-function RationalChebyshevPoly(d::Int, x)
-    # =======================================================
-    # Function to generate Chebyshev polynomial with Rational coefficients 
-    # of degree d in the variable x 
-    # =======================================================
-    if d == 0
-        return Rational(1.0)
-    elseif d == 1
-        return x
-    else
-        T_prev = Rational(1.0)
-        T_curr = x
-        for n in 2:d
-            T_next = 2 * x * T_curr - T_prev
-            T_prev = T_curr
-            T_curr = T_next
-        end
-        return T_curr
-    end
-end
+"""
+    SupportGen(n::Int, d::Int)::NamedTuple
 
+Compute the support of a polynomial of total degree at most `d`.
+
+# Arguments
+- `n::Int`: Number of variables.
+- `d::Int`: Maximum degree of the polynomial.
+
+# Returns
+- A `NamedTuple` containing the matrix of support and its size attributes.
+
+# Example
+```julia
+SupportGen(2, 3)
+```
+"""
 function SupportGen(n::Int, d::Int)::NamedTuple
-    # =======================================================
-    # Function to compute the support of polynomial of total degree at most $d$. 
-    # =======================================================
     ranges = [0:d for _ in 1:n]     # Generate ranges for each dimension
     iter = Iterators.product(ranges...) # Create the Cartesian product over the ranges
     # Initialize a list to hold valid tuples
@@ -107,11 +138,26 @@ function SupportGen(n::Int, d::Int)::NamedTuple
     return (data=lambda_matrix, size=size(lambda_matrix))
 end
 
-function lambda_vandermonde(Lambda, S)
-    # =======================================================
-    # Generate Vandermonde like matrix in Chebyshev tensored basis.
-    # Lambda: matrix of the support of the polynomial space
-    # =======================================================
+"""
+    lambda_vandermonde(Lambda, S)
+
+Generate a Vandermonde-like matrix in the Chebyshev tensored basis.
+
+# Arguments
+- `Lambda`: NamedTuple of the support of the polynomial space. Make sure what structure it is to type it. 
+- `S`: Sample points.
+
+# Returns
+- A Vandermonde-like matrix.
+
+# Example
+```julia
+Lambda = [0 1; 1 0; 1 1]
+S = [0.5 0.5; -0.5 -0.5; 0.0 0.0]
+lambda_vandermonde(Lambda, S)
+```
+"""
+function lambda_vandermonde(Lambda::NamedTuple, S)
     m, N = Lambda.size
     n, N = size(S)
     V = zeros(n, m)
@@ -129,14 +175,20 @@ end
 
 
 # ======================================================= For Msolve =======================================================
+"""
+    process_output_file(file_path::String)
+
+Parse the output file generated by `msolve`.
+
+# Arguments
+- `file_path::String`: Path to the output file.
+
+# Returns
+- Parsed content of the output file.
+"""
 function process_output_file(file_path)
-    """
-    Parse the output file generated by msolve 
-    """
-    # Read the file content
-    content = read(file_path, String)
-    # Extract the array starting from line 2
-    array_start = findfirst(r"\[\[\[", content)[1]
+    content = read(file_path, String)    # Read the file content
+    array_start = findfirst(r"\[\[\[", content)[1] # Extract the array starting from line 2
     array_end = findfirst(r"\]\]\]", content)[end]
     if array_start === nothing
         error("No array found starting from line 2.")
@@ -148,11 +200,19 @@ function process_output_file(file_path)
     return evaled
 end
 
+"""
+    process_output_file(file_path::String)
+
+Parse the output file generated by `msolve`.
+
+# Arguments
+- `file_path::String`: Path to the output file.
+
+# Returns
+- Parsed content of the output file.
+
+"""
 function parse_point(X::Vector{Vector{Vector{BigInt}}})::Vector{Rational{BigInt}}
-    """
-    A point is a vector of n boxes (vector).
-    The top and lower bound of each box is a vector representig a rational number. [numer, exponent.denom (power of 2)]
-    """
     pts = Vector{Rational{BigInt}}()
     for x in X
         numer_low = x[1][1]
