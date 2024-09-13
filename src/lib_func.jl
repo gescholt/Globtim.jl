@@ -163,6 +163,16 @@ function CrossInTray(xx::Vector{Float64})::Float64
     return -0.001 * (abs(sin(xx[1]) * sin(xx[2]) * exp(abs(100 - sqrt(xx[1]^2 + xx[2]^2) / pi))) + 1)^(1 / 10)
 end
 
+function Deuflhard(xx::Vector{Float64})::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Domain: [-1.2, 1.2]^2.
+    # =======================================================
+    term1 = (exp(xx[1]^2 + xx[2]^2) - 3)^2
+    term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
+    return term1 + term2
+end
+
 # ======================================================= 3D Functions =======================================================
 # Define the function on domain [-10, 10]^3.
 old_alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
@@ -248,11 +258,3 @@ function alpine2(x::Vector{Float64}, ndim::Int)::Float64
     
 end
 
-# Example usage
-# x = [1.0, 2.0, 3.0]
-# result = alpine(x)
-# println("Result: $result")
-
-# x = [1.0, 2.0]
-# result = schubert(x)
-# println("Result: $result")
