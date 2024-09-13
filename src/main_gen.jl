@@ -1,14 +1,3 @@
-using CSV
-using DataFrames
-using DynamicPolynomials
-using LinearSolve
-using LinearAlgebra
-
-include("lib_func.jl")
-include("Samples.jl")
-include("ApproxConstruct.jl")
-
-
 # ======================================================= Structures ======================================================
 struct ApproxPoly
     coeffs::Vector
@@ -147,4 +136,3 @@ function main_nd(n::Int, d::Int, coeffs::Vector{Float64})::Vector{Rational{BigIn
 end
 
 
-end
