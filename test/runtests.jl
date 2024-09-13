@@ -19,13 +19,14 @@ camel_df = DataFrame(CSV.File(camel_file_path))
 f = camel
 
 # Example test cases for functions in Globtim
-@polyvar x[1:2] # Define the variables
+n = 2 
+@polyvar x[1:n] # Define the variables
 d = 6           # Define the degree of the polynomial approximant
 C = 5.0         # Define the scaling factor
 
 
-poly_approx = MainGenerate(f, 2, d, 0.5, 0.8, C, 0.2) # computes the approximant in Chebyshev basis
-ap = main_2d(d, poly_approx.coeffs, x) # converts the approximant to the coefficients in the Lexicographic order  
+poly_approx = MainGenerate(f, n, d, 0.5, 0.8, C, 0.2) # computes the approximant in Chebyshev basis
+ap = main_nd(n, d, poly_approx.coeffs)
 # Convert the system to Float64 coefficients because problem with homotopy continuation
 PolynomialApproximant = sum(Float64.(ap) .* MonomialVector(x, 0:d))
 grad = differentiate.(PolynomialApproximant, x)

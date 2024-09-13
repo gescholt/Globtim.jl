@@ -1,6 +1,6 @@
 module Globtim
 
-export MainGenerate, ApproxPoly, main_nd, process_output_file, parse_point
+export MainGenerate, ApproxPoly, main_nd, process_output_file, parse_point, camel, CrossInTray, Deuflhard
 
 using CSV
 using DataFrames
