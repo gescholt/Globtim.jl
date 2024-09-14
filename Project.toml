@@ -19,5 +19,5 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
+HomotopyContinuation = "~2.0, 2"
 julia = "1.10"
-HomotopyContinuation = "~2.0"
