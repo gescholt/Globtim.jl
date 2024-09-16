@@ -13,12 +13,11 @@ In active development.
 
 ## Installation
 
-Git clone this repository and using the `Pkg` Julia module,  activate this module with
+The package is directly available from the Julia REPL.
 
 ```julia
-using Pkg 
-Pkg.activate(".")
-Pkg.test()
+]
+add Globtim
 ```
 
 The `exact` examples require [Msolve](https://msolve.lip6.fr/) to be installed. 
