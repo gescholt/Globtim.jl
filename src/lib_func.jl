@@ -1,13 +1,14 @@
 ## Library of functions to approximate ##
 
 # Define a struct to hold the Gaussian parameters
+@doc nothing
 struct GaussianParams
     centers::Matrix{Float64}
     variances::Vector{Float64}
 end
 
 # ======================================================= Random noise =======================================================
-
+@doc nothing
 function random_noise(x::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -16,7 +17,7 @@ function random_noise(x::Vector{Float64})::Float64
     return rand()
 end
 
-
+@doc nothing
 function bivariate_gaussian_noise(params::GaussianParams)::Vector{Float64}
     # =======================================================
     #   Not Rescaled
@@ -30,10 +31,12 @@ function bivariate_gaussian_noise(params::GaussianParams)::Vector{Float64}
 end
 
 # ======================================================= 2D Functions =======================================================
+@doc nothing
 function tref(x)
     return exp(sin(50 * x[1])) + sin(60 * exp(x[2])) + sin(70 * sin(x[1])) + sin(sin(80 * x[2])) - sin(10 * (x[1] + x[2])) + (x[1]^2 + x[2]^2) / 4
 end
 
+@doc nothing
 function Ackley(xx::Vector{Float64}; a=20, b=.2, c=2*pi):Float64
     # =======================================================
     #   Not Rescaled
@@ -43,6 +46,7 @@ function Ackley(xx::Vector{Float64}; a=20, b=.2, c=2*pi):Float64
     return -a * exp(-b * sqrt(sum(xx .^ 2) / length(xx))) - exp(sum(cos.(c .* xx) / length(xx))) + a + exp(1)
 end
 
+@doc nothing
 function camel_3(x)
     # =======================================================
     #   Not Rescaled
@@ -52,6 +56,7 @@ function camel_3(x)
     return 2*x[1]^2 - 1.05*x[1]^4 + x[1]^6/6 + x[1]*x[2] + x[2]^2
 end
 
+@doc nothing
 function camel(x) 
     # =======================================================
     #   Not Rescaled
@@ -61,7 +66,7 @@ function camel(x)
     return (4-2.1*x[1]^2 + x[1]^4/3)*x[1]^2 + x[1]*x[2] + (-4 + 4*x[2]^2)*x[2]^2
 end
 
-# Define the Schubert function
+@doc nothing
 function shubert(xx::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -77,7 +82,7 @@ function shubert(xx::Vector{Float64})::Float64
     return sum1 * sum2
 end
 
-
+@doc nothing
 function dejong5(xx::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -108,6 +113,7 @@ function dejong5(xx::Vector{Float64})::Float64
     return y
 end
 
+@doc nothing
 function easom(x::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -119,15 +125,14 @@ function easom(x::Vector{Float64})::Float64
 end
 
 
-
-# Function to initialize the Gaussian parameters
+@doc nothing
 function init_gaussian_params(N::Int, scale::Float64)::GaussianParams
     centers = 2 .* rand(N, 2) .- 1  # Preallocate random center points
     variances = scale.*rand(N)  # Preallocate random variances
     return GaussianParams(centers, variances)
 end
 
-# Function to evaluate the Gaussian sum using precomputed parameters
+@doc nothing
 function rand_gaussian(x::Vector{Float64}, params::GaussianParams)::Float64
     # =======================================================
     #   Not Rescaled
@@ -145,6 +150,7 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams)::Float64
     return total_sum
 end
 
+@doc nothing
 function HolderTable(xx::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -154,6 +160,7 @@ function HolderTable(xx::Vector{Float64})::Float64
     return -abs(sin(xx[1]) * cos(xx[2]) * exp(abs(1 - sqrt(xx[1]^2 + xx[2]^2) / pi)))
 end
 
+@doc nothing
 function CrossInTray(xx::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -163,6 +170,7 @@ function CrossInTray(xx::Vector{Float64})::Float64
     return -0.001 * (abs(sin(xx[1]) * sin(xx[2]) * exp(abs(100 - sqrt(xx[1]^2 + xx[2]^2) / pi))) + 1)^(1 / 10)
 end
 
+@doc nothing
 function Deuflhard(xx::Vector{Float64})::Float64
     # =======================================================
     #   Not Rescaled
@@ -182,13 +190,14 @@ old_alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
                  
 # ======================================================= 4D Functions =======================================================
 
+@doc nothing
 function shubert_4d(xx::Vector{Float64})::Float64
     # Sum of two Shubert 2D functions by coordinates 
     # Domain: [-10, 10]^4.
     return schubert(xx[1:2]) + schubert(xx[3:4])
-
 end
 
+@doc nothing
 function camel_4d(x)
     # =======================================================
     #   Not Rescaled
@@ -198,6 +207,7 @@ function camel_4d(x)
     return camel(x[1:2]) + camel(x[3:4])
 end
 
+@doc nothing
 function camel_3_by_3(x)
     # =======================================================
     #   Not Rescaled
@@ -207,6 +217,7 @@ function camel_3_by_3(x)
     return camel_3(x[1:2]) * camel_3(x[3:4])
 end
 
+@doc nothing
 function cosine_mixture(x)
     # =======================================================
     #   Not Rescaled
@@ -217,7 +228,7 @@ function cosine_mixture(x)
 end
 
 # ======================================================= 6D Functions =======================================================
-
+@doc nothing
 function camel_3_6d(x)
     # =======================================================
     #   Not Rescaled
@@ -228,7 +239,7 @@ function camel_3_6d(x)
 end
 
 # ======================================================= nD Functions =======================================================
-
+@doc nothing
 function Csendes(x, dims=4)
     # =======================================================
     #   Not Rescaled
@@ -238,7 +249,7 @@ function Csendes(x, dims=4)
     return sum(x[i]^6*(2+sin(1/x[i])) for i in 1:dims)    
 end
 
-
+@doc nothing
 function alpine1(x::Vector{Float64}; ndim::Int=2)::Float64
     # =======================================================
     #   Not Rescaled
@@ -248,6 +259,7 @@ function alpine1(x::Vector{Float64}; ndim::Int=2)::Float64
     return sum(abs(x[i] * sin(x[i]) + 0.1 * x[i]) for i in 1:ndim)
 end
 
+@doc nothing
 function alpine2(x::Vector{Float64}, ndim::Int)::Float64
     # =======================================================
     #   Not Rescaled
