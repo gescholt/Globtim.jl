@@ -1,4 +1,5 @@
 ## Library of functions to approximate ##
+using Distributions
 
 # Define a struct to hold the Gaussian parameters
 @doc nothing
@@ -179,6 +180,12 @@ function Deuflhard(xx::Vector{Float64})::Float64
     term1 = (exp(xx[1]^2 + xx[2]^2) - 3)^2
     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
     return term1 + term2
+end
+
+@doc nothing
+function noisy_Deuflhard(xx::Vector{Float64}; mean::Float64=0.0, stddev::Float64=5.0)::Float64
+    noise = rand(Distributions.Normal(mean, stddev))
+    return Deuflhard(xx) + noise
 end
 
 # ======================================================= 3D Functions =======================================================
