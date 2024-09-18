@@ -1,5 +1,5 @@
 ## Library of functions to approximate ##
-using Distributions
+
 
 # Define a struct to hold the Gaussian parameters
 @doc nothing

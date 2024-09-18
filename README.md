@@ -25,4 +25,5 @@ The other examples rely on HomotopyContinuation.jl for the resolution of the pol
 
 ## Examples
 
+
 See the description page for this package at [Globtim](https://gescholt.github.io/globtim).
