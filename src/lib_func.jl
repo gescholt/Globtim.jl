@@ -126,9 +126,27 @@ function easom(x::Vector{Float64})::Float64
 end
 
 
-@doc nothing
-function init_gaussian_params(N::Int, scale::Float64)::GaussianParams
-    centers = 2 .* rand(N, 2) .- 1  # Preallocate random center points
+"""
+    init_gaussian_params(n::Int, N::Int, scale::Float64) -> GaussianParams
+
+Initialize Gaussian parameters with random centers and variances.
+
+# Arguments
+- `n::Int`: Dimension of the domain.
+- `N::Int`: Number of Gaussian functions.
+- `scale::Float64`: Scaling factor for the variances.
+
+# Returns
+- `GaussianParams`: A struct containing the centers and variances of the Gaussian functions.
+
+# Example
+```julia
+params = init_gaussian_params(3, 5, 2.0)
+println(params.centers)  # Prints the centers of the Gaussian functions
+println(params.variances)  # Prints the variances of the Gaussian functions
+"""
+function init_gaussian_params(n::Int, N::Int, scale::Float64)::GaussianParams
+    centers = 2 .* rand(N, n) .- 1  # Preallocate random center points
     variances = scale.*rand(N)  # Preallocate random variances
     return GaussianParams(centers, variances)
 end

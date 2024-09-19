@@ -15,6 +15,9 @@ A structure to represent the polynomial approximation and related data.
 # Description
 The `ApproxPoly` struct is used to store the results of a polynomial approximation, including the coefficients of the polynomial, the norm of the approximation, the number of grid points, the scaling factor, the grid of points, and the values of the function at the grid points.
 
+# Comment
+It should also return the degree of the object
+
 # Example
 ```julia
 coeffs = [1.0, 2.0, 3.0]
