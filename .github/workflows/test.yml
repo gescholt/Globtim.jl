@@ -8,21 +8,50 @@ on:
     branches:
       - clean-version
 
+env:
+  JULIA_NUM_THREADS: 4
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: ['1.10'] # You can add other versions or 'nightly' if needed
+        julia-arch: [x64]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Julia
-      uses: julia-actions/setup-julia@v1
-      with:
-        version: '1.10'
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
 
-    - name: Install dependencies
-      run: julia -e 'using Pkg; Pkg.instantiate()'
+      - name: Cache Julia packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-julia-${{ matrix.julia-version }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-julia-${{ matrix.julia-version }}-
+            ${{ runner.os }}-julia-
+            ${{ runner.os }}-
 
-    - name: Run tests
-      run: julia -e 'using Pkg; Pkg.test()'
+      - name: Install dependencies
+        run: julia -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Show project status
+        run: julia -e 'using Pkg; Pkg.status()'
+
+      - name: Run tests
+        run: julia -e 'using Pkg; Pkg.test()'
+
+      # - name: Process coverage
+      #   uses: julia-actions/julia-processcoverage@v1
+
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     file: lcov.info
