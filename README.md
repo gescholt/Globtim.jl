@@ -1,3 +1,5 @@
+![Run Tests](https://github.com/gescholt/globtim.jl/actions/workflows/test.yml/badge.svg)
+
 ## Global optimization of continuous functions over compact domains
 
 The purpose of the Globtim package is to compute the set of all local minima of a real continuous function over a rectangular domain in $$ \R^n $$. This is carried out in 3 main steps:
@@ -16,8 +18,8 @@ In active development.
 The package is directly available from the Julia REPL.
 
 ```julia
-]
-add Globtim
+julia> ]
+pkg> add Globtim
 ```
 
 The `exact` examples require [Msolve](https://msolve.lip6.fr/) to be installed. 
