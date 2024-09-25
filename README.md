@@ -23,7 +23,7 @@ pkg> add Globtim
 ```
 
 The `exact` examples require [Msolve](https://msolve.lip6.fr/) to be installed. 
-The other examples rely on HomotopyContinuation.jl for the resolution of the polynomial system encoding the critical points of the objective function. 
+The other examples rely on [HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/) for the resolution of the polynomial system encoding the critical points of the objective function. 
 
 ## Examples
 

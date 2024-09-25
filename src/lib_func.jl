@@ -6,8 +6,11 @@
 struct GaussianParams
     centers::Matrix{Float64}
     variances::Vector{Float64}
-end
+    alt_signs::Union{Vector{Float64},Nothing}
 
+    GaussianParams(centers::Matrix{Float64}, variances::Vector{Float64}) = new(centers, variances, nothing)
+    GaussianParams(centers::Matrix{Float64}, variances::Vector{Float64}, alt_signs::Vector{Float64}) = new(centers, variances, alt_signs)
+end
 # ======================================================= Random noise =======================================================
 @doc nothing
 function random_noise(x::Vector{Float64})::Float64
@@ -137,7 +140,9 @@ Initialize Gaussian parameters with random centers and variances.
 - `scale::Float64`: Scaling factor for the variances.
 
 # Returns
-- `GaussianParams`: A struct containing the centers and variances of the Gaussian functions.
+- `GaussianParams`: A struct containing the centers, variances of 
+the Gaussian functions and a random boolean vector to make a signed sum 
+of the distributions. 
 
 # Example
 ```julia
@@ -146,9 +151,17 @@ println(params.centers)  # Prints the centers of the Gaussian functions
 println(params.variances)  # Prints the variances of the Gaussian functions
 """
 function init_gaussian_params(n::Int, N::Int, scale::Float64)::GaussianParams
-    centers = 2 .* rand(N, n) .- 1  # Preallocate random center points
+    centers = .8 .* rand(N, n)  # Preallocate random center points
     variances = scale.*rand(N)  # Preallocate random variances
-    return GaussianParams(centers, variances)
+    alt_signs = [rand(Bool) ? 1.0 : -1.0 for _ in 1:N]
+    # Apply random sign to each coordinate of the center points
+    for i in 1:N
+        for j in 1:n
+            sign = rand(Bool) ? 1.0 : -1.0
+            centers[i, j] *= sign
+        end
+    end
+    return GaussianParams(centers, variances, alt_signs)
 end
 
 @doc nothing
@@ -157,15 +170,18 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams)::Float64
     #   Not Rescaled
     #   Sum of N Gaussian function centered at random points in the domain with random variance.
     #   Domain: [-1, 1]^2.
+    #   params: include centers, variance and vector of random signs.  
     # =======================================================
     total_sum = 0.0
-
     for i in 1:length(params.variances)
         diff = x .- params.centers[i, :]
         gaussian = exp(-sum(diff .^ 2) / (2 * params.variances[i]^2))
-        total_sum += gaussian
     end
-
+    if params.alt_signs !== nothing
+        total_sum = dot(params.alt_signs, gaussian)
+    else
+        total_sum = sum(gaussian)
+    end
     return total_sum
 end
 
