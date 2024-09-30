@@ -15,7 +15,6 @@ IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
-Plotly = "58dd65bb-95f3-509e-9936-c39a10fdeae7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
@@ -28,5 +27,4 @@ HomotopyContinuation = "~2.11.0, 2"
 IterTools = "~1.10.0"
 LinearSolve = "~2.35.0, 2"
 Optim = "~1.9.4"
-Plotly = "0.4.1"
 julia = "1.10"
