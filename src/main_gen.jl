@@ -37,6 +37,14 @@ struct ApproxPoly
     z::Vector{Float64}
 end
 
+struct test_input
+    prec::Tuple{Float64,Float64} # alpha and delta, probabilistic parameters
+    noise::Tuple{Float64, Float64}
+    tolerance::Float64
+    minimizer_size::Vector
+    objective::Function
+end
+
 """
     MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
 
