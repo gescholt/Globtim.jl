@@ -233,3 +233,37 @@ function parse_point(X::Vector{Vector{Vector{BigInt}}})::Vector{Rational{BigInt}
     end
     return (pts)
 end
+
+"""
+    check_parameter(value, threshold; prompt=true)
+
+Checks if the given `value` exceeds the specified `threshold`. If it does and `prompt` is `true`,
+prompts the user with a yes/no question: "Are you sure you want to proceed?".
+
+# Arguments
+- `value::Number`: The value to be checked.
+- `threshold::Number`: The threshold value to compare against.
+- `prompt::Bool`: Optional keyword argument (default is `true`). If `false`, the function will not prompt the user.
+
+# Returns
+- `Bool`: Returns `true` if the user confirms to proceed or if the value does not exceed the threshold.
+          Returns `false` if the user decides to abort.
+"""
+function check_parameter(value, threshold; prompt=true)
+    if value > threshold && prompt
+        while true
+            println("Are you sure you want to proceed? (yes/no)")
+            answer = readline()
+            answer = lowercase(answer)
+            if answer == "yes"
+                return true
+            elseif answer == "no"
+                return false
+            else
+                println("Invalid input. Please type 'yes' or 'no'.")
+            end
+        end
+    else
+        return true
+    end
+end
