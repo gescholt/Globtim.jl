@@ -2,7 +2,7 @@ name = "Globtim"
 uuid = "00da9514-6261-47e9-8848-33640cb1e528"
 license = "GNU GENERAL PUBLIC LICENSE"
 authors = ["Georgy Scholten <scholtengeorgy@gmail.com>"]
-version = "0.1.5"
+version = "0.1.2"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
