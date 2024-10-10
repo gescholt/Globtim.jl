@@ -36,14 +36,64 @@ struct ApproxPoly
     grid::Matrix{Float64}
     z::Vector{Float64}
 end
+"""
+    struct test_input
+
+    Contains all the parameters to run a test. 
+
+    sample_scale: scales the range of the square on which we sample 
+    reduce_samples: Take only a precentage of the required samples if sample set size gets too big. 
+
+"""
 
 struct test_input
+    dim::Int
     prec::Tuple{Float64,Float64} # alpha and delta, probabilistic parameters
-    noise::Tuple{Float64, Float64}
     tolerance::Float64
-    minimizer_size::Vector
+    noise::Tuple{Float64,Float64}
+    sample_scale::Float64
+    reduce_samples::Float64
+    # minimizer_size::Vector
     objective::Function
 end
+
+"""
+    create_test_input()
+Generate standard inputs for test function 
+"""
+# Function to create a pre-populated instance of test_input
+function create_test_input(f::Function; n = 2, alpha = .1, delta = .5, reduce_samples = 1.)::test_input
+    # Set predefined values
+    prec = (alpha, delta)  # Example values for alpha and delta
+    noise = (0., 0.)   # Example values for noise parameters
+    tolerance = 2e-3     # Example tolerance value
+    sample_scale = 1.0    # Reduce number of taken samples
+    return test_input(n, prec, tolerance, noise, sample_scale, reduce_samples, f)
+end
+
+"""
+Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
+
+"""
+function Constructor(T::test_input, degree::Int)::ApproxPoly
+    p = nothing  # Initialize p to ensure it is defined before the loop
+    while true # Potential infinite loop
+        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_scale, T.reduce_samples)
+        if p.nrm < T.tolerance
+            println("attained the desired L2-norm: ", p.nrm)
+            println("Degree :$degree ")
+            break
+        else 
+            println("current L2-norm: ", p.nrm)
+            println("Number of samples: ", p.N)
+            degree += 1
+            println("Increase degree to: $degree")
+        end
+    end 
+    println("current L2-norm: ", p.nrm)
+    println("Number of samples: ", p.N)
+    return p 
+end 
 
 """
     MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly

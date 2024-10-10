@@ -1,5 +1,6 @@
 ## Library of functions to approximate ##
-
+using LinearAlgebra
+using Distributions
 
 # Define a struct to hold the Gaussian parameters
 @doc nothing
@@ -173,11 +174,14 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams)::Float64
     #   params: include centers, variance and vector of random signs.  
     # =======================================================
     total_sum = 0.0
+    gaussian = nothing 
     for i in 1:length(params.variances)
         diff = x .- params.centers[i, :]
         gaussian = exp(-sum(diff .^ 2) / (2 * params.variances[i]^2))
     end
     if params.alt_signs !== nothing
+        println(params.alt_signs)
+        println(gaussian)
         total_sum = dot(params.alt_signs, gaussian)
     else
         total_sum = sum(gaussian)
