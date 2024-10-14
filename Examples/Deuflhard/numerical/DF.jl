@@ -1,8 +1,18 @@
 using Pkg
-using DynamicPolynomials, HomotopyContinuation, ProgressLogging, DataFrames
 Pkg.activate(joinpath(ENV["HOME"], "Globtim.jl"))
 Pkg.instantiate()
+using DynamicPolynomials, HomotopyContinuation, ProgressLogging, DataFrames
 using Globtim
+using GLMakie
+using GLFW
+GLMakie.activate!()
+
+# Ensure GLFW is initialized
+if !GLFW.Init()
+    error("GLFW could not be initialized")
+end
+
+GLMakie.closeall()
 
 T = create_test_input(Deuflhard, sample_range=1.1, tolerance = 1e-4)
 Pol = Constructor(T, 2)
@@ -24,16 +34,13 @@ h_y = Float64[point[2] for point in filtered_points] # Initialize the y vector
 h_z = map(p -> T.objective([p[1], p[2]]), zip(T.sample_range * h_x, T.sample_range * h_y))
 df = DataFrame(x=T.sample_range * h_x, y=T.sample_range * h_y, z=h_z); # Create a DataFrame
 
+# Plotting # 
 function peaks(; div=49)
     x = LinRange(-1.0 * T.sample_range, 1.0 * T.sample_range, div)
     y = LinRange(-1.0 * T.sample_range, 1.0 * T.sample_range, div)
     z = [T.objective([i, j]) for i in x, j in y]
     return (x, y, z)
 end
-
-using GLMakie
-GLMakie.activate!()
-GLMakie.closeall()
 
 x, y, z = peaks()
 with_theme(theme_dark()) do
@@ -46,7 +53,7 @@ with_theme(theme_dark()) do
         colormap=cmap)
     # bug, colormap cannot be transparent
     contourf!(axs[2], x, y, z; levels=-0:0.01:4.8, colormap=cmap)
-    contour3d!(axs[2], x, y, z; levels=-0:0.05:4.8, colormap=cmap,
+    contour3d!(axs[2], x, y, z; levels=-0:0.01:4.8, colormap=cmap,
         transparency=true, linewidth=2)
 
     # add the computed critical points
@@ -55,5 +62,5 @@ with_theme(theme_dark()) do
 
     limits!(axs[1], -1 * T.sample_range, 1 * T.sample_range, -1 * T.sample_range, 1 * T.sample_range)
     hidedecorations!.(axs; grid=false)
-    fig
+    display(fig)
 end
