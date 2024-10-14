@@ -51,8 +51,8 @@ struct test_input
     prec::Tuple{Float64,Float64} # alpha and delta, probabilistic parameters
     tolerance::Float64
     noise::Tuple{Float64,Float64}
-    sample_scale::Float64
-    reduce_samples::Float64
+    sample_range::Float64
+    reduce_samples::Float64 
     # minimizer_size::Vector
     objective::Function
 end
@@ -62,13 +62,12 @@ end
 Generate standard inputs for test function 
 """
 # Function to create a pre-populated instance of test_input
-function create_test_input(f::Function; n = 2, alpha = .1, delta = .5, reduce_samples = 1.)::test_input
+function create_test_input(f::Function; n=2, tolerance = 2e-3, alpha=0.1, delta=0.5, sample_range = 1.0, reduce_samples = 1.0)::test_input
     # Set predefined values
     prec = (alpha, delta)  # Example values for alpha and delta
     noise = (0., 0.)   # Example values for noise parameters
-    tolerance = 2e-3     # Example tolerance value
-    sample_scale = 1.0    # Reduce number of taken samples
-    return test_input(n, prec, tolerance, noise, sample_scale, reduce_samples, f)
+    #sample range: rescales the [-1, 1]^n hypercube ?
+    return test_input(n, prec, tolerance, noise, sample_range, reduce_samples, f)
 end
 
 """
