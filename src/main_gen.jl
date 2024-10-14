@@ -6,6 +6,7 @@ A structure to represent the polynomial approximation and related data.
 
 # Fields
 - `coeffs::Vector`: The coefficients of the polynomial approximation.
+_ `degree::Int`: The degree of the polynomial approximation.
 - `nrm::Float64`: The norm of the polynomial approximation.
 - `N::Int`: The number of grid points used in the approximation.
 - `scale_factor::Float64`: The scaling factor applied to the domain.
@@ -30,6 +31,7 @@ approx_poly = ApproxPoly(coeffs, nrm, N, scale_factor, grid, z)
 """
 struct ApproxPoly
     coeffs::Vector
+    degree::Int
     nrm::Float64
     N::Int
     scale_factor::Float64
@@ -77,7 +79,7 @@ Constructor(T, degree) takes a test input and a starting degree and computes the
 function Constructor(T::test_input, degree::Int)::ApproxPoly
     p = nothing  # Initialize p to ensure it is defined before the loop
     while true # Potential infinite loop
-        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_scale, T.reduce_samples)
+        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples)
         if p.nrm < T.tolerance
             println("attained the desired L2-norm: ", p.nrm)
             println("Degree :$degree ")
@@ -145,7 +147,7 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_fa
     # Now solve the problem with proper choice of compute method. 
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
     nrm = norm(VL * sol.u - F)/(GN^n) # Watch out, we divide by GN to get the discrete norm
-    return ApproxPoly(sol, nrm, GN, scale_factor, matrix_from_grid, F)
+    return ApproxPoly(sol, d, nrm, GN, scale_factor, matrix_from_grid, F)
 end
 
 
