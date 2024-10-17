@@ -90,7 +90,7 @@ function Error_distance(p_test::Vector{Float64};
     end
     data_sample = sample_data(model, measured_data, time_interval, p_test, ic, datasize)
     Y_test = data_sample[first(keys(data_sample))]
-    return norm(Y_true - Y_test)
+    return norm(Y_true - Y_test, 1)
 end
 
 ```Polynomial system solving functions```
@@ -101,6 +101,9 @@ end
 function symbolic_solve(TR::test_input, Pol::ApproxPoly)::DataFrame
     loc = "inputs.ms"
     file_path_output = "outputs.ms" # File path of the output file
+    println("Polynomial degree: ", Pol.degree)
+    println("Polynomial coefficients: ", size(Pol.coeffs))
+    println("Dimension: ", TR.dim)
     ap = main_nd(TR.dim, Pol.degree, Pol.coeffs)
     @polyvar(x[1:TR.dim]) # Define polynomial ring 
     # Expand the polynomial approximant to the standard monomial basis in the Lexicographic order w.r.t x
@@ -110,6 +113,8 @@ function symbolic_solve(TR::test_input, Pol::ApproxPoly)::DataFrame
         println(file, 0)
     end
     # Define the polynomial approximant 
+    println("size coeffs: ", size(Pol.coeffs))
+    println("size ap: ", size(ap))
     PolynomialApproximant = sum(ap .* MonomialVector(x, 0:Pol.degree))
     for i in 1:TR.dim
         partial = differentiate(PolynomialApproximant, x[i])
@@ -139,6 +144,7 @@ function symbolic_solve(TR::test_input, Pol::ApproxPoly)::DataFrame
     end
 
     real_solutions = [TR.sample_range * point .+ TR.center for point in real_pts]
+    println("real solutions: ", real_solutions)
 
     df = DataFrame(
         critical_point=real_solutions,
@@ -179,12 +185,20 @@ TR4 = create_test_input(Error_distance, n=3,
     sample_range=0.25,
     reduce_samples=0.6)
 
+TR5 = create_test_input(Error_distance, n=3,
+    tolerance=1e-5,
+    center=p_true,
+    sample_range=0.25,
+    reduce_samples=0.8)
+
+``` By simple inspection of the polynomials, it seems there is a stabilization of the coefficients, we might be lacking precisions in floats ?```
 Pol1 = Constructor(TR1, 2)
 Pol2 = Constructor(TR2, 2)
 Pol3 = Constructor(TR3, 2)
 Pol4 = Constructor(TR4, 2)
+Pol5 = Constructor(TR5, 2)
 # Solve the polynomial system
-println("degrees attained: ", [Pol1.degree, Pol2.degree, Pol3.degree])
+println("degrees attained: ", [Pol1.degree, Pol2.degree, Pol3.degree, Pol4.degree, Pol5.degree])
 
 ```
 Run with Msolve. 
@@ -192,11 +206,104 @@ Run with Msolve.
 df1 = symbolic_solve(TR1, Pol1)
 df2 = symbolic_solve(TR2, Pol2)
 df3 = symbolic_solve(TR3, Pol3)
+df4 = symbolic_solve(TR4, Pol4)
+df5 = symbolic_solve(TR5, Pol5)
 
-p_true
 sort!(df1, :point_distance)
 sort!(df2, :point_distance)
 sort!(df3, :point_distance)
+sort!(df4, :point_distance)
+sort!(df5, :point_distance)
+
+TR = create_test_input(Error_distance, n=3,
+    tolerance=1e-6,
+    center=p_true,
+    sample_range=0.1,
+    reduce_samples=0.3)
+Pol = Constructor(TR, 2)
+df6 = symbolic_solve(TR, Pol)
+df7 = symbolic_solve(TR, Pol)
+df8 = symbolic_solve(TR, Pol)
+df9 = symbolic_solve(TR, Pol)
+df10 = symbolic_solve(TR, Pol)
+df11 = symbolic_solve(TR, Pol)
+sort!(df6, :point_distance)
+sort!(df7, :point_distance)
+sort!(df8, :point_distance)
+
+sort!(df11, :eval_distance)
+p_true
+
+``` Try sparsity -- requires deeper changes in the code. ```
+using Plots
+histogram(abs.(Pol1.coeffs))
+sort(abs.(Pol1.coeffs))
+
+new_coeffs_vector_1 = Vector([abs(coeff) < 1e-8 ? 0.0 : coeff for coeff in Pol1.coeffs])
+new_coeffs_vector_2 = [abs(coeff) < 1e-8 ? 0.0 : coeff for coeff in Pol2.coeffs]
+new_coeffs_vector_3 = [abs(coeff) < 1e-8 ? 0.0 : coeff for coeff in Pol3.coeffs]
+new_coeffs_vector_4 = [abs(coeff) < 1e-8 ? 0.0 : coeff for coeff in Pol4.coeffs]
+new_coeffs_vector_5 = [abs(coeff) < 1e-8 ? 0.0 : coeff for coeff in Pol5.coeffs]
+
+Pol1_sparse = ApproxPoly(
+    new_coeffs_vector_1,
+    Pol1.degree,
+    Pol1.nrm,
+    Pol1.N,
+    Pol1.scale_factor,
+    Pol1.grid,
+    Pol1.z
+)
+
+
+Pol2_sparse = ApproxPoly(
+    new_coeffs_vector_2,
+    Pol2.degree,
+    Pol2.nrm,
+    Pol2.N,
+    Pol2.scale_factor,
+    Pol2.grid,
+    Pol2.z
+)
+
+Pol3_sparse = ApproxPoly(
+    new_coeffs_vector_3,
+    Pol3.degree,
+    Pol3.nrm,
+    Pol3.N,
+    Pol3.scale_factor,
+    Pol3.grid,
+    Pol3.z
+)
+
+Pol4_sparse = ApproxPoly(
+    new_coeffs_vector_4,
+    Pol4.degree,
+    Pol4.nrm,
+    Pol4.N,
+    Pol4.scale_factor,
+    Pol4.grid,
+    Pol4.z
+)
+Pol5_sparse = ApproxPoly(
+    new_coeffs_vector_5,
+    Pol5.degree,
+    Pol5.nrm,
+    Pol5.N,
+    Pol5.scale_factor,
+    Pol5.grid,
+    Pol5.z
+)
+
+println(Pol1_sparse.degree)
+print(TR1)
+
+df1_sparse = symbolic_solve(TR1, Pol1_sparse)
+df2_sparse = symbolic_solve(TR2, Pol2_sparse)
+df3_sparse = symbolic_solve(TR3, Pol3_sparse)
+df4_sparse = symbolic_solve(TR4, Pol4_sparse)
+df5_sparse = symbolic_solve(TR5, Pol5_sparse)
+
 
 # using GLMakie
 # GLMakie.activate!()

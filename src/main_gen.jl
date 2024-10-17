@@ -5,7 +5,8 @@
 A structure to represent the polynomial approximation and related data.
 
 # Fields
-- `coeffs::Vector`: The coefficients of the polynomial approximation.
+- `coeffs::Vector`: The coefficients of the polynomial approximation. Could be floats or Big
+rationals. 
 _ `degree::Int`: The degree of the polynomial approximation.
 - `nrm::Float64`: The norm of the polynomial approximation.
 - `N::Int`: The number of grid points used in the approximation.
@@ -26,11 +27,11 @@ nrm = 0.1
 N = 10
 scale_factor = 1.0
 grid = rand(10, 2)
-z = rand(10)
+z = 
 approx_poly = ApproxPoly(coeffs, nrm, N, scale_factor, grid, z)
 """
-struct ApproxPoly
-    coeffs::Vector
+struct ApproxPoly{T<:Number}
+    coeffs::Vector{T}
     degree::Int
     nrm::Float64
     N::Int
@@ -166,10 +167,15 @@ Compute the coefficients of a bivariate polynomial in the standard monomial basi
 - `coeffs::Vector{Float64}`: A vector of coefficients of the polynomial approximant in the Chebyshev basis.
 
 # Returns
-- `Vector{Rational{BigInt}}`: A vector of coefficients of the bivariate polynomial in the standard monomial basis.
+- `Vector{Rational{BigInt}}`: A vector of coefficients of the n-variate polynomial in the standard monomial basis.
 
 # Description
 This function computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in `Rational{BigInt}` format. The input `coeffs` is a vector of coefficients of the polynomial approximant in the Chebyshev basis. The function assumes that the variables `x` are defined in a `DynamicPolynomials` environment using `@polyvar`.
+
+# Issues 
+This function implicitly assumes we are using DynamicPolynomials and defines variables x in the environment.
+In the sparse case, this creates issues, since not every monomial appears in the polynomial.
+We should return a polynomial object instead of a vector of coefficients.
 
 # Example
 ```julia
