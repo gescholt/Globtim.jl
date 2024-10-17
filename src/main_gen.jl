@@ -50,6 +50,7 @@ end
 
 struct test_input
     dim::Int
+    center::Vector{Float64}
     prec::Tuple{Float64,Float64} # alpha and delta, probabilistic parameters
     tolerance::Float64
     noise::Tuple{Float64,Float64}
@@ -64,12 +65,15 @@ end
 Generate standard inputs for test function 
 """
 # Function to create a pre-populated instance of test_input
-function create_test_input(f::Function; n=2, tolerance = 2e-3, alpha=0.1, delta=0.5, sample_range = 1.0, reduce_samples = 1.0)::test_input
-    # Set predefined values
+function create_test_input(f::Function; 
+    n=2,
+    center = fill(0.0, n),
+    tolerance = 2e-3, alpha=0.1, delta=0.5, sample_range = 1.0,
+    reduce_samples = 1.0)::test_input
     prec = (alpha, delta)  # Example values for alpha and delta
     noise = (0., 0.)   # Example values for noise parameters
     #sample range: rescales the [-1, 1]^n hypercube ?
-    return test_input(n, prec, tolerance, noise, sample_range, reduce_samples, f)
+    return test_input(n, center, prec, tolerance, noise, sample_range, reduce_samples, f)
 end
 
 """
@@ -79,7 +83,7 @@ Constructor(T, degree) takes a test input and a starting degree and computes the
 function Constructor(T::test_input, degree::Int)::ApproxPoly
     p = nothing  # Initialize p to ensure it is defined before the loop
     while true # Potential infinite loop
-        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples)
+        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples, center = T.center)
         if p.nrm < T.tolerance
             println("attained the desired L2-norm: ", p.nrm)
             println("Degree :$degree ")
