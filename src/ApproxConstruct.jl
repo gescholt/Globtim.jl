@@ -1,6 +1,7 @@
 
 # All Structures are located in main_gen.jl # 
 
+# using LegendrePolynomials
 
 """
     ChebyshevPoly(d::Int, x)
@@ -36,6 +37,18 @@ function ChebyshevPoly(d::Int, x)
     end
 end
 
+# """
+# Rodrigues formula implementation. 
+# Should work with Dynamic Polynomials. Should not be raw evaluated, meaning that 
+# this should be stored as an object, to then be evaluated. 
+# """
+# function LegendrePoly(d::Int, x)
+#     p = (x^2 - 1)^d
+#     coeff = 1 / (2^d * factorial(big(d)))
+#     return coeff * differentiate(p, x, d)
+# end
+
+
 """
     ChebyshevPolyExact(d::Int)::Vector{Int}
 
@@ -64,6 +77,7 @@ function ChebyshevPolyExact(d::Int)::Vector{Int}
         return Tn
     end
 end
+
 
 """
     BigFloatChebyshevPoly(d::Int, x)
@@ -99,10 +113,11 @@ function BigFloatChebyshevPoly(d::Int, x)
     end
 end
 
+
 """
     SupportGen(n::Int, d::Int)::NamedTuple
 
-Compute the support of a polynomial of total degree at most `d`.
+Compute the support of a dense polynomial of total degree at most d in n variables.
 
 # Arguments
 - `n::Int`: Number of variables.
@@ -157,7 +172,7 @@ S = [0.5 0.5; -0.5 -0.5; 0.0 0.0]
 lambda_vandermonde(Lambda, S)
 ```
 """
-function lambda_vandermonde(Lambda::NamedTuple, S)
+function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
     m, N = Lambda.size
     n, N = size(S)
     V = zeros(n, m)
@@ -165,7 +180,13 @@ function lambda_vandermonde(Lambda::NamedTuple, S)
         for j in 1:m # Dimension of vector space of polynomials
             P = 1.0
             for k in 1:N # Dimension of each sample
-                P *= ChebyshevPoly(Lambda.data[j, k], S[i, k])
+                if basis == :chebyshev
+                    P *= ChebyshevPoly(Lambda.data[j, k], S[i, k])
+                elseif basis == :legendre
+                    # P *= LegendrePoly(Lambda.data[j, k], S[i, k]) this is evaluations
+                else
+                    error("Unsupported basis: $basis")
+                end
             end
             V[i, j] = P
         end

@@ -64,9 +64,21 @@ Generate enough samples to satisfy the error bound with respect to the tensorize
 calculate_samples(3, 10)
 ```
 """
-function generate_grid(n::Int, GN::Int)
-    ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
-    cart_cheb = [ChebyshevNodes for _ in 1:n]
-    grid = Iterators.product(cart_cheb...)
-    return collect(grid)
+
+function generate_grid(n::Int, GN::Int; basis=:chebyshev)
+    if basis == :chebyshev
+        # Generate grid using Chebyshev nodes
+        ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
+        cart_cheb = [ChebyshevNodes for _ in 1:n]
+        grid = Iterators.product(cart_cheb...)
+        return collect(grid)
+    elseif basis == :legendre
+        # Generate grid using Legendre nodes
+        LegendreNodes = [-1 + 2*i/GN for i in 0:GN]
+        cart_legendre = [LegendreNodes for _ in 1:n]
+        grid = Iterators.product(cart_legendre...)
+        return collect(grid)
+    else
+        error("Unsupported basis: $basis")
+    end
 end

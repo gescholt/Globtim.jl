@@ -1,3 +1,4 @@
+using DynamicPolynomials
 # ======================================================= Structures ======================================================
 """
     struct ApproxPoly
@@ -39,6 +40,7 @@ struct ApproxPoly{T<:Number}
     grid::Matrix{Float64}
     z::Vector{Float64}
 end
+
 """
     struct test_input
 
@@ -48,7 +50,6 @@ end
     reduce_samples: Take only a precentage of the required samples if sample set size gets too big. 
 
 """
-
 struct test_input
     dim::Int
     center::Vector{Float64}
@@ -56,50 +57,14 @@ struct test_input
     tolerance::Float64
     noise::Tuple{Float64,Float64}
     sample_range::Float64
-    reduce_samples::Float64 
+    reduce_samples::Float64
     # minimizer_size::Vector
     objective::Function
 end
 
-"""
-    create_test_input()
-Generate standard inputs for test function 
-"""
-# Function to create a pre-populated instance of test_input
-function create_test_input(f::Function; 
-    n=2,
-    center = fill(0.0, n),
-    tolerance = 2e-3, alpha=0.1, delta=0.5, sample_range = 1.0,
-    reduce_samples = 1.0)::test_input
-    prec = (alpha, delta)  # Example values for alpha and delta
-    noise = (0., 0.)   # Example values for noise parameters
-    #sample range: rescales the [-1, 1]^n hypercube ?
-    return test_input(n, center, prec, tolerance, noise, sample_range, reduce_samples, f)
-end
+# ======================================================= Functions ======================================================
 
-"""
-Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
 
-"""
-function Constructor(T::test_input, degree::Int)::ApproxPoly
-    p = nothing  # Initialize p to ensure it is defined before the loop
-    while true # Potential infinite loop
-        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples, center = T.center)
-        if p.nrm < T.tolerance
-            println("attained the desired L2-norm: ", p.nrm)
-            println("Degree :$degree ")
-            break
-        else 
-            println("current L2-norm: ", p.nrm)
-            println("Number of samples: ", p.N)
-            degree += 1
-            println("Increase degree to: $degree")
-        end
-    end 
-    println("current L2-norm: ", p.nrm)
-    println("Number of samples: ", p.N)
-    return p 
-end 
 
 """
     MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
@@ -135,77 +100,118 @@ center = [0.0, 0.0]
 approx_poly = MainGenerate(f, n, d, delta, alph, scale_factor, scl, center=center)
 # approx_poly is an ApproxPoly object containing the polynomial approximation and related data
 """
-function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
+function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64;
+    center::Vector{Float64}=fill(0.0, n), verbose=0, basis=:chebyshev)::ApproxPoly
     m = binomial(n + d, d)  # Dimension of vector space
     K = calculate_samples(m, delta, alph)
     GN = Int(round(K^(1 / n) * scl) + 1) # need fewer points for high degre stuff # 
     Lambda = SupportGen(n, d)
-    grid = generate_grid(n, GN) # Intermediate grid
+    grid = generate_grid(n, GN, basis=basis) # Intermediate grid
     matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))' # the tensor we return in matrix form. 
-    VL = lambda_vandermonde(Lambda, matrix_from_grid)
+    VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
+    if verbose == 1
+        println("Condition number of G: ", cond(G_original))
+    end
     F = [f([scale_factor * matrix_from_grid[Int(i), :]...] + center) for i in 1:(GN+1)^n]
     RHS = VL' * F
-
     # Solve linear system using an appropriate LinearSolve function
     linear_prob = LinearProblem(G_original, RHS) # Define the linear problem
     # Now solve the problem with proper choice of compute method. 
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
     nrm = norm(VL * sol.u - F)/(GN^n) # Watch out, we divide by GN to get the discrete norm
-    return ApproxPoly(sol, d, nrm, GN, scale_factor, matrix_from_grid, F)
+    return ApproxPoly{Float64}(sol, d, nrm, GN, scale_factor, matrix_from_grid, F)
 end
 
+"""
+    main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
+    n::Int, d::Int, coeffs::Vector{Float64})::Polynomial{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder},Rational{BigInt}}    
+
+Construct a polynomial in the standard monomial basis from a vector of coefficients (which have been computed in the tensorized Chebyshev basis).
 
 """
-    main_nd(n::Int, d::Int, coeffs::Vector{Float64})::Vector{Rational{BigInt}}
+function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
+    n::Int, d::Int, coeffs::Vector{Float64}; basis=:chebyshev, verbose=false)::Polynomial{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder},Rational{BigInt}}
 
-Compute the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in `Rational{BigInt}` format.
-
-# Arguments
-- `n::Int`: The number of variables.
-- `d::Int`: The degree of the polynomial approximant.
-- `coeffs::Vector{Float64}`: A vector of coefficients of the polynomial approximant in the Chebyshev basis.
-
-# Returns
-- `Vector{Rational{BigInt}}`: A vector of coefficients of the n-variate polynomial in the standard monomial basis.
-
-# Description
-This function computes the coefficients of a bivariate polynomial in the standard monomial basis through an expansion in `Rational{BigInt}` format. The input `coeffs` is a vector of coefficients of the polynomial approximant in the Chebyshev basis. The function assumes that the variables `x` are defined in a `DynamicPolynomials` environment using `@polyvar`.
-
-# Issues 
-This function implicitly assumes we are using DynamicPolynomials and defines variables x in the environment.
-In the sparse case, this creates issues, since not every monomial appears in the polynomial.
-We should return a polynomial object instead of a vector of coefficients.
-
-# Example
-```julia
-n = 2
-d = 3
-coeffs = [0.5, 1.0, -0.5, 0.25]
-result = main_nd(n, d, coeffs)
-# result is a vector of Rational{BigInt} coefficients
-"""
-function main_nd(n::Int, d::Int, coeffs::Vector{Float64})::Vector{Rational{BigInt}}
-    lambda = SupportGen(n, d).data  # Assuming support_gen is defined elsewhere
+    lambda = SupportGen(n, d).data  # Assuming SupportGen is defined elsewhere
     m = size(lambda)[1]
+
+    if verbose
+        println("Dimension m of the vector space: ", m)
+    end
+
     if length(coeffs) != m
-        println(coeffs)
-        println("\n")
+        if verbose
+            println("The length of coeffs_poly_approx does not match the dimension of the space we project onto")
+        end
         error("The length of coeffs_poly_approx must match the dimension of the space we project onto")
     end
+
     coeffs = convert.(Rational{BigInt}, coeffs)
-    @polyvar x[1:n]
     S_rat = zero(x[1])
-    for j in 1:m
-        prd = one(x[1])
-        for k in 1:n
-            coeff_vec = ChebyshevPolyExact(lambda[j, k])
-            sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
-            prd *= sum(sized_coeff_vec .* MonomialVector([x[k]], 0:d))
+
+    if basis == :chebyshev
+        for j in 1:m
+            prd = one(x[1])
+            for k in 1:n
+                coeff_vec = ChebyshevPolyExact(lambda[j, k])
+                sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
+                prd *= sum(sized_coeff_vec .* MonomialVector([x[k]], 0:d))
+            end
+            S_rat += coeffs[j] * prd
         end
-        S_rat += coeffs[j] * prd
+    elseif basis == :legendre
+        for j in 1:m
+            prd = one(x[1])
+            for k in 1:n
+                prd *= LegendrePoly(lambda[j, k], x[k])
+            end
+            S_rat += coeffs[j] * prd
+        end
     end
-    return coefficients(S_rat)
+
+    return S_rat
 end
 
+"""
+Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
+
+"""
+function Constructor(T::test_input, degree::Int ; verbose=0, basis=:chebyshev)::ApproxPoly
+    p = nothing  # Initialize p to ensure it is defined before the loop
+    while true # Potential infinite loop
+        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
+                         center=T.center, verbose=verbose, basis=basis)
+        if p.nrm < T.tolerance
+            println("attained the desired L2-norm: ", p.nrm)
+            println("Degree :$degree ")
+            break
+        else
+            println("current L2-norm: ", p.nrm)
+            println("Number of samples: ", p.N)
+            degree += 1
+            println("Increase degree to: $degree")
+        end
+    end
+    println("current L2-norm: ", p.nrm)
+    println("Number of samples: ", p.N)
+    return p
+end
+
+
+"""
+    create_test_input()
+Generate standard inputs for test function 
+"""
+# Function to create a pre-populated instance of test_input
+function create_test_input(f::Function;
+    n=2,
+    center=fill(0.0, n),
+    tolerance=2e-3, alpha=0.1, delta=0.5, sample_range=1.0,
+    reduce_samples=1.0)::test_input
+    prec = (alpha, delta)  # Example values for alpha and delta
+    noise = (0.0, 0.0)   # Example values for noise parameters
+    #sample range: rescales the [-1, 1]^n hypercube ?
+    return test_input(n, center, prec, tolerance, noise, sample_range, reduce_samples, f)
+end
 

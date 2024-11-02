@@ -166,26 +166,51 @@ function init_gaussian_params(n::Int, N::Int, scale::Float64)::GaussianParams
 end
 
 @doc nothing
-function rand_gaussian(x::Vector{Float64}, params::GaussianParams)::Float64
+function rand_gaussian(x::Vector{Float64}, params::GaussianParams; verbose::Bool=false)::Float64
     # =======================================================
     #   Not Rescaled
     #   Sum of N Gaussian function centered at random points in the domain with random variance.
     #   Domain: [-1, 1]^2.
     #   params: include centers, variance and vector of random signs.  
     # =======================================================
+
+    if verbose
+        println("Input vector x: ", x)
+        println("Length of x: ", length(x))
+        println("Gaussian centers: ", params.centers)
+        println("Gaussian variances: ", params.variances)
+        println("Gaussian alt_signs: ", params.alt_signs)
+
+    end
+
+    @assert length(params.variances) == size(params.centers, 1) "Length of variances must match the number of rows in centers."
+    @assert params.alt_signs === nothing || length(params.alt_signs) == length(params.variances) "Length of alt_signs must match the length of variances if alt_signs is not nothing."
+
+    if verbose
+        println("All dimension checks passed.")
+    end
+
     total_sum = 0.0
-    gaussian = nothing 
+    gaussian = Vector{Float64}(undef, length(params.variances))
     for i in 1:length(params.variances)
         diff = x .- params.centers[i, :]
-        gaussian = exp(-sum(diff .^ 2) / (2 * params.variances[i]^2))
+        gaussian[i] = exp(-sum(diff .^ 2) / (2 * params.variances[i]^2))
     end
+
+    if verbose
+        println("Gaussian values: ", gaussian)
+    end
+
     if params.alt_signs !== nothing
-        println(params.alt_signs)
-        println(gaussian)
         total_sum = dot(params.alt_signs, gaussian)
     else
         total_sum = sum(gaussian)
     end
+
+    if verbose
+        println("Total sum: ", total_sum)
+    end
+
     return total_sum
 end
 
