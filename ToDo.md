@@ -16,3 +16,8 @@ We can have a recursive function that takes in the current dimension and the cur
 
 What did break with Chebyshev sampling model? 
 Should I run a notebook presentation tomorrow ?
+
+1) Implement the Legendre Polynomial function using the dynamic Polynomial environment that will return:
+Exact coefficient (rational) normalized Legendre polynomial of degree d in a `@polyvar x` variable. 
+
+2) add a switch to work over Float64 vs BigFloat. The vandermonde like matrix is constructed in high precision but then truncated to Float64.
