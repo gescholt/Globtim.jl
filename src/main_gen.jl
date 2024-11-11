@@ -13,7 +13,7 @@ _ `degree::Int`: The degree of the polynomial approximation.
 - `N::Int`: The number of grid points used in the approximation.
 - `scale_factor::Float64`: The scaling factor applied to the domain.
 - `grid::Matrix{Float64}`: The grid of points used in the approximation.
-- `z::Vector{Float64}`: The values of the function at the grid points.
+- `z::Vector{Float64}`: The values of the function objective at the grid points.
 
 # Description
 The `ApproxPoly` struct is used to store the results of a polynomial approximation, including the coefficients of the polynomial, the norm of the approximation, the number of grid points, the scaling factor, the grid of points, and the values of the function at the grid points.
@@ -106,8 +106,7 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_fa
     K = calculate_samples(m, delta, alph)
     GN = Int(round(K^(1 / n) * scl) + 1) # need fewer points for high degre stuff # 
     Lambda = SupportGen(n, d)
-    grid = generate_grid(n, GN, basis=basis) # Intermediate grid
-    matrix_from_grid = reduce(hcat, map(t -> collect(t), grid))' # the tensor we return in matrix form. 
+    matrix_from_grid = generate_grid(n, GN, basis=basis) 
     VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
     if verbose == 1
@@ -164,7 +163,7 @@ function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolyno
         for j in 1:m
             prd = one(x[1])
             for k in 1:n
-                prd *= LegendrePoly(lambda[j, k], x[k])
+                prd *= Pl(x[k], lambda[j, k], norm=Val(:normalized))
             end
             S_rat += coeffs[j] * prd
         end

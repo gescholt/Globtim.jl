@@ -154,46 +154,60 @@ function SupportGen(n::Int, d::Int)::NamedTuple
 end
 
 """
-    lambda_vandermonde(Lambda, S)
+    lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
 
-Generate a Vandermonde-like matrix in the Chebyshev tensored basis.
-
-# Arguments
-- `Lambda`: NamedTuple of the support of the polynomial space. Make sure what structure it is to type it. 
-- `S`: Sample points.
-
-# Returns
-- A Vandermonde-like matrix.
-
-# Example
-```julia
-Lambda = [0 1; 1 0; 1 1]
-S = [0.5 0.5; -0.5 -0.5; 0.0 0.0]
-lambda_vandermonde(Lambda, S)
-```
+Compute the Vandermonde matrix using precomputed basis polynomials.
+Lambda is generated from SupportGen(n,d) and contains integer degrees.
+S is the sample points matrix.
 """
 function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
     m, N = Lambda.size
     n, N = size(S)
-    V = zeros(n, m)
-    for i in 1:n # Number of samples
-        for j in 1:m # Dimension of vector space of polynomials
-            P = 1.0
-            for k in 1:N # Dimension of each sample
-                if basis == :chebyshev
-                    P *= ChebyshevPoly(Lambda.data[j, k], S[i, k])
-                elseif basis == :legendre
-                    # P *= LegendrePoly(Lambda.data[j, k], S[i, k]) this is evaluations
-                else
-                    error("Unsupported basis: $basis")
-                end
-            end
-            V[i, j] = P
-        end
-    end
-    return V
-end
+    V_big = zeros(BigFloat, n, m)  # Internal BigFloat computation
+    V = zeros(Float64, n, m)       # Final Float64 output
 
+    if basis == :legendre
+        # Find max degree needed (maximum sum in any row of Lambda.data)
+        max_degree = maximum(Lambda.data)
+
+        # Precompute all Legendre polynomials up to max_degree
+        @polyvar x
+        legendre_cache = Dict{Int,Any}()
+        for degree in 0:max_degree
+            legendre_cache[degree] = symbolic_legendre(degree)
+        end
+
+        # Compute Vandermonde matrix
+        for i in 1:n  # For each sample point
+            for j in 1:m  # For each polynomial basis
+                P = one(BigFloat)
+                for k in 1:N  # For each dimension
+                    degree = Int(Lambda.data[j, k])  # Ensure integer
+                    poly = legendre_cache[degree]
+                    # Evaluate polynomial at sample point
+                    P *= evaluate_legendre(poly, S[i, k])
+                end
+                V_big[i, j] = P
+            end
+        end
+
+    elseif basis == :chebyshev
+        for i in 1:n
+            for j in 1:m
+                P = one(BigFloat)
+                for k in 1:N
+                    P *= ChebyshevPoly(Lambda.data[j, k], S[i, k])
+                end
+                V_big[i, j] = P
+            end
+        end
+    else
+        error("Unsupported basis: $basis")
+    end
+
+    # Convert final matrix to Float64
+    return Float64.(V_big)
+end
 
 # ======================================================= For Msolve =======================================================
 """
