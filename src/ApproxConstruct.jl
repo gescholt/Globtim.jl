@@ -157,46 +157,76 @@ end
     lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
 
 Compute the Vandermonde matrix using precomputed basis polynomials.
+Optimized for grids where sample points are the same along each dimension.
 Lambda is generated from SupportGen(n,d) and contains integer degrees.
-S is the sample points matrix.
+S is the sample points matrix where each column contains the same points.
 """
 function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
     m, N = Lambda.size
     n, N = size(S)
-    V_big = zeros(BigFloat, n, m)  # Internal BigFloat computation
-    V = zeros(Float64, n, m)       # Final Float64 output
+    V_big = zeros(BigFloat, n, m)
+
+    # Get unique points (they're the same for each dimension)
+    unique_points = unique(S[:, 1])
+    GN = length(unique_points) - 1  # Number of points - 1
 
     if basis == :legendre
-        # Find max degree needed (maximum sum in any row of Lambda.data)
+        # Find max degree needed
         max_degree = maximum(Lambda.data)
 
-        # Precompute all Legendre polynomials up to max_degree
-        @polyvar x
-        legendre_cache = Dict{Int,Any}()
+        # Precompute Legendre polynomial evaluations for all degrees at unique points
+        eval_cache = Dict{Int,Vector{BigFloat}}()
         for degree in 0:max_degree
-            legendre_cache[degree] = symbolic_legendre(degree)
+            eval_cache[degree] = [evaluate_legendre(symbolic_legendre(degree), point) for point in unique_points]
         end
 
-        # Compute Vandermonde matrix
-        for i in 1:n  # For each sample point
-            for j in 1:m  # For each polynomial basis
+        # Create point index lookup
+        point_indices = Dict(point => i for (i, point) in enumerate(unique_points))
+
+        # Compute Vandermonde matrix using cached values
+        for i in 1:n
+            for j in 1:m
                 P = one(BigFloat)
-                for k in 1:N  # For each dimension
-                    degree = Int(Lambda.data[j, k])  # Ensure integer
-                    poly = legendre_cache[degree]
-                    # Evaluate polynomial at sample point
-                    P *= evaluate_legendre(poly, S[i, k])
+                for k in 1:N
+                    degree = Int(Lambda.data[j, k])
+                    point = S[i, k]
+                    point_idx = point_indices[point]
+                    P *= eval_cache[degree][point_idx]
                 end
                 V_big[i, j] = P
             end
         end
 
     elseif basis == :chebyshev
+        # Precompute Chebyshev polynomial evaluations for all needed degrees
+        max_degree = maximum(Lambda.data)
+        eval_cache = Dict{Int,Vector{BigFloat}}()
+
+        # For Chebyshev nodes, we can directly compute values
+        # cos(k * arccos(x)) is the k-th Chebyshev polynomial
+        for point_idx in 1:length(unique_points)
+            x = unique_points[point_idx]
+            theta = acos(x)
+            for degree in 0:max_degree
+                if !haskey(eval_cache, degree)
+                    eval_cache[degree] = Vector{BigFloat}(undef, length(unique_points))
+                end
+                eval_cache[degree][point_idx] = cos(degree * theta)
+            end
+        end
+
+        # Create point index lookup
+        point_indices = Dict(point => i for (i, point) in enumerate(unique_points))
+
+        # Compute Vandermonde matrix using cached values
         for i in 1:n
             for j in 1:m
                 P = one(BigFloat)
                 for k in 1:N
-                    P *= ChebyshevPoly(Lambda.data[j, k], S[i, k])
+                    degree = Int(Lambda.data[j, k])
+                    point = S[i, k]
+                    point_idx = point_indices[point]
+                    P *= eval_cache[degree][point_idx]
                 end
                 V_big[i, j] = P
             end
@@ -205,7 +235,6 @@ function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
         error("Unsupported basis: $basis")
     end
 
-    # Convert final matrix to Float64
     return Float64.(V_big)
 end
 
