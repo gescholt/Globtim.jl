@@ -1,4 +1,5 @@
 # ======================================================= Functions =======================================================
+# using IterTools
 
 """
     zeta(x::Float64)::Float64
@@ -70,15 +71,34 @@ function generate_grid(n::Int, GN::Int; basis=:chebyshev)
         # Generate grid using Chebyshev nodes
         ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
         cart_cheb = [ChebyshevNodes for _ in 1:n]
-        grid = Iterators.product(cart_cheb...)
-        return collect(grid)
+        grid = collect(Iterators.product(cart_cheb...))
     elseif basis == :legendre
         # Generate grid using Legendre nodes
         LegendreNodes = [-1 + 2*i/GN for i in 0:GN]
         cart_legendre = [LegendreNodes for _ in 1:n]
-        grid = Iterators.product(cart_legendre...)
-        return collect(grid)
+        grid = collect(Iterators.product(cart_legendre...))
+        
     else
         error("Unsupported basis: $basis")
     end
+    matrix_grid = reduce(hcat, map(t -> collect(t), grid))'
+    return matrix_grid
+end
+
+
+"""
+uniform_grid(n; range_min=-1.0, range_max=1.0, num_points_per_dim=20)
+
+"""
+function uniform_grid(n; range_min=-1.0, range_max=1.0, num_points_per_dim=20)
+    # Create a range of points for each dimension
+    ranges = [range(range_min, stop=range_max, length=num_points_per_dim) for _ in 1:n]
+
+    # Generate the Cartesian product of the ranges to create the grid
+    grid_points = collect(IterTools.product(ranges...))
+    # Convert the grid points to a matrix where each row is a point
+    uniform_grid_matrix = reduce(hcat, map(x -> collect(x), grid_points))'
+    # Print the grid points
+    uniform_grid_vectors = [collect(row) for row in eachrow(uniform_grid_matrix)]
+    return uniform_grid_vectors
 end

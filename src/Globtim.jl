@@ -14,7 +14,7 @@ export MainGenerate, ApproxPoly, test_input, main_nd, process_output_file, parse
     rand_gaussian, HolderTable, CrossInTray, Deuflhard, noisy_Deuflhard, old_alpine1, shubert_4d, camel_4d, camel_3_by_3,
     cosine_mixture, camel_3_6d, Csendes, alpine1, alpine2, create_test_input, Constructor, SupportGen, ChebyshevPolyExact,
     GaussianParams, uniform_grid, lambda_vandermonde, 
-    symbolic_legendre, evaluate_legendre
+    symbolic_legendre, evaluate_legendre, generate_grid
 
 
 using CSV
