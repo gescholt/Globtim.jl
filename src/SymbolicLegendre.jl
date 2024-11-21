@@ -16,7 +16,6 @@ function get_coefficient_type(P)
     end
 end
 
-
 """
     evaluate_legendre(P, x::Number)
 
@@ -37,28 +36,39 @@ function evaluate_legendre(P, x_val::Number)
 end
 
 """
-    symbolic_legendre(n::Integer; use_bigint::Bool=false)
+    symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
 
 Generate the symbolic Legendre polynomial of degree n.
+If normalized=true, returns the L²-normalized version.
 """
-function symbolic_legendre(n::Integer; use_bigint::Bool=false)
+function symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
-    
-    if n == 0
-        return use_bigint ? big(1) : 1
+
+    # Get the unnormalized polynomial
+    P = if n == 0
+        use_bigint ? big(1) : 1
     elseif n == 1
-        return x  # Use global x
-    end
-    
-    try
-        return _symbolic_legendre_impl(n, use_bigint)
-    catch e
-        if e isa OverflowError && !use_bigint
-            @warn "Integer overflow detected, switching to BigInt"
-            return _symbolic_legendre_impl(n, true)
-        else
-            rethrow(e)
+        x  # Use global x
+    else
+        try
+            _symbolic_legendre_impl(n, use_bigint)
+        catch e
+            if e isa OverflowError && !use_bigint
+                @warn "Integer overflow detected, switching to BigInt"
+                _symbolic_legendre_impl(n, true)
+            else
+                rethrow(e)
+            end
         end
+    end
+
+    # Apply normalization if requested
+    if normalized
+        # Normalization factor: √((2n+1)/2)
+        norm_factor = sqrt((2n + 1) / 2)
+        return norm_factor * P
+    else
+        return P
     end
 end
 
@@ -69,17 +79,16 @@ Internal implementation of Legendre polynomial generation.
 """
 function _symbolic_legendre_impl(n::Integer, use_bigint::Bool)
     T = use_bigint ? BigInt : Int
-    
+
     p_prev = use_bigint ? big(1) : 1  # P₀
     p_curr = x                        # P₁ (use global x)
-    
-    for k in T(1):T(n-1)
-        p_next = ((2k + 1) // (k + 1) * x * p_curr - 
+
+    for k in T(1):T(n - 1)
+        p_next = ((2k + 1) // (k + 1) * x * p_curr -
                   k // (k + 1) * p_prev)
         p_prev = p_curr
         p_curr = p_next
     end
-    
+
     return p_curr
 end
-
