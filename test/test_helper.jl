@@ -34,20 +34,22 @@ function sample_data(model::ModelingToolkit.ODESystem,
     return data_sample
 end
 
-function Error_distance(p_test::Vector{Float64};
-    model=model,
-    Y_true=[0.11, 0.11376181935472697, 0.11774652882518055, 0.12197777166050001, 0.1264826249688384],
-    measured_data=[y1 ~ x1],
-    time_interval=[0.0, 1.0],
-    datasize=5)
-    if datasize != length(Y_true)
-        error("The length of the test parameters must be equal to the length of the true parameters")
-    end
-    data_sample = sample_data(model, measured_data, time_interval, p_test, ic, datasize)
-    Y_test = data_sample[first(keys(data_sample))]
-    return 100 * norm(Y_true - Y_test, 1)
-end
+function make_error_distance(model, outputs)
+    function Error_distance(p_test::Vector{Float64};
+        Y_true=[0.11, 0.11376181935472697, 0.11774652882518055, 0.12197777166050001, 0.1264826249688384],
+        measured_data=outputs,  # Default to captured outputs
+        time_interval=[0.0, 1.0],
+        datasize=5)
 
+        if datasize != length(Y_true)
+            error("The length of the test parameters must be equal to the length of the true parameters")
+        end
+        data_sample = sample_data(model, measured_data, time_interval, p_test, ic, datasize)
+        Y_test = data_sample[first(keys(data_sample))]
+        return 100 * norm(Y_true - Y_test, 1)
+    end
+    return Error_distance
+end
 
 function process_real_solutions(real_pts, TR, p_true, Error_distance; bounds=(-1, 1))
     # Translate and scale back the solutions

@@ -116,7 +116,7 @@ sort!(res.dataframe, :point_distance)
 TR = create_test_input(Error_distance, n=3,
     tolerance=1.e-3,
     center=p_true + [0.05, 0.0, 0.0],
-    sample_range=0.15,
+    sample_range=0.25,
     reduce_samples=0.0125)
 Pol = Constructor(TR, 2, basis=:legendre)
 Pol.degree

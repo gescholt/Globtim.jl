@@ -101,25 +101,32 @@ approx_poly = MainGenerate(f, n, d, delta, alph, scale_factor, scl, center=cente
 # approx_poly is an ApproxPoly object containing the polynomial approximation and related data
 """
 function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64;
-    center::Vector{Float64}=fill(0.0, n), verbose=0, basis=:chebyshev)::ApproxPoly
+    center::Vector{Float64}=fill(0.0, n), verbose=0, basis=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
     m = binomial(n + d, d)  # Dimension of vector space
     K = calculate_samples(m, delta, alph)
-    GN = Int(round(K^(1 / n) * scl) + 1) # need fewer points for high degre stuff # 
+
+    # Use provided GN if given, otherwise compute it
+    actual_GN = if isnothing(GN)
+        Int(round(K^(1 / n) * scl) + 1)
+    else
+        GN
+    end
+
     Lambda = SupportGen(n, d)
-    matrix_from_grid = generate_grid(n, GN, basis=basis) 
+    matrix_from_grid = generate_grid(n, actual_GN, basis=basis)
     VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
     if verbose == 1
         println("Condition number of G: ", cond(G_original))
     end
-    F = [f([scale_factor * matrix_from_grid[Int(i), :]...] + center) for i in 1:(GN+1)^n]
+    F = [f([scale_factor * matrix_from_grid[Int(i), :]...] + center) for i in 1:(actual_GN+1)^n]
     RHS = VL' * F
     # Solve linear system using an appropriate LinearSolve function
     linear_prob = LinearProblem(G_original, RHS) # Define the linear problem
     # Now solve the problem with proper choice of compute method. 
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-    nrm = norm(VL * sol.u - F)/(GN^n) # Watch out, we divide by GN to get the discrete norm
-    return ApproxPoly{Float64}(sol, d, nrm, GN, scale_factor, matrix_from_grid, F)
+    nrm = norm(VL * sol.u - F) / (actual_GN^n) # Watch out, we divide by GN to get the discrete norm
+    return ApproxPoly{Float64}(sol, d, nrm, actual_GN, scale_factor, matrix_from_grid, F)
 end
 
 """
@@ -176,11 +183,11 @@ end
 Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
 
 """
-function Constructor(T::test_input, degree::Int ; verbose=0, basis=:chebyshev)::ApproxPoly
+function Constructor(T::test_input, degree::Int; verbose=0, basis=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
     p = nothing  # Initialize p to ensure it is defined before the loop
     while true # Potential infinite loop
         p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
-                         center=T.center, verbose=verbose, basis=basis)
+            center=T.center, verbose=verbose, basis=basis, GN=GN)
         if p.nrm < T.tolerance
             println("attained the desired L2-norm: ", p.nrm)
             println("Degree :$degree ")
@@ -206,11 +213,19 @@ Generate standard inputs for test function
 function create_test_input(f::Function;
     n=2,
     center=fill(0.0, n),
-    tolerance=2e-3, alpha=0.1, delta=0.5, sample_range=1.0,
-    reduce_samples=1.0)::test_input
+    tolerance=2e-3,
+    alpha=0.1,
+    delta=0.5,
+    sample_range=1.0,
+    reduce_samples=1.0,
+    model=nothing,  # New parameter
+    outputs=nothing  # New parameter
+)::test_input
     prec = (alpha, delta)  # Example values for alpha and delta
     noise = (0.0, 0.0)   # Example values for noise parameters
     #sample range: rescales the [-1, 1]^n hypercube ?
-    return test_input(n, center, prec, tolerance, noise, sample_range, reduce_samples, f)
-end
 
+    objective = (x) -> f(x, model=model, measured_data=outputs)  # Wrap function to include model and outputs
+
+    return test_input(n, center, prec, tolerance, noise, sample_range, reduce_samples, objective)
+end
