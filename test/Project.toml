@@ -1,6 +1,5 @@
 [deps]
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Globtim = "00da9514-6261-47e9-8848-33640cb1e528"
 HomotopyContinuation = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
