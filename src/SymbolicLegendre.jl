@@ -92,3 +92,34 @@ function _symbolic_legendre_impl(n::Integer, use_bigint::Bool)
 
     return p_curr
 end
+
+function get_legendre_coeffs(max_degree::Integer)
+    # Cache coefficients for Legendre polynomials from degree 0 to max_degree
+    legendre_coeffs = Vector{Vector{Rational{BigInt}}}(undef, max_degree + 1)
+
+    # For each degree, generate polynomial and extract coefficients
+    for deg in 0:max_degree
+        P = symbolic_legendre(deg, normalized=true)
+
+        # If constant polynomial
+        if P isa Number
+            legendre_coeffs[deg+1] = [convert(Rational{BigInt}, P)]
+        else
+            # Extract coefficients from terms
+            terms_array = terms(P)
+            degrees = [degree(t) for t in terms_array]
+            coeffs = [convert(Rational{BigInt}, coefficient(t)) for t in terms_array]
+
+            # Create full coefficient vector (padding with zeros)
+            full_coeffs = zeros(Rational{BigInt}, deg + 1)
+            for (d, c) in zip(degrees, coeffs)
+                full_coeffs[d+1] = c
+            end
+
+            legendre_coeffs[deg+1] = full_coeffs
+        end
+    end
+
+    return legendre_coeffs
+end
+

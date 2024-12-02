@@ -1,4 +1,3 @@
-using DynamicPolynomials
 # ======================================================= Structures ======================================================
 """
     struct ApproxPoly
@@ -137,9 +136,12 @@ Construct a polynomial in the standard monomial basis from a vector of coefficie
 
 """
 function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
-    n::Int, d::Int, coeffs::Vector{Float64}; basis=:chebyshev, verbose=false)::Polynomial{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder},Rational{BigInt}}
+    n::Int, d::Int, coeffs::Vector{Float64};
+    basis=:chebyshev,
+    verbose=false,
+    bigint=false)
 
-    lambda = SupportGen(n, d).data  # Assuming SupportGen is defined elsewhere
+    lambda = SupportGen(n, d).data
     m = size(lambda)[1]
 
     if verbose
@@ -153,7 +155,7 @@ function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolyno
         error("The length of coeffs_poly_approx must match the dimension of the space we project onto")
     end
 
-    coeffs = convert.(Rational{BigInt}, coeffs)
+    coeffs = convert.(Rational{bigint ? BigInt : Int}, coeffs)
     S_rat = zero(x[1])
 
     if basis == :chebyshev
@@ -167,13 +169,36 @@ function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolyno
             S_rat += coeffs[j] * prd
         end
     elseif basis == :legendre
+        max_degree = maximum(lambda)
+        legendre_coeffs = get_legendre_coeffs(max_degree)
+
         for j in 1:m
             prd = one(x[1])
             for k in 1:n
-                prd *= Pl(x[k], lambda[j, k], norm=Val(:normalized))
+                deg = lambda[j, k]
+                coeff_vec = legendre_coeffs[deg+1]
+                sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
+                prd *= sum(sized_coeff_vec .* MonomialVector([x[k]], 0:d))
             end
             S_rat += coeffs[j] * prd
         end
+    end
+
+    # If not using BigInt, convert coefficients to simpler rational numbers
+    if !bigint
+        terms_array = terms(S_rat)
+        simplified_terms = map(terms_array) do term
+            coeff = coefficient(term)
+            try
+                # Try to convert to simpler Rational{Int}
+                simple_coeff = convert(Rational{Int}, rationalize(Float64(coeff)))
+                simple_coeff * monomial(term)
+            catch e
+                @warn "Coefficient too large for Int, switching to BigInt for this term"
+                coeff * monomial(term)  # Keep original BigInt coefficient
+            end
+        end
+        return sum(simplified_terms)
     end
 
     return S_rat
@@ -181,11 +206,27 @@ end
 
 """
 Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
+If GN, the number of samples (per dimension), is specified, it will only compute the polynomial approximant for that number of samples.
 
 """
-function Constructor(T::test_input, degree::Int; verbose=0, basis=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
-    p = nothing  # Initialize p to ensure it is defined before the loop
-    while true # Potential infinite loop
+function Constructor(T::test_input, degree::Int; verbose=0, basis::Symbol=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
+    # Validate the basis parameter
+    if !(basis in [:chebyshev, :legendre])
+        throw(ArgumentError("basis must be either :chebyshev or :legendre"))
+    end
+
+    if !isnothing(GN)
+        # If GN is specified, just do one construction
+        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
+            center=T.center, verbose=verbose, basis=basis, GN=GN)
+        println("current L2-norm: ", p.nrm)
+        println("Number of samples: ", p.N)
+        return p
+    end
+
+    # Original behavior for when GN is nothing
+    p = nothing
+    while true
         p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
             center=T.center, verbose=verbose, basis=basis, GN=GN)
         if p.nrm < T.tolerance
@@ -203,7 +244,6 @@ function Constructor(T::test_input, degree::Int; verbose=0, basis=:chebyshev, GN
     println("Number of samples: ", p.N)
     return p
 end
-
 
 """
     create_test_input()
