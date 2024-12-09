@@ -342,22 +342,31 @@ function solve_polynomial_system(x, n, d, coeffs; basis=:chebyshev, bigint=true)
     grad = differentiate.(pol, x)
     sys = System(grad)
     solutions = solve(sys, start_system=:total_degree)
-    rl_sol = real_solutions(solutions; only_real=true, multiple_results=false)
-    return rl_sol, sys
+    rl_sol = HomotopyContinuation.real_solutions(solutions; only_real=true, multiple_results=false)
+    return rl_sol
 end
 
 """
-2D function to process critical points and return a DataFrame with the results.
-    Only keeps the points in [-1,1]^2.
+Process critical points in n-dimensional space and return a DataFrame.
+Only keeps points in [-1,1]^n.
 """
-function process_critical_points(real_pts, f, scale_factor)
+function process_critical_points(real_pts, f, scale_factor, dim::Int=2)
     solutions = real_pts[1]  # Extract solutions from tuple
-    condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
+
+    # Check if point is in [-1,1]^n hypercube
+    condition(point) = all(-1 .< point .< 1)
     filtered_points = filter(condition, solutions)
 
-    h_x = Float64[point[1] for point in filtered_points]
-    h_y = Float64[point[2] for point in filtered_points]
-    h_z = map(p -> f([p[1], p[2]]), zip(scale_factor * h_x, scale_factor * h_y))
+    # Extract coordinates
+    coords = [Float64[point[i] for point in filtered_points] for i in 1:dim]
 
-    DataFrame(x=scale_factor * h_x, y=scale_factor * h_y, z=h_z)
+    # Calculate function values
+    scaled_coords = [scale_factor * coord for coord in coords]
+    z = map(p -> f(collect(p)), zip(scaled_coords...))
+
+    # Create DataFrame
+    df_dict = Dict(Symbol("x$i") => scale_factor * coords[i] for i in 1:dim)
+    df_dict[:z] = z
+
+    DataFrame(df_dict)
 end
