@@ -342,7 +342,7 @@ function solve_polynomial_system(x, n, d, coeffs; basis=:chebyshev, bigint=true)
     grad = differentiate.(pol, x)
     sys = System(grad)
     solutions = solve(sys, start_system=:total_degree)
-    rl_sol = HomotopyContinuation.real_solutions(solutions; only_real=true, multiple_results=false)
+    rl_sol = real_solutions(solutions; only_real=true, multiple_results=false)
     return rl_sol
 end
 
@@ -351,11 +351,94 @@ Process critical points in n-dimensional space and return a DataFrame.
 Only keeps points in [-1,1]^n.
 """
 function process_critical_points(real_pts, f, scale_factor, dim::Int=2)
-    solutions = real_pts[1]  # Extract solutions from tuple
-
     # Check if point is in [-1,1]^n hypercube
     condition(point) = all(-1 .< point .< 1)
-    filtered_points = filter(condition, solutions)
+    filtered_points = filter(condition, real_pts)
+
+    # Extract coordinates
+    coords = [Float64[point[i] for point in filtered_points] for i in 1:dim]
+
+    # Calculate function values
+    scaled_coords = [scale_factor * coord for coord in coords]
+    z = map(p -> f(collect(p)), zip(scaled_coords...))
+
+    # Create DataFrame
+    df_dict = Dict(Symbol("x$i") => scale_factor * coords[i] for i in 1:dim)
+    df_dict[:z] = z
+
+    DataFrame(df_dict)
+end
+
+function msolve_polynomial_system(pol::ApproxPoly, x; n=2, basis=:chebyshev, bigint=true)
+    input_file = "inputs.ms"
+    output_file = "outputs.ms"
+
+    # Create empty files if they don't exist
+    if !isfile(input_file)
+        open(input_file, "w") do io
+            # Optionally, you can write a header or leave it empty
+        end
+        println("Created input file: $input_file")
+    else
+        println("Input file already exists: $input_file")
+    end
+
+    if !isfile(output_file)
+        open(output_file, "w") do io
+            # Optionally, you can write a header or leave it empty
+        end
+        println("Created output file: $output_file")
+    else
+        println("Output file already exists: $output_file")
+    end
+
+    # Process polynomial system
+    names = [x[i].name for i in 1:length(x)]
+    open(input_file, "w") do file
+        println(file, join(names, ", "))
+        println(file, 0)
+    end
+
+    p = main_nd(x, n, pol.degree, pol.coeffs, basis=basis, bigint=bigint)
+    grad = differentiate.(p, x)
+
+    for i in 1:n
+        partial_str = replace(string(grad[i]), "//" => "/")
+        open(input_file, "a") do file
+            if i < n
+                println(file, string(partial_str, ","))
+            else
+                println(file, partial_str)
+            end
+        end
+    end
+
+    run(`msolve -v 1 -f inputs.ms -o outputs.ms`)
+end
+
+function average(X::Vector{Int})::Float64
+    return sum(X) / length(X)
+end
+
+function msolve_parser(file_path, f, scale_factor, dim::Int=2)
+    # First process the file
+    evaled = process_output_file(file_path)
+
+    # Convert points to real values
+    real_pts = []
+    for pts in evaled
+        if typeof(pts) == Vector{Vector{Vector{BigInt}}}
+            X = parse_point(pts)
+        else
+            X = average.(pts)
+        end
+        push!(real_pts, Float64.(X))
+    end
+
+    # Process the points and create DataFrame
+    # Check if point is in [-1,1]^n hypercube
+    condition(point) = all(-1 .< point .< 1)
+    filtered_points = filter(condition, real_pts)
 
     # Extract coordinates
     coords = [Float64[point[i] for point in filtered_points] for i in 1:dim]
