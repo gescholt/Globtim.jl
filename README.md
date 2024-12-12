@@ -13,6 +13,12 @@ The purpose of the Globtim package is to compute the set of all local minima of 
 
 In active development.
 
+- [ ] fix the tests
+- [ ] build the documentation
+- [ ] reduce the dependencies
+
+The function `run_parameter_sweep` should take the `p_true`, `p_center` a tolerance as input? 
+
 ## Installation
 
 The package is directly available from the Julia REPL.
