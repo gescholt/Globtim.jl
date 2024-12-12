@@ -1,8 +1,4 @@
 include("setup.jl")
-include("model_parameters.jl")
-include("lotka_volterra_model.jl")
-include("parameter_sweep.jl")
-
 @info "Lotka-Volterra Tests"
 
 """
@@ -11,11 +7,11 @@ We need to work in high precision to avoid numerical errors --> bigint = true
 
 # First define the model and outputs
 model, params, states, outputs = define_lotka_volterra_model()
-Error_distance = make_error_distance(model, outputs)
-Error_distance([0.1, 0.22, 0.3], measured_data=outputs)
+Err_dist = make_error_distance(model, outputs, P_TRUE)
+# Error_distance([0.1, 0.22, 0.3], measured_data=outputs)
 
 # Then define Error_distance with captured model and outputs
-results_1 = run_parameter_sweep(Error_distance, model, outputs, sample_configs_1);
+results_1 = run_parameter_sweep(Err_dist, 4, model, outputs, sample_configs_1);
 # results_2 = run_parameter_sweep(Error_distance, model, outputs, sample_configs_2);
 # results_3 = run_parameter_sweep(Error_distance, model, outputs, sample_configs_3);
 # results_4 = run_parameter_sweep(Error_distance, model, outputs, sample_configs_4);
