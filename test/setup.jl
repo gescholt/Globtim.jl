@@ -8,7 +8,8 @@ using DynamicPolynomials, DataStructures, LinearAlgebra
 using HomotopyContinuation, ProgressLogging, DataFrames
 
 include("test_helper.jl")
-include("model_parameters.jl")
+# include("model_parameters.jl")
+include("short_config.jl")
 include("lotka_volterra_model.jl")
 include("parameter_sweep.jl")
 

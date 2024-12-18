@@ -16,6 +16,8 @@ In active development.
 - [ ] fix the tests
 - [ ] build the documentation
 - [ ] reduce the dependencies
+- [ ] return what center is used in the output (for each critical point)
+- [ ] if the L2-norm is not uniform on every cube, we might choose where to re-run.
 
 The function `run_parameter_sweep` should take the `p_true`, `p_center` a tolerance as input? 
 
