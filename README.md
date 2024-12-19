@@ -18,6 +18,7 @@ In active development.
 - [ ] reduce the dependencies
 - [ ] return what center is used in the output (for each critical point)
 - [ ] if the L2-norm is not uniform on every cube, we might choose where to re-run.
+- [ ] Run the Lotka-Volterra with msolve. 
 
 The function `run_parameter_sweep` should take the `p_true`, `p_center` a tolerance as input? 
 

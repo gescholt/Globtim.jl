@@ -85,24 +85,56 @@ function make_error_distance(model, outputs, p_true::Vector{Float64})
     end
 end
 
+""""
+We take the outputs of homotopy continuation or msolve and process them to filter out solutions that lie within the specified bounds. The solutions are then translated and scaled back using the provided transformation. Finally, we create a DataFrame containing the critical points, their distances from the true parameters, the evaluation distances using the error function, the sample range, and the number of samples. The DataFrame is sorted by the point distances before being returned.
+"""
 function process_real_solutions(real_pts, TR, p_true, Error_distance, sample_range, N_samples; bounds=(-1, 1))
+    # First, handle the case where real_pts is nothing
+    if real_pts === nothing
+        println("Warning: No real points found (nothing returned)")
+        return DataFrame(
+            critical_point=Vector{Vector{Float64}}(),
+            point_distance=Float64[],
+            eval_distance=Float64[],
+            sample_range=sample_range,
+            N_samples=N_samples,
+            center=Vector{typeof(TR.center)}()
+        )
+    end
+
+    # Now we know real_pts is not nothing, we can safely check if it's empty
+    if isempty(real_pts)
+        println("Warning: No real points found (empty array)")
+        return DataFrame(
+            critical_point=Vector{Vector{Float64}}(),
+            point_distance=Float64[],
+            eval_distance=Float64[],
+            sample_range=sample_range,
+            N_samples=N_samples,
+            center=Vector{typeof(TR.center)}()
+        )
+    end
+
     # Translate and scale back the solutions
     real_sol = [TR.sample_range * point .+ TR.center for point in real_pts]
+    println("Un-Filtered Real Solutions: ", real_sol)
 
     # Filter solutions within bounds
     lower_bound, upper_bound = bounds
     filtered_real_solutions = [point for point in real_sol
                                if all(x -> lower_bound <= x <= upper_bound, point)]
+    println("Filtered Real Solutions: ", filtered_real_solutions)
 
     # Create the DataFrame with solutions and metrics
     df = DataFrame(
         critical_point=filtered_real_solutions,
         point_distance=map(point -> norm(point .- p_true), filtered_real_solutions),
-        eval_distance=map(point -> Error_distance(point), filtered_real_solutions), 
+        eval_distance=map(point -> Error_distance(point), filtered_real_solutions),
         sample_range=sample_range,
-        N_samples=N_samples
+        N_samples=N_samples,
+        center=fill(TR.center, length(filtered_real_solutions))
     )
+
     sort!(df, :point_distance)
     return df
 end
-
