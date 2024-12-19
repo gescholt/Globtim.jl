@@ -2,7 +2,7 @@
 
 julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "7b3ac0de3944739bfe772228622a1b43b79d1fda"
+project_hash = "4464b8290cebcbe8b4eca4eabd47d4c6f5eff1e2"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "72af59f5b8f09faee36b4ec48e014a79210f2f4f"
@@ -788,8 +788,8 @@ uuid = "c27321d9-0574-5035-807b-f59d2c89b15c"
 version = "1.3.1"
 
 [[deps.Globtim]]
-deps = ["CSV", "DataFrames", "Distributions", "DynamicPolynomials", "HomotopyContinuation", "LinearAlgebra", "LinearSolve", "Revise", "SpecialFunctions"]
-path = "/Users/ghscholt/Globtim.jl"
+deps = ["CSV", "DataFrames", "DataStructures", "Distributions", "DynamicPolynomials", "HomotopyContinuation", "LinearAlgebra", "LinearSolve", "Revise", "SpecialFunctions"]
+path = "/home/user/Globtim.jl"
 uuid = "00da9514-6261-47e9-8848-33640cb1e528"
 version = "0.1.2"
 

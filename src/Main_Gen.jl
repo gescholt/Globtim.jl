@@ -1,129 +1,6 @@
-# ======================================================= Structures ======================================================
-
-"""
-    struct ApproxPoly
-
-A structure to represent the polynomial approximation and related data.
-
-# Fields
-- `coeffs::Vector`: The coefficients of the polynomial approximation. Could be floats or Big
-rationals. 
-_ `degree::Int`: The degree of the polynomial approximation.
-- `nrm::Float64`: The norm of the polynomial approximation.
-- `N::Int`: The number of grid points used in the approximation.
-- `scale_factor::Float64`: The scaling factor applied to the domain.
-- `grid::Matrix{Float64}`: The grid of points used in the approximation.
-- `z::Vector{Float64}`: The values of the function objective at the grid points.
-
-# Description
-The `ApproxPoly` struct is used to store the results of a polynomial approximation, including the coefficients of the polynomial, the norm of the approximation, the number of grid points, the scaling factor, the grid of points, and the values of the function at the grid points.
-
-# Comment
-It should also return the degree of the object
-
-# Example
-```julia
-coeffs = [1.0, 2.0, 3.0]
-nrm = 0.1
-N = 10
-scale_factor = 1.0
-grid = rand(10, 2)
-z = 
-approx_poly = ApproxPoly(coeffs, nrm, N, scale_factor, grid, z)
-"""
-struct ApproxPoly{T<:Number}
-    coeffs::Vector{T}
-    degree::Int
-    nrm::Float64
-    N::Int
-    scale_factor::Float64
-    grid::Matrix{Float64}
-    z::Vector{Float64}
-end
-
-"""
-    struct test_input
-
-A structure containing all parameters needed to run a test.
-
-# Fields
-- `dim::Int`: Dimension of the problem space
-- `center::Vector{Float64}`: Center point of the sampling region
-- `GN::Union{Int, Nothing}`: Number of samples (optional)
-- `prec::Union{Tuple{Float64,Float64}, Nothing}`: Precision parameters (α, δ)
-- `tolerance::Union{Float64, Nothing}`: Convergence tolerance
-- `noise::Union{Tuple{Float64,Float64}, Nothing}`: Noise parameters
-- `sample_range::Union{Float64, Nothing}`: Range for sampling around center
-- `reduce_samples::Union{Float64, Nothing}`: Reduction factor for sample set size
-- `objective::Function`: Objective function to be evaluated
-
-# Constructor
-    test_input(f::Function; kwargs...)
-
-# Keyword Arguments
-- `dim::Int=2`: Problem dimension
-- `center::AbstractVector{Float64}=fill(0.0, dim)`: Center point
-- `alpha::Float64=0.1`: First precision parameter
-- `delta::Float64=0.5`: Second precision parameter
-- `tolerance::Float64=2e-3`: Convergence tolerance
-- `sample_range::Number=1.0`: Sampling range around center
-- `reduce_samples::Float64=1.0`: Sample reduction factor
-- `model=nothing`: Optional model parameter passed to objective function
-- `outputs=nothing`: Optional outputs parameter passed to objective function
-"""
-struct test_input
-    dim::Int
-    center::Vector{Float64}
-    GN::Union{Int,Nothing}
-    prec::Union{Tuple{Float64,Float64},Nothing}
-    tolerance::Union{Float64,Nothing}
-    noise::Union{Tuple{Float64,Float64},Nothing}
-    sample_range::Union{Float64,Nothing}
-    reduce_samples::Union{Float64,Nothing}
-    objective::Function
-
-    # Enhanced constructor with all defaults built-in
-    function test_input(
-        f::Function;
-        dim::Int=2,
-        center::AbstractVector{Float64}=fill(0.0, dim),
-        GN::Union{Int,Nothing}=nothing,
-        alpha::Float64=0.1,
-        delta::Float64=0.5,
-        tolerance::Float64=2e-3,
-        sample_range::Number=1.0,
-        reduce_samples::Float64=1.0,
-        model=nothing,
-        outputs=nothing
-    )
-        # Validation
-        length(center) == dim || throw(ArgumentError("center vector length must match dim"))
-
-        # Create wrapped objective function
-        objective = (x) -> f(x, model=model, measured_data=outputs)
-
-        # Convert to concrete Vector type for storage
-        center_vec = Vector{Float64}(center)
-
-        # Create precision and noise tuples
-        prec = (alpha, delta)
-        noise = (0.0, 0.0)
-
-        # Convert sample_range to Float64 if needed (handles Rational input)
-        sample_range_float = Float64(sample_range)
-
-        new(dim, center_vec, GN, prec, tolerance, noise, sample_range_float, reduce_samples, objective)
-    end
-end
-# ======================================================= Functions ======================================================
-
-
-
+# ==================== Functions ====================
 """
     MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
-
-Compute the coefficients of the polynomial approximant of degree `d` in the Chebyshev basis.
-
 # Arguments
 - `f::Function`: The objective function to approximate.
 - `n::Int`: The number of variables.
@@ -300,26 +177,62 @@ function Constructor(T::test_input, degree::Int; verbose=0, basis::Symbol=:cheby
 end
 
 """
-    create_test_input()
-Generate standard inputs for test function 
+Function to solve the polynomial system using HomotopyContinuation.jl and the DynamicPolynomials.jl environment.
 """
-# Function to create a pre-populated instance of test_input
-function create_test_input(f::Function;
-    n=2,
-    center=fill(0.0, n),
-    tolerance=2e-3,
-    alpha=0.1,
-    delta=0.5,
-    sample_range=1.0,
-    reduce_samples=1.0,
-    model=nothing,  # New parameter
-    outputs=nothing  # New parameter
-)::test_input
-    prec = (alpha, delta)  # Example values for alpha and delta
-    noise = (0.0, 0.0)   # Example values for noise parameters
-    #sample range: rescales the [-1, 1]^n hypercube ?
-
-    objective = (x) -> f(x, model=model, measured_data=outputs)  # Wrap function to include model and outputs
-
-    return test_input(n, center, prec, tolerance, noise, sample_range, reduce_samples, objective)
+function solve_polynomial_system(x, n, d, coeffs; basis=:chebyshev, bigint=true)::Vector{Vector{Float64}}
+    pol = main_nd(x, n, d, coeffs, basis=basis, bigint=bigint)
+    grad = differentiate.(pol, x)
+    sys = System(grad)
+    solutions = solve(sys, start_system=:total_degree)
+    rl_sol = real_solutions(solutions; only_real=true, multiple_results=false)
+    return rl_sol
 end
+
+
+function msolve_polynomial_system(pol::ApproxPoly, x; n=2, basis=:chebyshev, bigint=true)
+    input_file = "inputs.ms"
+    output_file = "outputs.ms"
+
+    # Create empty files if they don't exist
+    if !isfile(input_file)
+        open(input_file, "w") do io
+            # Optionally, you can write a header or leave it empty
+        end
+        println("Created input file: $input_file")
+    else
+        println("Input file already exists: $input_file")
+    end
+
+    if !isfile(output_file)
+        open(output_file, "w") do io
+            # Optionally, you can write a header or leave it empty
+        end
+        println("Created output file: $output_file")
+    else
+        println("Output file already exists: $output_file")
+    end
+
+    # Process polynomial system
+    names = [x[i].name for i in 1:length(x)]
+    open(input_file, "w") do file
+        println(file, join(names, ", "))
+        println(file, 0)
+    end
+
+    p = main_nd(x, n, pol.degree, pol.coeffs, basis=basis, bigint=bigint)
+    grad = differentiate.(p, x)
+
+    for i in 1:n
+        partial_str = replace(string(grad[i]), "//" => "/")
+        open(input_file, "a") do file
+            if i < n
+                println(file, string(partial_str, ","))
+            else
+                println(file, partial_str)
+            end
+        end
+    end
+
+    run(`msolve -v 1 -f inputs.ms -o outputs.ms`)
+end
+

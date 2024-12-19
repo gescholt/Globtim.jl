@@ -12,7 +12,7 @@ Run parameter sweeps across different configurations, comparing critical points 
 # Returns
 - `DataFrame`: Results of parameter sweeps across all configurations
 """
-function run_parameter_sweep(Error_distance, d::Int, model::ODESystem, outputs, sample_configs)
+function run_parameter_sweep(Error_distance, d::Int, model::ODESystem, outputs, sample_configs; method::String="homotopy")
     all_results = []
 
     for (sample_range, N_samples, center) in sample_configs
@@ -21,7 +21,6 @@ function run_parameter_sweep(Error_distance, d::Int, model::ODESystem, outputs, 
                 Error_distance(p .+ center, measured_data=outputs)
             end
         end
-
         TR = test_input(error_fn,
             dim=3,
             tolerance=1.e-3,
@@ -33,8 +32,32 @@ function run_parameter_sweep(Error_distance, d::Int, model::ODESystem, outputs, 
             GN=N_samples)
 
         Pol = Constructor(TR, d, GN=N_samples, basis=:legendre)
-        @polyvar(x[1:TR.dim])  # Use TR.dim instead of n
-        real_pts_lege = solve_polynomial_system(x, TR.dim, Pol.degree, Pol.coeffs; basis=:legendre, bigint=true)
+        @polyvar(x[1:TR.dim])
+
+        # Choose solving method and handle process output
+        real_pts_lege = if method == "msolve"
+            println("Starting msolve computation...")
+            process = msolve_polynomial_system(Pol, x, n=TR.dim, basis=:legendre)
+
+            # Print status while waiting
+            start_time = time()
+            while !process_exited(process)
+                elapsed = round(time() - start_time, digits=1)
+                println("MSolve still running... ($(elapsed)s elapsed)")
+                sleep(5)  # Check every 5 seconds
+            end
+
+            println("MSolve computation completed in $(round(time() - start_time, digits=1))s")
+            println("Parsing results...")
+
+            msolve_parser("outputs.ms", error_fn, sample_range, TR.dim)
+        elseif method == "homotopy"
+            result = solve_polynomial_system(x, TR.dim, Pol.degree, Pol.coeffs; basis=:legendre, bigint=true)
+            # result isa Base.Process ? wait(result) : result
+        else
+            error("Invalid method: $method. Must be either 'homotopy' or 'msolve'")
+        end
+
         rl = process_real_solutions(real_pts_lege, TR, center, Error_distance, sample_range, N_samples)
 
         for row in eachrow(rl)

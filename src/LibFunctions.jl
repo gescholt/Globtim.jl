@@ -1,6 +1,3 @@
-## Library of functions to approximate ##
-using LinearAlgebra
-using Distributions
 
 # Define a struct to hold the Gaussian parameters
 @doc nothing
