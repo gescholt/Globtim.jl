@@ -67,25 +67,34 @@ struct test_input
     reduce_samples::Union{Float64,Nothing}
     objective::Function
 
-    # Enhanced constructor with all defaults built-in
+    # Enhanced constructor with all defaults and parameter names
     function test_input(
         f::Function;
-        dim::Int=2,
-        center::AbstractVector{Float64}=fill(0.0, dim),
-        GN::Union{Int,Nothing}=nothing,
-        alpha::Float64=0.1,
-        delta::Float64=0.5,
-        tolerance::Float64=2e-3,
-        sample_range::Number=1.0,
-        reduce_samples::Float64=1.0,
-        model=nothing,
-        outputs=nothing
+        # Core parameters with descriptions in comments
+        dim::Int=2,                    # Dimension of the problem
+        center::AbstractVector{Float64}=fill(0.0, dim),  # Center point
+        GN::Union{Int,Nothing}=nothing,                  # Grid number
+        alpha::Float64=0.1,            # Precision parameter alpha
+        delta::Float64=0.5,            # Precision parameter delta
+        tolerance::Float64=2e-3,       # Tolerance level
+        sample_range::Number=1.0,      # Range for sampling
+        reduce_samples::Float64=1.0,   # Sample reduction factor
+        model=nothing,                 # Optional model parameter
+        outputs=nothing                # Optional measured data
     )
         # Validation
         length(center) == dim || throw(ArgumentError("center vector length must match dim"))
 
-        # Create wrapped objective function
-        objective = (x) -> f(x, model=model, measured_data=outputs)
+        # Create wrapped objective function based on provided parameters
+        objective = if isnothing(model) && isnothing(outputs)
+            f  # Use f directly if no model or outputs specified
+        elseif !isnothing(model) && !isnothing(outputs)
+            (x) -> f(x, model=model, measured_data=outputs)
+        elseif !isnothing(model)
+            (x) -> f(x, model=model)
+        elseif !isnothing(outputs)
+            (x) -> f(x, measured_data=outputs)
+        end
 
         # Convert to concrete Vector type for storage
         center_vec = Vector{Float64}(center)
@@ -94,7 +103,7 @@ struct test_input
         prec = (alpha, delta)
         noise = (0.0, 0.0)
 
-        # Convert sample_range to Float64 if needed (handles Rational input)
+        # Convert sample_range to Float64
         sample_range_float = Float64(sample_range)
 
         new(dim, center_vec, GN, prec, tolerance, noise, sample_range_float, reduce_samples, objective)
