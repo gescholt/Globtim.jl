@@ -9,6 +9,7 @@ export test_input, ApproxPoly,
     CrossInTray, Deuflhard, noisy_Deuflhard, old_alpine1, shubert_4d,
     camel_4d, camel_3_by_3, cosine_mixture, camel_3_6d, Csendes,
     alpine1, alpine2, GaussianParams,
+    calculate_samples,
     create_test_input,
     Constructor, solve_polynomial_system, msolve_polynomial_system,
     process_critical_points, msolve_parser, process_output_file
