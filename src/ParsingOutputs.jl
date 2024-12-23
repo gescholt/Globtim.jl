@@ -220,3 +220,48 @@ function safe_average(X::Vector{T}) where {T<:Number}
     return result
 end
 
+### Plots ###
+
+function plot_polyapprox(pol::ApproxPoly, TR::test_input, df::DataFrame)
+    # Extract coordinates and function values
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
+
+    if size(coords)[2] == 2  # Plot if the dimensions are 2
+        fig = Figure(size=(800, 600))
+        ax = Axis3(fig[1, 1], title="Trefethen Function",
+            xlabel="X-axis", ylabel="Y-axis", zlabel="Z-axis")
+
+        # Create a regular grid for surface plotting
+        x_unique = sort(unique(coords[:, 1]))
+        y_unique = sort(unique(coords[:, 2]))
+
+        # Initialize the Z grid with NaN
+        Z = fill(NaN, (length(y_unique), length(x_unique)))
+
+        # Fill the Z grid by matching coordinates
+        for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
+            i = findlast(≈(y), y_unique)
+            j = findlast(≈(x), x_unique)
+            if !isnothing(i) && !isnothing(j)
+                Z[j, i] = z
+            end
+        end
+
+        # Create surface plot
+        surface!(ax, x_unique, y_unique, Z,
+            colormap=:viridis,
+            transparency=true,
+            alpha=0.8)
+
+        # Plot the critical points
+        scatter!(ax, df.x1, df.x2,
+            df.z,
+            markersize=10,
+            color=:orange,
+            label="Chebyshev approximant critical points")
+
+        display(fig)
+        return fig
+    end
+end

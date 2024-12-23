@@ -12,7 +12,7 @@ export test_input, ApproxPoly,
     calculate_samples,
     create_test_input,
     Constructor, solve_polynomial_system, msolve_polynomial_system,
-    process_critical_points, msolve_parser, process_output_file
+    process_critical_points, msolve_parser, process_output_file, plot_polyapprox
 
 using CSV
 using DataFrames
@@ -20,6 +20,8 @@ using DynamicPolynomials
 using LinearSolve
 using LinearAlgebra
 using Distributions
+using GLMakie
+
 
 import HomotopyContinuation: solve, real_solutions, System
 
