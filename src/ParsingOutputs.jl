@@ -72,7 +72,7 @@ function process_output_file(file_path::String; dim::Int=3)
     return points
 end
 
-function msolve_parser(file_path::String, f::Function, scale_factor::Number, dim::Int=3)
+function msolve_parser(file_path::String, f::Function, dim::Int=3, TR::Union{test_input,Nothing}=nothing)
     println("\n=== Starting MSolve Parser (dimension: $dim) ===")
 
     if !isfile(file_path)
@@ -101,16 +101,24 @@ function msolve_parser(file_path::String, f::Function, scale_factor::Number, dim
             return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:dim))
         end
 
-        # Extract and scale coordinates
-        coords = [scale_factor * [p[i] for p in filtered_points] for i in 1:dim]
-        println("Extracted and scaled coordinates")
+        # Apply translation if TR is provided
+        points_to_process = if !isnothing(TR)
+            # Extract coordinates before translation
+            coords = [[p[i] for p in filtered_points] for i in 1:dim]
+            # Apply translation to each coordinate array
+            translated_coords = [TR.sample_range * coords[i] .+ TR.center[i] for i in 1:dim]
+            println("Applied translation with sample_range and center")
+            translated_coords
+        else
+            [[p[i] for p in filtered_points] for i in 1:dim]
+        end
 
         # Compute function values
-        z = map(p -> f(collect(p)), zip(coords...))
+        z = map(p -> f(collect(p)), zip(points_to_process...))
         println("Computed function values")
 
         # Create DataFrame
-        df_dict = Dict(Symbol("x$i") => coords[i] for i in 1:dim)
+        df_dict = Dict(Symbol("x$i") => points_to_process[i] for i in 1:dim)
         df_dict[:z] = z
 
         return DataFrame(df_dict)
@@ -167,13 +175,20 @@ end
 Process critical points in n-dimensional space and return a DataFrame.
 Only keeps points in [-1,1]^n.
 """
-function process_critical_points(real_pts, f, scale_factor, dim::Int=2)
+function process_critical_points(real_pts, f, scale_factor, dim::Int=2; TR::Union{test_input,Nothing}=nothing)
     # Check if point is in [-1,1]^n hypercube
     condition(point) = all(-1 .< point .< 1)
     filtered_points = filter(condition, real_pts)
 
+    # If TR is provided, translate filtered points relative to center
+    points_to_process = if !isnothing(TR)
+        [TR.sample_range * point .+ TR.center for point in filtered_points]
+    else
+        filtered_points
+    end
+
     # Extract coordinates
-    coords = [Float64[point[i] for point in filtered_points] for i in 1:dim]
+    coords = [Float64[point[i] for point in points_to_process] for i in 1:dim]
 
     # Calculate function values
     scaled_coords = [scale_factor * coord for coord in coords]
