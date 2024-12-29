@@ -52,7 +52,7 @@ function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
 
     # Get unique points (they're the same for each dimension)
     unique_points = unique(S[:, 1])
-    GN = length(unique_points) - 1  # Number of points - 1
+    # GN = length(unique_points) - 1  # Number of points - 1
 
     if basis == :legendre
         # Find max degree needed

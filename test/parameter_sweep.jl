@@ -13,7 +13,7 @@ Run parameter sweeps across different configurations, comparing critical points 
 - `DataFrame`: Results of parameter sweeps across all configurations
 """
 function run_parameter_sweep(Error_distance, d::Int, model::ODESystem, outputs, sample_configs; method::String="homotopy")
-    all_results = []
+    all_results = DataFrame()  # Start with empty DataFrame
 
     for (sample_range, N_samples, center) in sample_configs
         error_fn = let model = model, outputs = outputs
@@ -31,39 +31,42 @@ function run_parameter_sweep(Error_distance, d::Int, model::ODESystem, outputs, 
             outputs=outputs,
             GN=N_samples)
 
-        Pol = Constructor(TR, d, GN=N_samples, basis=:legendre)
+        Pol = Constructor(TR, d, basis=:legendre)
         @polyvar(x[1:TR.dim])
+        println("Size of the grid: ", size(Pol.grid))
 
-        # Choose solving method and handle process output
-        real_pts_lege = if method == "msolve"
+        if method == "msolve"
             println("Starting msolve computation...")
             process = msolve_polynomial_system(Pol, x, n=TR.dim, basis=:legendre)
 
-            # Print status while waiting
             start_time = time()
             while !process_exited(process)
                 elapsed = round(time() - start_time, digits=1)
                 println("MSolve still running... ($(elapsed)s elapsed)")
-                sleep(5)  # Check every 5 seconds
+                sleep(5)
             end
 
             println("MSolve computation completed in $(round(time() - start_time, digits=1))s")
             println("Parsing results...")
 
-            msolve_parser("outputs.ms", error_fn, sample_range, TR.dim)
+            # Get results for this configuration
+            results_df = msolve_parser("outputs.ms", error_fn, TR)
+
+            # Add center as a single column containing the array
+            results_df[!, :center] .= Ref(center)  # Using Ref to store the array in each row
+
+            # Append to main results
+            if isempty(all_results)
+                all_results = results_df
+            else
+                append!(all_results, results_df)
+            end
         elseif method == "homotopy"
-            result = solve_polynomial_system(x, TR.dim, Pol.degree, Pol.coeffs; basis=:legendre, bigint=true)
-            # result isa Base.Process ? wait(result) : result
+            # ... homotopy code ...
         else
             error("Invalid method: $method. Must be either 'homotopy' or 'msolve'")
         end
-
-        rl = process_real_solutions(real_pts_lege, TR, center, Error_distance, sample_range, N_samples)
-
-        for row in eachrow(rl)
-            push!(all_results, Dict(pairs(row)))
-        end
     end
 
-    return DataFrame(all_results)
+    return all_results, Pol.grid
 end
