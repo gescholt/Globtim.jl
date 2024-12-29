@@ -39,13 +39,12 @@ function tref(x)
 end
 
 @doc nothing
-function Ackley(xx::Vector{Float64}; a=20, b=.2, c=2*pi):Float64
-    # =======================================================
-    #   Not Rescaled
-    #   Ackley function
-    #   Domain: [-32, 32]^2.
-    # =======================================================  
-    return -a * exp(-b * sqrt(sum(xx .^ 2) / length(xx))) - exp(sum(cos.(c .* xx) / length(xx))) + a + exp(1)
+function Ackley(xx::AbstractVector; a=20, b=0.2, c=2 * pi)
+    n = length(xx)
+    # Use map instead of broadcasting for better StaticArrays performance
+    sum_sq = sum(x^2 for x in xx) / n
+    sum_cos = sum(cos(c * x) for x in xx) / n
+    return -a * exp(-b * sqrt(sum_sq)) - exp(sum_cos) + a + exp(1)
 end
 
 @doc nothing

@@ -12,15 +12,16 @@ export test_input, ApproxPoly,
     calculate_samples,
     create_test_input,
     Constructor, solve_polynomial_system, msolve_polynomial_system,
-    process_critical_points, msolve_parser, process_output_file, plot_polyapprox
+    process_critical_points, msolve_parser, process_output_file, plot_polyapprox, generate_grid
 
 using CSV
+using StaticArrays
 using DataFrames
 using DynamicPolynomials
 using LinearSolve
 using LinearAlgebra
 using Distributions
-using GLMakie
+# using GLMakie
 
 
 import HomotopyContinuation: solve, real_solutions, System

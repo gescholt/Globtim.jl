@@ -1,12 +1,12 @@
 # ==================== Functions ====================
 """
-    MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
+    MainGenerate(f, n::Int, d::Int, delta::Float64, alpha::Float64, scale_factor::Float64, scl::Float64; center::Vector{Float64}=fill(0.0, n))::ApproxPoly
 # Arguments
 - `f::Function`: The objective function to approximate.
 - `n::Int`: The number of variables.
 - `d::Int`: The degree of the polynomial.
 - `delta::Float64`: Sampling parameter.
-- `alph::Float64`: Probability parameter.
+- `alpha::Float64`: Probability parameter.
 - `scale_factor::Float64`: Scaling factor for the domain.
 - `scl::Float64`: Scaling factor to reduce the number of points in the grid.
 - `center::Vector{Float64}`: The center of the domain (default is a zero vector of length `n`).
@@ -27,13 +27,13 @@ alph = 0.05
 scale_factor = 1.0
 scl = 0.5
 center = [0.0, 0.0]
-approx_poly = MainGenerate(f, n, d, delta, alph, scale_factor, scl, center=center)
+approx_poly = MainGenerate(f, n, d, delta, alpha, scale_factor, scl, center=center)
 # approx_poly is an ApproxPoly object containing the polynomial approximation and related data
 """
-function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_factor::Float64, scl::Float64;
+function MainGenerate(f, n::Int, d::Int, delta::Float64, alpha::Float64, scale_factor::Float64, scl::Float64;
     center::Vector{Float64}=fill(0.0, n), verbose=0, basis=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
     m = binomial(n + d, d)  # Dimension of vector space
-    K = calculate_samples(m, delta, alph)
+    K = calculate_samples(m, delta, alpha)
 
     # Use provided GN if given, otherwise compute it
     actual_GN = if isnothing(GN)
@@ -43,17 +43,21 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alph::Float64, scale_fa
     end
 
     Lambda = SupportGen(n, d)
-    matrix_from_grid = generate_grid(n, actual_GN, basis=basis)
+    if n<= 4
+        grid = generate_grid_small_n(n, actual_GN, basis=basis)
+    else
+        grid = generate_grid(n, actual_GN, basis=basis)
+    end
+    matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
     if verbose == 1
         println("Condition number of G: ", cond(G_original))
     end
-    F = [f([scale_factor * matrix_from_grid[Int(i), :]...] + center) for i in 1:(actual_GN+1)^n]
+    scaled_center = SVector{n,Float64}(center)
+    F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
     RHS = VL' * F
-    # Solve linear system using an appropriate LinearSolve function
-    linear_prob = LinearProblem(G_original, RHS) # Define the linear problem
-    # Now solve the problem with proper choice of compute method. 
+    linear_prob = LinearProblem(G_original, RHS) 
     sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
     nrm = norm(VL * sol.u - F) / (actual_GN^n) # Watch out, we divide by GN to get the discrete norm
     return ApproxPoly{Float64}(sol, d, nrm, actual_GN, scale_factor, matrix_from_grid, F)
@@ -137,29 +141,26 @@ end
 
 """
 Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
-If GN, the number of samples (per dimension), is specified, it will only compute the polynomial approximant for that number of samples.
+If GN, the number of samples (per dimension), is specified in the test input `T`, then we only compute the polynomial approximant for that number of samples per coordinate axis.
 
 """
-function Constructor(T::test_input, degree::Int; verbose=0, basis::Symbol=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
-    # Validate the basis parameter
+function Constructor(T::test_input, degree::Int; verbose=0, basis::Symbol=:chebyshev)::ApproxPoly
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
     end
 
-    if !isnothing(GN)
-        # If GN is specified, just do one construction
+    if !isnothing(T.GN) && isa(T.GN, Int)
         p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
-            center=T.center, verbose=verbose, basis=basis, GN=GN)
+            center=T.center, verbose=verbose, basis=basis, GN=T.GN)
         println("current L2-norm: ", p.nrm)
         println("Number of samples: ", p.N)
         return p
     end
 
-    # Original behavior for when GN is nothing
     p = nothing
     while true
         p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
-            center=T.center, verbose=verbose, basis=basis, GN=GN)
+            center=T.center, verbose=verbose, basis=basis, GN=T.GN)
         if p.nrm < T.tolerance
             println("attained the desired L2-norm: ", p.nrm)
             println("Degree :$degree ")
@@ -204,9 +205,6 @@ function msolve_polynomial_system(pol::ApproxPoly, x; n=2, basis=:chebyshev, big
     end
 
     if !isfile(output_file)
-        open(output_file, "w") do io
-            # Optionally, you can write a header or leave it empty
-        end
         println("Created output file: $output_file")
     else
         println("Output file already exists: $output_file")
@@ -233,6 +231,6 @@ function msolve_polynomial_system(pol::ApproxPoly, x; n=2, basis=:chebyshev, big
         end
     end
 
-    run(`msolve -v 1 -f inputs.ms -o outputs.ms`)
+    run(`msolve -v 0 -t 10 -f inputs.ms -o outputs.ms`)
 end
 

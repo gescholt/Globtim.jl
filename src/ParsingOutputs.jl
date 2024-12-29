@@ -45,52 +45,43 @@ function process_output_file(file_path::String; dim::Int=3)
 end
 
 
-function msolve_parser(file_path::String, f::Function, dim::Int=3, TR::Union{test_input,Nothing}=nothing)
+function msolve_parser(file_path::String, f::Function, TR::test_input)::DataFrame
     total_time = @elapsed begin
-        println("\n=== Starting MSolve Parser (dimension: $dim) ===")
+        println("\n=== Starting MSolve Parser (dimension: $(TR.dim)) ===")
 
         if !isfile(file_path)
             error("File not found: $file_path")
         end
 
         try
-            process_time = @elapsed points = process_output_file(file_path, dim=dim)
+            process_time = @elapsed points = process_output_file(file_path, dim=TR.dim)
             println("Processed $(length(points)) points ($(round(process_time, digits=3))s)")
 
-            validation_time = @elapsed begin
-                if !all(p -> length(p) == dim, points)
-                    invalid_points = filter(p -> length(p) != dim, points)
-                    error("Found points with incorrect dimension: $invalid_points")
-                end
+            if !all(p -> length(p) == TR.dim, points)
+                invalid_points = filter(p -> length(p) != TR.dim, points)
+                error("Found points with incorrect dimension: $invalid_points")
             end
-            println("Dimension validation complete ($(round(validation_time, digits=3))s)")
-
-            filter_time = @elapsed filtered_points = filter(p -> all(-1 .<= p .<= 1), points)
-            println("$(length(filtered_points)) points after filtering ($(round(filter_time, digits=3))s)")
+            
+            filtered_points = filter(p -> all(-1 .<= p .<= 1), points)
 
             if isempty(filtered_points)
                 println("No valid points found after filtering")
-                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:dim))
+                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim))
             end
 
-            translation_time = @elapsed points_to_process = if !isnothing(TR)
-                coords = [[p[i] for p in filtered_points] for i in 1:dim]
-                translated_coords = [TR.sample_range * coords[i] .+ TR.center[i] for i in 1:dim]
-                println("Applied translation")
-                translated_coords
-            else
-                [[p[i] for p in filtered_points] for i in 1:dim]
-            end
-            println("Translation complete ($(round(translation_time, digits=3))s)")
+            # Convert center to vector if it's not already
+            center_vec = Vector(TR.center)
+            # Transform each point
+            points_to_process = [TR.sample_range .* p .+ center_vec for p in filtered_points]
 
-            function_time = @elapsed z = map(p -> f(collect(p)), zip(points_to_process...))
-            println("Function evaluation complete ($(round(function_time, digits=3))s)")
+            z = [f(p) for p in points_to_process]
 
-            df_time = @elapsed df = DataFrame(merge(
-                Dict(Symbol("x$i") => points_to_process[i] for i in 1:dim),
-                Dict(:z => z)
-            ))
-            println("DataFrame creation complete ($(round(df_time, digits=3))s)")
+            df = DataFrame(
+                merge(
+                    Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim),
+                    Dict(:z => z)
+                )
+            )
 
             return df
         catch e

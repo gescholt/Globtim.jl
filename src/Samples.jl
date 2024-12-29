@@ -49,56 +49,89 @@ function calculate_samples(m::Int, delta::Float64, alph::Float64)::Int
 end
 
 """
-    generate_grid(n::Int, GN::Int)
+   generate_grid(n::Int, GN::Int; basis=:chebyshev)::Array{SVector{N,Float64}} where N
 
-Generate enough samples to satisfy the error bound with respect to the tensorized Chebyshev polynomial basis.
+Generate a grid of points using either Chebyshev or Legendre nodes in n dimensions.
 
 # Arguments
-- `n::Int`: Dimension.
-- `GN::Int`: Number of samples in a coordinate direction.
+- n::Int: Number of dimensions for the grid.
+- GN::Int: Number of points in each dimension (will generate GN + 1 points).
+- basis::Symbol=:chebyshev: Choice of basis for node generation. Options are:
+   - :chebyshev: Uses Chebyshev nodes of the first kind: cos((2i + 1)π/(2GN + 2))
+   - :legendre: Uses equally spaced points: -1 + 2i/GN
 
 # Returns
-- The required number of samples.
+- Array{SVector{n,Float64}, n}: An n-dimensional array containing SVectors of dimension n.
+   The size in each dimension is GN + 1.
 
-# Example
+# Examples
 ```julia
-calculate_samples(3, 10)
+# Generate a 2D grid with 3 points in each dimension using Chebyshev nodes
+grid = generate_grid(2, 2)  # Creates a 3×3 array of SVector{2,Float64}
+
+# Generate a 3D grid with 4 points in each dimension using Legendre nodes
+grid = generate_grid(3, 3, basis=:legendre)  # Creates a 4×4×4 array of SVector{3,Float64}
 ```
+# Notes
+- The returned grid points are always in the domain [-1, 1]^n
+- For Chebyshev nodes, the points are concentrated near the boundaries
+- For Legendre nodes, the points are equally spaced
 """
 
-function generate_grid(n::Int, GN::Int; basis=:chebyshev)
-    if basis == :chebyshev
-        # Generate grid using Chebyshev nodes
-        ChebyshevNodes = [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
-        cart_cheb = [ChebyshevNodes for _ in 1:n]
-        grid = collect(Iterators.product(cart_cheb...))
+function generate_grid(n::Int, GN::Int; basis::Symbol=:chebyshev)::Array{SVector{n,Float64},n}
+    nodes = if basis == :chebyshev
+        (cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN)
     elseif basis == :legendre
-        # Generate grid using Legendre nodes
-        LegendreNodes = [-1 + 2*i/GN for i in 0:GN]
-        cart_legendre = [LegendreNodes for _ in 1:n]
-        grid = collect(Iterators.product(cart_legendre...))
-        
+        (-1 + 2 * i / GN for i in 0:GN)
     else
         error("Unsupported basis: $basis")
     end
-    matrix_grid = reduce(hcat, map(t -> collect(t), grid))'
-    return matrix_grid
+
+    nodes_vec = collect(nodes)  # Only collect once
+
+    # Use array comprehension with direct SVector construction
+    [SVector{n,Float64}(ntuple(d -> nodes_vec[idx[d]], n))
+     for idx in Iterators.product(fill(1:GN+1, n)...)]
 end
 
-
 """
-uniform_grid(n; range_min=-1.0, range_max=1.0, num_points_per_dim=20)
+    generate_grid_small_n(::Val{N}, GN::Int; basis=:chebyshev)::Array{SVector{N,Float64}, N} where N
 
+Generate a grid of points using either Chebyshev or Legendre nodes in N dimensions.
+Optimized version for small dimensions (N ≤ 4) using compile-time unrolling.
+
+# Arguments
+- N: Number of dimensions (passed as Val{N})
+- GN::Int: Number of points in each dimension (will generate GN + 1 points)
+- basis::Symbol=:chebyshev: Choice of basis for node generation. Options are:
+    - :chebyshev: Uses Chebyshev nodes of the first kind: cos((2i + 1)π/(2GN + 2))
+    - :legendre: Uses equally spaced points: -1 + 2i/GN
+
+# Returns
+- Array{SVector{N,Float64}, N}: An N-dimensional array containing SVectors of dimension N.
+    The size in each dimension is GN + 1.
+
+# Examples
+```julia
+# Generate a 2D grid with 3 points in each dimension using Chebyshev nodes
+grid = generate_grid_small_n(Val(2), 2)  # Creates a 3×3 array of SVector{2,Float64}
+Notes
+
+The returned grid points are always in the domain [-1, 1]^N
+For Chebyshev nodes, the points are concentrated near the boundaries
+For Legendre nodes, the points are equally spaced
+This version is optimized for small N (typically N ≤ 4) using compile-time unrolling
 """
-function uniform_grid(n; range_min=-1.0, range_max=1.0, num_points_per_dim=20)
-    # Create a range of points for each dimension
-    ranges = [range(range_min, stop=range_max, length=num_points_per_dim) for _ in 1:n]
+function generate_grid_small_n(N::Int, GN::Int; basis::Symbol=:chebyshev)::Array{SVector{N,Float64},N}
+    nodes = if basis == :chebyshev
+        [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
+    elseif basis == :legendre
+        [-1 + 2 * i / GN for i in 0:GN]
+    else
+        error("Unsupported basis: $basis")
+    end
 
-    # Generate the Cartesian product of the ranges to create the grid
-    grid_points = collect(IterTools.product(ranges...))
-    # Convert the grid points to a matrix where each row is a point
-    uniform_grid_matrix = reduce(hcat, map(x -> collect(x), grid_points))'
-    # Print the grid points
-    uniform_grid_vectors = [collect(row) for row in eachrow(uniform_grid_matrix)]
-    return uniform_grid_vectors
+    reshape([SVector{N,Float64}(ntuple(d -> nodes[idx[d]], N))
+             for idx in Iterators.product(fill(1:GN+1, N)...)],
+        fill(GN + 1, N)...)
 end
