@@ -1,108 +1,7 @@
-
-
-# ======================================================= Functions =======================================================
-
-"""
-    ChebyshevPoly(d::Int, x)
-
-Generate the Chebyshev polynomial of degree `d` in the variable `x` with rational coefficients.
-
-# Arguments
-- `d::Int`: Degree of the Chebyshev polynomial.
-- `x`: Variable for the polynomial.
-
-# Returns
-- The Chebyshev polynomial of degree `d` in the variable `x`.
-
-# Example
-```julia
-ChebyshevPoly(3, x)
-```
-"""
-function ChebyshevPoly(d::Int, x)
-    if d == 0
-        return rationalize(1.0)
-    elseif d == 1
-        return x
-    else
-        T_prev = rationalize(1.0)
-        T_curr = x
-        for n in 2:d
-            T_next = rationalize(2.0) * x * T_curr - T_prev
-            T_prev = T_curr
-            T_curr = T_next
-        end
-        return T_curr
-    end
-end
-
-"""
-    ChebyshevPolyExact(d::Int)::Vector{Int}
-
-Generate a vector of integer coefficients of the Chebyshev polynomial of degree `d` in one variable.
-
-# Arguments
-- `d::Int`: Degree of the Chebyshev polynomial.
-
-# Returns
-- A vector of integer coefficients of the Chebyshev polynomial of degree `d`.
-
-# Example
-```julia
-ChebyshevPolyExact(3)
-```
-"""
-function ChebyshevPolyExact(d::Int)::Vector{Int}
-    if d == 0
-        return [1]
-    elseif d == 1
-        return [0, 1]
-    else
-        Tn_1 = ChebyshevPolyExact(d - 1)
-        Tn_2 = ChebyshevPolyExact(d - 2)
-        Tn = [0; 2 * Tn_1] - vcat(Tn_2, [0, 0])
-        return Tn
-    end
-end
-
-"""
-    BigFloatChebyshevPoly(d::Int, x)
-
-Generate the Chebyshev polynomial with `BigFloat` coefficients of degree `d` in the variable `x`.
-
-# Arguments
-- `d::Int`: Degree of the Chebyshev polynomial.
-- `x`: Variable for the polynomial.
-
-# Returns
-- The Chebyshev polynomial of degree `d` in the variable `x` with `BigFloat` coefficients.
-
-# Example
-```julia
-BigFloatChebyshevPoly(3, x)
-```
-"""
-function BigFloatChebyshevPoly(d::Int, x)
-    if d == 0
-        return BigFloat(1.0)
-    elseif d == 1
-        return x
-    else
-        T_prev = BigFloat(1.0)
-        T_curr = x
-        for n in 2:d
-            T_next = BigFloat(2.0) * x * T_curr - T_prev
-            T_prev = T_curr
-            T_curr = T_next
-        end
-        return T_curr
-    end
-end
-
 """
     SupportGen(n::Int, d::Int)::NamedTuple
 
-Compute the support of a polynomial of total degree at most `d`.
+Compute the support of a dense polynomial of total degree at most d in n variables.
 
 # Arguments
 - `n::Int`: Number of variables.
@@ -139,90 +38,86 @@ function SupportGen(n::Int, d::Int)::NamedTuple
 end
 
 """
-    lambda_vandermonde(Lambda, S)
+    lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
 
-Generate a Vandermonde-like matrix in the Chebyshev tensored basis.
-
-# Arguments
-- `Lambda`: NamedTuple of the support of the polynomial space. Make sure what structure it is to type it. 
-- `S`: Sample points.
-
-# Returns
-- A Vandermonde-like matrix.
-
-# Example
-```julia
-Lambda = [0 1; 1 0; 1 1]
-S = [0.5 0.5; -0.5 -0.5; 0.0 0.0]
-lambda_vandermonde(Lambda, S)
-```
+Compute the Vandermonde matrix using precomputed basis polynomials.
+Optimized for grids where sample points are the same along each dimension.
+Lambda is generated from SupportGen(n,d) and contains integer degrees.
+S is the sample points matrix where each column contains the same points.
 """
-function lambda_vandermonde(Lambda::NamedTuple, S)
+function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
     m, N = Lambda.size
     n, N = size(S)
-    V = zeros(n, m)
-    for i in 1:n # Number of samples
-        for j in 1:m # Dimension of vector space of polynomials
-            P = 1.0
-            for k in 1:N # Dimension of each sample
-                P *= ChebyshevPoly(Lambda.data[j, k], S[i, k])
-            end
-            V[i, j] = P
+    V_big = zeros(BigFloat, n, m)
+
+    # Get unique points (they're the same for each dimension)
+    unique_points = unique(S[:, 1])
+    # GN = length(unique_points) - 1  # Number of points - 1
+
+    if basis == :legendre
+        # Find max degree needed
+        max_degree = maximum(Lambda.data)
+
+        # Precompute Legendre polynomial evaluations for all degrees at unique points
+        eval_cache = Dict{Int,Vector{BigFloat}}()
+        for degree in 0:max_degree
+            eval_cache[degree] = [evaluate_legendre(symbolic_legendre(degree), point) for point in unique_points]
         end
+
+        # Create point index lookup
+        point_indices = Dict(point => i for (i, point) in enumerate(unique_points))
+
+        # Compute Vandermonde matrix using cached values
+        for i in 1:n
+            for j in 1:m
+                P = one(BigFloat)
+                for k in 1:N
+                    degree = Int(Lambda.data[j, k])
+                    point = S[i, k]
+                    point_idx = point_indices[point]
+                    P *= eval_cache[degree][point_idx]
+                end
+                V_big[i, j] = P
+            end
+        end
+
+    elseif basis == :chebyshev
+        # Precompute Chebyshev polynomial evaluations for all needed degrees
+        max_degree = maximum(Lambda.data)
+        eval_cache = Dict{Int,Vector{BigFloat}}()
+
+        # For Chebyshev nodes, we can directly compute values
+        # cos(k * arccos(x)) is the k-th Chebyshev polynomial
+        for point_idx in 1:length(unique_points)
+            x = unique_points[point_idx]
+            theta = acos(x)
+            for degree in 0:max_degree
+                if !haskey(eval_cache, degree)
+                    eval_cache[degree] = Vector{BigFloat}(undef, length(unique_points))
+                end
+                eval_cache[degree][point_idx] = cos(degree * theta)
+            end
+        end
+
+        # Create point index lookup
+        point_indices = Dict(point => i for (i, point) in enumerate(unique_points))
+
+        # Compute Vandermonde matrix using cached values
+        for i in 1:n
+            for j in 1:m
+                P = one(BigFloat)
+                for k in 1:N
+                    degree = Int(Lambda.data[j, k])
+                    point = S[i, k]
+                    point_idx = point_indices[point]
+                    P *= eval_cache[degree][point_idx]
+                end
+                V_big[i, j] = P
+            end
+        end
+    else
+        error("Unsupported basis: $basis")
     end
-    return V
-end
 
-
-# ======================================================= For Msolve =======================================================
-"""
-    process_output_file(file_path::String)
-
-Parse the output file generated by `msolve`.
-
-# Arguments
-- `file_path::String`: Path to the output file.
-
-# Returns
-- Parsed content of the output file.
-"""
-function process_output_file(file_path)
-    content = read(file_path, String)    # Read the file content
-    array_start = findfirst(r"\[\[\[", content)[1] # Extract the array starting from line 2
-    array_end = findfirst(r"\]\]\]", content)[end]
-    if array_start === nothing
-        error("No array found starting from line 2.")
-    end
-    array_content = content[array_start:array_end]
-    replaced_expression = replace(array_content, r"(-?\d+) / (2\^(\d+))" => s -> "[" * match(r"(-?\d+)", s).match * ", " * match(r"(\d+)$", s).match * "]")
-    parsed_expression = Meta.parse(replaced_expression)
-    evaled = eval(parsed_expression)
-    return evaled
-end
-
-"""
-    process_output_file(file_path::String)
-
-Parse the output file generated by `msolve`.
-
-# Arguments
-- `file_path::String`: Path to the output file.
-
-# Returns
-- Parsed content of the output file.
-
-"""
-function parse_point(X::Vector{Vector{Vector{BigInt}}})::Vector{Rational{BigInt}}
-    pts = Vector{Rational{BigInt}}()
-    for x in X
-        numer_low = x[1][1]
-        denom_low = BigInt(2)^x[1][2]
-        numer_hig = x[2][1]
-        denom_hig = BigInt(2)^x[2][2]
-        LW = Rational{BigInt}(numer_low, denom_low)
-        HG = Rational{BigInt}(numer_hig, denom_hig)
-        AVG = (LW + HG) / 2
-        push!(pts, AVG)
-    end
-    return (pts)
+    return Float64.(V_big)
 end
