@@ -1,10 +1,6 @@
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Globtim = "00da9514-6261-47e9-8848-33640cb1e528"
 HomotopyContinuation = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
-IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
-ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
