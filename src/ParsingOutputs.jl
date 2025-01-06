@@ -61,7 +61,7 @@ function msolve_parser(file_path::String, f::Function, TR::test_input)::DataFram
                 invalid_points = filter(p -> length(p) != TR.dim, points)
                 error("Found points with incorrect dimension: $invalid_points")
             end
-            
+
             filtered_points = filter(p -> all(-1 .<= p .<= 1), points)
 
             if isempty(filtered_points)
@@ -92,10 +92,15 @@ function msolve_parser(file_path::String, f::Function, TR::test_input)::DataFram
                 println()
             end
             rethrow(e)
+        finally
+            # Clean up the output file after processing
+            isfile(file_path) && rm(file_path)
         end
     end
     println("Total execution time: $(round(total_time, digits=3))s")
 end
+
+
 
 """
     parse_point(X::Vector{Vector{Vector{BigInt}}})::Vector{Rational{BigInt}}

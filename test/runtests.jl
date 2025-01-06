@@ -29,7 +29,8 @@ TR = test_input(f,
     dim=n,
     center=center,
     GN=60,
-    sample_range=scale_factor
+    sample_range=scale_factor,
+    degree_max=12,
 )
 pol_cheb = Constructor(TR, d, basis=:chebyshev)
 pol_lege = Constructor(TR, d, basis=:legendre)

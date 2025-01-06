@@ -27,34 +27,21 @@ struct ApproxPoly{T<:Number}
 end
 
 """
-    struct test_input
+   struct test_input
 
-A structure containing all parameters needed to run a test.
+Container for test parameters and objective function.
 
-# Fields
-- `dim::Int`: Dimension of the problem space
-- `center::Vector{Float64}`: Center point of the sampling region
-- `GN::Union{Int, Nothing}`: Number of samples (optional)
-- `prec::Union{Tuple{Float64,Float64}, Nothing}`: Precision parameters (α, δ)
-- `tolerance::Union{Float64, Nothing}`: Convergence tolerance
-- `noise::Union{Tuple{Float64,Float64}, Nothing}`: Noise parameters
-- `sample_range::Union{Float64, Nothing}`: Range for sampling around center
-- `reduce_samples::Union{Float64, Nothing}`: Reduction factor for sample set size
-- `objective::Function`: Objective function to be evaluated
-
-# Constructor
-    test_input(f::Function; kwargs...)
-
-# Keyword Arguments
-- `dim::Int=2`: Problem dimension
-- `center::AbstractVector{Float64}=fill(0.0, dim)`: Center point
-- `alpha::Float64=0.1`: First precision parameter
-- `delta::Float64=0.5`: Second precision parameter
-- `tolerance::Float64=2e-3`: Convergence tolerance
-- `sample_range::Number=1.0`: Sampling range around center
-- `reduce_samples::Float64=1.0`: Sample reduction factor
-- `model=nothing`: Optional model parameter passed to objective function
-- `outputs=nothing`: Optional outputs parameter passed to objective function
+Fields:
+- `dim::Int`: Problem dimension
+- `center::Vector{Float64}`: Center point of search region
+- `GN::Union{Int,Nothing}`: Grid size (optional)
+- `prec::Union{Tuple{Float64,Float64},Nothing}`: Precision parameters (α,δ) 
+- `tolerance::Union{Float64,Nothing}`: Convergence tolerance
+- `noise::Union{Tuple{Float64,Float64},Nothing}`: Noise parameters
+- `sample_range::Union{Float64,Nothing}`: Sampling radius around center
+- `reduce_samples::Union{Float64,Nothing}`: Sample reduction factor
+- `degree_max::Union{Int, Nothing}`: Maximum polynomial degree
+- `objective::Function`: Function to optimize
 """
 struct test_input
     dim::Int
@@ -65,66 +52,99 @@ struct test_input
     noise::Union{Tuple{Float64,Float64},Nothing}
     sample_range::Union{Float64,Nothing}
     reduce_samples::Union{Float64,Nothing}
+    degree_max::Union{Int, Nothing}
     objective::Function
 
-    # Enhanced constructor with all defaults and parameter names
     function test_input(
         f::Function;
-        # Core parameters with descriptions in comments
-        dim::Int=2,                    # Dimension of the problem
-        center::AbstractVector{Float64}=fill(0.0, dim),  # Center point
-        GN::Union{Int,Nothing}=nothing,                  # Grid number
-        alpha::Float64=0.1,            # Precision parameter alpha
-        delta::Float64=0.5,            # Precision parameter delta
-        tolerance::Float64=2e-3,       # Tolerance level
-        sample_range::Number=1.0,      # Range for sampling
-        reduce_samples::Float64=1.0,   # Sample reduction factor
-        model=nothing,                 # Optional model parameter
-        outputs=nothing                # Optional measured data
+        dim::Int=2,
+        center::AbstractVector{<:Real}=fill(0.0, dim),
+        GN::Union{Int,Nothing}=nothing,
+        alpha::Union{Real,Nothing}=0.1,
+        delta::Union{Real,Nothing}=0.5,
+        tolerance::Union{Real,Nothing}=2e-3,
+        sample_range::Union{Real,Nothing}=1.0,
+        reduce_samples::Union{Real,Nothing}=1.0,
+        degree_max::Int=6,
+        model::Union{Nothing,Any}=nothing,  # Changed from ODESystem
+        outputs::Union{Nothing,AbstractVector{<:Real}}=nothing
     )
-        # Validation
-        length(center) == dim || throw(ArgumentError("center vector length must match dim"))
+        # Type conversions
+        center_vec = Vector{Float64}(float.(center))
+        sample_range_float = isnothing(sample_range) ? nothing : Float64(sample_range)
+        reduce_samples_float = isnothing(reduce_samples) ? nothing : Float64(reduce_samples)
 
-        # Create wrapped objective function based on provided parameters
+        # Create precision tuple if alpha and delta are provided
+        prec = if !isnothing(alpha) && !isnothing(delta)
+            (Float64(alpha), Float64(delta))
+        else
+            nothing
+        end
+
+        # Convert tolerance if provided
+        tolerance_float = isnothing(tolerance) ? nothing : Float64(tolerance)
+
+        # Validation
+        length(center_vec) == dim || throw(ArgumentError("center vector length must match dim"))
+
+        # Create objective function
         objective = if isnothing(model) && isnothing(outputs)
-            f  # Use f directly if no model or outputs specified
+            f
         elseif !isnothing(model) && !isnothing(outputs)
             (x) -> f(x, model=model, measured_data=outputs)
         elseif !isnothing(model)
             (x) -> f(x, model=model)
-        elseif !isnothing(outputs)
+        else
             (x) -> f(x, measured_data=outputs)
         end
 
-        # Convert to concrete Vector type for storage
-        center_vec = Vector{Float64}(center)
-
-        # Create precision and noise tuples
-        prec = (alpha, delta)
         noise = (0.0, 0.0)
 
-        # Convert sample_range to Float64
-        sample_range_float = Float64(sample_range)
-
-        new(dim, center_vec, GN, prec, tolerance, noise, sample_range_float, reduce_samples, objective)
+        new(
+            dim,
+            center_vec,
+            GN,
+            prec,
+            tolerance_float,
+            noise,
+            sample_range_float,
+            reduce_samples_float,
+            degree_max,
+            objective
+        )
     end
 end
 
 """
-    create_test_input()
-Generate standard inputs for test function 
+   create_test_input(f::Function; kwargs...)::test_input
+
+Convenience constructor for test_input with default values.
+
+# Arguments
+- `f::Function`: Objective function to optimize
+- `n=2`: Problem dimension 
+- `center=fill(0.0,n)`: Center point
+- `tolerance=2e-3`: Convergence tolerance
+- `alpha=0.1`: First precision parameter
+- `delta=0.5`: Second precision parameter
+- `sample_range=1.0`: Sampling radius
+- `reduce_samples=1.0`: Sample reduction
+- `degree_max=6`: Maximum polynomial degree
+- `model=nothing`: Optional model
+- `outputs=nothing`: Optional measured data
 """
-# Function to create a pre-populated instance of test_input
-function create_test_input(f::Function;
-    n=2,
-    center=fill(0.0, n),
-    tolerance=2e-3,
-    alpha=0.1,
-    delta=0.5,
-    sample_range=1.0,
-    reduce_samples=1.0,
-    model=nothing,
-    outputs=nothing
+function create_test_input(
+    f::Function;
+    n::Int=2,
+    center::AbstractVector{Float64}=fill(0.0, n),
+    tolerance::Float64=2e-3,
+    alpha::Float64=0.1,
+    delta::Float64=0.5,
+    sample_range::Float64=1.0,
+    reduce_samples::Float64=1.0,
+    degree_max::Int=6,
+    model::Union{Nothing,Any}=nothing,  # Changed from ODESystem
+    outputs::Union{Nothing,AbstractVector{<:Real}}=nothing
 )::test_input
     return test_input(
         f;
@@ -135,6 +155,7 @@ function create_test_input(f::Function;
         delta=delta,
         sample_range=sample_range,
         reduce_samples=reduce_samples,
+        degree_max=degree_max,
         model=model,
         outputs=outputs
     )
