@@ -39,12 +39,6 @@ function to_makie_format(level_set::LevelSetData)
     )
 end
 
-# Generate grid and evaluate 
-grid = generate_grid(3, 20)  # 3D space with 50 points per dimension
-values = map(error_func, grid)
-
-# Prepare level set data for specific level
-level_set = prepare_level_set_data(grid, values, 1.0, tolerance=0.2)
 
 function plot_level_set(formatted_data)
     fig = Figure(size=(800, 600))

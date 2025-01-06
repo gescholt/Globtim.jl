@@ -31,7 +31,7 @@ approx_poly = MainGenerate(f, n, d, delta, alpha, scale_factor, scl, center=cent
 # approx_poly is an ApproxPoly object containing the polynomial approximation and related data
 """
 function MainGenerate(f, n::Int, d::Int, delta::Float64, alpha::Float64, scale_factor::Float64, scl::Float64;
-    center::Vector{Float64}=fill(0.0, n), verbose=0, basis=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
+    center::Vector{Float64}=fill(0.0, n), verbose=1, basis=:chebyshev, GN::Union{Int,Nothing}=nothing)::ApproxPoly
     m = binomial(n + d, d)  # Dimension of vector space
     K = calculate_samples(m, delta, alpha)
 
@@ -51,15 +51,24 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alpha::Float64, scale_f
     matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
-    if verbose == 1
-        println("Condition number of G: ", cond(G_original))
-    end
     scaled_center = SVector{n,Float64}(center)
     F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
     RHS = VL' * F
     linear_prob = LinearProblem(G_original, RHS) 
-    sol = LinearSolve.solve(linear_prob, method=:gmres, verbose=true)
-    nrm = norm(VL * sol.u - F) / (actual_GN^n) # Watch out, we divide by GN to get the discrete norm
+    if verbose == 1
+        println("Condition number of G: ", cond(G_original))
+        sol = LinearSolve.solve(linear_prob,verbose=true)
+        println("Chosen method: ", typeof(sol.alg))
+    else
+        sol = LinearSolve.solve(linear_prob)
+    end
+    # nrm = norm(VL * sol.u - F) / (actual_GN^n) # Watch out, we divide by GN to get the discrete norm
+    # Compute norm based on basis type
+    nrm = if basis == :chebyshev
+        norm(VL * sol.u - F) / (actual_GN^n) # Discrete norm for Chebyshev
+    else  # legendre case, we take discrete L2 norm w.r.t area of each summand. 
+        (VL * sol.u - F) .^ 2 |> sum |> (x -> x * (2 / actual_GN)^n) |> sqrt
+    end
     return ApproxPoly{Float64}(sol, d, nrm, actual_GN, scale_factor, matrix_from_grid, F)
 end
 
@@ -150,10 +159,8 @@ function Constructor(T::test_input, degree::Int; verbose=0, basis::Symbol=:cheby
     end
 
     if !isnothing(T.GN) && isa(T.GN, Int)
-        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples,
-            center=T.center, verbose=verbose, basis=basis, GN=T.GN)
+        p = MainGenerate(T.objective, T.dim, degree, T.prec[2], T.prec[1], T.sample_range, T.reduce_samples, center=T.center, verbose=verbose, basis=basis, GN=T.GN)
         println("current L2-norm: ", p.nrm)
-        println("Number of samples: ", p.N)
         return p
     end
 
@@ -166,14 +173,10 @@ function Constructor(T::test_input, degree::Int; verbose=0, basis::Symbol=:cheby
             println("Degree :$degree ")
             break
         else
-            println("current L2-norm: ", p.nrm)
-            println("Number of samples: ", p.N)
             degree += 1
             println("Increase degree to: $degree")
         end
     end
-    println("current L2-norm: ", p.nrm)
-    println("Number of samples: ", p.N)
     return p
 end
 
@@ -191,46 +194,43 @@ end
 
 
 function msolve_polynomial_system(pol::ApproxPoly, x; n=2, basis=:chebyshev, bigint=true)
-    input_file = "inputs.ms"
-    output_file = "outputs.ms"
+    # Generate random temporary filenames
+    random_suffix = randstring(8)
+    input_file = "tmp_input_$(random_suffix).ms"
+    output_file = "tmp_output_$(random_suffix).ms"
 
-    # Create empty files if they don't exist
-    if !isfile(input_file)
-        open(input_file, "w") do io
-            # Optionally, you can write a header or leave it empty
+    try
+        # Process polynomial system
+        names = [x[i].name for i in 1:length(x)]
+        open(input_file, "w") do file
+            println(file, join(names, ", "))
+            println(file, 0)
         end
-        println("Created input file: $input_file")
-    else
-        println("Input file already exists: $input_file")
-    end
 
-    if !isfile(output_file)
-        println("Created output file: $output_file")
-    else
-        println("Output file already exists: $output_file")
-    end
+        p = main_nd(x, n, pol.degree, pol.coeffs, basis=basis, bigint=bigint)
+        grad = differentiate.(p, x)
 
-    # Process polynomial system
-    names = [x[i].name for i in 1:length(x)]
-    open(input_file, "w") do file
-        println(file, join(names, ", "))
-        println(file, 0)
-    end
-
-    p = main_nd(x, n, pol.degree, pol.coeffs, basis=basis, bigint=bigint)
-    grad = differentiate.(p, x)
-
-    for i in 1:n
-        partial_str = replace(string(grad[i]), "//" => "/")
-        open(input_file, "a") do file
-            if i < n
-                println(file, string(partial_str, ","))
-            else
-                println(file, partial_str)
+        for i in 1:n
+            partial_str = replace(string(grad[i]), "//" => "/")
+            open(input_file, "a") do file
+                if i < n
+                    println(file, string(partial_str, ","))
+                else
+                    println(file, partial_str)
+                end
             end
         end
-    end
 
-    run(`msolve -v 0 -t 10 -f inputs.ms -o outputs.ms`)
+        run(`msolve -v 0 -t 10 -f $input_file -o $output_file`)
+
+        # Return the output filename so it can be used by msolve_parser
+        return output_file
+
+    finally
+        # Clean up only the input file here
+        isfile(input_file) && rm(input_file)
+    end
 end
+
+
 

@@ -32,7 +32,7 @@ Globtim
 p_center = p_true + [0.1, 0.0, 0.0]
 
 n = 3
-d = 8
+d = 12
 Pkg.develop(path="/home/user/Globtim.jl")
 using Globtim
 using DynamicPolynomials
@@ -40,15 +40,21 @@ using DynamicPolynomials
 
 TR = test_input(error_func,
     dim=n,
-    center=p_true,
-    GN=10,
-    sample_range=1//10
+    center=p_center,
+    GN=15,
+    sample_range=1//8
 );
 
 # Chebyshev 
 pol_cheb = Constructor(TR, d, basis=:chebyshev);
-msolve_polynomial_system(pol_cheb, x; n=3, basis=:chebyshev, bigint=true);
+@time msolve_polynomial_system(pol_cheb, x; n=3, basis=:chebyshev, bigint=true);
 df_cheb = msolve_parser("outputs.ms", error_func, TR)
+
+using HomotopyContinuation, ProgressLogging
+@time real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis=:chebyshev, bigint=true)
+df_cheb_2 = process_critical_points(real_pts_cheb, error_func, TR.sample_range, n, TR = TR)
+# this has not been translated to the new position yet (center)
+
 
 # Legendre
 pol_lege = Constructor(TR, d, basis=:legendre);
@@ -56,8 +62,18 @@ msolve_polynomial_system(pol_lege, x; n=3, basis=:legendre, bigint=true);
 df_lege = msolve_parser("outputs.ms", error_func, TR)
 
 
+## The homotopy Continuation version too.
 
-# using GLMakie
+using GLMakie
 
-# include("Visual.jl")
+include("Visual.jl")
 # """What do we want to achieve here?"""
+
+
+# Generate grid and evaluate 
+grid = generate_grid(3, 20)  # 3D space with 50 points per dimension
+values = map(error_func, grid)
+# Prepare level set data for specific level
+level_set = prepare_level_set_data(grid, values, 1.0, tolerance=0.2)
+
+plot_level_set(to_makie_format(level_set))
