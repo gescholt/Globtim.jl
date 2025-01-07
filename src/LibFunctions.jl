@@ -336,3 +336,12 @@ function alpine2(x::Vector{Float64}, ndim::Int)::Float64
     
 end
 
+@doc nothing
+function Rastringin(x::AbstractVector; ndim::Int=3)::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Rastringin function
+    #   Domain: [-5.12, 5.12]^ndim.
+    # =======================================================
+    return sum(x[i]^2 - 10 * cos(2 * pi * x[i]) for i in 1:ndim)
+end

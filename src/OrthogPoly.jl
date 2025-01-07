@@ -137,41 +137,84 @@ function evaluate_legendre(P, x_val::Number)
     return DynamicPolynomials.subs(P, x => x_val)
 end
 
+# """
+#     symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
+
+# Generate the symbolic Legendre polynomial of degree n.
+# If normalized=true, returns the L²-normalized version.
+# """
+# function symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
+#     n < 0 && throw(ArgumentError("Degree must be non-negative"))
+
+#     # Get the unnormalized polynomial
+#     P = if n == 0
+#         use_bigint ? big(1) : 1
+#     elseif n == 1
+#         x  # Use global x
+#     else
+#         try
+#             _symbolic_legendre_impl(n, use_bigint)
+#         catch e
+#             if e isa OverflowError && !use_bigint
+#                 @warn "Integer overflow detected, switching to BigInt"
+#                 _symbolic_legendre_impl(n, true)
+#             else
+#                 rethrow(e)
+#             end
+#         end
+#     end
+
+#     # Apply normalization if requested
+#     if normalized
+#         # Normalization factor: √((2n+1)/2)
+#         norm_factor = sqrt((2n + 1) / 2)
+#         return norm_factor * P
+#     else
+#         return P
+#     end
+# end
+
 """
     symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
 
-Generate the symbolic Legendre polynomial of degree n.
-If normalized=true, returns the L²-normalized version.
+Generate the symbolic Legendre polynomial of degree n using DynamicPolynomials.
+
+# Arguments
+- `n::Integer`: Degree of the Legendre polynomial
+- `use_bigint::Bool=false`: Whether to use BigInt for computation
+- `normalized::Bool=true`: If true, returns the L²-normalized version
+
+# Returns
+- The Legendre polynomial of degree n
+
+# Throws
+- ArgumentError: If n < 0
 """
 function symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
-    # Get the unnormalized polynomial
-    P = if n == 0
-        use_bigint ? big(1) : 1
-    elseif n == 1
-        x  # Use global x
-    else
-        try
-            _symbolic_legendre_impl(n, use_bigint)
-        catch e
-            if e isa OverflowError && !use_bigint
-                @warn "Integer overflow detected, switching to BigInt"
-                _symbolic_legendre_impl(n, true)
-            else
-                rethrow(e)
-            end
-        end
-    end
+    # Get the unnormalized polynomial using multiple dispatch
+    P = _get_legendre_polynomial(n, Val(use_bigint))
 
     # Apply normalization if requested
     if normalized
-        # Normalization factor: √((2n+1)/2)
-        norm_factor = sqrt((2n + 1) / 2)
+        norm_factor = sqrt((2n + 1) // 2)  # Using rational arithmetic for exactness
         return norm_factor * P
-    else
-        return P
     end
+    return P
+end
+
+# Helper functions using multiple dispatch
+function _get_legendre_polynomial(n::Integer, ::Val{false})
+    n == 0 && return one(x)  # x is defined globally via @polyvar
+    n == 1 && return x
+    return _symbolic_legendre_impl(n, false)
+end
+
+function _get_legendre_polynomial(n::Integer, ::Val{true})
+    n == 0 && return big(1)
+    n == 1 && return x
+    return _symbolic_legendre_impl(n, true)
 end
 
 """

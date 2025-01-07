@@ -181,6 +181,20 @@ function safe_average(X::Vector{T}) where {T<:Number}
     return result
 end
 
+"""
+    solve_and_parse(pol::ApproxPoly, x, f::Function, TR::test_input; kwargs...)
+"""
+function solve_and_parse(pol::ApproxPoly, x, f::Function, TR::test_input; basis::Symbol=:chebyshev, kwargs...)
+    # First run msolve_polynomial_system and get the output file path
+    output_file = msolve_polynomial_system(pol, x; n=TR.dim, basis=basis)
+
+    # Then parse the results and get the DataFrame
+    # The output file will be automatically cleaned up after parsing
+    df = msolve_parser(output_file, f, TR)
+
+    return df
+end
+
 ### Plots ###
 
 function plot_polyapprox(pol::ApproxPoly, TR::test_input, df::DataFrame)

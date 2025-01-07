@@ -8,12 +8,12 @@ export test_input, ApproxPoly,
     dejong5, easom, init_gaussian_params, rand_gaussian, HolderTable,
     CrossInTray, Deuflhard, noisy_Deuflhard, old_alpine1, shubert_4d,
     camel_4d, camel_3_by_3, cosine_mixture, camel_3_6d, Csendes,
-    alpine1, alpine2, GaussianParams,
+    alpine1, alpine2, GaussianParams, Rastringin,
     calculate_samples,
     create_test_input,
     Constructor, solve_polynomial_system, msolve_polynomial_system,
     process_critical_points, msolve_parser, process_output_file, plot_polyapprox, generate_grid,
-    subdivide_domain
+    subdivide_domain, solve_and_parse
 
 using CSV
 using StaticArrays
