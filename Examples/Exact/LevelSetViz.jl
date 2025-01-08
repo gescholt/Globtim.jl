@@ -1,5 +1,12 @@
+module LevelSetViz
+
+using StaticArrays, DataFrames
+using GLMakie
+using Parameters
+
+# Data Structures
 """
-    LevelSetData{T<:Real}
+    LevelSetData{T<:AbstractFloat}
 
 Structure to hold level set computation results.
 
@@ -8,26 +15,37 @@ Structure to hold level set computation results.
 - `values::Vector{T}`: Function values at the points
 - `level::T`: The target level value
 """
-struct LevelSetData{T<:Real}
+struct LevelSetData{T<:AbstractFloat}
     points::Vector{SVector{3,T}}
     values::Vector{T}
     level::T
 
     # Inner constructor for validation
-    function LevelSetData{T}(points::Vector{SVector{3,T}}, values::Vector{T}, level::T) where {T<:Real}
+    function LevelSetData{T}(points::Vector{SVector{3,T}}, values::Vector{T}, level::T) where {T<:AbstractFloat}
         length(points) == length(values) || throw(ArgumentError("Points and values must have same length"))
         new{T}(points, values, level)
     end
 end
 
 # Outer constructor for type inference
-LevelSetData(points::Vector{SVector{3,T}}, values::Vector{T}, level::T) where {T<:Real} =
+LevelSetData(points::Vector{SVector{3,T}}, values::Vector{T}, level::T) where {T<:AbstractFloat} =
     LevelSetData{T}(points, values, level)
 
+# Parameters
+@with_kw struct VisualizationParameters{T<:AbstractFloat}
+    point_tolerance::T = 1e-1
+    point_window::T = 2e-1
+    fig_size::Tuple{Int,Int} = (1000, 800)
+end
 
+# Core Functions
 """
-    prepare_level_set_data(grid::Array{SVector{3,T}}, values::Array{T}, level::T; 
-                          tolerance::T=convert(T, 1e-2)) where {T<:Real}
+    prepare_level_set_data(
+        grid::Array{SVector{3,T}}, 
+        values::Array{T}, 
+        level::T;
+        tolerance::T=convert(T, 1e-2)
+    ) where {T<:AbstractFloat}
 
 Prepare level set data by identifying points near the specified level.
 
@@ -45,7 +63,7 @@ function prepare_level_set_data(
     values::Array{T},
     level::T;
     tolerance::T=convert(T, 1e-2)
-) where {T<:Real}
+) where {T<:AbstractFloat}
     size(grid) == size(values) || throw(DimensionMismatch("Grid and values must have same dimensions"))
     tolerance > zero(T) || throw(ArgumentError("Tolerance must be positive"))
 
@@ -65,7 +83,7 @@ function prepare_level_set_data(
 end
 
 """
-    to_makie_format(level_set::LevelSetData{T}) where {T<:Real}
+    to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
 
 Convert LevelSetData to a format suitable for Makie plotting.
 
@@ -75,7 +93,7 @@ Convert LevelSetData to a format suitable for Makie plotting.
 # Returns
 - `NamedTuple`: Contains points matrix and coordinate vectors for plotting
 """
-function to_makie_format(level_set::LevelSetData{T}) where {T<:Real}
+function to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
     isempty(level_set.points) && return (points=Matrix{T}(undef, 3, 0),
         values=T[],
         xyz=(T[], T[], T[]))
@@ -89,10 +107,12 @@ function to_makie_format(level_set::LevelSetData{T}) where {T<:Real}
 end
 
 """
-    plot_level_set(formatted_data; 
-                   fig_size=(800, 600), 
-                   marker_size=4, 
-                   title="Level Set Visualization")
+    plot_level_set(
+        formatted_data;
+        fig_size=(800, 600),
+        marker_size=4,
+        title="Level Set Visualization"
+    )
 
 Create a 3D scatter plot of level set points.
 
@@ -109,30 +129,19 @@ function plot_level_set(formatted_data;
     fig_size=(800, 600),
     marker_size=4,
     title="Level Set Visualization")
+
     fig = Figure(size=fig_size)
     ax = Axis3(fig[1, 1],
         title=title,
-        xlabel="X-axis",
-        ylabel="Y-axis",
-        zlabel="Z-axis")
+        xlabel="x₁",
+        ylabel="x₂",
+        zlabel="x₃")
 
     # Extract coordinates using existing views
     scatter!(ax, formatted_data.xyz..., markersize=marker_size)
 
     display(fig)
     return fig
-end
-
-# module LevelSetViz
-
-# using StaticArrays, DataFrames
-# using GLMakie
-# using Parameters
-
-@with_kw struct VisualizationParameters{T<:AbstractFloat}
-    point_tolerance::T = 1e-1
-    point_window::T = 2e-1
-    fig_size::Tuple{Int,Int} = (1000, 800)
 end
 
 """
@@ -280,5 +289,10 @@ function create_level_set_visualization(
 
     return fig
 end
+
+# Export public interface
+export LevelSetData, VisualizationParameters
+export prepare_level_set_data, to_makie_format, plot_level_set
+export create_level_set_visualization
 
 end # module
