@@ -15,26 +15,78 @@ Compute the support of a dense polynomial of total degree at most d in n variabl
 SupportGen(2, 3)
 ```
 """
+# function SupportGen(n::Int, d::Int)::NamedTuple
+#     ranges = [0:d for _ in 1:n]     # Generate ranges for each dimension
+#     iter = Iterators.product(ranges...) # Create the Cartesian product over the ranges
+#     # Initialize a list to hold valid tuples
+#     lambda_list = []
+#     # Loop through the Cartesian product, filtering valid tuples
+#     for tuple in iter
+#         if sum(tuple) <= d
+#             push!(lambda_list, collect(tuple))  # Convert each tuple to an array
+#         end
+#     end
+#     # Check if lambda_list is empty to handle edge cases
+#     if length(lambda_list) == 0
+#         lambda_matrix = zeros(0, n)  # Return an empty matrix with 0 rows and n columns
+#     else
+#         # Convert the list of arrays to an N x n matrix
+#         lambda_matrix = hcat(lambda_list...)'
+#     end
+#     # Return a NamedTuple containing the matrix and its size attributes
+#     return (data=lambda_matrix, size=size(lambda_matrix))
+# end
+
+"""
+    SupportGen(n::Int, d::Int)::NamedTuple
+
+Compute the support of a dense polynomial of total degree at most d in n variables.
+
+# Arguments
+- `n::Int`: Number of variables
+- `d::Int`: Maximum degree of the polynomial
+
+# Returns
+- `NamedTuple`: Contains the support matrix and its dimensions
+    - `data::Matrix{Int}`: Matrix where each row represents a monomial exponent vector
+    - `size::Tuple{Int,Int}`: Dimensions of the support matrix
+
+# Throws
+- `ArgumentError`: If n < 1 or d < 0
+
+# Example
+```julia
+support = SupportGen(2, 3)
+# Returns a NamedTuple with monomial exponents for polynomials in 2 variables up to degree 3
+"""
+
 function SupportGen(n::Int, d::Int)::NamedTuple
-    ranges = [0:d for _ in 1:n]     # Generate ranges for each dimension
-    iter = Iterators.product(ranges...) # Create the Cartesian product over the ranges
-    # Initialize a list to hold valid tuples
-    lambda_list = []
-    # Loop through the Cartesian product, filtering valid tuples
-    for tuple in iter
-        if sum(tuple) <= d
-            push!(lambda_list, collect(tuple))  # Convert each tuple to an array
-        end
+    n ≥ 1 || throw(ArgumentError("Number of variables must be positive"))
+    d ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
+
+    if d == 0
+        return (data=zeros(Int, 1, n), size=(1, n))
     end
-    # Check if lambda_list is empty to handle edge cases
-    if length(lambda_list) == 0
-        lambda_matrix = zeros(0, n)  # Return an empty matrix with 0 rows and n columns
-    else
-        # Convert the list of arrays to an N x n matrix
-        lambda_matrix = hcat(lambda_list...)'
+
+    estimated_size = binomial(n + d, d)
+    lambda_vectors = Vector{Vector{Int}}(undef, estimated_size)
+    count = 0
+
+    ranges = fill(0:d, n)
+    for idx in Iterators.product(ranges...)
+        sum(idx) ≤ d || continue
+        count += 1
+        lambda_vectors[count] = collect(Int, idx)
     end
-    # Return a NamedTuple containing the matrix and its size attributes
-    return (data=lambda_matrix, size=size(lambda_matrix))
+
+    resize!(lambda_vectors, count)
+
+    lambda_matrix = count > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
+
+    return (
+        data=lambda_matrix,
+        size=size(lambda_matrix)
+    )
 end
 
 """
