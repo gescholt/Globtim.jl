@@ -149,33 +149,12 @@ Create an interactive visualization of level sets with a slider control.
 # Arguments
 - `f`: Function to visualize, must accept SVector{3,T} and return T
 - `grid`: Array of 3D points for evaluation
-- `df`: DataFrame with columns :x1, :x2, :x3, :z for data points
+- `df`: DataFrame with coordinates (x1/x2/x3 or similar) and z values
 - `z_range`: Tuple of (min_z, max_z) for level set range
 - `params`: Visualization parameters (see VisualizationParameters struct)
 
 # Returns
 - Figure object with interactive controls
-
-# Example
-```julia
-using StaticArrays, DataFrames
-
-# Define function and grid
-f(p::SVector{3,Float64}) = p[1]^2 + p[2]^2 + p[3]^2
-x_range = range(-2, 2, length=50)
-grid = [SVector{3,Float64}(x,y,z) for x in x_range, y in x_range, z in x_range]
-
-# Create sample data
-df = DataFrame(
-    x1 = randn(100),
-    x2 = randn(100),
-    x3 = randn(100)
-)
-df.z = map(row -> f(SVector{3,Float64}(row.x1, row.x2, row.x3)), eachrow(df))
-
-# Create visualization
-fig = create_level_set_visualization(f, grid, df, (1.0, 4.0))
-```
 """
 function create_level_set_visualization(
     f,
@@ -185,12 +164,13 @@ function create_level_set_visualization(
     params::VisualizationParameters{T}=VisualizationParameters{T}()
 ) where {T<:AbstractFloat}
 
-    # Validate inputs
-    @assert all(col -> col in names(df), [:x1, :x2, :x3, :z]) "DataFrame must have columns :x1, :x2, :x3, :z"
-    @assert z_range[1] < z_range[2] "z_range must be ordered (min, max)"
+    # Identify coordinate columns - look for x1,x2,x3 or similar patterns
+    coord_cols = names(df)[findall(x -> occursin(r"^[xy]\d$|^x[123]$", String(x)), names(df))]
+    z_col = names(df)[findfirst(x -> x == :z, names(df))]
 
-    # Evaluate function on grid
-    values = map(f, grid)
+    if length(coord_cols) != 3 || isnothing(z_col)
+        error("DataFrame must have 3 coordinate columns (x1/x2/x3 or similar) and a z column")
+    end
 
     # Create figure
     fig = Figure(size=params.fig_size)
@@ -198,9 +178,9 @@ function create_level_set_visualization(
     # Create main 3D axis
     ax = Axis3(fig[1, 1],
         title="Level Set Visualization",
-        xlabel="x₁",
-        ylabel="x₂",
-        zlabel="x₃")
+        xlabel=String(coord_cols[1]),
+        ylabel=String(coord_cols[2]),
+        zlabel=String(coord_cols[3]))
 
     # Set axis limits from grid bounds
     x_min, x_max = extrema(first.(vec(grid)))
@@ -242,6 +222,7 @@ function create_level_set_visualization(
 
     function update_visualization(level::T) where {T<:AbstractFloat}
         # Update level set points
+        values = map(f, grid)
         level_data = prepare_level_set_data(grid, values, level, tolerance=params.point_tolerance)
         formatted_data = to_makie_format(level_data)
 
@@ -256,9 +237,10 @@ function create_level_set_visualization(
         alphas = Float32[]
 
         for row in eachrow(df)
-            alpha = calculate_point_alpha(row.z, level, params.point_window)
+            alpha = calculate_point_alpha(row[z_col], level, params.point_window)
             if alpha > 0
-                push!(visible_points, Point3f(row.x1, row.x2, row.x3))
+                point = Point3f(row[coord_cols[1]], row[coord_cols[2]], row[coord_cols[3]])
+                push!(visible_points, point)
                 push!(alphas, alpha)
             end
         end
