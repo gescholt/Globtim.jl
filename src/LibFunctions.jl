@@ -211,7 +211,7 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams; verbose::Bool
 end
 
 @doc nothing
-function HolderTable(xx::Vector{Float64})::Float64
+function HolderTable(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}})::Float64
     # =======================================================
     #   Not Rescaled
     #   Holder Table function
@@ -221,7 +221,7 @@ function HolderTable(xx::Vector{Float64})::Float64
 end
 
 @doc nothing
-function CrossInTray(xx::Vector{Float64})::Float64
+function CrossInTray(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}})::Float64
     # =======================================================
     #   Not Rescaled
     #   Cross-in-Tray function
@@ -231,7 +231,7 @@ function CrossInTray(xx::Vector{Float64})::Float64
 end
 
 @doc nothing
-function Deuflhard(xx::Vector{Float64})::Float64
+function Deuflhard(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}})::Float64
     # =======================================================
     #   Not Rescaled
     #   Domain: [-1.2, 1.2]^2.
@@ -242,7 +242,7 @@ function Deuflhard(xx::Vector{Float64})::Float64
 end
 
 @doc nothing
-function noisy_Deuflhard(xx::Vector{Float64}; mean::Float64=0.0, stddev::Float64=5.0)::Float64
+function noisy_Deuflhard(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}}; mean::Float64=0.0, stddev::Float64=5.0)::Float64
     noise = rand(Distributions.Normal(mean, stddev))
     return Deuflhard(xx) + noise
 end
@@ -257,7 +257,7 @@ old_alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
 # ======================================================= 4D Functions =======================================================
 
 @doc nothing
-function shubert_4d(xx::Vector{Float64})::Float64
+function shubert_4d(xx::Union{Vector{Float64},StaticArraysCore.SVector{4,Float64}})::Float64
     # Sum of two Shubert 2D functions by coordinates 
     # Domain: [-10, 10]^4.
     return schubert(xx[1:2]) + schubert(xx[3:4])
@@ -316,23 +316,23 @@ function Csendes(x, dims=4)
 end
 
 @doc nothing
-function alpine1(x::Vector{Float64}; ndim::Int=2)::Float64
+function alpine1(xx::Union{Vector{Float64},StaticArraysCore.SVector{N,Float64}} where {N})::Float64
     # =======================================================
     #   Not Rescaled
     #   Alpine1 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return sum(abs(x[i] * sin(x[i]) + 0.1 * x[i]) for i in 1:ndim)
+    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i in 1:eachindex(xx))
 end
 
 @doc nothing
-function alpine2(x::Vector{Float64}, ndim::Int)::Float64
+function alpine2(xx::Union{Vector{Float64},StaticArraysCore.SVector{N,Float64}} where {N})::Float64
     # =======================================================
     #   Not Rescaled
     #   Alpine2 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return prod(sqrt(x[i]) * sin(x[i]) for i in 1:ndim)
+    return prod(sqrt(xx[i]) * sin(xx[i]) for i in 1:eachindex(xx))
     
 end
 

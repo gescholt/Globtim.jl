@@ -1,11 +1,6 @@
-module LevelSetViz
-
-using StaticArrays, DataFrames
-using GLMakie
+using DataFrames
 using Parameters
-using GeometryBasics 
-using DelaunayTriangulation
-
+using GLMakie
 
 # Data Structures
 """
@@ -240,10 +235,158 @@ function create_level_set_visualization(
 end
 
 
+function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
 
-# Export public interface
-export LevelSetData, VisualizationParameters
-export prepare_level_set_data, to_makie_format, plot_level_set
-export create_level_set_visualization
+    if size(coords)[2] == 2
+        fig = Figure(size=(1000, 600))
+        ax = Axis(fig[1, 1], title="Trefethen Function Level Sets",
+            xlabel="X-axis", ylabel="Y-axis")
 
-end # module
+        # Create a regular grid for contour plotting
+        x_unique = sort(unique(coords[:, 1]))
+        y_unique = sort(unique(coords[:, 2]))
+
+        Z = fill(NaN, (length(y_unique), length(x_unique)))
+
+        for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
+            i = findlast(≈(y), y_unique)
+            j = findlast(≈(x), x_unique)
+            if !isnothing(i) && !isnothing(j)
+                Z[j, i] = z
+            end
+        end
+
+        # Create contour plot
+        contourf!(ax, x_unique, y_unique, Z,
+            colormap=:viridis,
+            levels=30)
+
+        if :close in propertynames(df)
+            not_close_idx = .!df.close
+            if any(not_close_idx)
+                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                    markersize=5,
+                    color=:orange,
+                    label="Far")
+            end
+
+            close_idx = df.close
+            if any(close_idx)
+                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                    markersize=10,
+                    color=:green,
+                    label="Near")
+            end
+        else
+            scatter!(ax, df.x1, df.x2,
+                markersize=2,
+                color=:orange,
+                label="All points")
+        end
+
+        # Plot uncaptured minimizers from df_min in red
+        uncaptured_idx = .!df_min.captured
+        if any(uncaptured_idx)
+            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+                markersize=20,
+                marker=:diamond,
+                color=:red,
+                label="Uncaptured minima")
+        end
+
+        # Add legend to the right of the plot
+        Legend(fig[1, 2], ax, "Critical Points",
+            tellwidth=true)
+
+        # Add colorbar
+        Colorbar(fig[1, 3], limits=(minimum(z_coords), maximum(z_coords)),
+            colormap=:viridis,
+            label="Function value")
+
+        display(fig)
+        return fig
+    end
+end
+
+function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
+
+    if size(coords)[2] == 2
+        fig = Figure(size=(1000, 600))
+        ax = Axis3(fig[1, 1], title="Trefethen Function",
+            xlabel="X-axis", ylabel="Y-axis", zlabel="Z-axis")
+
+        # Create a regular grid for surface plotting
+        x_unique = sort(unique(coords[:, 1]))
+        y_unique = sort(unique(coords[:, 2]))
+
+        Z = fill(NaN, (length(y_unique), length(x_unique)))
+
+        for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
+            i = findlast(≈(y), y_unique)
+            j = findlast(≈(x), x_unique)
+            if !isnothing(i) && !isnothing(j)
+                Z[j, i] = z
+            end
+        end
+
+        surface!(ax, x_unique, y_unique, Z,
+            colormap=:viridis,
+            transparency=true,
+            alpha=0.8)
+
+        if :close in propertynames(df)
+            not_close_idx = .!df.close
+            if any(not_close_idx)
+                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                    df.z[not_close_idx],
+                    markersize=5,
+                    color=:orange,
+                    label="Far")
+            end
+
+            close_idx = df.close
+            if any(close_idx)
+                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                    df.z[close_idx],
+                    markersize=10,
+                    color=:green,
+                    label="Near")
+            end
+        else
+            scatter!(ax, df.x1, df.x2,
+                df.z,
+                markersize=2,
+                color=:orange,
+                label="All points")
+        end
+
+        # Plot uncaptured minimizers from df_min in red
+        uncaptured_idx = .!df_min.captured
+        if any(uncaptured_idx)
+            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+                df_min.value[uncaptured_idx],
+                markersize=20,
+                marker=:diamond,
+                color=:red,
+                label="Uncaptured minima")
+        end
+
+        # Add legend to the right of the plot
+        Legend(fig[1, 2], ax, "Critical Points",
+            tellwidth=true)
+
+        record(fig, "trefethern_rotation_d30.mp4", 1:240; framerate=30) do frame
+            ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / 240)
+            ax.elevation[] = pi / 4 + 0.3 * cos(2pi * frame / 240)
+        end
+
+        display(fig)
+        return fig
+    end
+end
+
+
