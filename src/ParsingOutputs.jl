@@ -133,33 +133,87 @@ end
 
 
 """
+    process_critical_points(
+        real_pts::Vector{<:AbstractVector},
+        f::Function,
+        TR::test_input;
+        kwargs...
+    )::DataFrame
+
 Process critical points in n-dimensional space and return a DataFrame.
-Only keeps points in [-1,1]^n.
+Points are automatically filtered to the [-1,1]^n hypercube and transformed according to the test_input parameters.
+
+# Arguments
+- `real_pts`: Vector of points in n-dimensional space
+- `f`: Function to evaluate at each point
+- `TR`: test_input struct containing dimension, center, and sample range information
+
+# Returns
+- DataFrame with columns x1, x2, ..., xn (for n dimensions) and z (function values)
+
+# Example
+```julia
+TR = test_input(dim=2, center=[0.0, 0.0], sample_range=1.0)
+points = [[0.5, 0.5], [-0.5, 0.5]]
+f(x) = sum(x.^2)
+df = process_critical_points(points, f, TR)
+```
 """
-function process_critical_points(real_pts, f, scale_factor, dim::Int=2; TR::Union{test_input,Nothing}=nothing)
-    # Check if point is in [-1,1]^n hypercube
-    condition(point) = all(-1 .< point .< 1)
-    filtered_points = filter(condition, real_pts)
+function process_critical_points(
+    real_pts::Vector{<:AbstractVector},
+    f::Function,
+    TR::test_input;
+    kwargs...
+)::DataFrame
+    total_time = @elapsed begin
+        println("\n=== Starting Critical Points Processing (dimension: $(TR.dim)) ===")
 
-    # If TR is provided, translate filtered points relative to center
-    points_to_process = if !isnothing(TR)
-        [TR.sample_range * point .+ TR.center for point in filtered_points]
-    else
-        filtered_points
+        try
+            # Validate input dimensions
+            if !all(p -> length(p) == TR.dim, real_pts)
+                invalid_points = filter(p -> length(p) != TR.dim, real_pts)
+                error("Found points with incorrect dimension: $invalid_points")
+            end
+
+            process_time = @elapsed begin
+                # Filter points in [-1,1]^n hypercube
+                filtered_points = filter(p -> all(-1 .<= p .<= 1), real_pts)
+
+                if isempty(filtered_points)
+                    println("No valid points found after filtering")
+                    return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim))
+                end
+
+                # Transform points using test_input parameters
+                center_vec = Vector(TR.center)
+                points_to_process = [TR.sample_range .* p .+ center_vec for p in filtered_points]
+
+                # Evaluate function at transformed points
+                z = [f(p) for p in points_to_process]
+
+                # Create DataFrame
+                df = DataFrame(
+                    merge(
+                        Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim),
+                        Dict(:z => z)
+                    )
+                )
+            end
+
+            println("Processed $(size(df, 1)) points ($(round(process_time, digits=3))s)")
+            return df
+
+        catch e
+            println("Error in process_critical_points: ", e)
+            println("Stack trace:")
+            for (exc, bt) in Base.catch_stack()
+                showerror(stdout, exc, bt)
+                println()
+            end
+            rethrow(e)
+        end
     end
-
-    # Extract coordinates
-    coords = [Float64[point[i] for point in points_to_process] for i in 1:dim]
-
-    # Calculate function values
-    scaled_coords = [scale_factor * coord for coord in coords]
-    z = map(p -> f(collect(p)), zip(scaled_coords...))
-
-    # Create DataFrame
-    df_dict = Dict(Symbol("x$i") => scale_factor * coords[i] for i in 1:dim)
-    df_dict[:z] = z
-
-    DataFrame(df_dict)
+    println("Total execution time: $(round(total_time, digits=3))s")
 end
 
 function average(X::Vector{T}) where {T<:Number}

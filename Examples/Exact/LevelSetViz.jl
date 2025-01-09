@@ -3,6 +3,9 @@ module LevelSetViz
 using StaticArrays, DataFrames
 using GLMakie
 using Parameters
+using GeometryBasics 
+using DelaunayTriangulation
+
 
 # Data Structures
 """
@@ -147,75 +150,35 @@ end
 """
     create_level_set_visualization(
         f, 
-        grid::Array{SVector{3,T}}, 
+        grid::Array{SVector{3,T},3}, 
         df::DataFrame,
         z_range::Tuple{T,T},
         params::VisualizationParameters=VisualizationParameters()
     ) where {T<:AbstractFloat}
-
-Create an interactive visualization of level sets with a slider control.
-
-# Arguments
-- `f`: Function to visualize, must accept SVector{3,T} and return T
-- `grid`: Array of 3D points for evaluation
-- `df`: DataFrame with columns :x1, :x2, :x3, :z for data points
-- `z_range`: Tuple of (min_z, max_z) for level set range
-- `params`: Visualization parameters (see VisualizationParameters struct)
-
-# Returns
-- Figure object with interactive controls
-
-# Example
-```julia
-using StaticArrays, DataFrames
-
-# Define function and grid
-f(p::SVector{3,Float64}) = p[1]^2 + p[2]^2 + p[3]^2
-x_range = range(-2, 2, length=50)
-grid = [SVector{3,Float64}(x,y,z) for x in x_range, y in x_range, z in x_range]
-
-# Create sample data
-df = DataFrame(
-    x1 = randn(100),
-    x2 = randn(100),
-    x3 = randn(100)
-)
-df.z = map(row -> f(SVector{3,Float64}(row.x1, row.x2, row.x3)), eachrow(df))
-
-# Create visualization
-fig = create_level_set_visualization(f, grid, df, (1.0, 4.0))
-```
 """
 function create_level_set_visualization(
     f,
-    grid::Array{SVector{3,T}},
+    grid::Array{SVector{3,T},3},
     df::DataFrame,
     z_range::Tuple{T,T},
     params::VisualizationParameters{T}=VisualizationParameters{T}()
 ) where {T<:AbstractFloat}
 
-    # Validate inputs
-    @assert all(col -> col in names(df), [:x1, :x2, :x3, :z]) "DataFrame must have columns :x1, :x2, :x3, :z"
-    @assert z_range[1] < z_range[2] "z_range must be ordered (min, max)"
-
-    # Evaluate function on grid
-    values = map(f, grid)
-
-    # Create figure
     fig = Figure(size=params.fig_size)
 
-    # Create main 3D axis
     ax = Axis3(fig[1, 1],
         title="Level Set Visualization",
         xlabel="x₁",
         ylabel="x₂",
         zlabel="x₃")
 
-    # Set axis limits from grid bounds
-    x_min, x_max = extrema(first.(vec(grid)))
-    y_min, y_max = extrema(getindex.(vec(grid), 2))
-    z_min_grid, z_max_grid = extrema(getindex.(vec(grid), 3))
-    limits!(ax, x_min, x_max, y_min, y_max, z_min_grid, z_max_grid)
+    # Extract grid bounds correctly from 3D array of SVectors
+    grid_points = vec(grid)  # Flatten the 3D array
+    x_range = extrema(p[1] for p in grid_points)
+    y_range = extrema(p[2] for p in grid_points)
+    z_range_grid = extrema(p[3] for p in grid_points)
+
+    limits!(ax, x_range..., y_range..., z_range_grid...)
 
     # Create level selection slider
     z_min, z_max = z_range
@@ -223,14 +186,13 @@ function create_level_set_visualization(
         range=range(z_min, z_max, length=1000),
         startvalue=z_min)
 
-    # Add current level label
-    level_label = Label(fig[3, 1], @lift(string("Level: ", round($(level_slider.value), digits=3))),
+    level_label = Label(fig[3, 1],
+        @lift(string("Level: ", round($(level_slider.value), digits=3))),
         tellwidth=false)
 
-    # Create observables for dynamic updates
+    # Observables for points
     level_points = Observable(Point3f[])
     data_points = Observable(Point3f[])
-    point_alphas = Observable(Float32[])
 
     # Create visualization elements
     scatter!(ax, level_points,
@@ -238,57 +200,46 @@ function create_level_set_visualization(
         markersize=2,
         label="Level Set")
 
-    data_scatter = scatter!(ax, data_points,
+    scatter!(ax, data_points,
         color=:orange,
         marker=:diamond,
-        markersize=6,
+        markersize=20,
         label="Data Points")
-
-    function calculate_point_alpha(z_value::T, level::T, window::T)::Float32 where {T<:AbstractFloat}
-        dist = abs(z_value - level)
-        return dist > window ? 0.0f0 : Float32(1.0 - (dist / window))
-    end
 
     function update_visualization(level::T) where {T<:AbstractFloat}
         # Update level set points
+        values = reshape(map(f, grid_points), size(grid))  # Preserve 3D structure
         level_data = prepare_level_set_data(grid, values, level, tolerance=params.point_tolerance)
         formatted_data = to_makie_format(level_data)
 
+        # Update grid points
         if !isempty(formatted_data.xyz[1])
             level_points[] = [Point3f(x, y, z) for (x, y, z) in zip(formatted_data.xyz...)]
         else
             level_points[] = Point3f[]
         end
 
-        # Update data points
+        # Update data points using same tolerance
         visible_points = Point3f[]
-        alphas = Float32[]
-
         for row in eachrow(df)
-            alpha = calculate_point_alpha(row.z, level, params.point_window)
-            if alpha > 0
-                push!(visible_points, Point3f(row.x1, row.x2, row.x3))
-                push!(alphas, alpha)
+            if abs(row["z"] - level) ≤ params.point_tolerance
+                push!(visible_points, Point3f(row["x1"], row["x2"], row["x3"]))
             end
         end
-
         data_points[] = visible_points
-        data_scatter.alpha = alphas
     end
 
-    # Connect slider to updates
     on(level_slider.value) do level
         update_visualization(level)
     end
 
-    # Initialize visualization
     update_visualization(z_min)
-
-    # Add legend
     axislegend(ax, position=:rt)
 
     return fig
 end
+
+
 
 # Export public interface
 export LevelSetData, VisualizationParameters
