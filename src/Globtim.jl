@@ -46,16 +46,7 @@ function __init__()
 
     @require Optim = "429524aa-4258-5aef-a3af-852621145aeb" begin
         include("refine.jl")
-        export analyze_critical_points  # or whatever your optimization functions are
+        export analyze_critical_points
     end
-
 end
-
-
-
-
-
-
-
-
 end

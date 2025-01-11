@@ -1,4 +1,3 @@
-using DataFrames
 using Parameters
 using GLMakie
 
@@ -46,15 +45,6 @@ end
     ) where {T<:AbstractFloat}
 
 Prepare level set data by identifying points near the specified level.
-
-# Arguments
-- `grid::Array{SVector{3,T}}`: Array of 3D points
-- `values::Array{T}`: Function values at grid points
-- `level::T`: Target level value
-- `tolerance::T`: Distance tolerance for point inclusion (default: 1e-2)
-
-# Returns
-- `LevelSetData{T}`: Structure containing points near the level set
 """
 function prepare_level_set_data(
     grid::Array{SVector{3,T}},
@@ -84,12 +74,6 @@ end
     to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
 
 Convert LevelSetData to a format suitable for Makie plotting.
-
-# Arguments
-- `level_set::LevelSetData{T}`: Level set data structure
-
-# Returns
-- `NamedTuple`: Contains points matrix and coordinate vectors for plotting
 """
 function to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
     isempty(level_set.points) && return (points=Matrix{T}(undef, 3, 0),
@@ -113,15 +97,6 @@ end
     )
 
 Create a 3D scatter plot of level set points.
-
-# Arguments
-- `formatted_data`: Data in Makie format from to_makie_format
-- `fig_size`: Tuple specifying figure dimensions (default: (800, 600))
-- `marker_size`: Size of scatter points (default: 4)
-- `title`: Plot title (default: "Level Set Visualization")
-
-# Returns
-- Makie Figure object
 """
 function plot_level_set(formatted_data;
     fig_size=(800, 600),
@@ -135,7 +110,6 @@ function plot_level_set(formatted_data;
         ylabel="x₂",
         zlabel="x₃")
 
-    # Extract coordinates using existing views
     scatter!(ax, formatted_data.xyz..., markersize=marker_size)
 
     display(fig)
@@ -234,7 +208,6 @@ function create_level_set_visualization(
     return fig
 end
 
-
 function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -290,7 +263,7 @@ function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame
         uncaptured_idx = .!df_min.captured
         if any(uncaptured_idx)
             scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
-                markersize=20,
+                markersize=10,
                 marker=:diamond,
                 color=:red,
                 label="Uncaptured minima")
@@ -388,5 +361,3 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
         return fig
     end
 end
-
-
