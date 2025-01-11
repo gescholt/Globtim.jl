@@ -65,9 +65,12 @@ function MainGenerate(f, n::Int, d::Int, delta::Float64, alpha::Float64, scale_f
     # nrm = norm(VL * sol.u - F) / (actual_GN^n) # Watch out, we divide by GN to get the discrete norm
     # Compute norm based on basis type
     nrm = if basis == :chebyshev
-        norm(VL * sol.u - F) / (actual_GN^n) # Discrete norm for Chebyshev
-    else  # legendre case, we take discrete L2 norm w.r.t area of each summand. 
-        (VL * sol.u - F) .^ 2 |> sum |> (x -> x * (2 / actual_GN)^n) |> sqrt
+        # Compute Riemann sum norm over the Chebyshev grid
+        residual = x -> (VL*sol.u-F)[findfirst(y -> y == x, reshape(grid, :))]
+        discrete_l2_norm_riemann(residual, grid)
+    else  # Legendre case
+        # Use uniform weights for Legendre grid
+        sqrt((2 / actual_GN)^n * sum(abs2.(VL * sol.u - F)))
     end
     return ApproxPoly{Float64}(sol, d, nrm, actual_GN, scale_factor, matrix_from_grid, F)
 end

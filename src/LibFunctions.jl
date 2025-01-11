@@ -68,23 +68,20 @@ function camel(x)
 end
 
 @doc nothing
-function shubert(xx::Vector{Float64})::Float64
+function shubert(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Shubert function
     #   Domain: [-10, 10]^2.
     # =======================================================
-    x1 = xx[1]
-    x2 = xx[2]
-
-    sum1 = sum(ii * cos((ii + 1) * x1 + ii) for ii in 1:5)
-    sum2 = sum(ii * cos((ii + 1) * x2 + ii) for ii in 1:5)
+    sum1 = sum(ii * cos((xx[1] + 1) * xx[1] + ii) for ii in 1:5)
+    sum2 = sum(ii * cos((ii + 1) * xx[2] + ii) for ii in 1:5)
 
     return sum1 * sum2
 end
 
 @doc nothing
-function dejong5(xx::Vector{Float64})::Float64
+function dejong5(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   De Jong 5 function
@@ -115,54 +112,91 @@ function dejong5(xx::Vector{Float64})::Float64
 end
 
 @doc nothing
-function easom(x::Vector{Float64})::Float64
+function easom(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Easom function
     #   Domain: [-100, 100]^2.
     #   Cenetered at (pi, pi) !!!
     # =======================================================
-    return -cos(x[1]) * cos(x[2]) * exp(-((x[1] - pi)^2 + (x[2] - pi)^2))
+    return -cos(xx[1]) * cos(xx[2]) * exp(-((xx[1] - pi)^2 + (xx[2] - pi)^2))
 end
 
 
 """
-    init_gaussian_params(n::Int, N::Int, scale::Float64) -> GaussianParams
+    init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64) -> GaussianParams
 
-Initialize Gaussian parameters with random centers and variances.
+Initialize Gaussian parameters with random centers and variances, ensuring centers are
+separated by at least `sep` distance.
 
 # Arguments
 - `n::Int`: Dimension of the domain.
 - `N::Int`: Number of Gaussian functions.
 - `scale::Float64`: Scaling factor for the variances.
+- `sep::Float64`: Minimum separation distance between centers.
 
 # Returns
 - `GaussianParams`: A struct containing the centers, variances of 
 the Gaussian functions and a random boolean vector to make a signed sum 
-of the distributions. 
+of the distributions.
 
 # Example
 ```julia
-params = init_gaussian_params(3, 5, 2.0)
+params = init_gaussian_params(3, 5, 2.0, 0.1)
 println(params.centers)  # Prints the centers of the Gaussian functions
 println(params.variances)  # Prints the variances of the Gaussian functions
 """
-function init_gaussian_params(n::Int, N::Int, scale::Float64)::GaussianParams
-    centers = .8 .* rand(N, n)  # Preallocate random center points
-    variances = scale.*rand(N)  # Preallocate random variances
+function init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64)::GaussianParams
+    centers = zeros(N, n)
+    variances = scale .* rand(N)
     alt_signs = [rand(Bool) ? 1.0 : -1.0 for _ in 1:N]
-    # Apply random sign to each coordinate of the center points
-    for i in 1:N
-        for j in 1:n
-            sign = rand(Bool) ? 1.0 : -1.0
-            centers[i, j] *= sign
+
+    # Generate first center
+    centers[1, :] = 0.8 .* rand(n)
+    for i in 1:n
+        centers[1, i] *= rand(Bool) ? 1.0 : -1.0
+    end
+
+    # Generate remaining centers with separation constraint
+    for i in 2:N
+        max_attempts = 1000
+        attempts = 0
+        valid_point = false
+
+        while !valid_point && attempts < max_attempts
+            # Generate candidate point
+            candidate = 0.8 .* rand(n)
+            for j in 1:n
+                candidate[j] *= rand(Bool) ? 1.0 : -1.0
+            end
+
+            # Check separation from all previously generated points
+            valid_point = true
+            for j in 1:(i-1)
+                if norm(candidate - centers[j, :]) < sep
+                    valid_point = false
+                    break
+                end
+            end
+
+            if valid_point
+                centers[i, :] = candidate
+            end
+
+            attempts += 1
+        end
+
+        # If we couldn't find a valid point after max attempts, error out
+        if !valid_point
+            error("Could not generate centers with minimum separation $sep after $max_attempts attempts. Try reducing N or sep.")
         end
     end
+
     return GaussianParams(centers, variances, alt_signs)
 end
 
 @doc nothing
-function rand_gaussian(x::Vector{Float64}, params::GaussianParams; verbose::Bool=false)::Float64
+function rand_gaussian(xx::AbstractVector, params::GaussianParams; verbose::Bool=false)::Float64
     # =======================================================
     #   Not Rescaled
     #   Sum of N Gaussian function centered at random points in the domain with random variance.
@@ -171,25 +205,30 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams; verbose::Bool
     # =======================================================
 
     if verbose
-        println("Input vector x: ", x)
-        println("Length of x: ", length(x))
+        println("Input vector x: ", xx)
+        println("Dimension of x: ", ndims(xx))
         println("Gaussian centers: ", params.centers)
         println("Gaussian variances: ", params.variances)
         println("Gaussian alt_signs: ", params.alt_signs)
-
     end
 
-    @assert length(params.variances) == size(params.centers, 1) "Length of variances must match the number of rows in centers."
-    @assert params.alt_signs === nothing || length(params.alt_signs) == length(params.variances) "Length of alt_signs must match the length of variances if alt_signs is not nothing."
+    # Using firstindex:lastindex for more robust iteration bounds
+    n_gaussians = firstindex(params.variances):lastindex(params.variances)
+    n_centers = size(params.centers, 1)  # Keep size for matrix dimension
+
+    @assert length(n_gaussians) == n_centers "Number of variances must match the number of rows in centers."
+    @assert params.alt_signs === nothing ||
+            firstindex(params.alt_signs):lastindex(params.alt_signs) == n_gaussians "Number of alt_signs must match the number of variances if alt_signs is not nothing."
 
     if verbose
         println("All dimension checks passed.")
     end
 
     total_sum = 0.0
-    gaussian = Vector{Float64}(undef, length(params.variances))
-    for i in 1:length(params.variances)
-        diff = x .- params.centers[i, :]
+    gaussian = zeros(Float64, length(n_gaussians))  # Pre-allocate with zeros instead of undef
+
+    for i in n_gaussians
+        diff = xx .- view(params.centers, i, :)  # Use view for better memory efficiency
         gaussian[i] = exp(-sum(diff .^ 2) / (2 * params.variances[i]^2))
     end
 
@@ -211,7 +250,7 @@ function rand_gaussian(x::Vector{Float64}, params::GaussianParams; verbose::Bool
 end
 
 @doc nothing
-function HolderTable(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}})::Float64
+function HolderTable(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Holder Table function
@@ -221,7 +260,7 @@ function HolderTable(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float6
 end
 
 @doc nothing
-function CrossInTray(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}})::Float64
+function CrossInTray(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Cross-in-Tray function
@@ -231,7 +270,7 @@ function CrossInTray(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float6
 end
 
 @doc nothing
-function Deuflhard(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}})::Float64
+function Deuflhard(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Domain: [-1.2, 1.2]^2.
@@ -242,7 +281,7 @@ function Deuflhard(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}
 end
 
 @doc nothing
-function noisy_Deuflhard(xx::Union{Vector{Float64},StaticArraysCore.SVector{2,Float64}}; mean::Float64=0.0, stddev::Float64=5.0)::Float64
+function noisy_Deuflhard(xx::AbstractVector; mean::Float64=0.0, stddev::Float64=5.0)::Float64
     noise = rand(Distributions.Normal(mean, stddev))
     return Deuflhard(xx) + noise
 end
@@ -257,10 +296,10 @@ old_alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
 # ======================================================= 4D Functions =======================================================
 
 @doc nothing
-function shubert_4d(xx::Union{Vector{Float64},StaticArraysCore.SVector{4,Float64}})::Float64
+function shubert_4d(xx::AbstractVector)::Float64
     # Sum of two Shubert 2D functions by coordinates 
     # Domain: [-10, 10]^4.
-    return schubert(xx[1:2]) + schubert(xx[3:4])
+    return shubert(xx[1:2]) + shubert(xx[3:4])
 end
 
 @doc nothing
