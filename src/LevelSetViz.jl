@@ -208,19 +208,33 @@ function create_level_set_visualization(
     return fig
 end
 
-function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
+function plot_polyapprox_levelset(
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    df_min::DataFrame;
+    figure_size::Tuple{Int,Int}=(1000, 600),
+    z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing  # New parameter
+)
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size=(1000, 600))
-        ax = Axis(fig[1, 1], title="Trefethen Function Level Sets",
+        fig = Figure(size=figure_size)
+        ax = Axis(fig[1, 1], title="",
             xlabel="X-axis", ylabel="Y-axis")
 
-        # Create a regular grid for contour plotting
+        # Calculate z_limits if not provided - now only using dataframe points
+        if isnothing(z_limits)
+            z_values = Float64[]
+            append!(z_values, df.z)          # Points from main dataframe
+            append!(z_values, df_min.value)  # Values from minimizers
+            z_limits = (minimum(z_values), maximum(z_values))
+        end
+
+        # Rest of plotting code same as before
         x_unique = sort(unique(coords[:, 1]))
         y_unique = sort(unique(coords[:, 2]))
-
         Z = fill(NaN, (length(y_unique), length(x_unique)))
 
         for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
@@ -231,9 +245,8 @@ function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame
             end
         end
 
-        # Create contour plot
         contourf!(ax, x_unique, y_unique, Z,
-            colormap=:viridis,
+            colormap=:inferno,
             levels=30)
 
         if :close in propertynames(df)
@@ -259,7 +272,6 @@ function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame
                 label="All points")
         end
 
-        # Plot uncaptured minimizers from df_min in red
         uncaptured_idx = .!df_min.captured
         if any(uncaptured_idx)
             scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
@@ -269,12 +281,10 @@ function plot_polyapprox_levelset(pol::ApproxPoly, TR::test_input, df::DataFrame
                 label="Uncaptured minima")
         end
 
-        # Add legend to the right of the plot
         Legend(fig[1, 2], ax, "Critical Points",
             tellwidth=true)
 
-        # Add colorbar
-        Colorbar(fig[1, 3], limits=(minimum(z_coords), maximum(z_coords)),
+        Colorbar(fig[1, 3], limits=z_limits,
             colormap=:viridis,
             label="Function value")
 
@@ -289,7 +299,7 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
 
     if size(coords)[2] == 2
         fig = Figure(size=(1000, 600))
-        ax = Axis3(fig[1, 1], title="Trefethen Function",
+        ax = Axis3(fig[1, 1], title="",
             xlabel="X-axis", ylabel="Y-axis", zlabel="Z-axis")
 
         # Create a regular grid for surface plotting
@@ -342,7 +352,7 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
         if any(uncaptured_idx)
             scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
                 df_min.value[uncaptured_idx],
-                markersize=20,
+                markersize=10,
                 marker=:diamond,
                 color=:red,
                 label="Uncaptured minima")
@@ -352,9 +362,299 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
         Legend(fig[1, 2], ax, "Critical Points",
             tellwidth=true)
 
-        record(fig, "trefethern_rotation_d30.mp4", 1:240; framerate=30) do frame
-            ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / 240)
-            ax.elevation[] = pi / 4 + 0.3 * cos(2pi * frame / 240)
+        # record(fig, "trefethern_rotation_d30.mp4", 1:240; framerate=30) do frame
+        #     ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / 240)
+        #     ax.elevation[] = pi / 4 + 0.3 * cos(2pi * frame / 240)
+        # end
+
+        display(fig)
+        return fig
+    end
+end
+
+function plot_polyapprox_animate(
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    df_min::DataFrame;
+    figure_size::Tuple{Int,Int}=(1000, 600)
+)
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
+
+    if size(coords)[2] == 2
+        fig = Figure(size=figure_size)
+        ax = Axis3(fig[1, 1],
+            title="",
+            xlabel="X-axis",
+            ylabel="Y-axis",
+            zlabel="Z-axis")
+
+        # Surface plotting (like in plot_polyapprox_rotate)
+        x_unique = sort(unique(coords[:, 1]))
+        y_unique = sort(unique(coords[:, 2]))
+        Z = fill(NaN, (length(y_unique), length(x_unique)))
+
+        for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
+            i = findlast(≈(y), y_unique)
+            j = findlast(≈(x), x_unique)
+            if !isnothing(i) && !isnothing(j)
+                Z[j, i] = z
+            end
+        end
+
+        surface!(ax, x_unique, y_unique, Z,
+            colormap=:viridis,
+            transparency=true,
+            alpha=0.8)
+
+        # Point plotting (like in your other functions)
+        if :close in propertynames(df)
+            not_close_idx = .!df.close
+            if any(not_close_idx)
+                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                    df.z[not_close_idx],
+                    markersize=5,
+                    color=:orange,
+                    label="Far")
+            end
+
+            close_idx = df.close
+            if any(close_idx)
+                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                    df.z[close_idx],
+                    markersize=10,
+                    color=:green,
+                    label="Near")
+            end
+        end
+
+        # Add legend
+        Legend(fig[1, 2], ax, "Critical Points", tellwidth=true)
+
+        # Simple rotation animation (will play in window)
+        for θ in range(0, 2π, length=100)
+            ax.azimuth[] = θ
+            ax.elevation[] = π / 6
+            sleep(0.03)  # Adjust speed
+            display(fig)
+        end
+
+        return fig
+    end
+end
+
+
+function plot_polyapprox_flyover(
+    pol::ApproxPoly,
+    TR::test_input,
+    df_lege::DataFrame,  # renamed to df_lege to be explicit
+    df_min::DataFrame;
+    figure_size::Tuple{Int,Int}=(1000, 600),
+    surface_alpha::Float64=0.8,
+    frames_per_point::Int=60,
+    camera_radius::Float64=2.0,
+    camera_height::Float64=2.0,
+    surface_point_size::Int=2,
+    close_point_size::Int=10,
+    far_point_size::Int=5,
+    min_point_size::Int=10
+)
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
+
+    if size(coords)[2] == 2
+        fig = Figure(size=figure_size)
+        ax = Axis3(fig[1, 1],
+            title="",
+            xlabel="X-axis",
+            ylabel="Y-axis",
+            zlabel="Z-axis",
+            aspect=(1, 1, 1),
+            viewmode=:fit
+        )
+
+        # Surface plotting
+        x_unique = sort(unique(coords[:, 1]))
+        y_unique = sort(unique(coords[:, 2]))
+        Z = fill(NaN, (length(y_unique), length(x_unique)))
+
+        for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
+            i = findlast(≈(y), y_unique)
+            j = findlast(≈(x), x_unique)
+            if !isnothing(i) && !isnothing(j)
+                Z[j, i] = z
+            end
+        end
+
+        surface!(ax, x_unique, y_unique, Z,
+            colormap=:viridis,
+            transparency=true,
+            alpha=surface_alpha)
+
+        # Points plotting
+        green_points = Point3f[]
+
+        # Plot points where close != 1 (far points)
+        far_idx = df_lege.close .!= 1
+        if any(far_idx)
+            scatter!(ax, df_lege.x1[far_idx], df_lege.x2[far_idx],
+                df_lege.z[far_idx],
+                markersize=far_point_size,
+                color=:orange,
+                label="Far")
+        end
+
+        # Plot points where close == 1 (near points)
+        close_idx = df_lege.close .== 1
+        if any(close_idx)
+            green_points = [Point3f(x, y, z) for (x, y, z) in
+                            zip(df_lege.x1[close_idx], df_lege.x2[close_idx], df_lege.z[close_idx])]
+
+            scatter!(ax, df_lege.x1[close_idx], df_lege.x2[close_idx], df_lege.z[close_idx],
+                markersize=close_point_size,
+                color=:green,
+                label="Near")
+        end
+
+        # Plot uncaptured minimizers
+        uncaptured_idx = .!df_min.captured
+        if any(uncaptured_idx)
+            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+                df_min.value[uncaptured_idx],
+                markersize=min_point_size,
+                marker=:diamond,
+                color=:red,
+                label="Uncaptured minima")
+        end
+
+        # Add legend
+        Legend(fig[1, 2], ax, "Critical Points",
+            tellwidth=true)
+
+        # Create animation flying over points where close == 1
+        if !isempty(green_points)
+            frames = 1:frames_per_point*length(green_points)
+
+            record(fig, "trefethen_flyover.mp4", frames; framerate=30) do frame
+                point_idx = (frame ÷ frames_per_point) + 1
+                point_idx = min(point_idx, length(green_points))
+                current_point = green_points[point_idx]
+
+                frame_in_point = (frame % frames_per_point) / frames_per_point
+
+                # Update camera angles
+                ax.azimuth[] = 2π * frame_in_point
+                ax.elevation[] = π / 6
+
+                # Center view on current point
+                xlims!(ax, current_point[1] - camera_radius, current_point[1] + camera_radius)
+                ylims!(ax, current_point[2] - camera_radius, current_point[2] + camera_radius)
+                zlims!(ax, current_point[3], current_point[3] + camera_height)
+            end
+        end
+
+        display(fig)
+        return fig
+    end
+end
+
+
+function plot_polyapprox_animate2(
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    df_min::DataFrame;
+    figure_size::Tuple{Int,Int}=(1000, 600),
+    filename::String="crit_pts_animation.mp4",
+    nframes::Int=240,
+    framerate::Int=30
+)
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
+
+    if size(coords)[2] == 2
+        fig = Figure(size=figure_size)
+        ax = Axis3(fig[1, 1],
+            title="",
+            xlabel="X-axis",
+            ylabel="Y-axis",
+            zlabel="Z-axis")
+
+        # Collect ALL z-values for limits
+        z_values = Float64[]
+
+        # Add surface z-values
+        append!(z_values, z_coords)
+
+        # Add z-values from main dataframe
+        if :z in propertynames(df)
+            append!(z_values, df.z)
+        end
+
+        # Add values from minimizers dataframe
+        if :value in propertynames(df_min)
+            append!(z_values, df_min.value)
+        end
+
+        # Set z limits using all values
+        z_min, z_max = extrema(z_values)
+        zlims!(ax, z_min, z_max)
+
+        # Rest of plotting code remains the same...
+        x_unique = sort(unique(coords[:, 1]))
+        y_unique = sort(unique(coords[:, 2]))
+        Z = fill(NaN, (length(y_unique), length(x_unique)))
+
+        for (idx, (x, y, z)) in enumerate(zip(coords[:, 1], coords[:, 2], z_coords))
+            i = findlast(≈(y), y_unique)
+            j = findlast(≈(x), x_unique)
+            if !isnothing(i) && !isnothing(j)
+                Z[j, i] = z
+            end
+        end
+
+        surface!(ax, x_unique, y_unique, Z,
+            colormap=:viridis,
+            transparency=true,
+            alpha=0.8)
+
+        if :close in propertynames(df)
+            not_close_idx = .!df.close
+            if any(not_close_idx)
+                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                    df.z[not_close_idx],
+                    markersize=5,
+                    color=:orange,
+                    label="Far")
+            end
+
+            close_idx = df.close
+            if any(close_idx)
+                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                    df.z[close_idx],
+                    markersize=10,
+                    color=:green,
+                    label="Near")
+            end
+        end
+
+        # Plot uncaptured minimizers
+        uncaptured_idx = .!df_min.captured
+        if any(uncaptured_idx)
+            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+                df_min.value[uncaptured_idx],
+                markersize=10,
+                marker=:diamond,
+                color=:red,
+                label="Uncaptured minima")
+        end
+
+        Legend(fig[1, 2], ax, "Critical Points", tellwidth=true)
+
+        record(fig, filename, 1:nframes; framerate=framerate) do frame
+            ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / nframes)
+            ax.elevation[] = pi / 4 + 0.3 * cos(2pi * frame / nframes)
         end
 
         display(fig)
