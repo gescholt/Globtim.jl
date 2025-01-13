@@ -41,7 +41,7 @@ function __init__()
     # This code only runs if/when GLMakie is loaded
     @require GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
         include("LevelSetViz.jl")
-        export LevelSetData, VisualizationParameters, plot_result, visualize_3d, prepare_level_set_data, to_makie_format, plot_level_set, create_level_set_visualization, plot_polyapprox_rotate, plot_polyapprox_levelset
+        export LevelSetData, VisualizationParameters, plot_result, visualize_3d, prepare_level_set_data, to_makie_format, plot_level_set, create_level_set_visualization, plot_polyapprox_rotate, plot_polyapprox_levelset, plot_polyapprox_flyover, plot_polyapprox_animate, plot_polyapprox_animate2
     end
 
     @require Optim = "429524aa-4258-5aef-a3af-852621145aeb" begin
