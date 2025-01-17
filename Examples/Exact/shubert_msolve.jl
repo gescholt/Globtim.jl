@@ -51,6 +51,7 @@ fig5 = plot_polyapprox_levelset(pol_cheb, TR, df_cheb, df_min_cheb)
 # display(fig4)
 # display(fig5)
 
+s
 # fig = plot_polyapprox_flyover(pol_cheb, TR, df_cheb, df_min_cheb)
 # display(fig)
 

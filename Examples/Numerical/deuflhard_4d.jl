@@ -10,19 +10,19 @@ using GLMakie
 using CairoMakie
 
 # Load the dataframe from the CSV file
-df_2d = CSV.read("data/camel_d6.csv", DataFrame)
+# df_2d = CSV.read("data/camel_d6.csv", DataFrame)
 
 # Constants and Parameters
-const n, a, b = 4, 18, 10
+const n, a, b = 4, 3, 5
 const scale_factor = a / b  # Scaling constant, C is appears in `main_computation`, maybe it should be a parameter.
 const delta, alpha = 0.1, 2 / 10  # Sampling parameters
 const tol_l2 = 1e-0
 # The objective function
-f = camel_3_by_3 # Objective function
+f = Deuflhard_4d # Objective function
 
 d = 6     # Degree 
-SMPL = 12 # Number of samples
-center = [0.0, 0.0, 0.0, 0.0]
+SMPL = 4 # Number of samples
+center = [0.5, -0.5, 0.5, -0.5]
 TR = test_input(f,
     dim=n,
     center=center,
@@ -36,14 +36,15 @@ pol_lege = Constructor(TR, d, basis=:legendre);
 @polyvar(x[1:n]); # Define polynomial ring 
 real_pts_cheb = solve_polynomial_system(x, TR.dim, pol_cheb.degree, pol_cheb.coeffs; basis=:chebyshev, bigint=true)
 df_cheb = process_critical_points(real_pts_cheb, f, TR)
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist= .10)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist= .40)
 
 real_pts_lege = solve_polynomial_system(x, TR.dim, pol_lege.degree, pol_lege.coeffs; basis=:legendre, bigint=true)
 df_lege = process_critical_points(real_pts_lege, f, TR)
 df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=1.0)
 
 # The optimized approximant
-sorted_df_cheb = sort(df_cheb, :"close", rev=true)[:, [:"close"]]
+sorted_df_cheb = sort(df_cheb, :"steps", rev=false)
+
 
 
 # Compute the tensored 4d dataframe #

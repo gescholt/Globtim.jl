@@ -1,5 +1,6 @@
 using Parameters
 using GLMakie
+using Colors
 
 # Data Structures
 """
@@ -214,15 +215,16 @@ function plot_polyapprox_levelset(
     df::DataFrame,
     df_min::DataFrame;
     figure_size::Tuple{Int,Int}=(1000, 600),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing  # New parameter
+    z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing,
+    chebyshev_levels::Bool=false,  # New parameter to toggle Chebyshev distribution
+    num_levels::Int=30            # Number of levels (default=30)
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
         fig = Figure(size=figure_size)
-        ax = Axis(fig[1, 1], title="",
-            xlabel="X-axis", ylabel="Y-axis")
+        ax = Axis(fig[1, 1], title="")
 
         # Calculate z_limits if not provided - now only using dataframe points
         if isnothing(z_limits)
@@ -230,6 +232,19 @@ function plot_polyapprox_levelset(
             append!(z_values, df.z)          # Points from main dataframe
             append!(z_values, df_min.value)  # Values from minimizers
             z_limits = (minimum(z_values), maximum(z_values))
+        end
+
+        # Calculate levels using Chebyshev nodes if requested
+        levels = if chebyshev_levels
+            # Generate Chebyshev nodes in [-1, 1]
+            k = collect(0:num_levels-1)
+            cheb_nodes = -cos.((2k .+ 1) .* π ./ (2 * num_levels))
+
+            # Map from [-1, 1] to [z_min, z_max]
+            z_min, z_max = z_limits
+            (z_max - z_min) ./ 2 .* cheb_nodes .+ (z_max + z_min) ./ 2
+        else
+            num_levels  # Default linear spacing
         end
 
         # Rest of plotting code same as before
@@ -247,14 +262,16 @@ function plot_polyapprox_levelset(
 
         contourf!(ax, x_unique, y_unique, Z,
             colormap=:inferno,
-            levels=30)
+            levels=levels)
 
         if :close in propertynames(df)
             not_close_idx = .!df.close
             if any(not_close_idx)
                 scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
                     markersize=5,
-                    color=:orange,
+                    color=:white,
+                    strokecolor=:black,      # border color
+                    strokewidth=1,
                     label="Far")
             end
 
@@ -263,6 +280,8 @@ function plot_polyapprox_levelset(
                 scatter!(ax, df.x1[close_idx], df.x2[close_idx],
                     markersize=10,
                     color=:green,
+                    strokecolor=:black,      # border color
+                    strokewidth=1,
                     label="Near")
             end
         else
@@ -275,10 +294,10 @@ function plot_polyapprox_levelset(
         uncaptured_idx = .!df_min.captured
         if any(uncaptured_idx)
             scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
-                markersize=10,
+                markersize=15,
                 marker=:diamond,
-                color=:red,
-                label="Uncaptured minima")
+                color=:blue,
+                label="Uncaptured")
         end
 
         Legend(fig[1, 2], ax, "Critical Points",
@@ -286,7 +305,7 @@ function plot_polyapprox_levelset(
 
         Colorbar(fig[1, 3], limits=z_limits,
             colormap=:viridis,
-            label="Function value")
+            label="")
 
         display(fig)
         return fig
@@ -359,8 +378,12 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
         end
 
         # Add legend to the right of the plot
-        Legend(fig[1, 2], ax, "Critical Points",
-            tellwidth=true)
+        # Legend(fig[1, 2], ax, "Critical Points",
+        #     tellwidth=true)
+        Legend(fig[2, 1], ax, "Critical Points",
+            orientation=:horizontal,  # Make legend horizontal for better space usage
+            tellwidth=false,         # Don't have legend width affect layout
+            tellheight=true)
 
         # record(fig, "trefethern_rotation_d30.mp4", 1:240; framerate=30) do frame
         #     ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / 240)

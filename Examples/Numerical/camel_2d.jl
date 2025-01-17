@@ -15,7 +15,7 @@ const delta, alpha = 0.5, 1 / 10  # Sampling parameters
 const tol_l2 = 3e-4 # Placeholder
 f = camel # Objective function
 
-d = 12 # Initial Degree 
+d = 6 # Initial Degree 
 SMPL = 120 # Number of samples
 center = [0.0, 0.0]
 TR = test_input(f,

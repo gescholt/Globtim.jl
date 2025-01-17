@@ -35,32 +35,94 @@ function ChebyshevPoly(d::Int, x)
     end
 end
 
-"""
-    ChebyshevPolyExact(d::Int)::Vector{Int}
+# """
+#     ChebyshevPolyExact(d::Int)::Vector{Int}
 
-Generate a vector of integer coefficients of the Chebyshev polynomial of degree `d` in one variable.
+# Generate a vector of integer coefficients of the Chebyshev polynomial of degree `d` in one variable.
+
+# # Arguments
+# - `d::Int`: Degree of the Chebyshev polynomial.
+
+# # Returns
+# - A vector of integer coefficients of the Chebyshev polynomial of degree `d`.
+
+# # Example
+# ```julia
+# ChebyshevPolyExact(3)
+# ```
+# """
+# function ChebyshevPolyExact(d::Int)::Vector{Int}
+#     if d == 0
+#         return [1]
+#     elseif d == 1
+#         return [0, 1]
+#     else
+#         Tn_1 = ChebyshevPolyExact(d - 1)
+#         Tn_2 = ChebyshevPolyExact(d - 2)
+#         Tn = [0; 2 * Tn_1] - vcat(Tn_2, [0, 0])
+#         return Tn
+#     end
+# end
+
+"""
+    closest_pow2denom_rational(r::Rational{BigInt})::Rational{BigInt}
+
+Convert a rational number to one with a power-of-2 denominator, 
+adjusting the numerator to maintain the closest possible value.
+
+# Arguments
+- `r::Rational{BigInt}`: Input rational number
+
+# Returns
+- A rational number with power-of-2 denominator
+"""
+function closest_pow2denom_rational(r::Rational{BigInt})::Rational{BigInt}
+    num = numerator(r)
+    den = denominator(r)
+    new_den = BigInt(2)^ceil(Int, log2(den))
+    new_num = round(BigInt, num * new_den / den)
+    return new_num // new_den
+end
+
+"""
+    ChebyshevPolyExact(d::Int)::Vector{Rational{BigInt}}
+
+Generate a vector of rational coefficients of the Chebyshev polynomial of degree `d` in one variable,
+with denominators being powers of 2.
 
 # Arguments
 - `d::Int`: Degree of the Chebyshev polynomial.
 
 # Returns
-- A vector of integer coefficients of the Chebyshev polynomial of degree `d`.
+- A vector of rational coefficients of the Chebyshev polynomial of degree `d`.
 
 # Example
 ```julia
-ChebyshevPolyExact(3)
+julia> ChebyshevPolyExact(3)
+4-element Vector{Rational{BigInt}}:
+ 0 // 1
+ -3 // 1
+ 0 // 1
+ 1 // 1
 ```
 """
-function ChebyshevPolyExact(d::Int)::Vector{Int}
+function ChebyshevPolyExact(d::Int)::Vector{Rational{BigInt}}
     if d == 0
-        return [1]
+        return [BigInt(1) // 1]
     elseif d == 1
-        return [0, 1]
+        return [BigInt(0) // 1, BigInt(1) // 1]
     else
         Tn_1 = ChebyshevPolyExact(d - 1)
         Tn_2 = ChebyshevPolyExact(d - 2)
-        Tn = [0; 2 * Tn_1] - vcat(Tn_2, [0, 0])
-        return Tn
+
+        # Multiply by 2 and convert to power-of-2 denominator
+        doubled = map(r -> closest_pow2denom_rational(2 * r), Tn_1)
+
+        # Create the new polynomial
+        Tn = [BigInt(0) // 1; doubled] - vcat(Tn_2, [BigInt(0) // 1, BigInt(0) // 1])
+
+        # Convert final results to power-of-2 denominators
+        return map(closest_pow2denom_rational, Tn)
     end
 end
 
