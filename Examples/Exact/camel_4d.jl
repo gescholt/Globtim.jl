@@ -10,7 +10,7 @@ using GLMakie
 using CairoMakie
 
 # Load the dataframe from the CSV file
-df_2d = CSV.read("data/camel_d6.csv", DataFrame)
+df_2d = CSV.read("data/matlab_critical_points/camel_d6.csv", DataFrame)
 
 # Constants and Parameters
 const n, a, b = 4, 18, 10
@@ -21,7 +21,7 @@ const tol_l2 = 1e-0
 f = camel_3_by_3 # Objective function
 
 d = 6     # Degree 
-SMPL = 12 # Number of samples
+SMPL = 4 # Number of samples
 center = [0.0, 0.0, 0.0, 0.0]
 TR = test_input(f,
     dim=n,
@@ -34,13 +34,13 @@ pol_cheb = Constructor(TR, d, basis=:chebyshev);
 pol_lege = Constructor(TR, d, basis=:legendre);
 
 @polyvar(x[1:n]); # Define polynomial ring 
-real_pts_cheb = solve_polynomial_system(x, TR.dim, pol_cheb.degree, pol_cheb.coeffs; basis=:chebyshev, bigint=true)
-df_cheb = process_critical_points(real_pts_cheb, f, TR)
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist= .10)
+df_cheb = solve_and_parse(pol_cheb, x, f, TR)
+sort!(df_cheb, :z, rev=true)
+df_lege = solve_and_parse(pol_lege, x, f, TR, basis=:legendre)
+sort!(df_lege, :z, rev=true)
 
-real_pts_lege = solve_polynomial_system(x, TR.dim, pol_lege.degree, pol_lege.coeffs; basis=:legendre, bigint=true)
-df_lege = process_critical_points(real_pts_lege, f, TR)
-df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=1.0)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.003)
+df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=0.001)
 
 # The optimized approximant
 sorted_df_cheb = sort(df_cheb, :"close", rev=true)[:, [:"close"]]

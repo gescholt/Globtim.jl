@@ -332,6 +332,15 @@ function cosine_mixture(x)
     return -0.1*sum(5*pi*cos(x[i]) for i in 1:4) - sum(x[i]^2 for i in 1:4)
 end
 
+@doc nothing
+function Deuflhard_4d(xx::AbstractVector)::Float64
+    # =======================================================
+    #   Not Rescaled
+    #   Domain: [-1.2, 1.2]^4.
+    # =======================================================
+    return Deuflhard(xx[1:2]) + Deuflhard(xx[3:4])
+end
+
 # ======================================================= 6D Functions =======================================================
 @doc nothing
 function camel_3_6d(x)

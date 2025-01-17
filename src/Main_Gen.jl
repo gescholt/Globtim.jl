@@ -79,13 +79,13 @@ end
     main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
     n::Int, d::Int, coeffs::Vector{Float64})::Polynomial{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder},Rational{BigInt}}    
 
-Construct a polynomial in the standard monomial basis from a vector of coefficients (which have been computed in the tensorized Chebyshev basis).
+Construct a polynomial in the standard monomial basis from a vector of coefficients (which have been computed in the tensorized Chebyshev or tensorized Legendre basis).
 
 """
 function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
     n::Int, d::Int, coeffs::Vector{Float64};
     basis=:chebyshev,
-    verbose=false,
+    verbose=true,
     bigint=false)
 
     lambda = SupportGen(n, d).data
@@ -107,13 +107,26 @@ function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolyno
 
     if basis == :chebyshev
         for j in 1:m
-            prd = one(x[1])
-            for k in 1:n
-                coeff_vec = ChebyshevPolyExact(lambda[j, k])
-                sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
-                prd *= sum(sized_coeff_vec .* MonomialVector([x[k]], 0:d))
+            total_time_j = @elapsed begin  # Time the entire j iteration
+                prd = one(x[1])
+                for k in 1:n
+                    time_coeff = @elapsed coeff_vec = ChebyshevPolyExact(lambda[j, k])
+                    println("Time for ChebyshevPolyExact at j=$j, k=$k: $time_coeff seconds")
+
+                    time_sizing = @elapsed sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
+                    println("Time for vector sizing at j=$j, k=$k: $time_sizing seconds")
+
+                    time_monom = @elapsed monom_vec = MonomialVector([x[k]], 0:d)
+                    println("Time for MonomialVector at j=$j, k=$k: $time_monom seconds")
+
+                    time_mult = @elapsed prd *= sum(sized_coeff_vec .* monom_vec)
+                    println("Time for multiplication and sum at j=$j, k=$k: $time_mult seconds")
+                end
+                time_final = @elapsed S_rat += coeffs[j] * prd
+                println("Time for final addition at j=$j: $time_final seconds")
             end
-            S_rat += coeffs[j] * prd
+            println("Total time for iteration j=$j: $total_time_j seconds")
+            println("-------------------")
         end
     elseif basis == :legendre
         max_degree = maximum(lambda)
@@ -150,6 +163,155 @@ function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolyno
 
     return S_rat
 end
+# function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
+#     n::Int, d::Int, coeffs::Vector{Float64};
+#     basis=:chebyshev,
+#     verbose=true,
+#     bigint=false)
+
+#     # Initialization timing
+#     t_init = @elapsed begin
+#         lambda = SupportGen(n, d).data
+#         m = size(lambda)[1]
+
+#         if length(coeffs) != m
+#             error("The length of coeffs_poly_approx must match the dimension of the space we project onto")
+#         end
+
+#         coeffs = convert.(Rational{bigint ? BigInt : Int}, coeffs)
+#         S_rat = zero(x[1])
+#     end
+
+#     if verbose
+#         println("\nInitialization time: ", t_init, " seconds")
+#     end
+
+#     # Timing aggregators for detailed breakdown
+#     t_cheb_or_leg_total = 0.0  # Time for computing Chebyshev or Legendre coefficients
+#     t_padding_total = 0.0      # Time for padding vectors
+#     t_monom_total = 0.0        # Time for MonomialVector operations
+#     t_prod_total = 0.0         # Time for polynomial products
+#     t_sum_total = 0.0          # Time for final sum in each iteration
+
+#     # Main computation timing
+#     t_main = @elapsed begin
+#         if basis == :chebyshev
+#             for j in 1:m
+#                 local_prd = one(x[1])
+#                 for k in 1:n
+#                     # Time Chebyshev polynomial computation
+#                     t_cheb = @elapsed coeff_vec = ChebyshevPolyExact(lambda[j, k])
+#                     t_cheb_or_leg_total += t_cheb
+
+#                     # Time padding operation
+#                     t_pad = @elapsed sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
+#                     t_padding_total += t_pad
+
+#                     # Time monomial vector creation
+#                     t_monom = @elapsed monom_vec = MonomialVector([x[k]], 0:d)
+#                     t_monom_total += t_monom
+
+#                     # Time polynomial multiplication
+#                     t_prod = @elapsed local_prd *= sum(sized_coeff_vec .* monom_vec)
+#                     t_prod_total += t_prod
+#                 end
+
+#                 # Time final sum for this iteration
+#                 t_sum = @elapsed S_rat += coeffs[j] * local_prd
+#                 t_sum_total += t_sum
+
+#                 if verbose && j == 1
+#                     println("\nDetailed timing for first iteration:")
+#                     println("  Chebyshev computation: ", t_cheb, " seconds")
+#                     println("  Vector padding: ", t_pad, " seconds")
+#                     println("  Monomial vector creation: ", t_monom, " seconds")
+#                     println("  Polynomial multiplication: ", t_prod, " seconds")
+#                     println("  Final sum: ", t_sum, " seconds")
+#                 end
+#             end
+#         elseif basis == :legendre
+#             t_legendre_prep = @elapsed begin
+#                 max_degree = maximum(lambda)
+#                 legendre_coeffs = get_legendre_coeffs(max_degree)
+#             end
+
+#             if verbose
+#                 println("\nLegendre coefficients preparation time: ", t_legendre_prep, " seconds")
+#             end
+
+#             for j in 1:m
+#                 local_prd = one(x[1])
+#                 for k in 1:n
+#                     # Time Legendre coefficient lookup
+#                     t_leg = @elapsed begin
+#                         deg = lambda[j, k]
+#                         coeff_vec = legendre_coeffs[deg+1]
+#                     end
+#                     t_cheb_or_leg_total += t_leg
+
+#                     # Time padding operation
+#                     t_pad = @elapsed sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
+#                     t_padding_total += t_pad
+
+#                     # Time monomial vector creation
+#                     t_monom = @elapsed monom_vec = MonomialVector([x[k]], 0:d)
+#                     t_monom_total += t_monom
+
+#                     # Time polynomial multiplication
+#                     t_prod = @elapsed local_prd *= sum(sized_coeff_vec .* monom_vec)
+#                     t_prod_total += t_prod
+#                 end
+
+#                 # Time final sum for this iteration
+#                 t_sum = @elapsed S_rat += coeffs[j] * local_prd
+#                 t_sum_total += t_sum
+
+#                 if verbose && j == 1
+#                     println("\nDetailed timing for first iteration:")
+#                     println("  Legendre lookup: ", t_leg, " seconds")
+#                     println("  Vector padding: ", t_pad, " seconds")
+#                     println("  Monomial vector creation: ", t_monom, " seconds")
+#                     println("  Polynomial multiplication: ", t_prod, " seconds")
+#                     println("  Final sum: ", t_sum, " seconds")
+#                 end
+#             end
+#         end
+#     end
+
+#     # Final conversion timing
+#     t_final = @elapsed begin
+#         if !bigint
+#             terms_array = terms(S_rat)
+#             simplified_terms = map(terms_array) do term
+#                 coeff = coefficient(term)
+#                 try
+#                     simple_coeff = convert(Rational{Int}, rationalize(Float64(coeff)))
+#                     simple_coeff * monomial(term)
+#                 catch e
+#                     @warn "Coefficient too large for Int, switching to BigInt for this term"
+#                     coeff * monomial(term)
+#                 end
+#             end
+#             S_rat = sum(simplified_terms)
+#         end
+#     end
+
+#     if verbose
+#         println("\nDetailed Timing Summary:")
+#         println("Initialization time: ", t_init, " seconds")
+#         println("\nMain computation breakdown:")
+#         println("  $(basis) computation/lookup total: ", t_cheb_or_leg_total, " seconds")
+#         println("  Vector padding operations total: ", t_padding_total, " seconds")
+#         println("  Monomial vector operations total: ", t_monom_total, " seconds")
+#         println("  Polynomial multiplications total: ", t_prod_total, " seconds")
+#         println("  Final summations total: ", t_sum_total, " seconds")
+#         println("Total main computation time: ", t_main, " seconds")
+#         println("Final conversion time: ", t_final, " seconds")
+#         println("\nTotal execution time: ", t_init + t_main + t_final, " seconds")
+#     end
+
+#     return S_rat
+# end
 
 """
 Constructor(T, degree) takes a test input and a starting degree and computes the polynomial approximant satisfying that tolerance. 
