@@ -216,8 +216,8 @@ function plot_polyapprox_levelset(
     df_min::DataFrame;
     figure_size::Tuple{Int,Int}=(1000, 600),
     z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing,
-    chebyshev_levels::Bool=false,  # New parameter to toggle Chebyshev distribution
-    num_levels::Int=30            # Number of levels (default=30)
+    chebyshev_levels::Bool=false,
+    num_levels::Int=30
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -226,28 +226,25 @@ function plot_polyapprox_levelset(
         fig = Figure(size=figure_size)
         ax = Axis(fig[1, 1], title="")
 
-        # Calculate z_limits if not provided - now only using dataframe points
+        # Calculate z_limits if not provided
         if isnothing(z_limits)
             z_values = Float64[]
-            append!(z_values, df.z)          # Points from main dataframe
-            append!(z_values, df_min.value)  # Values from minimizers
+            append!(z_values, df.z)
+            append!(z_values, df_min.value)
             z_limits = (minimum(z_values), maximum(z_values))
         end
 
-        # Calculate levels using Chebyshev nodes if requested
+        # Calculate levels
         levels = if chebyshev_levels
-            # Generate Chebyshev nodes in [-1, 1]
             k = collect(0:num_levels-1)
             cheb_nodes = -cos.((2k .+ 1) .* π ./ (2 * num_levels))
-
-            # Map from [-1, 1] to [z_min, z_max]
             z_min, z_max = z_limits
             (z_max - z_min) ./ 2 .* cheb_nodes .+ (z_max + z_min) ./ 2
         else
-            num_levels  # Default linear spacing
+            num_levels
         end
 
-        # Rest of plotting code same as before
+        # Prepare contour data
         x_unique = sort(unique(coords[:, 1]))
         y_unique = sort(unique(coords[:, 2]))
         Z = fill(NaN, (length(y_unique), length(x_unique)))
@@ -260,52 +257,83 @@ function plot_polyapprox_levelset(
             end
         end
 
+        # Create contour plot
+        # chosen_colormap = :viridis  
+        chosen_colormap = :inferno 
         contourf!(ax, x_unique, y_unique, Z,
-            colormap=:inferno,
+            colormap=chosen_colormap,
             levels=levels)
 
+        # Initialize empty array for legend entries
+        legend_entries = []
+
+        # Plot and add legend entries for all point types
         if :close in propertynames(df)
+            # Far points
             not_close_idx = .!df.close
             if any(not_close_idx)
                 scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
-                    markersize=5,
+                    markersize=10,
                     color=:white,
-                    strokecolor=:black,      # border color
+                    strokecolor=:black,
                     strokewidth=1,
                     label="Far")
+                push!(legend_entries, "Far")
             end
 
+            # Near points
             close_idx = df.close
             if any(close_idx)
                 scatter!(ax, df.x1[close_idx], df.x2[close_idx],
                     markersize=10,
                     color=:green,
-                    strokecolor=:black,      # border color
+                    strokecolor=:black,
                     strokewidth=1,
                     label="Near")
+                push!(legend_entries, "Near")
             end
         else
+            # All points if no close/far distinction
             scatter!(ax, df.x1, df.x2,
                 markersize=2,
                 color=:orange,
                 label="All points")
+            push!(legend_entries, "All points")
         end
 
-        uncaptured_idx = .!df_min.captured
-        if any(uncaptured_idx)
-            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
-                markersize=15,
-                marker=:diamond,
-                color=:blue,
-                label="Uncaptured")
+        # Uncaptured points
+        if !isempty(df_min)
+            uncaptured_idx = .!df_min.captured
+            captured_idx = df_min.captured
+
+            if any(uncaptured_idx)
+                scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+                    markersize=15,
+                    marker=:diamond,
+                    color=:red,
+                    label="Uncaptured")
+                push!(legend_entries, "Uncaptured")
+            end
+
+            if any(captured_idx)
+                scatter!(ax, df_min.x1[captured_idx], df_min.x2[captured_idx],
+                    markersize=15,
+                    marker=:diamond,
+                    color=:blue,
+                    label="Captured")
+                push!(legend_entries, "Captured")
+            end
         end
 
-        Legend(fig[1, 2], ax, "Critical Points",
-            tellwidth=true)
+        # Only create legend if we have entries
+        # if !isempty(legend_entries)
+        #     Legend(fig[1, 2], ax, "Critical Points",
+        #         tellwidth=true)
+        # end
 
-        Colorbar(fig[1, 3], limits=z_limits,
-            colormap=:viridis,
-            label="")
+        # Colorbar(fig[1, 3], limits=z_limits,
+        #     colormap=chosen_colormap,
+        #     label="")
 
         display(fig)
         return fig
@@ -336,7 +364,8 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
         end
 
         surface!(ax, x_unique, y_unique, Z,
-            colormap=:viridis,
+            # colormap=:viridis,
+            colormap=:inferno,
             transparency=true,
             alpha=0.8)
 
@@ -684,3 +713,72 @@ function plot_polyapprox_animate2(
         return fig
     end
 end
+
+function plot_talk(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
+    coords = pol.scale_factor * pol.grid .+ TR.center'
+    z_coords = pol.z
+
+    if size(coords)[2] == 2
+        fig = Figure(size=(1000, 600))
+        ax = Axis3(fig[1, 1],
+            xlabel="X-axis", ylabel="Y-axis", zlabel="Z-axis",
+            elevation=π / 4,
+            # perspectiveness=.8,
+            limits=((minimum(coords[:, 1]), maximum(coords[:, 1])),
+                (minimum(coords[:, 2]), maximum(coords[:, 2])),
+                (minimum(z_coords), maximum(z_coords))),
+            azimuth=π / 6)  # More front-facing view
+
+        scatter!(ax, coords[:, 1], coords[:, 2], z_coords,
+            color=z_coords,
+            colormap=:inferno,
+            markersize=2,
+            label="Grid points",
+            colorrange=(minimum(z_coords), maximum(z_coords)))
+
+        if :close in propertynames(df)
+            not_close_idx = .!df.close
+            if any(not_close_idx)
+                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                    df.z[not_close_idx],
+                    markersize=5,
+                    color=:orange,
+                    label="Far")
+            end
+
+            close_idx = df.close
+            if any(close_idx)
+                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                    df.z[close_idx],
+                    markersize=10,
+                    color=:green,
+                    label="Near")
+            end
+        else
+            scatter!(ax, df.x1, df.x2,
+                df.z,
+                markersize=2,
+                color=:orange,
+                label="All points")
+        end
+
+        uncaptured_idx = .!df_min.captured
+        if any(uncaptured_idx)
+            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+                df_min.value[uncaptured_idx],
+                markersize=10,
+                marker=:diamond,
+                color=:red,
+                label="Uncaptured minima")
+        end
+
+        Legend(fig[2, 1], ax, "Critical Points",
+            orientation=:horizontal,
+            tellwidth=false,
+            tellheight=true)
+
+        display(fig)
+        return fig
+    end
+end
+

@@ -107,26 +107,14 @@ function main_nd(x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolyno
 
     if basis == :chebyshev
         for j in 1:m
-            total_time_j = @elapsed begin  # Time the entire j iteration
-                prd = one(x[1])
-                for k in 1:n
-                    time_coeff = @elapsed coeff_vec = ChebyshevPolyExact(lambda[j, k])
-                    println("Time for ChebyshevPolyExact at j=$j, k=$k: $time_coeff seconds")
-
-                    time_sizing = @elapsed sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
-                    println("Time for vector sizing at j=$j, k=$k: $time_sizing seconds")
-
-                    time_monom = @elapsed monom_vec = MonomialVector([x[k]], 0:d)
-                    println("Time for MonomialVector at j=$j, k=$k: $time_monom seconds")
-
-                    time_mult = @elapsed prd *= sum(sized_coeff_vec .* monom_vec)
-                    println("Time for multiplication and sum at j=$j, k=$k: $time_mult seconds")
-                end
-                time_final = @elapsed S_rat += coeffs[j] * prd
-                println("Time for final addition at j=$j: $time_final seconds")
+            prd = one(x[1])
+            for k in 1:n
+                coeff_vec = ChebyshevPolyExact(lambda[j, k])
+                sized_coeff_vec = vcat(coeff_vec, zeros(eltype(coeff_vec), d + 1 - length(coeff_vec)))
+                monom_vec = MonomialVector([x[k]], 0:d)
+                prd *= sum(sized_coeff_vec .* monom_vec)
             end
-            println("Total time for iteration j=$j: $total_time_j seconds")
-            println("-------------------")
+            S_rat += coeffs[j] * prd
         end
     elseif basis == :legendre
         max_degree = maximum(lambda)
