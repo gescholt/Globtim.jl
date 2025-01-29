@@ -1,6 +1,6 @@
 What is to do: 
 
-[]: # ~ Make a local git repo on MPI gitlab.
+[X]: # ~ Make a local git repo on MPI gitlab.
 
 []: # ~ Explore connections to spectral methods. 
 
@@ -9,10 +9,10 @@ What is to do:
 
 What has been done: 
 
-[]: Legendre polynomials for uniform sampling grid. (Normalized ?)
+[X]: Legendre polynomials for uniform sampling grid. (Normalized ?)
 
-[]: Chebyshev polynomials for best construction of stable polynomial approximant.
+[X]: Chebyshev polynomials for best construction of stable polynomial approximant.
 
+[?]: Add a switch between Float64 vs BigFloat. The Vandermonde-like matrix is constructed in high precision but then truncated to Float64.
 
 Old stuff: []: # ~ We should use the LegendrePolynomial Package --> didn't do that in the end. It seems too numerical in its approach. Make it compatible with DynamicPolynomials. 
-2) Add a switch between Float64 vs BigFloat. The Vandermonde-like matrix is constructed in high precision but then truncated to Float64.

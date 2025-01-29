@@ -6,16 +6,17 @@ using DynamicPolynomials, DataFrames
 using ProgressLogging
 using Optim
 using GLMakie
+using CairoMakie
 
 
 # Constants and Parameters
-const n, a, b = 2, 14, 10
+const n, a, b = 2, 12, 10
 const scale_factor = a / b   # Size of domain. 
 const delta, alpha = 0.5, 1 / 10  # Sampling parameters
 const tol_l2 = 3e-4 # Placeholder
 f = Deuflhard # Objective function
 
-d = 20 # Initial Degree 
+d = 8 # Initial Degree 
 SMPL = 120 # Number of samples
 center = [0.0, 0.0]
 TR = test_input(f,
@@ -35,10 +36,10 @@ real_pts_lege = solve_polynomial_system(x, TR.dim, pol_lege.degree, pol_lege.coe
 df_cheb = process_critical_points(real_pts_cheb, f, TR)
 df_lege = process_critical_points(real_pts_lege, f, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.00035)
-df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=0.00035)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.12)
+df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=0.1)
 
-GLMakie.activate!()
+CairoMakie.activate!()
 
 # fig0 = plot_polyapprox_flyover(pol_cheb, TR, df_cheb, df_min_cheb)
 # fig1 = plot_polyapprox_rotate(pol_cheb, TR, df_cheb, df_min_cheb)
@@ -53,9 +54,10 @@ fig6 = plot_polyapprox_levelset(pol_lege, TR, df_lege, df_min_lege, chebyshev_le
 # display(fig3)
 # display(fig4)
 display(fig5)
+display(fig6)
 
 
 # using CairoMakie
-# save("deuflhard_chebyshev_d_20.pdf", fig5)
+save("deuflhard_legendre_d_8.pdf", fig6)
 # it would be cool to put `analyze_critical_points` inside the `plot_polyapprox_rotate` function. 
 # GLMakie.closeall()

@@ -292,6 +292,10 @@ old_alpine1 = (x) -> abs(x[1] * sin(x[1]) + 0.1 * x[1]) +
                  abs(x[2] * sin(x[2]) + 0.1 * x[2]) +
                  abs(x[3] * sin(x[3]) + 0.1 * x[3])
 
+function tref_3d(x::AbstractVector)
+    return exp(sin(50x[1])) + sin(60exp(x[2])) * sin(60x[3]) + sin(70sin(x[1])) * cos(10x[3]) +
+           sin(sin(80x[2])) - sin(10(x[1] + x[3])) + (x[1]^2 + x[2]^2 + x[3]^2) / 4
+end
                  
 # ======================================================= 4D Functions =======================================================
 
