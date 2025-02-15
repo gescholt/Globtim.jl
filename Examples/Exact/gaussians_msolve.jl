@@ -1,5 +1,5 @@
 using Pkg
-using Revise 
+using Revise
 Pkg.activate(".")
 using Globtim
 using DynamicPolynomials, DataFrames
@@ -15,7 +15,7 @@ const delta, alpha = 0.5, 1 / 10  # Sampling parameters
 const tol_l2 = 3e-4 # Placeholder
 
 N = 12
-params = init_gaussian_params(n, N, .6, 0.2)
+params = init_gaussian_params(n, N, 0.6, 0.2)
 # Create a closure that captures params
 rand_gaussian_closure = (x) -> rand_gaussian(x, params)
 f = rand_gaussian_closure;
@@ -23,24 +23,25 @@ f = rand_gaussian_closure;
 d = 20 # Initial Degree 
 SMPL = 80 # Number of samples
 center = [0.0, 0.0]
-TR = test_input(f,
-    dim=n,
-    center=[0.0, 0.0],
-    GN=SMPL,
-    sample_range=scale_factor,
-    tolerance=tol_l2,
+TR = test_input(
+    f,
+    dim = n,
+    center = [0.0, 0.0],
+    GN = SMPL,
+    sample_range = scale_factor,
+    tolerance = tol_l2,
 )
-pol_cheb = Constructor(TR, d, basis=:chebyshev)
-pol_lege = Constructor(TR, d, basis=:legendre);
+pol_cheb = Constructor(TR, d, basis = :chebyshev)
+pol_lege = Constructor(TR, d, basis = :legendre);
 
 @polyvar(x[1:n]); # Define polynomial ring 
 
 df_cheb = solve_and_parse(pol_cheb, x, f, TR)
-sort!(df_cheb, :z, rev=true)
-df_lege = solve_and_parse(pol_lege, x, f, TR, basis=:legendre)
-sort!(df_lege, :z, rev=true)
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=1.)
-df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=1.)
+sort!(df_cheb, :z, rev = true)
+df_lege = solve_and_parse(pol_lege, x, f, TR, basis = :legendre)
+sort!(df_lege, :z, rev = true)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist = 1.0)
+df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist = 1.0)
 
 GLMakie.activate!()
 

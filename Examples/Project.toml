@@ -1,7 +1,6 @@
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-Globtim = "00da9514-6261-47e9-8848-33640cb1e528"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"

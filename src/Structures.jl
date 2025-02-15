@@ -52,22 +52,22 @@ struct test_input
     noise::Union{Tuple{Float64,Float64},Nothing}
     sample_range::Union{Float64,Nothing}
     reduce_samples::Union{Float64,Nothing}
-    degree_max::Union{Int, Nothing}
+    degree_max::Union{Int,Nothing}
     objective::Function
 
     function test_input(
         f::Function;
-        dim::Int=2,
-        center::AbstractVector{<:Real}=fill(0.0, dim),
-        GN::Union{Int,Nothing}=nothing,
-        alpha::Union{Real,Nothing}=0.1,
-        delta::Union{Real,Nothing}=0.5,
-        tolerance::Union{Real,Nothing}=2e-3,
-        sample_range::Union{Real,Nothing}=1.0,
-        reduce_samples::Union{Real,Nothing}=1.0,
-        degree_max::Int=6,
-        model::Union{Nothing,Any}=nothing,  # Changed from ODESystem
-        outputs::Union{Nothing,AbstractVector{<:Real}}=nothing
+        dim::Int = 2,
+        center::AbstractVector{<:Real} = fill(0.0, dim),
+        GN::Union{Int,Nothing} = nothing,
+        alpha::Union{Real,Nothing} = 0.1,
+        delta::Union{Real,Nothing} = 0.5,
+        tolerance::Union{Real,Nothing} = 2e-3,
+        sample_range::Union{Real,Nothing} = 1.0,
+        reduce_samples::Union{Real,Nothing} = 1.0,
+        degree_max::Int = 6,
+        model::Union{Nothing,Any} = nothing,  # Changed from ODESystem
+        outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
     )
         # Type conversions
         center_vec = Vector{Float64}(float.(center))
@@ -85,17 +85,18 @@ struct test_input
         tolerance_float = isnothing(tolerance) ? nothing : Float64(tolerance)
 
         # Validation
-        length(center_vec) == dim || throw(ArgumentError("center vector length must match dim"))
+        length(center_vec) == dim ||
+            throw(ArgumentError("center vector length must match dim"))
 
         # Create objective function
         objective = if isnothing(model) && isnothing(outputs)
             f
         elseif !isnothing(model) && !isnothing(outputs)
-            (x) -> f(x, model=model, measured_data=outputs)
+            (x) -> f(x, model = model, measured_data = outputs)
         elseif !isnothing(model)
-            (x) -> f(x, model=model)
+            (x) -> f(x, model = model)
         else
-            (x) -> f(x, measured_data=outputs)
+            (x) -> f(x, measured_data = outputs)
         end
 
         noise = (0.0, 0.0)
@@ -110,7 +111,7 @@ struct test_input
             sample_range_float,
             reduce_samples_float,
             degree_max,
-            objective
+            objective,
         )
     end
 end
@@ -135,29 +136,28 @@ Convenience constructor for test_input with default values.
 """
 function create_test_input(
     f::Function;
-    n::Int=2,
-    center::AbstractVector{Float64}=fill(0.0, n),
-    tolerance::Float64=2e-3,
-    alpha::Float64=0.1,
-    delta::Float64=0.5,
-    sample_range::Float64=1.0,
-    reduce_samples::Float64=1.0,
-    degree_max::Int=6,
-    model::Union{Nothing,Any}=nothing,  # Changed from ODESystem
-    outputs::Union{Nothing,AbstractVector{<:Real}}=nothing
+    n::Int = 2,
+    center::AbstractVector{Float64} = fill(0.0, n),
+    tolerance::Float64 = 2e-3,
+    alpha::Float64 = 0.1,
+    delta::Union{Real,Nothing} = nothing,  # Made optional
+    sample_range::Float64 = 1.0,
+    reduce_samples::Union{Real,Nothing} = nothing,  # Made optional
+    degree_max::Int = 6,
+    model::Union{Nothing,Any} = nothing,  # Changed from ODESystem
+    outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
 )::test_input
     return test_input(
         f;
-        dim=n,
-        center=center,
-        tolerance=tolerance,
-        alpha=alpha,
-        delta=delta,
-        sample_range=sample_range,
-        reduce_samples=reduce_samples,
-        degree_max=degree_max,
-        model=model,
-        outputs=outputs
+        dim = n,
+        center = center,
+        tolerance = tolerance,
+        alpha = alpha,
+        delta = delta,
+        sample_range = sample_range,
+        reduce_samples = reduce_samples,
+        degree_max = degree_max,
+        model = model,
+        outputs = outputs,
     )
 end
-

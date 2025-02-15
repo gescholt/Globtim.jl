@@ -25,7 +25,7 @@ function ChebyshevPoly(d::Int, x)
     else
         T_prev = rationalize(1.0)
         T_curr = x
-        for n in 2:d
+        for n = 2:d
             T_next = rationalize(2.0) * x * T_curr - T_prev
             T_prev = T_curr
             T_curr = T_next
@@ -77,7 +77,7 @@ julia> ChebyshevPolyExact(3)
  4//4
 ```
 """
-function ChebyshevPolyExact(d::Int, power_of_two::Bool=false)::Vector{Rational{BigInt}}
+function ChebyshevPolyExact(d::Int, power_of_two::Bool = false)::Vector{Rational{BigInt}}
     if d == 0
         return [BigInt(1) // 1]
     elseif d == 1
@@ -88,10 +88,10 @@ function ChebyshevPolyExact(d::Int, power_of_two::Bool=false)::Vector{Rational{B
 
         # Double Tn_1
         doubled = map(r -> 2 * r, Tn_1)
-        
+
         # Create the new polynomial
         Tn = [BigInt(0) // 1; doubled] - vcat(Tn_2, [BigInt(0) // 1, BigInt(0) // 1])
-        
+
         # Convert to power-of-2 denominators if requested
         return power_of_two ? map(closest_pow2denom_rational, Tn) : Tn
     end
@@ -122,11 +122,52 @@ function BigFloatChebyshevPoly(d::Int, x)
     else
         T_prev = BigFloat(1.0)
         T_curr = x
-        for n in 2:d
+        for n = 2:d
             T_next = BigFloat(2.0) * x * T_curr - T_prev
             T_prev = T_curr
             T_curr = T_next
         end
         return T_curr
     end
+end
+
+function construct_chebyshev_approx(
+    x::Vector{
+        Variable{
+            DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},
+            Graded{LexOrder},
+        },
+    },
+    coeffs::Vector{Float64},
+    degree::Int,
+)
+    n = length(x)  # number of variables
+    lambda = SupportGen(n, degree).data
+    m = size(lambda, 1)
+
+    # Check coefficients length matches space dimension
+    length(coeffs) == m ||
+        error("coeffs length ($(length(coeffs))) must match space dimension ($m)")
+
+    # Convert coefficients to BigInt rationals
+    coeffs_rat = convert.(Rational{BigInt}, coeffs)
+
+    # Initialize polynomial
+    S = zero(x[1])
+
+    # Construct polynomial using Chebyshev basis
+    for j = 1:m
+        term = one(x[1])
+        for k = 1:n
+            coeff_vec = ChebyshevPolyExact(lambda[j, k])
+            # Pad coefficient vector with zeros to match degree
+            sized_coeff_vec =
+                vcat(coeff_vec, zeros(eltype(coeff_vec), degree + 1 - length(coeff_vec)))
+            monom_vec = MonomialVector([x[k]], 0:degree)
+            term *= sum(sized_coeff_vec .* monom_vec)
+        end
+        S += coeffs_rat[j] * term
+    end
+
+    return S
 end

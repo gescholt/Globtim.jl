@@ -1,5 +1,5 @@
 using Pkg
-using Revise 
+using Revise
 Pkg.activate(".")
 using Globtim
 using DynamicPolynomials, DataFrames
@@ -18,24 +18,25 @@ f = camel # Objective function
 d = 12 # Initial Degree 
 SMPL = 120 # Number of samples
 center = [0.0, 0.0]
-TR = test_input(f,
-    dim=n,
-    center=[0.0, 0.0],
-    GN=SMPL,
-    sample_range=scale_factor,
-    tolerance=tol_l2,
+TR = test_input(
+    f,
+    dim = n,
+    center = [0.0, 0.0],
+    GN = SMPL,
+    sample_range = scale_factor,
+    tolerance = tol_l2,
 )
-pol_cheb = Constructor(TR, d, basis=:chebyshev)
-pol_lege = Constructor(TR, d, basis=:legendre);
+pol_cheb = Constructor(TR, d, basis = :chebyshev)
+pol_lege = Constructor(TR, d, basis = :legendre);
 
 @polyvar(x[1:n]); # Define polynomial ring 
 df_cheb = solve_and_parse(pol_cheb, x, f, TR)
-sort!(df_cheb, :z, rev=true)
-df_lege = solve_and_parse(pol_lege, x, f, TR, basis=:legendre)
-sort!(df_lege, :z, rev=true)
+sort!(df_cheb, :z, rev = true)
+df_lege = solve_and_parse(pol_lege, x, f, TR, basis = :legendre)
+sort!(df_lege, :z, rev = true)
 
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.003)
-df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=0.001)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist = 0.003)
+df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist = 0.001)
 
 GLMakie.activate!()
 
