@@ -7,6 +7,13 @@ num_samples = 120
 sample_range = 0.375  # 3/8
 tolerance = 3e-4
 
+[tref_small]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 40
+sample_range = 0.1
+tolerance = 3e-4
+
 [CrossInTray]
 dim = 2
 center = [0.0, 0.0]
@@ -47,6 +54,15 @@ alpha = 0.1
 dim = 2
 center = [0.0, 0.0]
 num_samples = 120 
+sample_range = 10
+tolerance = 3e-4
+delta = 0.5
+alpha = 0.1
+
+[HolderSmall]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 30 
 sample_range = 10
 tolerance = 3e-4
 delta = 0.5

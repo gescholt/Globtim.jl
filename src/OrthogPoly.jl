@@ -26,7 +26,7 @@ function ChebyshevPoly(d::Int, x)
     else
         T_prev = rationalize(1.0)
         T_curr = x
-        for n in 2:d
+        for n = 2:d
             T_next = rationalize(2.0) * x * T_curr - T_prev
             T_prev = T_curr
             T_curr = T_next
@@ -35,34 +35,6 @@ function ChebyshevPoly(d::Int, x)
     end
 end
 
-# """
-#     ChebyshevPolyExact(d::Int)::Vector{Int}
-
-# Generate a vector of integer coefficients of the Chebyshev polynomial of degree `d` in one variable.
-
-# # Arguments
-# - `d::Int`: Degree of the Chebyshev polynomial.
-
-# # Returns
-# - A vector of integer coefficients of the Chebyshev polynomial of degree `d`.
-
-# # Example
-# ```julia
-# ChebyshevPolyExact(3)
-# ```
-# """
-# function ChebyshevPolyExact(d::Int)::Vector{Int}
-#     if d == 0
-#         return [1]
-#     elseif d == 1
-#         return [0, 1]
-#     else
-#         Tn_1 = ChebyshevPolyExact(d - 1)
-#         Tn_2 = ChebyshevPolyExact(d - 2)
-#         Tn = [0; 2 * Tn_1] - vcat(Tn_2, [0, 0])
-#         return Tn
-#     end
-# end
 
 """
     closest_pow2denom_rational(r::Rational{BigInt})::Rational{BigInt}
@@ -152,7 +124,7 @@ function BigFloatChebyshevPoly(d::Int, x)
     else
         T_prev = BigFloat(1.0)
         T_curr = x
-        for n in 2:d
+        for n = 2:d
             T_next = BigFloat(2.0) * x * T_curr - T_prev
             T_prev = T_curr
             T_curr = T_next
@@ -252,7 +224,7 @@ Generate the symbolic Legendre polynomial of degree n using DynamicPolynomials.
 # Throws
 - ArgumentError: If n < 0
 """
-function symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
+function symbolic_legendre(n::Integer; use_bigint::Bool = false, normalized::Bool = true)
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
     # Get the unnormalized polynomial using multiple dispatch
@@ -290,9 +262,8 @@ function _symbolic_legendre_impl(n::Integer, use_bigint::Bool)
     p_prev = use_bigint ? big(1) : 1  # P₀
     p_curr = x                        # P₁ (use global x)
 
-    for k in T(1):T(n - 1)
-        p_next = ((2k + 1) // (k + 1) * x * p_curr -
-                  k // (k + 1) * p_prev)
+    for k = T(1):T(n - 1)
+        p_next = ((2k + 1) // (k + 1) * x * p_curr - k // (k + 1) * p_prev)
         p_prev = p_curr
         p_curr = p_next
     end
@@ -305,8 +276,8 @@ function get_legendre_coeffs(max_degree::Integer)
     legendre_coeffs = Vector{Vector{Rational{BigInt}}}(undef, max_degree + 1)
 
     # For each degree, generate polynomial and extract coefficients
-    for deg in 0:max_degree
-        P = symbolic_legendre(deg, normalized=true)
+    for deg = 0:max_degree
+        P = symbolic_legendre(deg, normalized = true)
 
         # If constant polynomial
         if P isa Number
@@ -328,4 +299,4 @@ function get_legendre_coeffs(max_degree::Integer)
     end
 
     return legendre_coeffs
-end 
+end

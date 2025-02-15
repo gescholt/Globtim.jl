@@ -23,27 +23,28 @@ f = camel_3_by_3 # Objective function
 d = 6     # Degree 
 SMPL = 4 # Number of samples
 center = [0.0, 0.0, 0.0, 0.0]
-TR = test_input(f,
-    dim=n,
-    center=center,
-    GN=SMPL,
-    sample_range=scale_factor,
-    tolerance=tol_l2,
+TR = test_input(
+    f,
+    dim = n,
+    center = center,
+    GN = SMPL,
+    sample_range = scale_factor,
+    tolerance = tol_l2,
 );
-pol_cheb = Constructor(TR, d, basis=:chebyshev);
-pol_lege = Constructor(TR, d, basis=:legendre);
+pol_cheb = Constructor(TR, d, basis = :chebyshev);
+pol_lege = Constructor(TR, d, basis = :legendre);
 
 @polyvar(x[1:n]); # Define polynomial ring 
 df_cheb = solve_and_parse(pol_cheb, x, f, TR)
-sort!(df_cheb, :z, rev=true)
-df_lege = solve_and_parse(pol_lege, x, f, TR, basis=:legendre)
-sort!(df_lege, :z, rev=true)
+sort!(df_cheb, :z, rev = true)
+df_lege = solve_and_parse(pol_lege, x, f, TR, basis = :legendre)
+sort!(df_lege, :z, rev = true)
 
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.003)
-df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=0.001)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist = 0.003)
+df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist = 0.001)
 
 # The optimized approximant
-sorted_df_cheb = sort(df_cheb, :"close", rev=true)[:, [:"close"]]
+sorted_df_cheb = sort(df_cheb, :"close", rev = true)[:, [:"close"]]
 
 
 # Compute the tensored 4d dataframe #
@@ -57,7 +58,7 @@ function double_dataframe(df::DataFrame)
     x2 = vec([df.x[j[2]] for j in pairs])
     y2 = vec([df.y[j[2]] for j in pairs])
 
-    return DataFrame(x1=x1, x2=y1, x3=x2, x4=y2)
+    return DataFrame(x1 = x1, x2 = y1, x3 = x2, x4 = y2)
 end
 
 df_doubled = double_dataframe(df_2d)
@@ -66,9 +67,9 @@ df_doubled = double_dataframe(df_2d)
 using LinearAlgebra
 include("../cmpr.jl")
 
-df_result = compare_tensor_points(df_cheb, df_doubled,tol_dist=0.10)
+df_result = compare_tensor_points(df_cheb, df_doubled, tol_dist = 0.10)
 df_filtered = df_result[df_result.captured.==true, :]
-sort(df_filtered, :"x1", rev=true)
+sort(df_filtered, :"x1", rev = true)
 
-df_lege_result = compare_tensor_points(df_lege, df_doubled,tol_dist=0.15)
+df_lege_result = compare_tensor_points(df_lege, df_doubled, tol_dist = 0.15)
 df_lege_filtered = df_lege_result[df_lege_result.captured.==true, :]

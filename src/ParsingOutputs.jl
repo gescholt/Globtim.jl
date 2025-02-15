@@ -19,7 +19,7 @@ end
 
 
 
-function process_output_file(file_path::String; dim::Int=3)
+function process_output_file(file_path::String; dim::Int = 3)
     content = read(file_path, String)
     content = replace(content, r":\]$" => "]", r"\s+" => "")
 
@@ -29,7 +29,7 @@ function process_output_file(file_path::String; dim::Int=3)
 
     for m in eachmatch(pair_pattern, content)
         # Process each rational directly to float
-        for i in 1:2
+        for i = 1:2
             num = parse(BigInt, match(r"(-?\d+)/2\^(\d+)", m[i]).captures[1])
             exp = parse(Int, match(r"(-?\d+)/2\^(\d+)", m[i]).captures[2])
             val = Float64(num / BigFloat(2)^exp)
@@ -37,7 +37,8 @@ function process_output_file(file_path::String; dim::Int=3)
             i == 1 && (global last_val = val)
         end
 
-        length(current_point) == dim && (push!(points, copy(current_point)); current_point = Vector{Float64}())
+        length(current_point) == dim &&
+            (push!(points, copy(current_point)); current_point = Vector{Float64}())
     end
 
     !isempty(current_point) && error("Incomplete point")
@@ -54,8 +55,10 @@ function msolve_parser(file_path::String, f::Function, TR::test_input)::DataFram
         end
 
         try
-            process_time = @elapsed points = process_output_file(file_path, dim=TR.dim)
-            println("Processed $(length(points)) points ($(round(process_time, digits=3))s)")
+            process_time = @elapsed points = process_output_file(file_path, dim = TR.dim)
+            println(
+                "Processed $(length(points)) points ($(round(process_time, digits=3))s)",
+            )
 
             if !all(p -> length(p) == TR.dim, points)
                 invalid_points = filter(p -> length(p) != TR.dim, points)
@@ -66,21 +69,25 @@ function msolve_parser(file_path::String, f::Function, TR::test_input)::DataFram
 
             if isempty(filtered_points)
                 println("No valid points found after filtering")
-                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim))
+                return DataFrame(Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim))
             end
 
             # Convert center to vector if it's not already
             center_vec = Vector(TR.center)
             # Transform each point
-            points_to_process = [TR.sample_range .* p .+ center_vec for p in filtered_points]
+            points_to_process =
+                [TR.sample_range .* p .+ center_vec for p in filtered_points]
 
             z = [f(p) for p in points_to_process]
 
             df = DataFrame(
                 merge(
-                    Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim),
-                    Dict(:z => z)
-                )
+                    Dict(
+                        Symbol("x$i") => [p[i] for p in points_to_process] for
+                        i = 1:TR.dim
+                    ),
+                    Dict(:z => z),
+                ),
             )
 
             return df
@@ -163,7 +170,7 @@ function process_critical_points(
     real_pts::Vector{<:AbstractVector},
     f::Function,
     TR::test_input;
-    kwargs...
+    kwargs...,
 )::DataFrame
     total_time = @elapsed begin
         println("\n=== Starting Critical Points Processing (dimension: $(TR.dim)) ===")
@@ -181,12 +188,13 @@ function process_critical_points(
 
                 if isempty(filtered_points)
                     println("No valid points found after filtering")
-                    return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim))
+                    return DataFrame(Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim))
                 end
 
                 # Transform points using test_input parameters
                 center_vec = Vector(TR.center)
-                points_to_process = [TR.sample_range .* p .+ center_vec for p in filtered_points]
+                points_to_process =
+                    [TR.sample_range .* p .+ center_vec for p in filtered_points]
 
                 # Evaluate function at transformed points
                 z = [f(p) for p in points_to_process]
@@ -194,9 +202,12 @@ function process_critical_points(
                 # Create DataFrame
                 df = DataFrame(
                     merge(
-                        Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim),
-                        Dict(:z => z)
-                    )
+                        Dict(
+                            Symbol("x$i") => [p[i] for p in points_to_process]
+                            for i = 1:TR.dim
+                        ),
+                        Dict(:z => z),
+                    ),
                 )
             end
 
@@ -238,9 +249,16 @@ end
 """
     solve_and_parse(pol::ApproxPoly, x, f::Function, TR::test_input; kwargs...)
 """
-function solve_and_parse(pol::ApproxPoly, x, f::Function, TR::test_input; basis::Symbol=:chebyshev, kwargs...)
+function solve_and_parse(
+    pol::ApproxPoly,
+    x,
+    f::Function,
+    TR::test_input;
+    basis::Symbol = :chebyshev,
+    kwargs...,
+)
     # First run msolve_polynomial_system and get the output file path
-    output_file = msolve_polynomial_system(pol, x; n=TR.dim, basis=basis)
+    output_file = msolve_polynomial_system(pol, x; n = TR.dim, basis = basis)
 
     # Then parse the results and get the DataFrame
     # The output file will be automatically cleaned up after parsing
@@ -248,7 +266,3 @@ function solve_and_parse(pol::ApproxPoly, x, f::Function, TR::test_input; basis:
 
     return df
 end
-
-
-
-

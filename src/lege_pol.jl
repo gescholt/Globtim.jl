@@ -88,7 +88,7 @@ Generate the symbolic Legendre polynomial of degree n using DynamicPolynomials.
 # Throws
 - ArgumentError: If n < 0
 """
-function symbolic_legendre(n::Integer; use_bigint::Bool=false, normalized::Bool=true)
+function symbolic_legendre(n::Integer; use_bigint::Bool = false, normalized::Bool = true)
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
     # Get the unnormalized polynomial using multiple dispatch
@@ -126,9 +126,8 @@ function _symbolic_legendre_impl(n::Integer, use_bigint::Bool)
     p_prev = use_bigint ? big(1) : 1  # P₀
     p_curr = x                        # P₁ (use global x)
 
-    for k in T(1):T(n - 1)
-        p_next = ((2k + 1) // (k + 1) * x * p_curr -
-                  k // (k + 1) * p_prev)
+    for k = T(1):T(n - 1)
+        p_next = ((2k + 1) // (k + 1) * x * p_curr - k // (k + 1) * p_prev)
         p_prev = p_curr
         p_curr = p_next
     end
@@ -141,8 +140,8 @@ function get_legendre_coeffs(max_degree::Integer)
     legendre_coeffs = Vector{Vector{Rational{BigInt}}}(undef, max_degree + 1)
 
     # For each degree, generate polynomial and extract coefficients
-    for deg in 0:max_degree
-        P = symbolic_legendre(deg, normalized=true)
+    for deg = 0:max_degree
+        P = symbolic_legendre(deg, normalized = true)
 
         # If constant polynomial
         if P isa Number

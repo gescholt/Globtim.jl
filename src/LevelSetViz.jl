@@ -19,15 +19,23 @@ struct LevelSetData{T<:AbstractFloat}
     level::T
 
     # Inner constructor for validation
-    function LevelSetData{T}(points::Vector{SVector{3,T}}, values::Vector{T}, level::T) where {T<:AbstractFloat}
-        length(points) == length(values) || throw(ArgumentError("Points and values must have same length"))
+    function LevelSetData{T}(
+        points::Vector{SVector{3,T}},
+        values::Vector{T},
+        level::T,
+    ) where {T<:AbstractFloat}
+        length(points) == length(values) ||
+            throw(ArgumentError("Points and values must have same length"))
         new{T}(points, values, level)
     end
 end
 
 # Outer constructor for type inference
-LevelSetData(points::Vector{SVector{3,T}}, values::Vector{T}, level::T) where {T<:AbstractFloat} =
-    LevelSetData{T}(points, values, level)
+LevelSetData(
+    points::Vector{SVector{3,T}},
+    values::Vector{T},
+    level::T,
+) where {T<:AbstractFloat} = LevelSetData{T}(points, values, level)
 
 # Parameters
 @with_kw struct VisualizationParameters{T<:AbstractFloat}
@@ -51,9 +59,10 @@ function prepare_level_set_data(
     grid::Array{SVector{3,T}},
     values::Array{T},
     level::T;
-    tolerance::T=convert(T, 1e-2)
+    tolerance::T = convert(T, 1e-2),
 ) where {T<:AbstractFloat}
-    size(grid) == size(values) || throw(DimensionMismatch("Grid and values must have same dimensions"))
+    size(grid) == size(values) ||
+        throw(DimensionMismatch("Grid and values must have same dimensions"))
     tolerance > zero(T) || throw(ArgumentError("Tolerance must be positive"))
 
     # Flatten arrays for processing
@@ -64,11 +73,7 @@ function prepare_level_set_data(
     level_set_mask = @. abs(flat_values - level) < tolerance
 
     # Create LevelSetData structure
-    LevelSetData(
-        flat_grid[level_set_mask],
-        flat_values[level_set_mask],
-        level
-    )
+    LevelSetData(flat_grid[level_set_mask], flat_values[level_set_mask], level)
 end
 
 """
@@ -77,15 +82,14 @@ end
 Convert LevelSetData to a format suitable for Makie plotting.
 """
 function to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
-    isempty(level_set.points) && return (points=Matrix{T}(undef, 3, 0),
-        values=T[],
-        xyz=(T[], T[], T[]))
+    isempty(level_set.points) &&
+        return (points = Matrix{T}(undef, 3, 0), values = T[], xyz = (T[], T[], T[]))
 
     points = reduce(hcat, level_set.points)
     return (
-        points=points,
-        values=level_set.values,
-        xyz=(view(points, 1, :), view(points, 2, :), view(points, 3, :))
+        points = points,
+        values = level_set.values,
+        xyz = (view(points, 1, :), view(points, 2, :), view(points, 3, :)),
     )
 end
 
@@ -99,19 +103,17 @@ end
 
 Create a 3D scatter plot of level set points.
 """
-function plot_level_set(formatted_data;
-    fig_size=(800, 600),
-    marker_size=4,
-    title="Level Set Visualization")
+function plot_level_set(
+    formatted_data;
+    fig_size = (800, 600),
+    marker_size = 4,
+    title = "Level Set Visualization",
+)
 
-    fig = Figure(size=fig_size)
-    ax = Axis3(fig[1, 1],
-        title=title,
-        xlabel="x₁",
-        ylabel="x₂",
-        zlabel="x₃")
+    fig = Figure(size = fig_size)
+    ax = Axis3(fig[1, 1], title = title, xlabel = "x₁", ylabel = "x₂", zlabel = "x₃")
 
-    scatter!(ax, formatted_data.xyz..., markersize=marker_size)
+    scatter!(ax, formatted_data.xyz..., markersize = marker_size)
 
     display(fig)
     return fig
@@ -129,74 +131,101 @@ end
 function create_level_set_visualization(
     f,
     grid::Array{SVector{3,T},3},
-    df::DataFrame,
+    df::Union{DataFrame,Nothing},
     z_range::Tuple{T,T},
-    params::VisualizationParameters{T}=VisualizationParameters{T}()
+    params::VisualizationParameters{T} = VisualizationParameters{T}(),
 ) where {T<:AbstractFloat}
+    grid_points = vec(grid)
+    valid_points = filter(p -> !any(isnan, p), grid_points)
+    isempty(valid_points) && throw(ArgumentError("Grid contains no valid points"))
 
-    fig = Figure(size=params.fig_size)
+    z_min, z_max = z_range
+    (isnan(z_min) || isnan(z_max)) && throw(ArgumentError("Invalid z_range"))
 
-    ax = Axis3(fig[1, 1],
-        title="Level Set Visualization",
-        xlabel="x₁",
-        ylabel="x₂",
-        zlabel="x₃")
+    fig = Figure(size = params.fig_size)
+    ax = Axis3(
+        fig[1, 1],
+        title = "Level Set Visualization",
+        xlabel = "x₁",
+        ylabel = "x₂",
+        zlabel = "x₃",
+    )
 
-    # Extract grid bounds correctly from 3D array of SVectors
-    grid_points = vec(grid)  # Flatten the 3D array
-    x_range = extrema(p[1] for p in grid_points)
-    y_range = extrema(p[2] for p in grid_points)
-    z_range_grid = extrema(p[3] for p in grid_points)
+    x_range = extrema(p[1] for p in valid_points)
+    y_range = extrema(p[2] for p in valid_points)
+    z_range_grid = extrema(p[3] for p in valid_points)
 
     limits!(ax, x_range..., y_range..., z_range_grid...)
 
-    # Create level selection slider
-    z_min, z_max = z_range
-    level_slider = Slider(fig[2, 1],
-        range=range(z_min, z_max, length=1000),
-        startvalue=z_min)
+    level_slider =
+        Slider(fig[2, 1], range = range(z_min, z_max, length = 1000), startvalue = z_min)
 
-    level_label = Label(fig[3, 1],
-        @lift(string("Level: ", round($(level_slider.value), digits=3))),
-        tellwidth=false)
+    level_label = Label(
+        fig[3, 1],
+        @lift(string("Level: ", round($(level_slider.value), digits = 3))),
+        tellwidth = false,
+    )
 
-    # Observables for points
     level_points = Observable(Point3f[])
     data_points = Observable(Point3f[])
 
-    # Create visualization elements
-    scatter!(ax, level_points,
-        color=:blue,
-        markersize=2,
-        label="Level Set")
+    # Pre-compute function values for the entire grid
+    values = zeros(T, size(grid)...)
+    @inbounds for i in eachindex(grid_points)
+        point = grid_points[i]
+        values[i] = any(isnan, point) ? NaN : f(point)
+    end
 
-    scatter!(ax, data_points,
-        color=:orange,
-        marker=:diamond,
-        markersize=20,
-        label="Data Points")
+    scatter!(ax, level_points, color = :blue, markersize = 2, label = "Level Set")
+
+    if !isnothing(df)
+        scatter!(
+            ax,
+            data_points,
+            color = :darkorange,
+            marker = :diamond,
+            markersize = 20,
+            label = "Data Points",
+        )
+    end
 
     function update_visualization(level::T) where {T<:AbstractFloat}
-        # Update level set points
-        values = reshape(map(f, grid_points), size(grid))  # Preserve 3D structure
-        level_data = prepare_level_set_data(grid, values, level, tolerance=params.point_tolerance)
-        formatted_data = to_makie_format(level_data)
+        try
+            # Update level set points
+            level_data = prepare_level_set_data(
+                grid,
+                values,
+                level,
+                tolerance = params.point_tolerance,
+            )
 
-        # Update grid points
-        if !isempty(formatted_data.xyz[1])
-            level_points[] = [Point3f(x, y, z) for (x, y, z) in zip(formatted_data.xyz...)]
-        else
-            level_points[] = Point3f[]
-        end
+            formatted_data = to_makie_format(level_data)
 
-        # Update data points using same tolerance
-        visible_points = Point3f[]
-        for row in eachrow(df)
-            if abs(row["z"] - level) ≤ params.point_tolerance
-                push!(visible_points, Point3f(row["x1"], row["x2"], row["x3"]))
+            # Update points atomically
+            new_points = Point3f[]
+            if !isempty(formatted_data.xyz[1])
+                for (x, y, z) in zip(formatted_data.xyz...)
+                    if !any(isnan, (x, y, z))
+                        push!(new_points, Point3f(x, y, z))
+                    end
+                end
             end
+            level_points[] = new_points
+
+            if !isnothing(df)
+                visible_points = Point3f[]
+                for row in eachrow(df)
+                    if !any(isnan, [row["x1"], row["x2"], row["x3"], row["z"]]) &&
+                       abs(row["z"] - level) ≤ params.point_tolerance
+                        push!(visible_points, Point3f(row["x1"], row["x2"], row["x3"]))
+                    end
+                end
+                data_points[] = visible_points
+            end
+        catch e
+            @error "Error in visualization update" exception = e
+            rethrow(e)
         end
-        data_points[] = visible_points
     end
 
     on(level_slider.value) do level
@@ -204,27 +233,29 @@ function create_level_set_visualization(
     end
 
     update_visualization(z_min)
-    axislegend(ax, position=:rt)
+    axislegend(ax, position = :rt)
 
     return fig
 end
+
+
 
 function plot_polyapprox_levelset(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int}=(1000, 600),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing,
-    chebyshev_levels::Bool=false,
-    num_levels::Int=30
+    figure_size::Tuple{Int,Int} = (1000, 600),
+    z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    chebyshev_levels::Bool = false,
+    num_levels::Int = 30,
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size=figure_size)
-        ax = Axis(fig[1, 1], title="")
+        fig = Figure(size = figure_size)
+        ax = Axis(fig[1, 1], title = "")
 
         # Calculate z_limits if not provided
         if isnothing(z_limits)
@@ -259,10 +290,8 @@ function plot_polyapprox_levelset(
 
         # Create contour plot
         # chosen_colormap = :viridis  
-        chosen_colormap = :inferno 
-        contourf!(ax, x_unique, y_unique, Z,
-            colormap=chosen_colormap,
-            levels=levels)
+        chosen_colormap = :inferno
+        contourf!(ax, x_unique, y_unique, Z, colormap = chosen_colormap, levels = levels)
 
         # Initialize empty array for legend entries
         legend_entries = []
@@ -272,32 +301,44 @@ function plot_polyapprox_levelset(
             # Far points
             not_close_idx = .!df.close
             if any(not_close_idx)
-                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
-                    markersize=10,
-                    color=:white,
-                    strokecolor=:black,
-                    strokewidth=1,
-                    label="Far")
+                scatter!(
+                    ax,
+                    df.x1[not_close_idx],
+                    df.x2[not_close_idx],
+                    markersize = 10,
+                    color = :white,
+                    strokecolor = :black,
+                    strokewidth = 1,
+                    label = "Far",
+                )
                 push!(legend_entries, "Far")
             end
 
             # Near points
             close_idx = df.close
             if any(close_idx)
-                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
-                    markersize=10,
-                    color=:green,
-                    strokecolor=:black,
-                    strokewidth=1,
-                    label="Near")
+                scatter!(
+                    ax,
+                    df.x1[close_idx],
+                    df.x2[close_idx],
+                    markersize = 10,
+                    color = :green,
+                    strokecolor = :black,
+                    strokewidth = 1,
+                    label = "Near",
+                )
                 push!(legend_entries, "Near")
             end
         else
             # All points if no close/far distinction
-            scatter!(ax, df.x1, df.x2,
-                markersize=2,
-                color=:orange,
-                label="All points")
+            scatter!(
+                ax,
+                df.x1,
+                df.x2,
+                markersize = 2,
+                color = :orange,
+                label = "All points",
+            )
             push!(legend_entries, "All points")
         end
 
@@ -307,20 +348,28 @@ function plot_polyapprox_levelset(
             captured_idx = df_min.captured
 
             if any(uncaptured_idx)
-                scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
-                    markersize=15,
-                    marker=:diamond,
-                    color=:red,
-                    label="Uncaptured")
+                scatter!(
+                    ax,
+                    df_min.x1[uncaptured_idx],
+                    df_min.x2[uncaptured_idx],
+                    markersize = 15,
+                    marker = :diamond,
+                    color = :red,
+                    label = "Uncaptured",
+                )
                 push!(legend_entries, "Uncaptured")
             end
 
             if any(captured_idx)
-                scatter!(ax, df_min.x1[captured_idx], df_min.x2[captured_idx],
-                    markersize=15,
-                    marker=:diamond,
-                    color=:blue,
-                    label="Captured")
+                scatter!(
+                    ax,
+                    df_min.x1[captured_idx],
+                    df_min.x2[captured_idx],
+                    markersize = 15,
+                    marker = :diamond,
+                    color = :blue,
+                    label = "Captured",
+                )
                 push!(legend_entries, "Captured")
             end
         end
@@ -340,14 +389,24 @@ function plot_polyapprox_levelset(
     end
 end
 
-function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
+function plot_polyapprox_rotate(
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    df_min::DataFrame,
+)
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size=(1000, 600))
-        ax = Axis3(fig[1, 1], title="",
-            xlabel="X-axis", ylabel="Y-axis", zlabel="Z-axis")
+        fig = Figure(size = (1000, 600))
+        ax = Axis3(
+            fig[1, 1],
+            title = "",
+            xlabel = "X-axis",
+            ylabel = "Y-axis",
+            zlabel = "Z-axis",
+        )
 
         # Create a regular grid for surface plotting
         x_unique = sort(unique(coords[:, 1]))
@@ -363,56 +422,81 @@ function plot_polyapprox_rotate(pol::ApproxPoly, TR::test_input, df::DataFrame, 
             end
         end
 
-        surface!(ax, x_unique, y_unique, Z,
+        surface!(
+            ax,
+            x_unique,
+            y_unique,
+            Z,
             # colormap=:viridis,
-            colormap=:inferno,
-            transparency=true,
-            alpha=0.8)
+            colormap = :inferno,
+            transparency = true,
+            alpha = 0.8,
+        )
 
         if :close in propertynames(df)
             not_close_idx = .!df.close
             if any(not_close_idx)
-                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                scatter!(
+                    ax,
+                    df.x1[not_close_idx],
+                    df.x2[not_close_idx],
                     df.z[not_close_idx],
-                    markersize=5,
-                    color=:orange,
-                    label="Far")
+                    markersize = 5,
+                    color = :orange,
+                    label = "Far",
+                )
             end
 
             close_idx = df.close
             if any(close_idx)
-                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                scatter!(
+                    ax,
+                    df.x1[close_idx],
+                    df.x2[close_idx],
                     df.z[close_idx],
-                    markersize=10,
-                    color=:green,
-                    label="Near")
+                    markersize = 10,
+                    color = :green,
+                    label = "Near",
+                )
             end
         else
-            scatter!(ax, df.x1, df.x2,
+            scatter!(
+                ax,
+                df.x1,
+                df.x2,
                 df.z,
-                markersize=2,
-                color=:orange,
-                label="All points")
+                markersize = 2,
+                color = :orange,
+                label = "All points",
+            )
         end
 
         # Plot uncaptured minimizers from df_min in red
         uncaptured_idx = .!df_min.captured
         if any(uncaptured_idx)
-            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+            scatter!(
+                ax,
+                df_min.x1[uncaptured_idx],
+                df_min.x2[uncaptured_idx],
                 df_min.value[uncaptured_idx],
-                markersize=10,
-                marker=:diamond,
-                color=:red,
-                label="Uncaptured minima")
+                markersize = 10,
+                marker = :diamond,
+                color = :red,
+                label = "Uncaptured minima",
+            )
         end
 
         # Add legend to the right of the plot
         # Legend(fig[1, 2], ax, "Critical Points",
         #     tellwidth=true)
-        Legend(fig[2, 1], ax, "Critical Points",
-            orientation=:horizontal,  # Make legend horizontal for better space usage
-            tellwidth=false,         # Don't have legend width affect layout
-            tellheight=true)
+        Legend(
+            fig[2, 1],
+            ax,
+            "Critical Points",
+            orientation = :horizontal,  # Make legend horizontal for better space usage
+            tellwidth = false,         # Don't have legend width affect layout
+            tellheight = true,
+        )
 
         # record(fig, "trefethern_rotation_d30.mp4", 1:240; framerate=30) do frame
         #     ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / 240)
@@ -429,18 +513,20 @@ function plot_polyapprox_animate(
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int}=(1000, 600)
+    figure_size::Tuple{Int,Int} = (1000, 600),
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size=figure_size)
-        ax = Axis3(fig[1, 1],
-            title="",
-            xlabel="X-axis",
-            ylabel="Y-axis",
-            zlabel="Z-axis")
+        fig = Figure(size = figure_size)
+        ax = Axis3(
+            fig[1, 1],
+            title = "",
+            xlabel = "X-axis",
+            ylabel = "Y-axis",
+            zlabel = "Z-axis",
+        )
 
         # Surface plotting (like in plot_polyapprox_rotate)
         x_unique = sort(unique(coords[:, 1]))
@@ -455,37 +541,50 @@ function plot_polyapprox_animate(
             end
         end
 
-        surface!(ax, x_unique, y_unique, Z,
-            colormap=:viridis,
-            transparency=true,
-            alpha=0.8)
+        surface!(
+            ax,
+            x_unique,
+            y_unique,
+            Z,
+            colormap = :viridis,
+            transparency = true,
+            alpha = 0.8,
+        )
 
         # Point plotting (like in your other functions)
         if :close in propertynames(df)
             not_close_idx = .!df.close
             if any(not_close_idx)
-                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                scatter!(
+                    ax,
+                    df.x1[not_close_idx],
+                    df.x2[not_close_idx],
                     df.z[not_close_idx],
-                    markersize=5,
-                    color=:orange,
-                    label="Far")
+                    markersize = 5,
+                    color = :orange,
+                    label = "Far",
+                )
             end
 
             close_idx = df.close
             if any(close_idx)
-                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                scatter!(
+                    ax,
+                    df.x1[close_idx],
+                    df.x2[close_idx],
                     df.z[close_idx],
-                    markersize=10,
-                    color=:green,
-                    label="Near")
+                    markersize = 10,
+                    color = :green,
+                    label = "Near",
+                )
             end
         end
 
         # Add legend
-        Legend(fig[1, 2], ax, "Critical Points", tellwidth=true)
+        Legend(fig[1, 2], ax, "Critical Points", tellwidth = true)
 
         # Simple rotation animation (will play in window)
-        for θ in range(0, 2π, length=100)
+        for θ in range(0, 2π, length = 100)
             ax.azimuth[] = θ
             ax.elevation[] = π / 6
             sleep(0.03)  # Adjust speed
@@ -502,28 +601,29 @@ function plot_polyapprox_flyover(
     TR::test_input,
     df_lege::DataFrame,  # renamed to df_lege to be explicit
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int}=(1000, 600),
-    surface_alpha::Float64=0.8,
-    frames_per_point::Int=60,
-    camera_radius::Float64=2.0,
-    camera_height::Float64=2.0,
-    surface_point_size::Int=2,
-    close_point_size::Int=10,
-    far_point_size::Int=5,
-    min_point_size::Int=10
+    figure_size::Tuple{Int,Int} = (1000, 600),
+    surface_alpha::Float64 = 0.8,
+    frames_per_point::Int = 60,
+    camera_radius::Float64 = 2.0,
+    camera_height::Float64 = 2.0,
+    surface_point_size::Int = 2,
+    close_point_size::Int = 10,
+    far_point_size::Int = 5,
+    min_point_size::Int = 10,
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size=figure_size)
-        ax = Axis3(fig[1, 1],
-            title="",
-            xlabel="X-axis",
-            ylabel="Y-axis",
-            zlabel="Z-axis",
-            aspect=(1, 1, 1),
-            viewmode=:fit
+        fig = Figure(size = figure_size)
+        ax = Axis3(
+            fig[1, 1],
+            title = "",
+            xlabel = "X-axis",
+            ylabel = "Y-axis",
+            zlabel = "Z-axis",
+            aspect = (1, 1, 1),
+            viewmode = :fit,
         )
 
         # Surface plotting
@@ -539,10 +639,15 @@ function plot_polyapprox_flyover(
             end
         end
 
-        surface!(ax, x_unique, y_unique, Z,
-            colormap=:viridis,
-            transparency=true,
-            alpha=surface_alpha)
+        surface!(
+            ax,
+            x_unique,
+            y_unique,
+            Z,
+            colormap = :viridis,
+            transparency = true,
+            alpha = surface_alpha,
+        )
 
         # Points plotting
         green_points = Point3f[]
@@ -550,45 +655,59 @@ function plot_polyapprox_flyover(
         # Plot points where close != 1 (far points)
         far_idx = df_lege.close .!= 1
         if any(far_idx)
-            scatter!(ax, df_lege.x1[far_idx], df_lege.x2[far_idx],
+            scatter!(
+                ax,
+                df_lege.x1[far_idx],
+                df_lege.x2[far_idx],
                 df_lege.z[far_idx],
-                markersize=far_point_size,
-                color=:orange,
-                label="Far")
+                markersize = far_point_size,
+                color = :orange,
+                label = "Far",
+            )
         end
 
         # Plot points where close == 1 (near points)
         close_idx = df_lege.close .== 1
         if any(close_idx)
-            green_points = [Point3f(x, y, z) for (x, y, z) in
-                            zip(df_lege.x1[close_idx], df_lege.x2[close_idx], df_lege.z[close_idx])]
+            green_points = [
+                Point3f(x, y, z) for (x, y, z) in
+                zip(df_lege.x1[close_idx], df_lege.x2[close_idx], df_lege.z[close_idx])
+            ]
 
-            scatter!(ax, df_lege.x1[close_idx], df_lege.x2[close_idx], df_lege.z[close_idx],
-                markersize=close_point_size,
-                color=:green,
-                label="Near")
+            scatter!(
+                ax,
+                df_lege.x1[close_idx],
+                df_lege.x2[close_idx],
+                df_lege.z[close_idx],
+                markersize = close_point_size,
+                color = :green,
+                label = "Near",
+            )
         end
 
         # Plot uncaptured minimizers
         uncaptured_idx = .!df_min.captured
         if any(uncaptured_idx)
-            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+            scatter!(
+                ax,
+                df_min.x1[uncaptured_idx],
+                df_min.x2[uncaptured_idx],
                 df_min.value[uncaptured_idx],
-                markersize=min_point_size,
-                marker=:diamond,
-                color=:red,
-                label="Uncaptured minima")
+                markersize = min_point_size,
+                marker = :diamond,
+                color = :red,
+                label = "Uncaptured minima",
+            )
         end
 
         # Add legend
-        Legend(fig[1, 2], ax, "Critical Points",
-            tellwidth=true)
+        Legend(fig[1, 2], ax, "Critical Points", tellwidth = true)
 
         # Create animation flying over points where close == 1
         if !isempty(green_points)
             frames = 1:frames_per_point*length(green_points)
 
-            record(fig, "trefethen_flyover.mp4", frames; framerate=30) do frame
+            record(fig, "trefethen_flyover.mp4", frames; framerate = 30) do frame
                 point_idx = (frame ÷ frames_per_point) + 1
                 point_idx = min(point_idx, length(green_points))
                 current_point = green_points[point_idx]
@@ -600,8 +719,16 @@ function plot_polyapprox_flyover(
                 ax.elevation[] = π / 6
 
                 # Center view on current point
-                xlims!(ax, current_point[1] - camera_radius, current_point[1] + camera_radius)
-                ylims!(ax, current_point[2] - camera_radius, current_point[2] + camera_radius)
+                xlims!(
+                    ax,
+                    current_point[1] - camera_radius,
+                    current_point[1] + camera_radius,
+                )
+                ylims!(
+                    ax,
+                    current_point[2] - camera_radius,
+                    current_point[2] + camera_radius,
+                )
                 zlims!(ax, current_point[3], current_point[3] + camera_height)
             end
         end
@@ -617,21 +744,23 @@ function plot_polyapprox_animate2(
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int}=(1000, 600),
-    filename::String="crit_pts_animation.mp4",
-    nframes::Int=240,
-    framerate::Int=30
+    figure_size::Tuple{Int,Int} = (1000, 600),
+    filename::String = "crit_pts_animation.mp4",
+    nframes::Int = 240,
+    framerate::Int = 30,
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size=figure_size)
-        ax = Axis3(fig[1, 1],
-            title="",
-            xlabel="X-axis",
-            ylabel="Y-axis",
-            zlabel="Z-axis")
+        fig = Figure(size = figure_size)
+        ax = Axis3(
+            fig[1, 1],
+            title = "",
+            xlabel = "X-axis",
+            ylabel = "Y-axis",
+            zlabel = "Z-axis",
+        )
 
         # Collect ALL z-values for limits
         z_values = Float64[]
@@ -666,45 +795,62 @@ function plot_polyapprox_animate2(
             end
         end
 
-        surface!(ax, x_unique, y_unique, Z,
-            colormap=:viridis,
-            transparency=true,
-            alpha=0.8)
+        surface!(
+            ax,
+            x_unique,
+            y_unique,
+            Z,
+            colormap = :viridis,
+            transparency = true,
+            alpha = 0.8,
+        )
 
         if :close in propertynames(df)
             not_close_idx = .!df.close
             if any(not_close_idx)
-                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
+                scatter!(
+                    ax,
+                    df.x1[not_close_idx],
+                    df.x2[not_close_idx],
                     df.z[not_close_idx],
-                    markersize=5,
-                    color=:orange,
-                    label="Far")
+                    markersize = 5,
+                    color = :orange,
+                    label = "Far",
+                )
             end
 
             close_idx = df.close
             if any(close_idx)
-                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
+                scatter!(
+                    ax,
+                    df.x1[close_idx],
+                    df.x2[close_idx],
                     df.z[close_idx],
-                    markersize=10,
-                    color=:green,
-                    label="Near")
+                    markersize = 10,
+                    color = :green,
+                    label = "Near",
+                )
             end
         end
 
         # Plot uncaptured minimizers
         uncaptured_idx = .!df_min.captured
         if any(uncaptured_idx)
-            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
+            scatter!(
+                ax,
+                df_min.x1[uncaptured_idx],
+                df_min.x2[uncaptured_idx],
                 df_min.value[uncaptured_idx],
-                markersize=10,
-                marker=:diamond,
-                color=:red,
-                label="Uncaptured minima")
+                markersize = 10,
+                marker = :diamond,
+                color = :red,
+                label = "Uncaptured minima",
+            )
         end
 
-        Legend(fig[1, 2], ax, "Critical Points", tellwidth=true)
+        Legend(fig[1, 2], ax, "Critical Points", tellwidth = true)
 
-        record(fig, filename, 1:nframes; framerate=framerate) do frame
+        record(fig, filename, 1:nframes; framerate = framerate) do frame
             ax.azimuth[] = 1.7pi + 0.4 * sin(2pi * frame / nframes)
             ax.elevation[] = pi / 4 + 0.3 * cos(2pi * frame / nframes)
         end
@@ -714,71 +860,101 @@ function plot_polyapprox_animate2(
     end
 end
 
-function plot_talk(pol::ApproxPoly, TR::test_input, df::DataFrame, df_min::DataFrame)
-    coords = pol.scale_factor * pol.grid .+ TR.center'
-    z_coords = pol.z
 
-    if size(coords)[2] == 2
-        fig = Figure(size=(1000, 600))
-        ax = Axis3(fig[1, 1],
-            xlabel="X-axis", ylabel="Y-axis", zlabel="Z-axis",
-            elevation=π / 4,
-            # perspectiveness=.8,
-            limits=((minimum(coords[:, 1]), maximum(coords[:, 1])),
-                (minimum(coords[:, 2]), maximum(coords[:, 2])),
-                (minimum(z_coords), maximum(z_coords))),
-            azimuth=π / 6)  # More front-facing view
+function create_level_set_animation(
+    f,
+    grid::Array{SVector{3,T},3},
+    df::Union{DataFrame,Nothing},
+    z_range::Tuple{T,T},
+    params::VisualizationParameters{T} = VisualizationParameters{T}(),
+    fps::Int = 30,
+    duration::Int = 20,  # seconds
+) where {T<:AbstractFloat}
+    grid_points = vec(grid)
+    valid_points = filter(p -> !any(isnan, p), grid_points)
 
-        scatter!(ax, coords[:, 1], coords[:, 2], z_coords,
-            color=z_coords,
-            colormap=:inferno,
-            markersize=2,
-            label="Grid points",
-            colorrange=(minimum(z_coords), maximum(z_coords)))
+    z_min, z_max = z_range
 
-        if :close in propertynames(df)
-            not_close_idx = .!df.close
-            if any(not_close_idx)
-                scatter!(ax, df.x1[not_close_idx], df.x2[not_close_idx],
-                    df.z[not_close_idx],
-                    markersize=5,
-                    color=:orange,
-                    label="Far")
-            end
+    fig = Figure(size = params.fig_size)
+    ax = Axis3(
+        fig[1, 1],
+        title = "Level Set Visualization",
+        xlabel = "x₁",
+        ylabel = "x₂",
+        zlabel = "x₃",
+    )
 
-            close_idx = df.close
-            if any(close_idx)
-                scatter!(ax, df.x1[close_idx], df.x2[close_idx],
-                    df.z[close_idx],
-                    markersize=10,
-                    color=:green,
-                    label="Near")
-            end
-        else
-            scatter!(ax, df.x1, df.x2,
-                df.z,
-                markersize=2,
-                color=:orange,
-                label="All points")
-        end
+    # Set up initial ranges and limits
+    x_range = extrema(p[1] for p in valid_points)
+    y_range = extrema(p[2] for p in valid_points)
+    z_range_grid = extrema(p[3] for p in valid_points)
+    limits!(ax, x_range..., y_range..., z_range_grid...)
 
-        uncaptured_idx = .!df_min.captured
-        if any(uncaptured_idx)
-            scatter!(ax, df_min.x1[uncaptured_idx], df_min.x2[uncaptured_idx],
-                df_min.value[uncaptured_idx],
-                markersize=10,
-                marker=:diamond,
-                color=:red,
-                label="Uncaptured minima")
-        end
-
-        Legend(fig[2, 1], ax, "Critical Points",
-            orientation=:horizontal,
-            tellwidth=false,
-            tellheight=true)
-
-        display(fig)
-        return fig
+    # Pre-compute function values
+    values = zeros(T, size(grid)...)
+    @inbounds for i in eachindex(grid_points)
+        point = grid_points[i]
+        values[i] = any(isnan, point) ? NaN : f(point)
     end
-end
 
+    level_points = Observable(Point3f[])
+    data_points = Observable(Point3f[])
+
+    scatter!(ax, level_points, color = :blue, markersize = 2, label = "Level Set")
+
+    if !isnothing(df)
+        scatter!(
+            ax,
+            data_points,
+            color = :darkorange,
+            marker = :diamond,
+            markersize = 20,
+            label = "Data Points",
+        )
+    end
+
+    function update_visualization(level::T) where {T<:AbstractFloat}
+        level_data =
+            prepare_level_set_data(grid, values, level, tolerance = params.point_tolerance)
+
+        formatted_data = to_makie_format(level_data)
+
+        new_points = Point3f[]
+        if !isempty(formatted_data.xyz[1])
+            for (x, y, z) in zip(formatted_data.xyz...)
+                if !any(isnan, (x, y, z))
+                    push!(new_points, Point3f(x, y, z))
+                end
+            end
+        end
+        level_points[] = new_points
+
+        if !isnothing(df)
+            visible_points = Point3f[]
+            for row in eachrow(df)
+                if !any(isnan, [row["x1"], row["x2"], row["x3"], row["z"]]) &&
+                   abs(row["z"] - level) ≤ params.point_tolerance
+                    push!(visible_points, Point3f(row["x1"], row["x2"], row["x3"]))
+                end
+            end
+            data_points[] = visible_points
+        end
+    end
+
+    axislegend(ax, position = :rt)
+
+    # Animation parameters
+    total_frames = fps * duration
+    θ = range(0, π, length = total_frames)  # Two full rotations
+    levels = range(z_min, z_max, length = total_frames)
+
+    record(fig, "level_set_animation.mp4", 1:total_frames; framerate = fps) do frame
+        # Update camera position
+        ax.azimuth[] = θ[frame]
+
+        # Update level set
+        update_visualization(levels[frame])
+    end
+
+    return fig
+end

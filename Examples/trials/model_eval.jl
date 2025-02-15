@@ -96,6 +96,8 @@ function sample_data(model::ModelingToolkit.ODESystem,
 
     data_sample = DataStructures.OrderedDict{Any,Vector{T}}(Num(v.lhs) => solution_true[Num(v.rhs)] for v in measured_data)
 
+    # println("data_sample: ", data_sample)
+
     if inject_noise
         for (key, sample) in data_sample
             data_sample[key] = sample + randn(num_points) .* stddev_noise .+ mean_noise

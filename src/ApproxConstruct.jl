@@ -4,45 +4,6 @@
 Compute the support of a dense polynomial of total degree at most d in n variables.
 
 # Arguments
-- `n::Int`: Number of variables.
-- `d::Int`: Maximum degree of the polynomial.
-
-# Returns
-- A `NamedTuple` containing the matrix of support and its size attributes.
-
-# Example
-```julia
-SupportGen(2, 3)
-```
-"""
-# function SupportGen(n::Int, d::Int)::NamedTuple
-#     ranges = [0:d for _ in 1:n]     # Generate ranges for each dimension
-#     iter = Iterators.product(ranges...) # Create the Cartesian product over the ranges
-#     # Initialize a list to hold valid tuples
-#     lambda_list = []
-#     # Loop through the Cartesian product, filtering valid tuples
-#     for tuple in iter
-#         if sum(tuple) <= d
-#             push!(lambda_list, collect(tuple))  # Convert each tuple to an array
-#         end
-#     end
-#     # Check if lambda_list is empty to handle edge cases
-#     if length(lambda_list) == 0
-#         lambda_matrix = zeros(0, n)  # Return an empty matrix with 0 rows and n columns
-#     else
-#         # Convert the list of arrays to an N x n matrix
-#         lambda_matrix = hcat(lambda_list...)'
-#     end
-#     # Return a NamedTuple containing the matrix and its size attributes
-#     return (data=lambda_matrix, size=size(lambda_matrix))
-# end
-
-"""
-    SupportGen(n::Int, d::Int)::NamedTuple
-
-Compute the support of a dense polynomial of total degree at most d in n variables.
-
-# Arguments
 - `n::Int`: Number of variables
 - `d::Int`: Maximum degree of the polynomial
 
@@ -65,7 +26,7 @@ function SupportGen(n::Int, d::Int)::NamedTuple
     d ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
 
     if d == 0
-        return (data=zeros(Int, 1, n), size=(1, n))
+        return (data = zeros(Int, 1, n), size = (1, n))
     end
 
     estimated_size = binomial(n + d, d)
@@ -83,10 +44,7 @@ function SupportGen(n::Int, d::Int)::NamedTuple
 
     lambda_matrix = count > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
 
-    return (
-        data=lambda_matrix,
-        size=size(lambda_matrix)
-    )
+    return (data = lambda_matrix, size = size(lambda_matrix))
 end
 
 """
@@ -97,7 +55,7 @@ Optimized for grids where sample points are the same along each dimension.
 Lambda is generated from SupportGen(n,d) and contains integer degrees.
 S is the sample points matrix where each column contains the same points.
 """
-function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
+function lambda_vandermonde(Lambda::NamedTuple, S; basis = :chebyshev)
     m, N = Lambda.size
     n, N = size(S)
     V_big = zeros(BigFloat, n, m)
@@ -117,15 +75,16 @@ function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
         eval_cache = Dict{Int,Vector{BigFloat}}()
 
         # Compute polynomials and evaluations
-        @views for degree in 0:max_degree
-            poly = symbolic_legendre(degree, use_bigint=use_bigint)
-            eval_cache[degree] = map(point -> evaluate_legendre(poly, big(point)), unique_points)
+        @views for degree = 0:max_degree
+            poly = symbolic_legendre(degree, use_bigint = use_bigint)
+            eval_cache[degree] =
+                map(point -> evaluate_legendre(poly, big(point)), unique_points)
         end
 
         # Compute Vandermonde matrix using cached values
-        @views for i in 1:n, j in 1:m
+        @views for i = 1:n, j = 1:m
             P = one(BigFloat)
-            for k in 1:N
+            for k = 1:N
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
                 point_idx = point_indices[point]
@@ -142,7 +101,7 @@ function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
         @views for point in unique_points
             point_idx = point_indices[point]
             theta = acos(big(point))
-            for degree in 0:max_degree
+            for degree = 0:max_degree
                 if !haskey(eval_cache, degree)
                     eval_cache[degree] = Vector{BigFloat}(undef, length(unique_points))
                 end
@@ -151,9 +110,9 @@ function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
         end
 
         # Compute Vandermonde matrix using cached values
-        @views for i in 1:n, j in 1:m
+        @views for i = 1:n, j = 1:m
             P = one(BigFloat)
-            for k in 1:N
+            for k = 1:N
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
                 point_idx = point_indices[point]
@@ -162,7 +121,11 @@ function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
             V_big[i, j] = P
         end
     else
-        throw(ArgumentError("Unsupported basis: $basis. Supported bases are :legendre and :chebyshev"))
+        throw(
+            ArgumentError(
+                "Unsupported basis: $basis. Supported bases are :legendre and :chebyshev",
+            ),
+        )
     end
 
     return Float64.(V_big)
@@ -209,10 +172,10 @@ function subdivide_domain(T::test_input)::Vector{test_input}
     subdivided_inputs = Vector{test_input}()
     new_scale = isnothing(T.sample_range) ? nothing : T.sample_range / 2
 
-    for i in 0:(2^n-1)
+    for i = 0:(2^n-1)
         new_center = copy(T.center)
         if !isnothing(T.sample_range)
-            for j in 0:(n-1)
+            for j = 0:(n-1)
                 if (i >> j) & 1 == 1
                     new_center[j+1] += T.sample_range
                 else
@@ -226,18 +189,21 @@ function subdivide_domain(T::test_input)::Vector{test_input}
         delta = isnothing(T.prec) ? nothing : T.prec[2]
 
         # Create new test_input using keyword arguments
-        push!(subdivided_inputs, test_input(
-            T.objective;  # first positional argument is the function
-            dim=n,
-            center=new_center,
-            GN=T.GN,
-            alpha=alpha,
-            delta=delta,
-            tolerance=T.tolerance,
-            sample_range=new_scale,
-            reduce_samples=T.reduce_samples,
-            degree_max=T.degree_max  # Added degree_max parameter
-        ))
+        push!(
+            subdivided_inputs,
+            test_input(
+                T.objective;  # first positional argument is the function
+                dim = n,
+                center = new_center,
+                GN = T.GN,
+                alpha = alpha,
+                delta = delta,
+                tolerance = T.tolerance,
+                sample_range = new_scale,
+                reduce_samples = T.reduce_samples,
+                degree_max = T.degree_max,  # Added degree_max parameter
+            ),
+        )
     end
 
     return subdivided_inputs
@@ -292,19 +258,19 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N
     GN = size(grid, 1) - 1  # Number of intervals
 
     # Create vectors of the unique coordinates in each dimension
-    coords = [sort(unique([p[i] for p in vec(grid)])) for i in 1:N]
+    coords = [sort(unique([p[i] for p in vec(grid)])) for i = 1:N]
 
     # Compute cell boundaries as midpoints between adjacent points
     # Add domain boundaries [-1,1] as endpoints
-    cell_bounds = [vcat(-1.0,
-        [(coords[d][i] + coords[d][i+1]) / 2 for i in 1:GN],
-        1.0)
-                   for d in 1:N]
+    cell_bounds =
+        [vcat(-1.0, [(coords[d][i] + coords[d][i+1]) / 2 for i = 1:GN], 1.0) for d = 1:N]
 
     # Compute cell volumes
-    cell_volumes = [SVector{N,Float64}(ntuple(d ->
-            cell_bounds[d][idx[d]+1] - cell_bounds[d][idx[d]], N))
-                    for idx in Iterators.product(fill(1:GN+1, N)...)]
+    cell_volumes = [
+        SVector{N,Float64}(
+            ntuple(d -> cell_bounds[d][idx[d]+1] - cell_bounds[d][idx[d]], N),
+        ) for idx in Iterators.product(fill(1:GN+1, N)...)
+    ]
 
     # Compute cell volumes as products of side lengths
     volumes = [prod(vol) for vol in cell_volumes]
@@ -316,4 +282,38 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N
     sum_squares = sum(abs2(f(x)) * v for (x, v) in zip(grid, volumes))
 
     return sqrt(sum_squares)
+end
+
+"""Simplified Lambda Vandermode function for Chebyshev basis"""
+function simple_lambda_vandermonde(Lambda::NamedTuple, points::Matrix{Float64})
+    # Extract dimensions from inputs
+    lambda_matrix = Matrix(Lambda.data')
+    n_points = size(points, 1)
+    n_terms = Lambda.size[1]
+    n_vars = size(points, 2)
+
+    # Validate inputs
+    n_vars == 2 || error("Expected 2D points, got $(n_vars)D")
+    size(lambda_matrix, 1) == n_vars ||
+        error("Lambda matrix first dimension must match number of variables")
+
+    # Initialize Vandermonde matrix: (n_points × n_terms)
+    V = zeros(n_points, n_terms)
+
+    # Compute Chebyshev polynomial evaluations
+    for i = 1:n_points, j = 1:n_terms
+        term_value = 1.0
+        for k = 1:n_vars
+            x = points[i, k]
+            abs(x) <= 1 || error("Point $i coordinate $k = $x outside [-1,1]")
+
+            # Evaluate Chebyshev polynomial of degree lambda_matrix[k,j] at x
+            degree = lambda_matrix[k, j]
+            theta = acos(x)
+            term_value *= cos(degree * theta)
+        end
+        V[i, j] = term_value
+    end
+
+    return V
 end
