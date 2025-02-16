@@ -275,11 +275,16 @@ end
     )^(1 / 10)
 end
 
-@doc nothing function Deuflhard(xx::AbstractVector)::Float64
-    # =======================================================
-    #   Not Rescaled
-    #   Domain: [-1.2, 1.2]^2.
-    # =======================================================
+# @doc nothing function Deuflhard(xx::AbstractVector)::Float64
+#     # =======================================================
+#     #   Not Rescaled
+#     #   Domain: [-1.2, 1.2]^2.
+#     # =======================================================
+#     term1 = (exp(xx[1]^2 + xx[2]^2) - 3)^2
+#     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
+#     return term1 + term2
+# end
+function Deuflhard(xx::Union{Vector{Float64},SVector{N,Float64}} where {N})::Float64
     term1 = (exp(xx[1]^2 + xx[2]^2) - 3)^2
     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
     return term1 + term2
