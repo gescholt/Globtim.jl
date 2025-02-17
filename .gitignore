@@ -5,3 +5,16 @@ Examples/Deuflhard/inputs.ms
 Examples/Deuflhard/outputs.ms
 data/figures/
 Manifest.toml
+Examples/Observations.md
+Examples/Camel2D/
+Examples/Camel4D/
+Examples/CrossInTray/
+Examples/Deuflhard/
+Examples/Easom/
+Examples/Exact/
+Examples/GaussianMixtures/
+Examples/Holder/
+Examples/Noisy/
+Examples/Numerical/
+Examples/Shubert/
+Examples/trials/
