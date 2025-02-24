@@ -7,8 +7,9 @@ using LinearAlgebra
 using StaticArrays
 using SharedArrays
 using DataStructures
-using GLMakie
-
+# using GLMakie
+using CairoMakie
+CairoMakie.activate!
 
 const T = Float64
 time_interval = T[0.0, 2.0]
@@ -22,9 +23,11 @@ error_func = make_error_distance(model, outputs, p_true, num_points)
 """ 
 Test
 """
-p_test = SVector(0.55, 0.048, -0.73)  # Example test parameters
 error_value = error_func(p_test)
-error_func([.1, .2, .3])
+p_test = SVector(0.4, .4, .7)
+plot_parameter_result(model, outputs, p_true, p_test,
+    plot_title="Lotka-Volterra Model Comparison")
+
 
 """
 Globtim
@@ -40,8 +43,7 @@ TR = test_input(error_func,
     dim=n,
     center=p_center,
     GN=40,
-    sample_range= .25
-);
+    sample_range= .25);
 
 # Chebyshev 
 pol_cheb = Constructor(TR, d, basis=:chebyshev);
