@@ -178,3 +178,130 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
 
     return Error_distance
 end
+
+using CairoMakie
+using StaticArrays
+using ModelingToolkit
+
+"""
+    plot_time_series_comparison(model::ModelingToolkit.ODESystem,
+                              outputs::Vector{ModelingToolkit.Equation},
+                              p_true::Union{Vector{T}, SVector{N,T}},
+                              p_test::Union{Vector{T}, SVector{N,T}},
+                              numpoints::Int=100;
+                              time_interval::Vector{T}=[0.0, 1.0],
+                              plot_title::String="Time Series Comparison",
+                              figure_size=(800, 500)) where {N,T<:Number}
+
+Plot comparison between time series generated with true and test parameters using CairoMakie.
+
+Arguments:
+- `model`: ModelingToolkit ODESystem
+- `outputs`: Vector of measurement equations
+- `p_true`: Vector or SVector of true parameter values
+- `p_test`: Vector or SVector of test parameter values
+- `numpoints`: Number of time points to sample (default: 100)
+- `time_interval`: Time interval [start_time, end_time] (default: [0.0, 1.0])
+- `plot_title`: Title for the plot (default: "Time Series Comparison")
+- `figure_size`: Tuple of (width, height) for the figure (default: (800, 500))
+
+Returns:
+    Makie.Figure object containing the comparison plot
+"""
+function plot_time_series_comparison(model::ModelingToolkit.ODESystem,
+    outputs::Vector{ModelingToolkit.Equation},
+    p_true::Union{Vector{T},SVector{N,T}},
+    p_test::Union{Vector{T},SVector{N,T}},
+    numpoints::Int=100;
+    time_interval::Vector{T}=[0.0, 1.0],
+    plot_title::String="Time Series Comparison",
+    figure_size=(800, 500)) where {N,T<:Number}
+
+    # Convert Vector to SVector if needed
+    if p_true isa Vector
+        p_true = SVector{length(p_true),T}(p_true)
+    end
+    if p_test isa Vector
+        p_test = SVector{length(p_test),T}(p_test)
+    end
+
+    # Generate data for both parameter sets
+    data_true = sample_data(model, outputs, time_interval, p_true, ic, numpoints)
+    data_test = sample_data(model, outputs, time_interval, p_test, ic, numpoints)
+
+    # Extract time points
+    t = data_true["t"]
+
+    # Create figure and axis
+    fig = Figure(size=figure_size)
+    ax = Axis(fig[1, 1],
+        title=plot_title,
+        xlabel="Time",
+        ylabel="Value")
+
+    # Define colors for true and test values
+    colors = [:royalblue, :crimson]  # You can adjust these colors
+
+    # Track minimum y value for error text placement
+    y_min = Inf
+
+    # Plot each output variable
+    for (idx, (key, values_true)) in enumerate(data_true)
+        if key != "t"  # Skip time array
+            values_test = data_test[key]
+
+            # Update minimum y value
+            y_min = min(y_min, minimum(values_true), minimum(values_test))
+
+            # Plot true values
+            lines!(ax, t, values_true,
+                label="True - $(key)",
+                color=colors[1],
+                linewidth=2)
+
+            # Plot test values
+            lines!(ax, t, values_test,
+                label="Test - $(key)",
+                color=colors[2],
+                linewidth=2,
+                linestyle=:dash)
+        end
+    end
+
+    # Calculate and display error
+    error = norm(data_true[first(keys(data_true))] - data_test[first(keys(data_test))], 1)
+    error_text = "L¹ Error: $(round(error, digits=2))"
+
+    # Add error text in the bottom right
+    text!(ax, time_interval[2], y_min,
+        text=error_text,
+        align=(:right, :bottom),
+        offset=(0, 10))
+
+    # Add legend
+    axislegend(ax, position=:lt)  # top-left position
+
+    return fig
+end
+
+# Helper function to quickly visualize a single parameter set against true parameters
+"""
+    plot_parameter_result(model::ModelingToolkit.ODESystem,
+                         outputs::Vector{ModelingToolkit.Equation},
+                         p_true::Union{Vector{T}, SVector{N,T}},
+                         p_test::Union{Vector{T}, SVector{N,T}};
+                         kwargs...) where {N,T<:Number}
+
+Convenience function to quickly plot and display a parameter comparison using CairoMakie.
+
+Takes the same arguments as plot_time_series_comparison plus additional plot options via kwargs.
+"""
+function plot_parameter_result(model::ModelingToolkit.ODESystem,
+    outputs::Vector{ModelingToolkit.Equation},
+    p_true::Union{Vector{T},SVector{N,T}},
+    p_test::Union{Vector{T},SVector{N,T}};
+    kwargs...) where {N,T<:Number}
+    fig = plot_time_series_comparison(model, outputs, p_true, p_test; kwargs...)
+    display(fig)
+    return fig
+end
