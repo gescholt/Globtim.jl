@@ -1,6 +1,4 @@
 # src/Main_gen.jl
-# Main generation and manipulation functions for polynomial approximations
-
 
 """
     MainGenerate(
