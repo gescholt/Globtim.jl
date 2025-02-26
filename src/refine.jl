@@ -423,3 +423,81 @@ function analyze_converged_points(
 
     return stats
 end
+
+
+
+"""
+    Toy_gen(
+        f,
+        n::Int,
+        d::Int,
+        grid::Matrix{Float64},
+        scale_factor::Float64;
+        center::Vector{Float64} = fill(0.0, 2),
+        verbose = 1,
+        basis::Symbol = :chebyshev,
+        GN::Union{Int,Nothing} = nothing,
+        precision::PrecisionType = RationalPrecision,
+        normalized::Bool = true,
+        power_of_two_denom::Bool = false
+    )::ApproxPoly
+
+Generate a polynomial approximation using a pre-defined grid.
+
+# Arguments
+- Standard arguments plus:
+- `grid`: A pre-defined sampling grid
+- `precision`: Precision type for coefficients
+- `normalized`: Whether to use normalized basis polynomials
+- `power_of_two_denom`: For rational precision, ensures denominators are powers of 2
+
+# Returns
+- `ApproxPoly`: An object containing the polynomial approximation and related data
+"""
+function Toy_gen(
+    f,
+    n::Int,
+    d::Int,
+    grid::Matrix{Float64},
+    scale_factor::Float64;
+    center::Vector{Float64}=fill(0.0, 2),
+    verbose=1,
+    basis::Symbol=:chebyshev,
+    GN::Union{Int,Nothing}=nothing,
+    precision::PrecisionType=RationalPrecision,
+    normalized::Bool=true,
+    power_of_two_denom::Bool=false
+)::ApproxPoly
+    Lambda = SupportGen(n, d)
+    m_lambda = Lambda.size[1]
+    VL = simple_lambda_vandermonde(Lambda, grid)
+    G_original = VL' * VL # size: (n_points × n_points)
+    F = Float64[]
+    for point in eachrow(grid)
+        scaled_point = scale_factor * SVector{2,Float64}(point) + SVector{2,Float64}(center)
+        push!(F, f(scaled_point))
+    end
+
+    # Solve least squares problem
+    RHS = VL' * F                                  # size: (n_points × 1)
+    linear_prob = LinearProblem(G_original, RHS)
+
+    if verbose == 1
+        println("Number of polynomial terms: ", m_lambda)
+        println("Condition number of G: ", cond(G_original))
+        sol = LinearSolve.solve(linear_prob, verbose=true)
+    else
+        sol = LinearSolve.solve(linear_prob)
+    end
+
+    actual_GN = isnothing(GN) ? Int(floor(sqrt(size(grid, 1)))) : GN
+
+    # Store the basis parameters in the ApproxPoly object
+    return ApproxPoly{Float64}(
+        sol, d, NaN, actual_GN, scale_factor, grid, F;
+        basis=basis,
+        precision=precision,
+        normalized=normalized,
+        power_of_two_denom=power_of_two_denom
+    )
+end

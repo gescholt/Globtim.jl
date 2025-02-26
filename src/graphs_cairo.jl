@@ -223,7 +223,6 @@ function cairo_plot_polyapprox_levelset(
         end
 
         # Create contour plot
-        # chosen_colormap = :viridis  
         chosen_colormap = :inferno
         contourf!(ax, x_unique, y_unique, Z, colormap = chosen_colormap, levels = levels)
 
