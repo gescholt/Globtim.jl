@@ -12,7 +12,7 @@ using Random
 using Parameters
 using TOML
 
-
+@enum PrecisionType Float64Precision RationalPrecision BigFloatPrecision BigIntPrecision
 
 import HomotopyContinuation: solve, real_solutions, System
 
@@ -77,17 +77,34 @@ export test_input,
     simple_lambda_vandermonde,
     create_level_set_animation
 
+# Precision type export
+export PrecisionType, Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision
+
+# Legendre polynomial functions
+export symbolic_legendre, evaluate_legendre, get_legendre_coeffs, construct_legendre_approx
+
+# Chebyshev polynomial functions
+export symbolic_chebyshev, evaluate_chebyshev, get_chebyshev_coeffs, construct_chebyshev_approx
+
+# Unified orthogonal polynomial interface
+export symbolic_orthopoly, evaluate_orthopoly, get_orthopoly_coeffs, construct_orthopoly_polynomial
+
+# ApproxPoly accessor functions
+export get_basis, get_precision, is_normalized, has_power_of_two_denom
+
 include("config.jl")
 include("LibFunctions.jl") #list of test functions. 
 include("Structures.jl") # list of structures used in the code.
 include("Samples.jl") #functions to generate samples.
-# include("OrthogPoly.jl") #functions to generate orthogonal polynomials.
+include("Main_Gen.jl") #functions to construct polynomial approximations.
+include("l2_norm.jl") #measure error of approx.
+include("ApproxConstruct.jl") #construct Vandermonde like matrix.
+include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
-include("ApproxConstruct.jl") # Construct Vandermonde like matrix.
-include("Main_Gen.jl") #functions to construct polynomial approximations.
-include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation and polynomial system solving.
-
+include("msolve_system.jl") #polynomial system solving with Msolve.
+include("hom_solve.jl") #polynomial system solving with homotopy Continuation. 
+include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
 
 function __init__()
     # This code only runs if/when GLMakie is loaded
