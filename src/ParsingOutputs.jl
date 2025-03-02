@@ -1,3 +1,82 @@
+using DataFrames
+
+"""
+    process_crit_pts(
+        real_pts::Vector{<:AbstractVector},
+        f::Function,
+        TR::test_input;
+        skip_filtering::Bool = false,
+        kwargs...
+    )::DataFrame
+
+Process critical points in n-dimensional space and return a DataFrame.
+Points are automatically filtered to the [-1,1]^n hypercube (unless skip_filtering is true)
+and transformed according to the test_input parameters.
+
+# Arguments
+- `real_pts`: Vector of points in n-dimensional space
+- `f`: Function to evaluate at each point
+- `TR`: test_input struct containing dimension, center, and sample range information
+- `skip_filtering`: If true, skips the [-1,1] bounds filtering (default: false)
+- `kwargs...`: Additional arguments for future extensions
+
+# Returns
+- DataFrame with columns x1, x2, ..., xn (for n dimensions) and z (function values)
+"""
+function process_crit_pts(
+    real_pts::Vector{<:AbstractVector},
+    f::Function,
+    TR::test_input;
+    skip_filtering::Bool=false,
+    kwargs...
+)::DataFrame
+    # Validate input dimensions
+    if !all(p -> length(p) == TR.dim, real_pts)
+        error("All points must have the same dimension as TR.dim ($(TR.dim))")
+    end
+
+    # Apply filtering only if skip_filtering is false
+    filtered_points = real_pts
+    if !skip_filtering
+        # Filter points in [-1,1]^n hypercube
+        filtered_points = filter(p -> all(-1 .<= p .<= 1), real_pts)
+
+        # Handle case where all points were filtered out
+        if isempty(filtered_points) && !isempty(real_pts)
+            # Find the maximum absolute value
+            max_abs_val = maximum(abs.(reduce(vcat, real_pts)))
+
+            # If the points are not too far outside, use them anyway
+            if max_abs_val < 10.0
+                filtered_points = real_pts
+            end
+        end
+    end
+
+    # Handle case with no valid points
+    if isempty(filtered_points)
+        return DataFrame(Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim))
+    end
+
+    # Transform points using test_input parameters
+    center_vec = Vector(TR.center)
+    points_to_process = [TR.sample_range .* p .+ center_vec for p in filtered_points]
+
+    # Evaluate function at transformed points
+    z = [f(p) for p in points_to_process]
+
+    # Create DataFrame
+    return DataFrame(
+        merge(
+            Dict(
+                Symbol("x$i") => [p[i] for p in points_to_process]
+                for i = 1:TR.dim
+            ),
+            Dict(:z => z),
+        )
+    )
+end
+
 # ==== For Msolve ====
 """
     parse_rational(str::AbstractString)
@@ -132,6 +211,7 @@ function msolve_parser(
             # Convert center to vector if it's not already
             center_vec = Vector(TR.center)
             # Transform each point
+            sample_range_scalar = isa(TR.sample_range, Number) ? TR.sample_range : convert(Float64, TR.sample_range)
             points_to_process = [TR.sample_range .* p .+ center_vec for p in filtered_points]
 
             z = [f(p) for p in points_to_process]
@@ -195,116 +275,7 @@ function parse_point(X::Vector{Vector{Vector{BigInt}}})::Vector{Float64}
     end
 end
 
-"""
-    process_critical_points(
-        real_pts::Vector{<:AbstractVector},
-        f::Function,
-        TR::test_input;
-        skip_filtering::Bool = false,
-        kwargs...
-    )::DataFrame
 
-Process critical points in n-dimensional space and return a DataFrame.
-Points are automatically filtered to the [-1,1]^n hypercube (unless skip_filtering is true)
-and transformed according to the test_input parameters.
-
-# Arguments
-- `real_pts`: Vector of points in n-dimensional space
-- `f`: Function to evaluate at each point
-- `TR`: test_input struct containing dimension, center, and sample range information
-- `skip_filtering`: If true, skips the [-1,1] bounds filtering (default: false)
-- `kwargs...`: Additional arguments for future extensions
-
-# Returns
-- DataFrame with columns x1, x2, ..., xn (for n dimensions) and z (function values)
-
-# Example
-```julia
-TR = test_input(dim=2, center=[0.0, 0.0], sample_range=1.0)
-points = [[0.5, 0.5], [-0.5, 0.5]]
-f(x) = sum(x.^2)
-df = process_critical_points(points, f, TR)
-```
-"""
-function process_critical_points(
-    real_pts::Vector{<:AbstractVector},
-    f::Function,
-    TR::test_input;
-    skip_filtering::Bool=false,
-    kwargs...
-)::DataFrame
-    total_time = @elapsed begin
-        println("\n=== Starting Critical Points Processing (dimension: $(TR.dim)) ===")
-
-        try
-            # Validate input dimensions
-            if !all(p -> length(p) == TR.dim, real_pts)
-                invalid_points = filter(p -> length(p) != TR.dim, real_pts)
-                error("Found points with incorrect dimension: $invalid_points")
-            end
-
-            process_time = @elapsed begin
-                # Apply filtering only if skip_filtering is false
-                filtered_points = real_pts
-                if !skip_filtering
-                    # Filter points in [-1,1]^n hypercube
-                    filtered_points = filter(p -> all(-1 .<= p .<= 1), real_pts)
-
-                    if isempty(filtered_points) && !isempty(real_pts)
-                        println("Warning: All points were filtered out. Consider using skip_filtering=true")
-
-                        # Find the maximum absolute value to understand how far outside bounds
-                        max_abs_val = maximum(abs.(reduce(vcat, real_pts)))
-                        println("Maximum absolute value in points: $max_abs_val")
-
-                        # If the points are not too far outside, use them anyway
-                        if max_abs_val < 10.0
-                            println("Points are not too far outside bounds, using them anyway")
-                            filtered_points = real_pts
-                        end
-                    end
-                end
-
-                if isempty(filtered_points)
-                    println("No valid points found after filtering")
-                    return DataFrame(Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim))
-                end
-
-                # Transform points using test_input parameters
-                center_vec = Vector(TR.center)
-                points_to_process =
-                    [TR.sample_range .* p .+ center_vec for p in filtered_points]
-
-                # Evaluate function at transformed points
-                z = [f(p) for p in points_to_process]
-
-                # Create DataFrame
-                df = DataFrame(
-                    merge(
-                        Dict(
-                            Symbol("x$i") => [p[i] for p in points_to_process]
-                            for i = 1:TR.dim
-                        ),
-                        Dict(:z => z),
-                    ),
-                )
-            end
-
-            println("Processed $(size(df, 1)) points ($(round(process_time, digits=3))s)")
-            return df
-
-        catch e
-            println("Error in process_critical_points: ", e)
-            println("Stack trace:")
-            for (exc, bt) in Base.catch_stack()
-                showerror(stdout, exc, bt)
-                println()
-            end
-            rethrow(e)
-        end
-    end
-    println("Total execution time: $(round(total_time, digits=3))s")
-end
 
 """
     average(X::Vector{T}) where {T<:Number}

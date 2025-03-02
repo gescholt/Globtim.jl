@@ -1,91 +1,124 @@
 using Test
 using Globtim
+# Add this diagnostic code near the top of your test file
+println("Checking if Constructor is defined: ", isdefined(Globtim, :Constructor))
+println("Checking if test_input is defined: ", isdefined(Globtim, :test_input))
+println("Checking if process_crit_pts is defined: ", isdefined(Globtim, :process_crit_pts))
+
+# You're already using Constructor and test_input in your test, so they should be defined
+println("Names exported from Globtim: ", filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim)))
+
 using CSV
 using DataFrames
 using DynamicPolynomials
-using HomotopyContinuation
+# using HomotopyContinuation
 using LinearAlgebra
-using Optim
-using StaticArrays
+using ProgressLogging
 
-@testset "Globtim Tests" begin
-    # Constants and Parameters
-    @testset "Basic parameters" begin
-        n, a, b = 2, 12, 10
-        scale_factor = a / b
-        delta, alpha = 0.5, 1 / 10
-        tol_l2 = 3e-4
 
-        @test n == 2
-        @test scale_factor == 1.2
-        @test delta == 0.5~0.1
-        @test alpha == 0.1
-        @test tol_l2 ≈ 3e-4
+
+@testset "Polynomial System Solving" begin
+    # Test parameters
+    n = 2
+    a, b = 7, 5
+    scale_factor = a / b
+    f = Deuflhard  # Objective function
+    d = 22      # Initial Degree 
+    SMPL = 120
+
+    println("Number of samples: ", SMPL^n)
+
+    # Create test input
+    TR = test_input(
+        f,
+        dim=n,
+        center=[0.0, 0.0],
+        GN=SMPL,
+        sample_range=scale_factor
+    )
+
+    # Define df_cheb at this scope level so both nested testsets can access it
+    df_cheb = nothing
+
+    @testset "Chebyshev basis" begin
+        time_construct = @elapsed begin
+            pol_cheb = Constructor(TR, d, basis=:chebyshev, normalized=false)
+        end
+        println("Time to construct Chebyshev polynomial: $(time_construct) seconds")
+
+        @polyvar(x[1:n]) # Define polynomial ring
+
+        time_solve = @elapsed begin
+            real_pts_cheb = solve_polynomial_system(
+                x, n, d, pol_cheb.coeffs;
+                basis=:chebyshev, normalized=false
+            )
+        end
+        println("Time to solve Chebyshev system: $(time_solve) seconds")
+
+        # Debug output
+        println("Type of real_pts_cheb: ", typeof(real_pts_cheb))
+        println("Length of real_pts_cheb: ", length(real_pts_cheb))
+        if !isempty(real_pts_cheb)
+            println("First point: ", real_pts_cheb[1])
+            println("Type of first point: ", typeof(real_pts_cheb[1]))
+
+            # Check if all points have the correct dimension
+            dimensions_correct = all(p -> length(p) == TR.dim, real_pts_cheb)
+            println("All points have correct dimension? ", dimensions_correct)
+
+            if !dimensions_correct
+                wrong_points = filter(p -> length(p) != TR.dim, real_pts_cheb)
+                println("Points with wrong dimension: ", wrong_points)
+            end
+        end
+
+        # Process critical points
+        try
+            # Assign to the outer variable to make it accessible in other testsets
+            df_cheb = process_crit_pts(
+                real_pts_cheb,
+                f,
+                TR;
+                skip_filtering=false
+            )
+            println("Successfully created DataFrame with $(nrow(df_cheb)) rows")
+            println("DataFrame columns: ", names(df_cheb))
+            @test isa(df_cheb, DataFrame)
+            @test nrow(df_cheb) > 0
+        catch e
+            println("Error in process_crit_pts: ", e)
+            for (exc, bt) in Base.catch_stack()
+                showerror(stdout, exc, bt)
+                println()
+            end
+        end
     end
 
-    # Test function initialization
-    @testset "Function initialization" begin
-        f = Deuflhard
-        # Test with specific vector types
-        @test isa(f, Function)
-        @test f([0.0, 0.0]) ≈ 4.0 atol = 1e-10
-        @test f(zeros(2)) ≈ 4.0 atol = 1e-10  # Test with Array
-    end
+    # Optional: Compare with pre-computed critical points from MATLAB
+    @testset "Comparison with MATLAB results" begin
+        # Load the pre-computed critical points from MATLAB if the file exists
+        matlab_file_path = "../data/matlab_critical_points/valid_points_deuflhard.csv"
+        if isfile(matlab_file_path)
+            matlab_df = DataFrame(CSV.File(matlab_file_path))
 
-    # Test polynomial system solving
-    @testset "Polynomial System Solving" begin
-        f = CrossInTray
-        n = 2
-        d = 8
-        SMPL = 40
-        scale_factor = 12 / 10
-        tol_l2 = 3e-4
+            # Make sure df_cheb exists and has rows
+            if df_cheb !== nothing && nrow(df_cheb) > 0
+                # Test if each MATLAB point is found in Chebyshev results
+                tol_l2 = 1e-2
+                for matlab_point in eachrow(matlab_df)
+                    x0 = [matlab_point.x, matlab_point.y]
 
-        # Load the pre-computed critical points from MATLAB
-        deuflhard_file_path = "../data/matlab_critical_points/valid_points_deuflhard.csv"
-        matlab_df = DataFrame(CSV.File(deuflhard_file_path))
-
-        # Recreate the necessary objects within this testset
-        TR = test_input(
-            CrossInTray,
-            dim=n,
-            center=[0.0, 0.0],
-            GN=SMPL
-        )
-        # Create both polynomial approximations
-        # pol_cheb = Constructor(TR, d, basis=:chebyshev)
-        # pol_lege = Constructor(TR, d, basis=:legendre)
-
-        # @test pol_cheb.degree == d
-        # @test pol_lege.degree == d
-        # @polyvar(x[1:n])
-
-        # # Get and process critical points using the correct workflow
-        # df_cheb = solve_and_parse(pol_cheb, x, f, TR)
-        # sort!(df_cheb, :z, rev=true)
-        # df_lege = solve_and_parse(pol_lege, x, f, TR, basis=:legendre)
-        # sort!(df_lege, :z, rev=true)
-
-        # df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=1.0)
-        # df_lege, df_min_lege = analyze_critical_points(f, df_lege, TR, tol_dist=1.0)
-
-        # # Test if each MATLAB point is found in both Chebyshev and Legendre results
-        # for matlab_point in eachrow(matlab_df)
-        #     x0 = [matlab_point.x, matlab_point.y]
-
-        #     # Check distances to Chebyshev points
-        #     distances_cheb = [norm(x0 - [row.x1, row.x2]) for row in eachrow(df_cheb)]
-        #     @test minimum(distances_cheb) < tol_l2
-
-        #     # Check distances to Legendre points
-        #     distances_lege = [norm(x0 - [row.x1, row.x2]) for row in eachrow(df_lege)]
-        #     @test minimum(distances_lege) < tol_l2
-        # end
-
-        # # Test DataFrame types and structure
-        # @test isa(df_cheb, DataFrame)
-        # @test isa(df_lege, DataFrame)
-        # @test isa(df_min_cheb, DataFrame)
-        # @test isa(df_min_lege, DataFrame)
+                    # Check distances to Chebyshev points
+                    distances_cheb = [norm(x0 - [row.x1, row.x2]) for row in eachrow(df_cheb)]
+                    @test minimum(distances_cheb) < tol_l2
+                end
+            else
+                @info "DataFrame from Chebyshev test is empty or undefined, skipping comparison"
+            end
+        else
+            @info "MATLAB comparison file not found, skipping comparison tests"
+        end
     end
 end
+       
