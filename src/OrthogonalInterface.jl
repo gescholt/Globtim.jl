@@ -158,7 +158,7 @@ function construct_orthopoly_polynomial(
     # Debug the resulting polynomial
     if verbose
         println("Result type: ", typeof(result))
-        println("First terms of result: ", string(result)[1:min(200, length(string(result)))])
+        # println("First terms of result: ", string(result)[1:min(200, length(string(result)))])
     end
 
     return result

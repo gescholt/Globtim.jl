@@ -56,7 +56,6 @@ export test_input,
     Constructor,
     solve_polynomial_system,
     msolve_polynomial_system,
-    process_critical_points,
     msolve_parser,
     process_output_file,
     plot_polyapprox,
@@ -76,6 +75,9 @@ export test_input,
     Toy_gen,
     simple_lambda_vandermonde,
     create_level_set_animation
+
+#Function giving trouble in test.
+export process_crit_pts
 
 # Precision type export
 export PrecisionType, Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision

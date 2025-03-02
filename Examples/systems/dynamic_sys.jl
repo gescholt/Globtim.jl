@@ -7,7 +7,7 @@ using LinearAlgebra
 using StaticArrays
 using SharedArrays
 using DataStructures
-# using GLMakie
+using Optim
 using CairoMakie
 CairoMakie.activate!
 
@@ -23,10 +23,9 @@ error_func = make_error_distance(model, outputs, p_true, num_points)
 """ 
 Test
 """
+p_test = SVector(0.2, .5, .7)
 error_value = error_func(p_test)
-p_test = SVector(0.4, .4, .7)
-plot_parameter_result(model, outputs, p_true, p_test,
-    plot_title="Lotka-Volterra Model Comparison")
+plot_parameter_result(model, outputs, p_true, p_test, plot_title="Lotka-Volterra Model Comparison")
 
 
 """
@@ -46,9 +45,14 @@ TR = test_input(error_func,
     sample_range= .25);
 
 # Chebyshev 
-pol_cheb = Constructor(TR, d, basis=:chebyshev);
-pts_cheb = solve_polynomial_system(x, TR.dim, d, pol_cheb.coeffs; basis=:chebyshev)
-df_cheb = process_critical_points(pts_cheb, error_func, TR)
+pol_cheb = Constructor(TR, d, basis=:chebyshev, precision=RationalPrecision)
+real_pts_cheb = solve_polynomial_system(
+    x, n, d, pol_cheb.coeffs;
+    basis=pol_cheb.basis)
+df_cheb = process_critical_points(real_pts_cheb, f, TR)
+df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.05);
+
+
 grid = TR.sample_range * generate_grid(3, 40, basis=:legendre);
 new_grid = map(x -> x + p_center, grid);
 # values = map(error_func, grid); # Prepare level set data for specific level
@@ -56,4 +60,4 @@ new_grid = map(x -> x + p_center, grid);
 fig = create_level_set_visualization(error_func, new_grid, df_cheb, (0., 1000.))
 display(fig)
 
-GLMakie.closeall()
+# GLMakie.closeall()

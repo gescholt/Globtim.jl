@@ -138,7 +138,7 @@ function Constructor(
     verbose=0,
     basis::Symbol=:chebyshev,
     precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
+    normalized::Bool=false,
     power_of_two_denom::Bool=false
 )::ApproxPoly
     if !(basis in [:chebyshev, :legendre])
