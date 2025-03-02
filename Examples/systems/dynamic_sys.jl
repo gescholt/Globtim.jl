@@ -49,7 +49,7 @@ pol_cheb = Constructor(TR, d, basis=:chebyshev, precision=RationalPrecision)
 real_pts_cheb = solve_polynomial_system(
     x, n, d, pol_cheb.coeffs;
     basis=pol_cheb.basis)
-df_cheb = process_critical_points(real_pts_cheb, f, TR)
+df_cheb = process_crit_pts(real_pts_cheb, f, TR)
 df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.05);
 
 
