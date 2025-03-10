@@ -111,11 +111,11 @@ include("ParsingOutputs.jl") #functions to parse the output of the polynomial ap
 function __init__()
     # This code only runs if/when GLMakie is loaded
     @require GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
+        include("graphs_makie.jl")
+        export plot_polyapprox_3d
         include("LevelSetViz.jl")
         export LevelSetData,
             VisualizationParameters,
-            plot_result,
-            visualize_3d,
             prepare_level_set_data,
             to_makie_format,
             plot_level_set,

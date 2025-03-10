@@ -1,6 +1,6 @@
 using Parameters
 using GLMakie
-using Colors
+# using Colors
 
 # Data Structures
 """
@@ -145,7 +145,6 @@ function create_level_set_visualization(
     fig = Figure(size = params.fig_size)
     ax = Axis3(
         fig[1, 1],
-        title = "Level Set Visualization",
         xlabel = "x₁",
         ylabel = "x₂",
         zlabel = "x₃",
@@ -176,7 +175,7 @@ function create_level_set_visualization(
         values[i] = any(isnan, point) ? NaN : f(point)
     end
 
-    scatter!(ax, level_points, color = :blue, markersize = 2, label = "Level Set")
+    scatter!(ax, level_points, color = :blue, markersize = 6, label = "Level Set")
 
     if !isnothing(df)
         scatter!(
