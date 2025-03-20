@@ -30,10 +30,24 @@ function plot_polyapprox_3d(
     rotate::Bool=false,
     filename::String="function_3d_rotation.mp4",
     fade::Bool=false,
-    z_cut=.25
+    z_cut=0.25
 )
-    # Extract data from polynomial approximation
-    coords = pol.scale_factor * pol.grid .+ TR.center'
+    # Handle different scale_factor types when transforming coordinates
+    coords = if isa(pol.scale_factor, Number)
+        # Original scalar version
+        pol.scale_factor * pol.grid .+ TR.center'
+    else
+        # Vector scale_factor version - apply element-wise multiplication
+        # Create a new matrix for the scaled coordinates
+        scaled_coords = similar(pol.grid)
+        for i in 1:size(pol.grid, 1)
+            for j in 1:size(pol.grid, 2)
+                scaled_coords[i, j] = pol.scale_factor[j] * pol.grid[i, j] + TR.center[j]
+            end
+        end
+        scaled_coords
+    end
+
     z_coords = pol.z
 
     if size(coords)[2] == 2
@@ -213,15 +227,6 @@ function plot_polyapprox_3d(
                 end
             end
         end
-
-        # Add legend to the right of the plot
-        # Legend(fig[1, 2], ax, "Points")
-
-        # Add colorbar
-        # Colorbar(fig[1, 3], 
-        #     limits = z_limits,
-        #     colormap = :viridis,
-        #     label = "Function value")
 
         # Optional: Create animation if requested
         if rotate

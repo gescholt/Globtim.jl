@@ -1,4 +1,4 @@
-# src/Main_gen.jl
+# Modified MainGenerate function to handle vector scale_factor
 
 """
     MainGenerate(
@@ -7,7 +7,7 @@
         d::Int,
         delta::Float64,
         alpha::Float64,
-        scale_factor::Float64,
+        scale_factor::Union{Float64,Vector{Float64}},
         scl::Float64;
         center::Vector{Float64} = fill(0.0, n),
         verbose = 1,
@@ -26,7 +26,7 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 - `d`: Maximum degree of the polynomial
 - `delta`: Sampling parameter
 - `alpha`: Probability parameter
-- `scale_factor`: Scaling factor for the domain
+- `scale_factor`: Scaling factor(s) for the domain (scalar or vector)
 - `scl`: Scaling factor to reduce the number of points in the grid
 - `center`: The center of the domain
 - `verbose`: Verbosity level
@@ -45,7 +45,7 @@ function MainGenerate(
     d::Int,
     delta::Float64,
     alpha::Float64,
-    scale_factor::Float64,
+    scale_factor::Union{Float64,Vector{Float64}},
     scl::Float64;
     center::Vector{Float64}=fill(0.0, n),
     verbose=1,
@@ -74,8 +74,24 @@ function MainGenerate(
     matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
+
+    # Convert center to SVector
     scaled_center = SVector{n,Float64}(center)
-    F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
+
+    # Handle different scale_factor types for function evaluation
+    if isa(scale_factor, Number)
+        # Scalar scale_factor
+        F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
+    else
+        # Vector scale_factor - element-wise multiplication for each coordinate
+        # Create a function to apply per-coordinate scaling
+        function apply_scale(x)
+            scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
+            return f(scaled_x + scaled_center)
+        end
+        F = map(apply_scale, reshape(grid, :))
+    end
+
     RHS = VL' * F
     linear_prob = LinearProblem(G_original, RHS)
     if verbose == 1
@@ -88,9 +104,20 @@ function MainGenerate(
 
     # Compute norm based on basis type
     nrm = if basis == :chebyshev
-        # Compute Riemann sum norm over the Chebyshev grid
-        residual = x -> (VL*sol.u-F)[findfirst(y -> y == x, reshape(grid, :))]
-        discrete_l2_norm_riemann(residual, grid)
+        # For vector scale_factor case, we need a different approach
+        if isa(scale_factor, Number)
+            # Original scalar version
+            residual = x -> (VL*sol.u-F)[findfirst(y -> y == x, reshape(grid, :))]
+            discrete_l2_norm_riemann(residual, grid)
+        else
+            # For vector scale_factor
+            # Create a residual function that works with the scaled grid
+            function residual(x)
+                idx = findfirst(y -> y == x, reshape(grid, :))
+                return (VL*sol.u-F)[idx]
+            end
+            discrete_l2_norm_riemann(residual, grid)
+        end
     else  # Legendre case
         # Use uniform weights for Legendre grid
         sqrt((2 / actual_GN)^n * sum(abs2.(VL * sol.u - F)))
@@ -106,32 +133,7 @@ function MainGenerate(
     )
 end
 
-
-"""
-    Constructor(
-        T::test_input,
-        degree::Int;
-        verbose = 0,
-        basis::Symbol = :chebyshev,
-        precision::PrecisionType = RationalPrecision,
-        normalized::Bool = true,
-        power_of_two_denom::Bool = false
-    )::ApproxPoly
-
-Compute a polynomial approximant satisfying a given tolerance.
-
-# Arguments
-- `T`: Test input containing objective function and parameters
-- `degree`: Starting degree for the polynomial
-- `verbose`: Verbosity level
-- `basis`: Type of basis (:chebyshev or :legendre)
-- `precision`: Precision type for coefficients
-- `normalized`: Whether to use normalized basis polynomials
-- `power_of_two_denom`: For rational precision, ensures denominators are powers of 2
-
-# Returns
-- `ApproxPoly`: The polynomial approximation
-"""
+# Update the Constructor function to pass through the vector scale_factor
 function Constructor(
     T::test_input,
     degree::Int;

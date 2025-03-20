@@ -171,25 +171,40 @@ function compute_min_distances(df, df_check)
 end
 
 """
-For a specific `d`, we can plot the level set of the function with captured critical points in green and optim points in Blue (or red if not captured).
+Updated visualization function to handle per-coordinate scaling factors.
 """
 function cairo_plot_polyapprox_levelset(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int} = (1000, 600),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
-    chebyshev_levels::Bool = false,
-    num_levels::Int = 30,
-    show_captured::Bool = true,  # New parameter
+    figure_size::Tuple{Int,Int}=(1000, 600),
+    z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing,
+    chebyshev_levels::Bool=false,
+    num_levels::Int=30,
+    show_captured::Bool=true,  # New parameter
 )
-    coords = pol.scale_factor * pol.grid .+ TR.center'
+    # Handle different scale_factor types when transforming coordinates
+    coords = if isa(pol.scale_factor, Number)
+        # Original scalar version
+        pol.scale_factor * pol.grid .+ TR.center'
+    else
+        # Vector scale_factor version - apply element-wise multiplication
+        # Create a new matrix for the scaled coordinates
+        scaled_coords = similar(pol.grid)
+        for i in 1:size(pol.grid, 1)
+            for j in 1:size(pol.grid, 2)
+                scaled_coords[i, j] = pol.scale_factor[j] * pol.grid[i, j] + TR.center[j]
+            end
+        end
+        scaled_coords
+    end
+
     z_coords = pol.z
 
     if size(coords)[2] == 2
-        fig = Figure(size = figure_size)
-        ax = Axis(fig[1, 1], title = "")
+        fig = Figure(size=figure_size)
+        ax = Axis(fig[1, 1], title="")
 
         # Calculate z_limits if not provided
         if isnothing(z_limits)
@@ -224,7 +239,7 @@ function cairo_plot_polyapprox_levelset(
 
         # Create contour plot
         chosen_colormap = :inferno
-        contourf!(ax, x_unique, y_unique, Z, colormap = chosen_colormap, levels = levels)
+        contourf!(ax, x_unique, y_unique, Z, colormap=chosen_colormap, levels=levels)
 
         # Initialize empty array for legend entries
         legend_entries = []
@@ -238,11 +253,11 @@ function cairo_plot_polyapprox_levelset(
                     ax,
                     df.x1[not_close_idx],
                     df.x2[not_close_idx],
-                    markersize = 10,
-                    color = :white,
-                    strokecolor = :black,
-                    strokewidth = 1,
-                    label = "Far",
+                    markersize=10,
+                    color=:white,
+                    strokecolor=:black,
+                    strokewidth=1,
+                    label="Far",
                 )
                 push!(legend_entries, "Far")
             end
@@ -254,11 +269,11 @@ function cairo_plot_polyapprox_levelset(
                     ax,
                     df.x1[close_idx],
                     df.x2[close_idx],
-                    markersize = 10,
-                    color = :green,
-                    strokecolor = :black,
-                    strokewidth = 1,
-                    label = "Near",
+                    markersize=10,
+                    color=:green,
+                    strokecolor=:black,
+                    strokewidth=1,
+                    label="Near",
                 )
                 push!(legend_entries, "Near")
             end
@@ -268,9 +283,9 @@ function cairo_plot_polyapprox_levelset(
                 ax,
                 df.x1,
                 df.x2,
-                markersize = 2,
-                color = :orange,
-                label = "All points",
+                markersize=2,
+                color=:orange,
+                label="All points",
             )
             push!(legend_entries, "All points")
         end
@@ -285,10 +300,10 @@ function cairo_plot_polyapprox_levelset(
                     ax,
                     df_min.x1[uncaptured_idx],
                     df_min.x2[uncaptured_idx],
-                    markersize = 15,
-                    marker = :diamond,
-                    color = :red,
-                    label = "Uncaptured",
+                    markersize=15,
+                    marker=:diamond,
+                    color=:red,
+                    label="Uncaptured",
                 )
                 push!(legend_entries, "Uncaptured")
             end
@@ -299,10 +314,10 @@ function cairo_plot_polyapprox_levelset(
                     ax,
                     df_min.x1[captured_idx],
                     df_min.x2[captured_idx],
-                    markersize = 15,
-                    marker = :diamond,
-                    color = :blue,
-                    label = "Captured",
+                    markersize=15,
+                    marker=:diamond,
+                    color=:blue,
+                    label="Captured",
                 )
                 push!(legend_entries, "Captured")
             end
@@ -312,110 +327,8 @@ function cairo_plot_polyapprox_levelset(
 end
 
 """
-Plot the outputs of`analyze_converged_points` function. 
+Updated plot_filtered_y_distances function to handle per-coordinate scaling.
 """
-function plot_distance_statistics(stats::Dict{String,Any}; show_legend::Bool = true)
-    fig = Figure(size = (600, 400))
-
-    ax = Axis(fig[1, 1], xlabel = "Degree")
-
-    # Plot maximum and average distances
-    degrees = stats["degrees"]
-    scatterlines!(ax, degrees, stats["max_distances"], label = "Maximum", color = :red)
-    scatterlines!(ax, degrees, stats["avg_distances"], label = "Average", color = :blue)
-
-    if show_legend
-        axislegend(ax)
-    end
-
-    return fig
-end
-# function plot_filtered_y_distances(
-#     df_filtered::DataFrame,
-#     results::Dict{Int,NamedTuple{(:df, :df_min, :convergence_stats, :discrete_l2),
-#         Tuple{DataFrame,DataFrame,NamedTuple,Float64}}},
-#     start_degree::Int,
-#     end_degree::Int,
-#     step::Int=1;
-#     use_optimized::Bool=true,  # true for y values (optimized), false for x values (initial)
-#     show_legend::Bool=true)
-
-#     degrees = start_degree:step:end_degree
-#     n_dims = count(col -> startswith(string(col), "x"), names(df_filtered))
-#     n_points = nrow(df_filtered)
-
-#     # ANSI color codes for pretty printing
-#     bold = "\e[1m"
-#     blue = "\e[34m"
-#     green = "\e[32m"
-#     reset = "\e[0m"
-
-#     point_type = use_optimized ? "optimized (y)" : "initial (x)"
-#     println("\n$(bold)Distance Analysis Summary$(reset)")
-#     println("$(blue)▶ $(reset)Analyzing $(bold)$(n_points)$(reset) filtered points in $(bold)$(n_dims)$(reset) dimensions")
-#     println("$(blue)▶ $(reset)Using $(bold)$point_type$(reset) points from filtered data")
-#     println("$(blue)▶ $(reset)Degree range: $(bold)$start_degree$(reset) to $(bold)$end_degree$(reset) with step $(bold)$step$(reset)")
-
-#     point_distances = zeros(Float64, n_points, length(degrees))
-
-#     for (i, row) in enumerate(eachrow(df_filtered))
-#         # Select either y (optimized) or x (initial) values based on flag
-#         point_coords::Vector{Float64} = if use_optimized
-#             [row[Symbol("y$j")] for j in 1:n_dims]
-#         else
-#             [row[Symbol("x$j")] for j in 1:n_dims]
-#         end
-
-#         for (d_idx, d) in enumerate(degrees)
-#             raw_points = results[d].df
-
-#             min_dist::Float64 = Inf
-#             for raw_row in eachrow(raw_points)
-#                 point::Vector{Float64} = [raw_row[Symbol("x$j")] for j in 1:n_dims]
-#                 dist::Float64 = norm(point_coords - point)
-#                 min_dist = min(min_dist, dist)
-#             end
-#             point_distances[i, d_idx] = min_dist
-#         end
-#     end
-
-#     max_distances::Vector{Float64} = [maximum(point_distances[:, i]) for i in 1:length(degrees)]
-#     avg_distances::Vector{Float64} = [sum(point_distances[:, i]) / n_points for i in 1:length(degrees)]
-#     min_distances::Vector{Float64} = [minimum(point_distances[:, i]) for i in 1:length(degrees)]
-#     overall_avg::Float64 = sum(avg_distances) / length(avg_distances)
-
-#     println("\n$(green)▶ $(reset)Distance Statistics:")
-#     println("   $(bold)Overall maximum distance:$(reset) $(round(maximum(max_distances), digits=6))")
-#     println("   $(bold)Overall minimum distance:$(reset) $(round(minimum(min_distances), digits=6))")
-#     println("   $(bold)Overall average distance:$(reset) $(round(overall_avg, digits=6))")
-
-#     println("\n$(green)▶ $(reset)Per-degree Analysis:")
-#     for (i, d) in enumerate(degrees)
-#         println("   $(bold)Degree $d:$(reset)")
-#         println("      Max distance: $(round(max_distances[i], digits=6))")
-#         println("      Min distance: $(round(min_distances[i], digits=6))")
-#         println("      Avg distance: $(round(avg_distances[i], digits=6))")
-#         println()
-#     end
-
-#     fig = Figure(size=(600, 400))
-
-#     point_label = use_optimized ? "Optimized" : "Initial"
-#     ax = Axis(fig[1, 1],
-#         # title="Distance from Each $point_label Point to Nearest Initial Point",
-#         xlabel="Degree",
-#         ylabel="")
-
-#     scatterlines!(ax, degrees, max_distances, label="Maximum", color=:red)
-#     scatterlines!(ax, degrees, avg_distances, label="Average", color=:blue)
-
-#     if show_legend
-#         axislegend(ax)
-#     end
-
-#     return fig
-# end
-
 function plot_filtered_y_distances(
     df_filtered::DataFrame,
     TR::test_input,  # Added TR parameter
@@ -428,9 +341,9 @@ function plot_filtered_y_distances(
     },
     start_degree::Int,
     end_degree::Int,
-    step::Int = 1;
-    use_optimized::Bool = true,
-    show_legend::Bool = true,
+    step::Int=1;
+    use_optimized::Bool=true,
+    show_legend::Bool=true,
 )
 
     degrees = start_degree:step:end_degree
@@ -438,8 +351,9 @@ function plot_filtered_y_distances(
     first_degree = first(degrees)
     n_points = nrow(results[first_degree].df)
 
-    # Filter points that are in the hypercube
-    in_domain = points_in_hypercube(df_filtered, TR, use_y = true)
+    # Filter points that are in the hypercube - use the updated points_in_hypercube function
+    # that handles per-coordinate scaling
+    in_domain = points_in_hypercube(df_filtered, TR, use_y=true)
     df_in_domain = df_filtered[in_domain, :]
 
     point_distances = zeros(Float64, n_points, length(degrees))
@@ -505,18 +419,18 @@ function plot_filtered_y_distances(
         println()
     end
 
-    fig = Figure(size = (600, 400))
+    fig = Figure(size=(600, 400))
 
     point_label = use_optimized ? "Optimized" : "Initial"
     ax = Axis(
         fig[1, 1],
         # title="Distance from Each $point_label Point to Nearest Initial Point",
-        xlabel = "Degree",
-        ylabel = "",
+        xlabel="Degree",
+        ylabel="",
     )
 
-    scatterlines!(ax, degrees, max_distances, label = "Maximum", color = :red)
-    scatterlines!(ax, degrees, avg_distances, label = "Average", color = :blue)
+    scatterlines!(ax, degrees, max_distances, label="Maximum", color=:red)
+    scatterlines!(ax, degrees, avg_distances, label="Average", color=:blue)
 
     if show_legend
         axislegend(ax)
@@ -525,38 +439,18 @@ function plot_filtered_y_distances(
     return fig
 end
 
-
-
-function plot_convergence_captured(
-    results,
-    df_check,
-    start_degree::Int,
-    end_degree::Int,
-    step::Int;
-    show_legend::Bool = true,
-)
-    degrees = start_degree:step:end_degree
-    max_distances = Float64[]
-    avg_distances = Float64[]
-
-    for d in degrees
-        df = results[d].df_min
-        stats = analyze_captured_distances(df, df_check)
-        push!(max_distances, stats.maximum)
-        push!(avg_distances, stats.average)
-    end
-
+"""
+Plot the outputs of`analyze_converged_points` function. 
+"""
+function plot_distance_statistics(stats::Dict{String,Any}; show_legend::Bool = true)
     fig = Figure(size = (600, 400))
 
-    ax = Axis(
-        fig[1, 1],
-        # title="Distance to Nearest Critical Point",
-        xlabel = "Degree",
-        ylabel = "Distance",
-    )
+    ax = Axis(fig[1, 1], xlabel = "Degree")
 
-    scatterlines!(ax, degrees, max_distances, label = "Maximum", color = :red)
-    scatterlines!(ax, degrees, avg_distances, label = "Average", color = :blue)
+    # Plot maximum and average distances
+    degrees = stats["degrees"]
+    scatterlines!(ax, degrees, stats["max_distances"], label = "Maximum", color = :red)
+    scatterlines!(ax, degrees, stats["avg_distances"], label = "Average", color = :blue)
 
     if show_legend
         axislegend(ax)
@@ -564,8 +458,6 @@ function plot_convergence_captured(
 
     return fig
 end
-
-
 
 function create_legend_figure(tol_dist::Float64)
     fig = Figure(size = (300, 100))
@@ -593,11 +485,6 @@ function create_legend_figure(tol_dist::Float64)
 
     return fig
 end
-
-
-
-
-
 
 function plot_convergence_captured(
     results,
