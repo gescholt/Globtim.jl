@@ -175,7 +175,7 @@ function create_level_set_visualization(
         values[i] = any(isnan, point) ? NaN : f(point)
     end
 
-    scatter!(ax, level_points, color = :blue, markersize = 6, label = "Level Set")
+    scatter!(ax, level_points, color = :blue, markersize = 6, alpha=0.7, label = "Level Set")
 
     if !isnothing(df)
         scatter!(
@@ -183,7 +183,7 @@ function create_level_set_visualization(
             data_points,
             color = :darkorange,
             marker = :diamond,
-            markersize = 20,
+            markersize = 30,
             label = "Data Points",
         )
     end
