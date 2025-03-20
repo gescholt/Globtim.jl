@@ -28,6 +28,8 @@ error_value = error_func(p_test)
 plot_parameter_result(model, outputs, p_true, p_test, plot_title="Lotka-Volterra Model Comparison")
 
 
+## Would it make sense to define the error function as the area between the two curves?
+
 """
 Globtim
 """
@@ -49,8 +51,8 @@ pol_cheb = Constructor(TR, d, basis=:chebyshev, precision=RationalPrecision)
 real_pts_cheb = solve_polynomial_system(
     x, n, d, pol_cheb.coeffs;
     basis=pol_cheb.basis)
-df_cheb = process_crit_pts(real_pts_cheb, f, TR)
-df_cheb, df_min_cheb = analyze_critical_points(f, df_cheb, TR, tol_dist=0.05);
+df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist=0.05);
 
 
 grid = TR.sample_range * generate_grid(3, 40, basis=:legendre);
