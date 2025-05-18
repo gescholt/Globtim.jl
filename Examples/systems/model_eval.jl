@@ -13,6 +13,22 @@ function define_lotka_volterra_model()
     return model, params, states, outputs
 end
 
+# c := 1
+function define_lotka_volterra_2D_model()
+    @independent_variables t
+    @variables x1(t) x2(t) y1(t)
+    @parameters a b
+    D = Differential(t)
+    params = [a, b]
+    states = [x1, x2]
+    @named model = ODESystem(
+        [D(x1) ~ a * x1 + b * x1 * x2,
+            D(x2) ~ b * x1 * x2 + x2],
+        t, states, params)
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
 function sample_data(model::ModelingToolkit.ODESystem,
     measured_data::Vector{ModelingToolkit.Equation},
     time_interval::Vector{T},
@@ -73,7 +89,7 @@ function sample_data(model::ModelingToolkit.ODESystem,
     reltol=convert(T, 1e-14)) where {N,T<:Number}
 
     @assert length(time_interval) == 2 "Time interval must be [start_time, end_time]"
-    @assert N == length(parameters(model)) "Parameter vector length mismatch"
+    @assert N == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
 
     if uneven_sampling
         if length(uneven_sampling_times) == 0
@@ -136,9 +152,9 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
     outputs::Vector{ModelingToolkit.Equation},
     p_true::SVector{N,T},
     numpoints::Int=5
-) where {N}
+) where {N,T}
 
-    @assert N == length(parameters(model)) "Parameter vector length mismatch"
+    @assert N == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
 
     # Generate reference solution once during function creation
     data_sample_true = sample_data(model, outputs, [0.0, 1.0], p_true, ic, numpoints)
@@ -170,7 +186,12 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
             end
 
             return 100 * norm(Y_true - Y_test, 1)
+            # return log(norm(Y_true - Y_test, 2) + eps(T))
         catch e
+            # So that Ctrl+C works
+            if isa(e, InterruptException)
+                rethrow(e)
+            end
             println("case 4")
             return NaN
         end

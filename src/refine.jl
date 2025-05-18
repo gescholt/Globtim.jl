@@ -108,7 +108,7 @@ function analyze_critical_points(
             x0 = [df[i, Symbol("x$j")] for j = 1:n_dims]
 
             # Optimization
-            res = Optim.optimize(f, x0, BFGS(), Optim.Options(show_trace=false))
+            res = Optim.optimize(f, x0, Optim.BFGS(), Optim.Options(show_trace=false))
             minimizer = Optim.minimizer(res)
             min_value = Optim.minimum(res)
             steps = res.iterations
