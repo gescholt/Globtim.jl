@@ -74,10 +74,8 @@ export test_input,
     generate_grid_small_n,
     Toy_gen,
     simple_lambda_vandermonde,
-    create_level_set_animation
-
-#Function giving trouble in test.
-export process_crit_pts
+    create_level_set_animation,
+    process_crit_pts # Function previously giving trouble in test
 
 # Precision type export
 export PrecisionType, Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision
@@ -92,11 +90,15 @@ export symbolic_chebyshev, evaluate_chebyshev, get_chebyshev_coeffs, construct_c
 export symbolic_orthopoly, evaluate_orthopoly, get_orthopoly_coeffs, construct_orthopoly_polynomial
 
 # ApproxPoly accessor functions
-export get_basis, get_precision, is_normalized, has_power_of_two_denom
+export get_basis, get_precision, is_normalized, has_power_of_two_denom, get_scale_factor
+
+# Scaling utilities
+export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
 
 include("config.jl")
 include("LibFunctions.jl") #list of test functions. 
 include("Structures.jl") # list of structures used in the code.
+include("scaling_utils.jl") # Type-stable scaling utilities
 include("Samples.jl") #functions to generate samples.
 include("Main_Gen.jl") #functions to construct polynomial approximations.
 include("l2_norm.jl") #measure error of approx.

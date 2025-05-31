@@ -1,16 +1,16 @@
 # src/Structures.jl
 
 """
-    struct ApproxPoly
+    struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
 
 A structure to represent the polynomial approximation and related data.
 
 # Fields
-- `coeffs::Vector`: The coefficients of the polynomial approximation. Could be floats or Big rationals.
+- `coeffs::Vector{T}`: The coefficients of the polynomial approximation. Could be floats or Big rationals.
 - `degree::Int`: The degree of the polynomial approximation.
 - `nrm::Float64`: The norm of the polynomial approximation.
 - `N::Int`: The number of grid points used in the approximation.
-- `scale_factor::Union{Float64, Vector{Float64}}`: Scaling factor(s) applied to the domain.
+- `scale_factor::S`: Scaling factor(s) applied to the domain (type-stable).
 - `grid::Matrix{Float64}`: The grid of points used in the approximation.
 - `z::Vector{Float64}`: The values of the function objective at the grid points.
 - `basis::Symbol`: Type of basis used (:chebyshev or :legendre).
@@ -20,13 +20,15 @@ A structure to represent the polynomial approximation and related data.
 
 # Description
 The `ApproxPoly` struct is used to store the results of a polynomial approximation, including the coefficients of the polynomial, the norm of the approximation, the number of grid points, the scaling factor, the grid of points, and the values of the function at the grid points. It also stores information about the basis used for the polynomial approximation.
+
+The type parameter `S` makes the scale_factor field type-stable, eliminating runtime dispatch when accessing it.
 """
-struct ApproxPoly{T<:Number}
+struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     coeffs::Vector{T}
     degree::Int
     nrm::Float64
     N::Int
-    scale_factor::Union{Float64,Vector{Float64}}
+    scale_factor::S
     grid::Matrix{Float64}
     z::Vector{Float64}
     basis::Symbol
@@ -34,7 +36,7 @@ struct ApproxPoly{T<:Number}
     normalized::Bool
     power_of_two_denom::Bool
 
-    # Original constructor (backward compatibility)
+    # Original constructor (backward compatibility) - scalar scale_factor
     function ApproxPoly{T}(
         coeffs::Vector{T},
         degree::Int,
@@ -44,13 +46,13 @@ struct ApproxPoly{T<:Number}
         grid::Matrix{Float64},
         z::Vector{Float64}
     ) where {T<:Number}
-        new(
+        new{T,Float64}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
             :chebyshev, RationalPrecision, true, false
         )
     end
 
-    # New vector scale_factor constructor (backward compatibility)
+    # Vector scale_factor constructor (backward compatibility)
     function ApproxPoly{T}(
         coeffs::Vector{T},
         degree::Int,
@@ -60,7 +62,7 @@ struct ApproxPoly{T<:Number}
         grid::Matrix{Float64},
         z::Vector{Float64}
     ) where {T<:Number}
-        new(
+        new{T,Vector{Float64}}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
             :chebyshev, RationalPrecision, true, false
         )
@@ -80,7 +82,7 @@ struct ApproxPoly{T<:Number}
         normalized::Bool,
         power_of_two_denom::Bool
     ) where {T<:Number}
-        new(
+        new{T,Float64}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom
         )
@@ -100,7 +102,7 @@ struct ApproxPoly{T<:Number}
         normalized::Bool,
         power_of_two_denom::Bool
     ) where {T<:Number}
-        new(
+        new{T,Vector{Float64}}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom
         )
@@ -120,18 +122,61 @@ struct ApproxPoly{T<:Number}
         normalized::Bool=true,
         power_of_two_denom::Bool=false
     ) where {T<:Number}
-        new(
+        S = typeof(scale_factor)
+        new{T,S}(
             sol.u, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom
         )
     end
+    
+    # General constructor with both type parameters
+    function ApproxPoly{T,S}(
+        coeffs::Vector{T},
+        degree::Int,
+        nrm::Float64,
+        N::Int,
+        scale_factor::S,
+        grid::Matrix{Float64},
+        z::Vector{Float64},
+        basis::Symbol,
+        precision::PrecisionType,
+        normalized::Bool,
+        power_of_two_denom::Bool
+    ) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
+        new{T,S}(
+            coeffs, degree, nrm, N, scale_factor, grid, z,
+            basis, precision, normalized, power_of_two_denom
+        )
+    end
 end
+
+# Smart constructor that infers types automatically
+function ApproxPoly(
+    coeffs::Vector{T},
+    degree::Int,
+    nrm::Float64,
+    N::Int,
+    scale_factor::S,
+    grid::Matrix{Float64},
+    z::Vector{Float64},
+    basis::Symbol=:chebyshev,
+    precision::PrecisionType=RationalPrecision,
+    normalized::Bool=true,
+    power_of_two_denom::Bool=false
+) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
+    return ApproxPoly{T}(
+        coeffs, degree, nrm, N, scale_factor, grid, z,
+        basis, precision, normalized, power_of_two_denom
+    )
+end
+
 
 # Convenience accessor functions
 get_basis(p::ApproxPoly) = p.basis
 get_precision(p::ApproxPoly) = p.precision
 is_normalized(p::ApproxPoly) = p.normalized
 has_power_of_two_denom(p::ApproxPoly) = p.power_of_two_denom
+get_scale_factor(p::ApproxPoly) = p.scale_factor
 
 """
    struct test_input
