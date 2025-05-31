@@ -104,32 +104,18 @@ function MainGenerate(
 
     # Compute norm based on basis type
     nrm = if basis == :chebyshev
-        # For vector scale_factor case, we need a different approach
-        if isa(scale_factor, Number)
-            # Original scalar version
-            residual = x -> (VL*sol.u-F)[findfirst(y -> y == x, reshape(grid, :))]
-            discrete_l2_norm_riemann(residual, grid)
-        else
-            # For vector scale_factor
-            # Create a residual function that works with the scaled grid
-            function residual(x)
-                idx = findfirst(y -> y == x, reshape(grid, :))
-                return (VL*sol.u-F)[idx]
-            end
-            discrete_l2_norm_riemann(residual, grid)
-        end
+        # Type-stable norm computation
+        compute_norm(scale_factor, VL, sol, F, grid, n, d)
     else  # Legendre case
         # Use uniform weights for Legendre grid
         sqrt((2 / actual_GN)^n * sum(abs2.(VL * sol.u - F)))
     end
 
     # Store the basis parameters in the ApproxPoly object
-    return ApproxPoly{Float64}(
-        sol, d, nrm, actual_GN, scale_factor, matrix_from_grid, F;
-        basis=basis,
-        precision=precision,
-        normalized=normalized,
-        power_of_two_denom=power_of_two_denom
+    # Use the smart constructor to get correct type parameters
+    return ApproxPoly(
+        sol.u, d, nrm, actual_GN, scale_factor, matrix_from_grid, F,
+        basis, precision, normalized, power_of_two_denom
     )
 end
 
@@ -142,7 +128,7 @@ function Constructor(
     precision::PrecisionType=RationalPrecision,
     normalized::Bool=false,
     power_of_two_denom::Bool=false
-)::ApproxPoly
+)
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
     end
