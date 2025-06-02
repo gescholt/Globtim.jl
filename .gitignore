@@ -7,3 +7,15 @@ data/figures/
 Manifest.toml
 .DS_Store
 **/.DS_Store
+
+# Development and personal files
+.claude/
+.vscode/
+CLAUDE.md
+CLAUDE_REFACTORED.md
+TYPE_INSTABILITY_ANALYSIS.md
+SCALE_FACTOR_REFACTORING_PLAN.md
+benchmark_scale_factor.jl
+test_scale_factor_*.jl
+src/*_backup.jl
+Examples/test_compat.jl
