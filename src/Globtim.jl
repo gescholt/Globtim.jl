@@ -74,7 +74,8 @@ export test_input,
     generate_grid_small_n,
     Toy_gen,
     simple_lambda_vandermonde,
-    create_level_set_animation
+    create_level_set_animation,
+    create_level_set_visualization
 
 #Function giving trouble in test.
 export process_crit_pts

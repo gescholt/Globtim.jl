@@ -66,20 +66,20 @@ function MainGenerate(
     end
 
     Lambda = SupportGen(n, d)
-    if n <= 4
+    @time if n <= 4
         grid = generate_grid_small_n(n, actual_GN, basis=basis)
     else
         grid = generate_grid(n, actual_GN, basis=basis)
     end
     matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
-    VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
-    G_original = VL' * VL
+    @time VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
+    @time G_original = VL' * VL
 
     # Convert center to SVector
     scaled_center = SVector{n,Float64}(center)
 
     # Handle different scale_factor types for function evaluation
-    if isa(scale_factor, Number)
+    @time if isa(scale_factor, Number)
         # Scalar scale_factor
         F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
     else
@@ -94,16 +94,18 @@ function MainGenerate(
 
     RHS = VL' * F
     linear_prob = LinearProblem(G_original, RHS)
-    if verbose == 1
+    @time if verbose == 1
         println("Condition number of G: ", cond(G_original))
-        sol = LinearSolve.solve(linear_prob, verbose=true)
+        println("Condition number of V: ", cond(VL))
+        sol = LinearSolve.solve(LinearProblem(VL, F), verbose=true)
+        # sol = LinearSolve.solve(linear_prob, verbose=true)
         println("Chosen method: ", typeof(sol.alg))
     else
         sol = LinearSolve.solve(linear_prob)
     end
 
     # Compute norm based on basis type
-    nrm = if basis == :chebyshev
+    @time nrm = if basis == :chebyshev
         # For vector scale_factor case, we need a different approach
         if isa(scale_factor, Number)
             # Original scalar version
@@ -124,7 +126,7 @@ function MainGenerate(
     end
 
     # Store the basis parameters in the ApproxPoly object
-    return ApproxPoly{Float64}(
+    @time return ApproxPoly{Float64}(
         sol, d, nrm, actual_GN, scale_factor, matrix_from_grid, F;
         basis=basis,
         precision=precision,
