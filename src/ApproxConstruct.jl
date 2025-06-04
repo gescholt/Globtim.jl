@@ -47,7 +47,7 @@ function SupportGen(n::Int, d::Int)::NamedTuple
     return (data = lambda_matrix, size = size(lambda_matrix))
 end
 
-function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
+TimerOutputs.@timeit _TO function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
     m, N = Lambda.size
     n, N = size(S)
     V = zeros(Float64, n, m)  # Using Float64 directly instead of BigFloat

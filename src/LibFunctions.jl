@@ -385,7 +385,7 @@ end
     #   Alpine1 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i = 1:eachindex(xx))
+    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i = eachindex(xx))
 end
 
 @doc nothing function alpine2(
@@ -396,15 +396,16 @@ end
     #   Alpine2 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return prod(sqrt(xx[i]) * sin(xx[i]) for i = 1:eachindex(xx))
+    return prod(sqrt(xx[i]) * sin(xx[i]) for i = eachindex(xx))
 
 end
 
-@doc nothing function Rastringin(x::AbstractVector; ndim::Int = 3)::Float64
+@doc nothing function Rastringin(x::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Rastringin function
     #   Domain: [-5.12, 5.12]^ndim.
     # =======================================================
+    ndim = length(x)
     return sum(x[i]^2 - 10 * cos(2 * pi * x[i]) for i = 1:ndim)
 end

@@ -78,7 +78,7 @@ grid = generate_grid(3, 3, basis=:legendre)  # Creates a 4×4×4 array of SVecto
 - For Legendre nodes, the points are equally spaced
 """
 
-function generate_grid(
+TimerOutputs.@timeit _TO function generate_grid(
     n::Int,
     GN::Int;
     basis::Symbol = :chebyshev,
@@ -128,7 +128,7 @@ For Chebyshev nodes, the points are concentrated near the boundaries
 For Legendre nodes, the points are equally spaced
 This version is optimized for small N (typically N ≤ 4) using compile-time unrolling
 """
-function generate_grid_small_n(
+TimerOutputs.@timeit _TO function generate_grid_small_n(
     N::Int,
     GN::Int;
     basis::Symbol = :chebyshev,

@@ -39,7 +39,7 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 # Returns
 - `ApproxPoly`: An object containing the polynomial approximation and related data
 """
-function MainGenerate(
+TimerOutputs.@timeit _TO function MainGenerate(
     f,
     n::Int,
     d::Int,
@@ -79,27 +79,31 @@ function MainGenerate(
     scaled_center = SVector{n,Float64}(center)
 
     # Handle different scale_factor types for function evaluation
-    if isa(scale_factor, Number)
-        # Scalar scale_factor
-        F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
-    else
-        # Vector scale_factor - element-wise multiplication for each coordinate
-        # Create a function to apply per-coordinate scaling
-        function apply_scale(x)
-            scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
-            return f(scaled_x + scaled_center)
+    TimerOutputs.@timeit _TO "evaluation" begin
+        if isa(scale_factor, Number)
+            # Scalar scale_factor
+            F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
+        else
+            # Vector scale_factor - element-wise multiplication for each coordinate
+            # Create a function to apply per-coordinate scaling
+            function apply_scale(x)
+                scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
+                return f(scaled_x + scaled_center)
+            end
+            F = map(apply_scale, reshape(grid, :))
         end
-        F = map(apply_scale, reshape(grid, :))
     end
 
-    RHS = VL' * F
-    linear_prob = LinearProblem(G_original, RHS)
-    if verbose == 1
-        println("Condition number of G: ", cond(G_original))
-        sol = LinearSolve.solve(linear_prob, verbose=true)
-        println("Chosen method: ", typeof(sol.alg))
-    else
-        sol = LinearSolve.solve(linear_prob)
+    TimerOutputs.@timeit _TO "linear_solve_vandermonde" begin
+        RHS = VL' * F
+        linear_prob = LinearProblem(G_original, RHS)
+        if verbose == 1
+            println("Condition number of G: ", cond(G_original))
+            sol = LinearSolve.solve(linear_prob, verbose=true)
+            println("Chosen method: ", typeof(sol.alg))
+        else
+            sol = LinearSolve.solve(linear_prob)
+        end
     end
 
     # Compute norm based on basis type
@@ -120,7 +124,7 @@ function MainGenerate(
 end
 
 # Update the Constructor function to pass through the vector scale_factor
-function Constructor(
+TimerOutputs.@timeit _TO function Constructor(
     T::test_input,
     degree::Int;
     verbose=0,

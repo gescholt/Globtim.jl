@@ -25,7 +25,7 @@ Solve a polynomial system using HomotopyContinuation.jl.
 # Returns
 - Vector of solution vectors
 """
-function solve_polynomial_system(
+TimerOutputs.@timeit _TO function solve_polynomial_system(
     x,
     n,
     d,

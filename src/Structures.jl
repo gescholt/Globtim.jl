@@ -207,7 +207,7 @@ struct test_input
     degree_max::Union{Int,Nothing}
     objective::Function
 
-    function test_input(
+    TimerOutputs.@timeit _TO function test_input(
         f::Function;
         dim::Int=2,
         center::AbstractVector{<:Real}=fill(0.0, dim),
