@@ -11,10 +11,13 @@ using Distributions
 using Random
 using Parameters
 using TOML
+using TimerOutputs
 
 @enum PrecisionType Float64Precision RationalPrecision BigFloatPrecision BigIntPrecision
 
 import HomotopyContinuation: solve, real_solutions, System
+
+const _TO = TimerOutputs.TimerOutput()
 
 # Exported functions and variables
 export test_input,
@@ -75,6 +78,7 @@ export test_input,
     Toy_gen,
     simple_lambda_vandermonde,
     create_level_set_animation,
+    create_level_set_visualization,
     process_crit_pts # Function previously giving trouble in test
 
 # Precision type export
