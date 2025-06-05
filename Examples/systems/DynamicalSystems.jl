@@ -12,7 +12,10 @@ export define_lotka_volterra_model,
     sample_data,
     make_error_distance,
     plot_time_series_comparison,
-    plot_parameter_result
+    plot_parameter_result,
+    log_L2_norm,
+    L1_norm,
+    L2_norm
 
 function define_lotka_volterra_3D_model()
     @independent_variables t
@@ -157,8 +160,10 @@ Arguments:
 - `outputs`: Vector of measurement equations
 - `initial_conditions`: Vector of initial conditions for the ODE system
 - `p_true`: SVector of true parameter values
+- `time_interval`: Time interval [start_time, end_time] for simulation
 - `numpoints`: Number of time points to sample (default: 5)
-- `distance_function`: Function to compute distance (default: L2_norm)
+- `distance_function`: Function to compute distance (default: L2_norm).
+    The function should take two vectors (true and predicted) and return a scalar distance value.
 
 Returns:
     Function that computes error between predictions and reference data
@@ -215,7 +220,7 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
                 rethrow(e)
             end
             println("case 4")
-            println("Error in make_error_distance: ", e)
+            # println("Error in make_error_distance: ", e)
             return NaN
         end
     end

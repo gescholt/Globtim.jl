@@ -54,41 +54,7 @@ end
 #=
 Example output:
 julia> include("globtim/experiments/week0/timings_for_different_n_dim.jl")
-current L2-norm: 0.3037290761559208
-Processing point 1 of 17
-Optimization has converged within bounds: ✓
-Processing point 2 of 17
-Optimization has converged within bounds: ✓
-Processing point 3 of 17
-Optimization has converged within bounds: ✓
-Processing point 4 of 17
-Optimization has converged within bounds: ✓
-Processing point 5 of 17
-Optimization has converged within bounds: ✓
-Processing point 6 of 17
-Optimization has converged within bounds: ✓
-Processing point 7 of 17
-Optimization has converged within bounds: ✓
-Processing point 8 of 17
-Optimization has converged within bounds: ✓
-Processing point 9 of 17
-Optimization has converged within bounds: ✓
-Processing point 10 of 17
-Optimization has converged within bounds: ✓
-Processing point 11 of 17
-Optimization has converged within bounds: ✓
-Processing point 12 of 17
-Optimization has converged within bounds: ✓
-Processing point 13 of 17
-Optimization has converged within bounds: ✓
-Processing point 14 of 17
-Optimization has converged within bounds: ✓
-Processing point 15 of 17
-Optimization has converged within bounds: ✓
-Processing point 16 of 17
-Optimization has converged within bounds: ✓
-Processing point 17 of 17
-Optimization has converged within bounds: ✓
+
 ===============================================
 Function: Ackley
 Configuration:
@@ -117,258 +83,7 @@ Constructor                         1   11.5ms    0.2%  11.5ms   3.66MiB    1.5%
     evaluation                      1   99.1μs    0.0%  99.1μs   3.69KiB    0.0%  3.69KiB
 test_input                          1   8.27μs    0.0%  8.27μs      176B    0.0%     176B
 ─────────────────────────────────────────────────────────────────────────────────────────
-current L2-norm: 0.2814527419894433
-Tracking 512 paths... 100%|██████████████████████████████████████| Time: 0:00:25
-                   # paths tracked: 512
-   # non-singular solutions (real): 512 (182)
-       # singular endpoints (real): 0 (0)
-          # total solutions (real): 512 (182)
-Processing point 1 of 123
-Optimization has converged within bounds: ✓
-Processing point 2 of 123
-Optimization has converged within bounds: ✓
-Processing point 3 of 123
-Optimization has converged within bounds: ✓
-Processing point 4 of 123
-Optimization has converged within bounds: ✓
-Processing point 5 of 123
-Optimization has converged within bounds: ✓
-Processing point 6 of 123
-Optimization has converged within bounds: ✓
-Processing point 7 of 123
-Optimization has converged within bounds: ✓
-Processing point 8 of 123
-Optimization has converged within bounds: ✓
-Processing point 9 of 123
-Optimization has converged within bounds: ✓
-Processing point 10 of 123
-Optimization has converged within bounds: ✓
-Processing point 11 of 123
-Optimization has converged within bounds: ✓
-Processing point 12 of 123
-Optimization has converged within bounds: ✓
-Processing point 13 of 123
-Optimization has converged within bounds: ✓
-Processing point 14 of 123
-Optimization has converged within bounds: ✓
-Processing point 15 of 123
-Optimization has converged within bounds: ✓
-Processing point 16 of 123
-Optimization has converged within bounds: ✓
-Processing point 17 of 123
-Optimization has converged within bounds: ✓
-Processing point 18 of 123
-Optimization has converged within bounds: ✓
-Processing point 19 of 123
-Optimization has converged within bounds: ✓
-Processing point 20 of 123
-Optimization has converged within bounds: ✓
-Processing point 21 of 123
-Optimization has converged within bounds: ✓
-Processing point 22 of 123
-Optimization has converged within bounds: ✓
-Processing point 23 of 123
-Optimization has converged within bounds: ✓
-Processing point 24 of 123
-Optimization has converged within bounds: ✓
-Processing point 25 of 123
-Optimization has converged within bounds: ✓
-Processing point 26 of 123
-Optimization has converged within bounds: ✓
-Processing point 27 of 123
-Optimization has converged within bounds: ✓
-Processing point 28 of 123
-Optimization has converged within bounds: ✓
-Processing point 29 of 123
-Optimization has converged within bounds: ✓
-Processing point 30 of 123
-Optimization has converged within bounds: ✓
-Processing point 31 of 123
-Optimization has converged within bounds: ✓
-Processing point 32 of 123
-Optimization has converged within bounds: ✓
-Processing point 33 of 123
-Optimization has converged within bounds: ✓
-Processing point 34 of 123
-Optimization has converged within bounds: ✓
-Processing point 35 of 123
-Optimization has converged within bounds: ✓
-Processing point 36 of 123
-Optimization has converged within bounds: ✓
-Processing point 37 of 123
-Optimization has converged within bounds: ✓
-Processing point 38 of 123
-Optimization has converged within bounds: ✓
-Processing point 39 of 123
-Optimization has converged within bounds: ✓
-Processing point 40 of 123
-Optimization has converged within bounds: ✓
-Processing point 41 of 123
-Optimization has converged within bounds: ✓
-Processing point 42 of 123
-Optimization has converged within bounds: ✓
-Processing point 43 of 123
-Optimization has converged within bounds: ✓
-Processing point 44 of 123
-Optimization has converged within bounds: ✓
-Processing point 45 of 123
-Optimization has converged within bounds: ✓
-Processing point 46 of 123
-Optimization has converged within bounds: ✓
-Processing point 47 of 123
-Optimization has converged within bounds: ✓
-Processing point 48 of 123
-Optimization has converged within bounds: ✓
-Processing point 49 of 123
-Optimization has converged within bounds: ✓
-Processing point 50 of 123
-Optimization has converged within bounds: ✓
-Processing point 51 of 123
-Optimization has converged within bounds: ✓
-Processing point 52 of 123
-Optimization has converged within bounds: ✓
-Processing point 53 of 123
-Optimization has converged within bounds: ✓
-Processing point 54 of 123
-Optimization has converged within bounds: ✓
-Processing point 55 of 123
-Optimization has converged within bounds: ✓
-Processing point 56 of 123
-Optimization has converged within bounds: ✓
-Processing point 57 of 123
-Optimization has converged within bounds: ✓
-Processing point 58 of 123
-Optimization has converged within bounds: ✓
-Processing point 59 of 123
-Optimization has converged within bounds: ✓
-Processing point 60 of 123
-Optimization has converged within bounds: ✓
-Processing point 61 of 123
-Optimization has converged within bounds: ✓
-Processing point 62 of 123
-Optimization has converged within bounds: ✓
-Processing point 63 of 123
-Optimization has converged within bounds: ✓
-Processing point 64 of 123
-Optimization has converged within bounds: ✓
-Processing point 65 of 123
-Optimization has converged within bounds: ✓
-Processing point 66 of 123
-Optimization has converged within bounds: ✓
-Processing point 67 of 123
-Optimization has converged within bounds: ✓
-Processing point 68 of 123
-Optimization has converged within bounds: ✓
-Processing point 69 of 123
-Optimization has converged within bounds: ✓
-Processing point 70 of 123
-Optimization has converged within bounds: ✓
-Processing point 71 of 123
-Optimization has converged within bounds: ✓
-Processing point 72 of 123
-Optimization has converged within bounds: ✓
-Processing point 73 of 123
-Optimization has converged within bounds: ✓
-Processing point 74 of 123
-Optimization has converged within bounds: ✓
-Processing point 75 of 123
-Optimization has converged within bounds: ✓
-Processing point 76 of 123
-Optimization has converged within bounds: ✓
-Processing point 77 of 123
-Optimization has converged within bounds: ✓
-Processing point 78 of 123
-Optimization has converged within bounds: ✓
-Processing point 79 of 123
-Optimization has converged within bounds: ✓
-Processing point 80 of 123
-Optimization has converged within bounds: ✓
-Processing point 81 of 123
-Optimization has converged within bounds: ✓
-Processing point 82 of 123
-Optimization has converged within bounds: ✓
-Processing point 83 of 123
-Optimization has converged within bounds: ✓
-Processing point 84 of 123
-Optimization has converged within bounds: ✓
-Processing point 85 of 123
-Optimization has converged within bounds: ✓
-Processing point 86 of 123
-Optimization has converged within bounds: ✓
-Processing point 87 of 123
-Optimization has converged within bounds: ✓
-Processing point 88 of 123
-Optimization has converged within bounds: ✓
-Processing point 89 of 123
-Optimization has converged within bounds: ✓
-Processing point 90 of 123
-Optimization has converged within bounds: ✓
-Processing point 91 of 123
-Optimization has converged within bounds: ✓
-Processing point 92 of 123
-Optimization has converged within bounds: ✓
-Processing point 93 of 123
-Optimization has converged within bounds: ✓
-Processing point 94 of 123
-Optimization has converged within bounds: ✓
-Processing point 95 of 123
-Optimization has converged within bounds: ✓
-Processing point 96 of 123
-Optimization has converged within bounds: ✓
-Processing point 97 of 123
-Optimization has converged within bounds: ✓
-Processing point 98 of 123
-Optimization has converged within bounds: ✓
-Processing point 99 of 123
-Optimization has converged within bounds: ✓
-Processing point 100 of 123
-Optimization has converged within bounds: ✓
-Processing point 101 of 123
-Optimization has converged within bounds: ✓
-Processing point 102 of 123
-Optimization has converged within bounds: ✓
-Processing point 103 of 123
-Optimization has converged within bounds: ✓
-Processing point 104 of 123
-Optimization has converged within bounds: ✓
-Processing point 105 of 123
-Optimization has converged within bounds: ✓
-Processing point 106 of 123
-Optimization has converged within bounds: ✓
-Processing point 107 of 123
-Optimization has converged within bounds: ✓
-Processing point 108 of 123
-Optimization has converged within bounds: ✓
-Processing point 109 of 123
-Optimization has converged within bounds: ✓
-Processing point 110 of 123
-Optimization has converged within bounds: ✓
-Processing point 111 of 123
-Optimization has converged within bounds: ✓
-Processing point 112 of 123
-Optimization has converged within bounds: ✓
-Processing point 113 of 123
-Optimization has converged within bounds: ✓
-Processing point 114 of 123
-Optimization has converged within bounds: ✓
-Processing point 115 of 123
-Optimization has converged within bounds: ✓
-Processing point 116 of 123
-Optimization has converged within bounds: ✓
-Processing point 117 of 123
-Optimization has converged within bounds: ✓
-Processing point 118 of 123
-Optimization has converged within bounds: ✓
-Processing point 119 of 123
-Optimization has converged within bounds: ✓
-Processing point 120 of 123
-Optimization has converged within bounds: ✓
-Processing point 121 of 123
-Optimization has converged within bounds: ✓
-Processing point 122 of 123
-Optimization has converged within bounds: ✓
-Processing point 123 of 123
-Optimization has converged within bounds: ✓
+
 ===============================================
 Function: Ackley
 Configuration:
@@ -399,70 +114,32 @@ test_input                          1   1.13μs    0.0%  1.13μs      176B    0.
 ─────────────────────────────────────────────────────────────────────────────────────────
 
 
+==============================================
+Function: Ackley
+Configuration:
+n = 4
+d = 9
+scale_factor = 1.0
+SMPL = 20
+L2-norm (cheb): 0.2940375130229731
 
-
-
-
-
-
-^CERROR: LoadError: InterruptException:
-Stacktrace:
-  [1] -(A::Vector{Float64}, B::Vector{Float64})
-    @ Base ./arraymath.jl:6
-  [2] (::Globtim.var"#41#43"{Matrix{…}, SciMLBase.LinearSolution{…}, Vector{…}, Array{…}})(x::SVector{4, Float64})
-    @ Globtim ~/projects/globtim/src/scaling_utils.jl:46
-  [3] #82
-    @ ./none:0 [inlined]
-  [4] MappingRF
-    @ ./reduce.jl:100 [inlined]
-  [5] _foldl_impl(op::Base.MappingRF{…}, init::Base._InitialValue, itr::Base.Iterators.Zip{…})
-    @ Base ./reduce.jl:62
-  [6] foldl_impl
-    @ ./reduce.jl:48 [inlined]
-  [7] mapfoldl_impl
-    @ ./reduce.jl:44 [inlined]
-  [8] mapfoldl
-    @ ./reduce.jl:175 [inlined]
-  [9] mapreduce
-    @ ./reduce.jl:307 [inlined]
- [10] sum
-    @ ./reduce.jl:532 [inlined]
- [11] sum(a::Base.Generator{Base.Iterators.Zip{Tuple{…}}, Globtim.var"#82#90"{Globtim.var"#41#43"{…}}})
-    @ Base ./reduce.jl:561
- [12] discrete_l2_norm_riemann(f::Globtim.var"#41#43"{…}, grid::Array{…})
-    @ Globtim ~/projects/globtim/src/l2_norm.jl:71
- [13] compute_norm(scale_factor::Float64, VL::Matrix{…}, sol::SciMLBase.LinearSolution{…}, F::Vector{…}, grid::Array{…}, n::Int64, d::Int64)
-    @ Globtim ~/projects/globtim/src/scaling_utils.jl:47
- [14] MainGenerate(f::typeof(Ackley), n::Int64, d::Int64, delta::Float64, alpha::Float64, scale_factor::Float64, scl::Float64; center::Vector{…}, verbose::Int64, basis::Symbol, GN::Int64, precision::PrecisionType, normalized::Bool, power_of_two_denom::Bool)
-    @ Globtim ~/projects/globtim/src/Main_Gen.jl:42
- [15] 
-    @ Globtim ~/projects/globtim/src/Main_Gen.jl:128
- [16] Constructor
-    @ ~/projects/globtim/src/Main_Gen.jl:128 [inlined]
- [17] top-level scope
-    @ ~/projects/globtim/experiments/week0/timings_for_different_n_dim.jl:28
- [18] include(fname::String)
-    @ Main ./sysimg.jl:38
-in expression starting at /Users/demin/projects/globtim/experiments/week0/timings_for_different_n_dim.jl:9
-Some type information was truncated. Use `show(err)` to see complete types.
-
-julia> Globtim._TO
 ─────────────────────────────────────────────────────────────────────────────────────────
                                                 Time                    Allocations      
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                1.72h /  99.8%            117GiB / 100.0%    
+           Tot / % measured:                4.69h / 100.0%            573GiB / 100.0%    
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
-Constructor                         1    1.72h  100.0%   1.72h    116GiB  100.0%   116GiB
-  MainGenerate                      1    1.72h  100.0%   1.72h    116GiB  100.0%   116GiB
-    norm_computation                1    1.71h   99.1%   1.71h    115GiB   99.0%   115GiB
-    lambda_vandermonde              1    48.8s    0.8%   48.8s   1.04GiB    0.9%  1.04GiB
-    generate_grid                   1    2.65s    0.0%   2.65s    129MiB    0.1%   129MiB
-    evaluation                      1    337ms    0.0%   337ms   8.74MiB    0.0%  8.74MiB
-    linear_solve_vandermonde        1    125ms    0.0%   125ms   3.93MiB    0.0%  3.93MiB
-test_input                          1   3.01μs    0.0%  3.01μs      208B    0.0%     208B
+Constructor                         1    4.68h   99.7%   4.68h    571GiB   99.6%   571GiB
+  MainGenerate                      1    4.68h   99.7%   4.68h    571GiB   99.6%   571GiB
+    norm_computation                1    4.68h   99.7%   4.68h    570GiB   99.4%   570GiB
+    lambda_vandermonde              1    8.76s    0.1%   8.76s   1.04GiB    0.2%  1.04GiB
+    generate_grid                   1    493ms    0.0%   493ms    129MiB    0.0%   129MiB
+    evaluation                      1   67.1ms    0.0%  67.1ms   8.64MiB    0.0%  8.64MiB
+    linear_solve_vandermonde        1   59.8ms    0.0%  59.8ms   3.93MiB    0.0%  3.93MiB
+solve_polynomial_system             1    46.0s    0.3%   46.0s   2.32GiB    0.4%  2.32GiB
+analyze_critical_points             1    333ms    0.0%   333ms   65.3MiB    0.0%  65.3MiB
+test_input                          1    770ns    0.0%   770ns      208B    0.0%     208B
 ─────────────────────────────────────────────────────────────────────────────────────────
-
 
 =#
