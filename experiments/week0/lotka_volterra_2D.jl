@@ -8,7 +8,6 @@ using Globtim
 using DynamicPolynomials, DataFrames
 using ProgressLogging
 using Optim
-# using ParameterEstimation
 using ModelingToolkit
 using OrdinaryDiffEq
 using StaticArrays
@@ -18,7 +17,8 @@ using TimerOutputs
 
 #
 
-include(joinpath(@__DIR__, "../../Examples/systems/model_eval.jl"))
+Revise.includet(joinpath(@__DIR__, "../../Examples/systems/DynamicalSystems.jl"))
+using .DynamicalSystems
 
 reset_timer!(Globtim._TO)
 
@@ -30,7 +30,7 @@ p_true = T[0.2, 0.4]
 ic = T[0.3, 0.6]
 num_points = 20
 model, params, states, outputs = define_lotka_volterra_2D_model()
-error_func = make_error_distance(model, outputs, p_true, num_points)
+error_func = make_error_distance(model, outputs, ic, p_true, time_interval, num_points)
 
 # 
 
@@ -71,6 +71,26 @@ df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 @info "" df_cheb
 
 Globtim._TO
+
+#=
+Example output:
+─────────────────────────────────────────────────────────────────────────────────────────
+                                                Time                    Allocations      
+                                       ───────────────────────   ────────────────────────
+           Tot / % measured:                14.7s /  99.7%           2.80GiB /  99.8%    
+
+Section                        ncalls     time    %tot     avg     alloc    %tot      avg
+─────────────────────────────────────────────────────────────────────────────────────────
+Constructor                         1    14.6s   99.8%   14.6s   2.80GiB   99.9%  2.80GiB
+  MainGenerate                      1    14.6s   99.8%   14.6s   2.80GiB   99.9%  2.80GiB
+    evaluation                      1    14.6s   99.3%   14.6s   2.75GiB   98.2%  2.75GiB
+    lambda_vandermonde              1   3.31ms    0.0%  3.31ms    757KiB    0.0%   757KiB
+    generate_grid_small_n           1   2.79ms    0.0%  2.79ms    868KiB    0.0%   868KiB
+    linear_solve_vandermonde        1    720μs    0.0%   720μs   84.7KiB    0.0%  84.7KiB
+solve_polynomial_system             1   31.2ms    0.2%  31.2ms   4.22MiB    0.1%  4.22MiB
+test_input                          1    477ns    0.0%   477ns      240B    0.0%     240B
+─────────────────────────────────────────────────────────────────────────────────────────
+=#
 
 #=
 println(df_min_cheb)

@@ -35,6 +35,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     precision::PrecisionType
     normalized::Bool
     power_of_two_denom::Bool
+    cond_vandermonde::Float64
 
     # Original constructor (backward compatibility) - scalar scale_factor
     function ApproxPoly{T}(
@@ -48,7 +49,8 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     ) where {T<:Number}
         new{T,Float64}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
-            :chebyshev, RationalPrecision, true, false
+            :chebyshev, RationalPrecision, true, false,
+            1.0
         )
     end
 
@@ -64,7 +66,8 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     ) where {T<:Number}
         new{T,Vector{Float64}}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
-            :chebyshev, RationalPrecision, true, false
+            :chebyshev, RationalPrecision, true, false,
+            1.0
         )
     end
 
@@ -80,11 +83,13 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool
+        power_of_two_denom::Bool,
+        cond_vandermonde::Float64
     ) where {T<:Number}
         new{T,Float64}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            basis, precision, normalized, power_of_two_denom,
+            cond_vandermonde
         )
     end
 
@@ -100,11 +105,13 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool
+        power_of_two_denom::Bool,
+        cond_vandermonde::Float64
     ) where {T<:Number}
         new{T,Vector{Float64}}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            basis, precision, normalized, power_of_two_denom,
+            cond_vandermonde
         )
     end
 
@@ -120,12 +127,14 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         basis::Symbol=:chebyshev,
         precision::PrecisionType=RationalPrecision,
         normalized::Bool=true,
-        power_of_two_denom::Bool=false
+        power_of_two_denom::Bool=false,
+        cond_vandermonde::Float64=1.0
     ) where {T<:Number}
         S = typeof(scale_factor)
         new{T,S}(
             sol.u, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            basis, precision, normalized, power_of_two_denom,
+            cond_vandermonde
         )
     end
     
@@ -141,11 +150,13 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool
+        power_of_two_denom::Bool,
+        cond_vandermonde::Float64
     ) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
         new{T,S}(
             coeffs, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            basis, precision, normalized, power_of_two_denom,
+            cond_vandermonde
         )
     end
 end
@@ -162,11 +173,13 @@ function ApproxPoly(
     basis::Symbol=:chebyshev,
     precision::PrecisionType=RationalPrecision,
     normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    power_of_two_denom::Bool=false,
+    cond_vandermonde::Float64=1.0
 ) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
     return ApproxPoly{T}(
         coeffs, degree, nrm, N, scale_factor, grid, z,
-        basis, precision, normalized, power_of_two_denom
+        basis, precision, normalized, power_of_two_denom,
+        cond_vandermonde
     )
 end
 

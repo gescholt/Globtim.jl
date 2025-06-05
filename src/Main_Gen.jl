@@ -66,7 +66,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     end
 
     Lambda = SupportGen(n, d)
-    if n <= 4
+    if n <= 0
         grid = generate_grid_small_n(n, actual_GN, basis=basis)
     else
         grid = generate_grid(n, actual_GN, basis=basis)
@@ -94,11 +94,12 @@ TimerOutputs.@timeit _TO function MainGenerate(
         end
     end
 
+    cond_vandermonde = cond(G_original)
     TimerOutputs.@timeit _TO "linear_solve_vandermonde" begin
         RHS = VL' * F
         linear_prob = LinearProblem(G_original, RHS)
         if verbose == 1
-            println("Condition number of G: ", cond(G_original))
+            println("Condition number of G: ", cond_vandermonde)
             sol = LinearSolve.solve(linear_prob, verbose=true)
             println("Chosen method: ", typeof(sol.alg))
         else
@@ -107,7 +108,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     end
 
     # Compute norm based on basis type
-    nrm = if basis == :chebyshev
+    TimerOutputs.@timeit _TO "norm_computation" nrm = if basis == :chebyshev
         # Type-stable norm computation
         compute_norm(scale_factor, VL, sol, F, grid, n, d)
     else  # Legendre case
@@ -119,7 +120,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     # Use the smart constructor to get correct type parameters
     return ApproxPoly(
         sol.u, d, nrm, actual_GN, scale_factor, matrix_from_grid, F,
-        basis, precision, normalized, power_of_two_denom
+        basis, precision, normalized, power_of_two_denom, cond_vandermonde
     )
 end
 
