@@ -1,3 +1,5 @@
+# Sasha: This files seems not Revise-able.
+
 """
 Applies a mask to the dataframe based on the hypercube defined in the test input TR. 
 The mask is a boolean array where each element corresponds to a row in the dataframe. 
@@ -77,6 +79,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     TR::test_input;
     tol_dist=0.025,
     verbose=true,
+    max_iters_in_optim=50
 )
     n_dims = count(col -> startswith(string(col), "x"), names(df))  # Count x-columns
 
@@ -106,9 +109,17 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
 
             # Extract starting point
             x0 = [df[i, Symbol("x$j")] for j = 1:n_dims]
-
+            
             # Optimization
-            res = Optim.optimize(f, x0, Optim.BFGS(), Optim.Options(show_trace=false))
+            res = Optim.optimize(
+                f, x0, Optim.BFGS(), 
+                Optim.Options(
+                    show_trace=false, 
+                    f_calls_limit=max_iters_in_optim,
+                ),
+                # https://discourse.julialang.org/t/how-to-properly-specify-maximum-interations-in-optimization/109144/5
+            )
+
             minimizer = Optim.minimizer(res)
             min_value = Optim.minimum(res)
             steps = res.iterations
