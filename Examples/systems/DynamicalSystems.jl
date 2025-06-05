@@ -1,4 +1,20 @@
-function define_lotka_volterra_model()
+module DynamicalSystems
+
+using ModelingToolkit
+using StaticArrays
+using OrdinaryDiffEq
+using DataStructures
+using LinearAlgebra
+
+export define_lotka_volterra_model,
+    define_lotka_volterra_3D_model,
+    define_lotka_volterra_2D_model,
+    sample_data,
+    make_error_distance,
+    plot_time_series_comparison,
+    plot_parameter_result
+
+function define_lotka_volterra_3D_model()
     @independent_variables t
     @variables x1(t) x2(t) y1(t)
     @parameters a b c
@@ -124,46 +140,51 @@ function sample_data(model::ModelingToolkit.ODESystem,
     return data_sample
 end
 
+L1_norm(Y_true, Y_test) = 100 * norm(Y_true - Y_test, 1)
+L2_norm(Y_true, Y_test) = norm(Y_true - Y_test, 2)
+log_L2_norm(Y_true, Y_test) = log2(norm(Y_true - Y_test, 2) + eps(eltype(Y_true)))
+
 """
     make_error_distance(model::ModelingToolkit.ODESystem, 
                        outputs::Vector{ModelingToolkit.Equation},
-                       p_true::SVector{N,Float64}) where {N<:Integer}
+                       p_true::SVector{N,Float64},
+                       distance_function) where {N<:Integer}
 
-Construct an L¹-norm error function comparing model predictions against reference data.
+Construct an error function comparing model predictions against reference data.
 
 Arguments:
 - `model`: ModelingToolkit ODESystem
 - `outputs`: Vector of measurement equations
+- `initial_conditions`: Vector of initial conditions for the ODE system
 - `p_true`: SVector of true parameter values
+- `numpoints`: Number of time points to sample (default: 5)
+- `distance_function`: Function to compute distance (default: L2_norm)
 
 Returns:
-    Function that computes L¹-norm error between predictions and reference data
+    Function that computes error between predictions and reference data
 """
 function make_error_distance(model::ModelingToolkit.ODESystem,
     outputs::Vector{ModelingToolkit.Equation},
-    p_true::Vector{Float64},
-    numpoints::Int=5)
-    N = length(p_true)
-    return make_error_distance(model, outputs, SVector{N,Float64}(p_true), numpoints)
-end
-
-
-function make_error_distance(model::ModelingToolkit.ODESystem,
-    outputs::Vector{ModelingToolkit.Equation},
-    p_true::SVector{N,T},
-    numpoints::Int=5
-) where {N,T}
-
-    @assert N == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
+    initial_conditions::Vector{Float64},
+    p_true::Vector{T},
+    time_interval,
+    numpoints::Int=5,
+    distance_function=L2_norm
+) where {T}
+    @assert length(p_true) == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
+    @assert length(initial_conditions) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
+    @assert length(outputs) > 0 "At least one output variable must be specified"
+    @assert numpoints > 0 "Number of points must be greater than zero"
+    @assert time_interval[2] > time_interval[1] "End time must be greater than start time"
 
     # Generate reference solution once during function creation
-    data_sample_true = sample_data(model, outputs, [0.0, 1.0], p_true, ic, numpoints)
+    data_sample_true = sample_data(model, outputs, time_interval, p_true, initial_conditions, numpoints)
     Y_true = data_sample_true[first(keys(data_sample_true))]
 
     function Error_distance(p_test::Union{SVector{N,T}, Vector{T}};
         measured_data=outputs,
-        time_interval=[0.0, 1.0],
-        datasize=numpoints)
+        time_interval=time_interval,
+        datasize=numpoints) where {N}
 
         try
             if datasize != length(Y_true)
@@ -171,7 +192,7 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
                 return NaN
             end
 
-            data_sample_test = sample_data(model, measured_data, time_interval, p_test, ic, datasize)
+            data_sample_test = sample_data(model, measured_data, time_interval, p_test, initial_conditions, datasize)
 
             if isempty(data_sample_test) || !haskey(data_sample_test, first(keys(data_sample_test)))
                 println("case 2")
@@ -185,7 +206,8 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
                 return NaN
             end
 
-            return 100 * norm(Y_true - Y_test, 1)
+            return distance_function(Y_true, Y_test)
+            # return 100 * norm(Y_true - Y_test, 1)
             # return log(norm(Y_true - Y_test, 2) + eps(T))
         catch e
             # So that Ctrl+C works
@@ -193,6 +215,7 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
                 rethrow(e)
             end
             println("case 4")
+            println("Error in make_error_distance: ", e)
             return NaN
         end
     end
@@ -326,3 +349,5 @@ function plot_parameter_result(model::ModelingToolkit.ODESystem,
     display(fig)
     return fig
 end
+
+end # module DynamicalSystems
