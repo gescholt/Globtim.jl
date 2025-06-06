@@ -174,7 +174,8 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
     p_true::Vector{T},
     time_interval,
     numpoints::Int=5,
-    distance_function=L2_norm
+    distance_function=L2_norm,
+    add_noise_in_time_series=nothing
 ) where {T}
     @assert length(p_true) == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
     @assert length(initial_conditions) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
@@ -185,6 +186,10 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
     # Generate reference solution once during function creation
     data_sample_true = sample_data(model, outputs, time_interval, p_true, initial_conditions, numpoints)
     Y_true = data_sample_true[first(keys(data_sample_true))]
+
+    if add_noise_in_time_series !== nothing
+        Y_true = add_noise_in_time_series(Y_true)
+    end
 
     function Error_distance(p_test::Union{SVector{N,T}, Vector{T}};
         measured_data=outputs,

@@ -1,3 +1,5 @@
+# NOISE ADDED TO THE ERROR FUNCTION
+
 using Pkg
 # Pkg.activate(joinpath(@__DIR__, "./../../globtim"))
 # Pkg.status()
