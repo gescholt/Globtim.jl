@@ -58,7 +58,7 @@ df_cheb, df_min_cheb = analyze_critical_points(
     error_func, df_cheb, TR, tol_dist=0.05);
 
 println("########################################")
-println("Noise added to the time series: (stddev = $stddev)")
+println("No noise")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
 println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
