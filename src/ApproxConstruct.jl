@@ -21,24 +21,30 @@ support = SupportGen(2, 3)
 # Returns a NamedTuple with monomial exponents for polynomials in 2 variables up to degree 3
 """
 
-function SupportGen(n::Int, d::Int)::NamedTuple
+function SupportGen(n::Int, d)::NamedTuple
     n ≥ 1 || throw(ArgumentError("Number of variables must be positive"))
-    d ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
+    minimum(d) ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
 
-    if d == 0
+    if all(==(0), d)
         return (data = zeros(Int, 1, n), size = (1, n))
     end
 
-    estimated_size = binomial(n + d, d)
+    estimated_size = binomial(n + maximum(d), maximum(d))
     lambda_vectors = Vector{Vector{Int}}(undef, estimated_size)
     count = 0
 
+    # if isinteger(d)
+    #     d = fill(d, n)  # Ensure d is a vector of length n
+    # end
+    # ranges = [0:di for di in d]
     ranges = fill(0:d, n)
     for idx in Iterators.product(ranges...)
         sum(idx) ≤ d || continue
         count += 1
         lambda_vectors[count] = collect(Int, idx)
     end
+
+    # @info "" lambda_vectors
 
     resize!(lambda_vectors, count)
 

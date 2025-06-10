@@ -42,7 +42,7 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 TimerOutputs.@timeit _TO function MainGenerate(
     f,
     n::Int,
-    d::Int,
+    d,
     delta::Float64,
     alpha::Float64,
     scale_factor::Union{Float64,Vector{Float64}},
@@ -55,7 +55,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     normalized::Bool=true,
     power_of_two_denom::Bool=false
 )::ApproxPoly
-    m = binomial(n + d, d)  # Dimension of vector space
+    m = binomial(n + maximum(d), maximum(d))  # Dimension of vector space
     K = calculate_samples(m, delta, alpha)
 
     # Use provided GN if given, otherwise compute it
@@ -127,7 +127,7 @@ end
 # Update the Constructor function to pass through the vector scale_factor
 TimerOutputs.@timeit _TO function Constructor(
     T::test_input,
-    degree::Int;
+    degree;
     verbose=0,
     basis::Symbol=:chebyshev,
     precision::PrecisionType=RationalPrecision,

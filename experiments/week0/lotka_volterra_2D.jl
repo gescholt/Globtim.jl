@@ -44,7 +44,7 @@ error_value = error_func(p_test)
 using DynamicPolynomials
 using HomotopyContinuation, ProgressLogging
 n = 2
-d = 9
+d = 2 # [2,2]
 GN = 40
 sample_range = 0.25
 @polyvar(x[1:n]); # Define polynomial ring 
