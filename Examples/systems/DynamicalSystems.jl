@@ -9,6 +9,7 @@ using LinearAlgebra
 export define_lotka_volterra_model,
     define_lotka_volterra_3D_model,
     define_lotka_volterra_2D_model,
+    define_fitzhugh_nagumo_3D_model,
     sample_data,
     make_error_distance,
     plot_time_series_comparison,
@@ -16,6 +17,21 @@ export define_lotka_volterra_model,
     log_L2_norm,
     L1_norm,
     L2_norm
+
+function define_fitzhugh_nagumo_3D_model()
+    @independent_variables t
+    @parameters g a b
+    @variables V(t) R(t) y1(t)
+    D = Differential(t)
+    states = [V, R]
+    params = [g, a, b]
+    outputs = [y1 ~ V]
+    @named model = ODESystem([
+        D(V) ~ g * (V - V^3 / 3 + R),
+        D(R) ~ 1 / g * (V - a + b * R),
+    ], t, states, params)
+    return model, params, states, outputs
+end
 
 function define_lotka_volterra_3D_model()
     @independent_variables t
