@@ -9,11 +9,14 @@ using LinearAlgebra
 export define_lotka_volterra_model,
     define_lotka_volterra_3D_model,
     define_lotka_volterra_2D_model,
+    define_lotka_volterra_2D_model_v2,
     define_fitzhugh_nagumo_3D_model,
     sample_data,
     make_error_distance,
     plot_time_series_comparison,
     plot_parameter_result,
+    plot_model_outputs,
+    plot_error_function_2D,
     log_L2_norm,
     L1_norm,
     L2_norm
@@ -59,6 +62,22 @@ function define_lotka_volterra_2D_model()
     @named model = ODESystem(
         [D(x1) ~ a * x1 + b * x1 * x2,
             D(x2) ~ b * x1 * x2 + x2],
+        t, states, params)
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
+# c := 0.1
+function define_lotka_volterra_2D_model_v2()
+    @independent_variables t
+    @variables x1(t) x2(t) y1(t)
+    @parameters a b
+    D = Differential(t)
+    params = [a, b]
+    states = [x1, x2]
+    @named model = ODESystem(
+        [D(x1) ~ a * x1 + b * x1 * x2,
+            D(x2) ~ b * x1 * x2 + 0.1*x2],
         t, states, params)
     outputs = [y1 ~ x1]
     return model, params, states, outputs
@@ -252,6 +271,104 @@ end
 using CairoMakie
 using StaticArrays
 using ModelingToolkit
+
+function plot_model_outputs(model::ModelingToolkit.ODESystem,
+    outputs::Vector{ModelingToolkit.Equation},
+    ic::Vector{T},
+    parameter_values::Vector{A},
+    time_interval,
+    num_points;
+    ground_truth=nothing,
+    yaxis=identity,
+    plot_title="Model Outputs",
+    figure_size=(800, 500)) where {T<:Number,A}
+
+    @assert length(parameter_values) > 0 "At least one parameter set must be provided"
+    @assert length(ic) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
+
+    # Create figure and axis
+    fig = Figure(size=figure_size)
+    ax = Axis(fig[1, 1], title=plot_title, xlabel="Time", ylabel="Value", yscale=yaxis)
+
+    # Generate data for each parameter set
+    for (idx, p) in enumerate(parameter_values)
+        data_sample = sample_data(model, outputs, time_interval, p, ic, num_points)
+
+        # Extract time points
+        t = data_sample["t"]
+
+        # Plot each output variable
+        for (key, values) in data_sample
+
+            if length(values) != num_points
+                println("Skipping parameter set $(idx) - $(key) due to mismatched data length")
+                continue
+            end
+
+            if idx == ground_truth
+            # Highlight ground truth in a different color
+                color = :green
+                alpha = 1.0
+                linewidth = 3
+                label = "Set $(idx) - $(key) - $(p) (Ground Truth)"
+                style = :solid
+            else
+                color = :blue
+                alpha = 0.1
+                linewidth = 1
+                label = nothing # "Set $(idx) - $(key) - $(p)"
+                style = :solid
+            end
+
+            if key != "t"  # Skip time array
+                lines!(ax, t, values,
+                    label=label,
+                    linewidth=linewidth,
+                    color=color,
+                    linestyle=style,
+                    alpha=alpha)
+            end
+        end
+    end
+
+    # Add legend
+    axislegend(ax, position=:lt)  # top-left position
+
+    return fig
+end
+
+function plot_error_function_2D(
+    error_func,
+    model::ModelingToolkit.ODESystem,
+    outputs::Vector{ModelingToolkit.Equation},
+    ic::Vector{T},
+    p_true,
+    plot_range,
+    time_interval,
+    num_points;
+    ground_truth=nothing,
+    plot_title="Error Function",
+    figure_size=(800, 500)) where {T<:Number}
+
+    @assert length(ic) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
+
+    # Create figure and axis
+    fig = Figure(size=figure_size)
+    ax = Axis(fig[1, 1], title=plot_title, xlabel="Parameter 1", ylabel="Parameter 2")
+
+    errors = [
+        [error_func([p_true[1] + e1, p_true[2] + e2]) for e1 in plot_range]
+        for e2 in plot_range
+    ]
+    errors = hcat(errors...)  # Convert to matrix form
+
+    # Plot the error surface
+    hm = heatmap!(ax, plot_range, plot_range, errors,
+        colormap=:viridis)
+    cbar = Colorbar(fig[1,2], hm)
+
+    return fig
+end
 
 """
     plot_time_series_comparison(model::ModelingToolkit.ODESystem,
