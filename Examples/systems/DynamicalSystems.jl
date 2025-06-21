@@ -10,6 +10,7 @@ export define_lotka_volterra_model,
     define_lotka_volterra_3D_model,
     define_lotka_volterra_2D_model,
     define_lotka_volterra_2D_model_v2,
+    define_lotka_volterra_3D_model_v2,
     define_fitzhugh_nagumo_3D_model,
     sample_data,
     make_error_distance,
@@ -47,6 +48,21 @@ function define_lotka_volterra_3D_model()
     @named model = ODESystem(
         [D(x1) ~ a * x1 + b * x1 * x2,
             D(x2) ~ b * x1 * x2 + c * x2],
+        t, states, params)
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
+function define_lotka_volterra_3D_model_v2()
+    @independent_variables t
+    @variables x1(t) x2(t) y1(t)
+    @parameters a b c
+    D = Differential(t)
+    params = [a, b, c]
+    states = [x1, x2]
+    @named model = ODESystem(
+        [D(x1) ~ a * x1 + -b * x1 * x2,
+            D(x2) ~ -b*x2 + c * x1 * x2],
         t, states, params)
     outputs = [y1 ~ x1]
     return model, params, states, outputs
@@ -295,7 +311,9 @@ function plot_model_outputs(model::ModelingToolkit.ODESystem,
 
     # Generate data for each parameter set
     for (idx, p) in enumerate(parameter_values)
-        data_sample = sample_data(model, outputs, time_interval, p, ic, num_points)
+        problem = ODEProblem(ModelingToolkit.complete(model), ic, time_interval,
+            Dict(ModelingToolkit.parameters(model) .=> p))
+        data_sample = sample_data(problem, model, outputs, time_interval, p, ic, num_points)
 
         # Extract time points
         t = data_sample["t"]
@@ -400,10 +418,11 @@ Returns:
 """
 function plot_time_series_comparison(model::ModelingToolkit.ODESystem,
     outputs::Vector{ModelingToolkit.Equation},
+    ic,
+    time_interval,
     p_true::Union{Vector{T},SVector{N,T}},
     p_test::Union{Vector{T},SVector{N,T}},
     numpoints::Int=100;
-    time_interval::Vector{T}=[0.0, 1.0],
     plot_title::String="Time Series Comparison",
     figure_size=(800, 500)) where {N,T<:Number}
 
@@ -416,8 +435,13 @@ function plot_time_series_comparison(model::ModelingToolkit.ODESystem,
     end
 
     # Generate data for both parameter sets
-    data_true = sample_data(model, outputs, time_interval, p_true, ic, numpoints)
-    data_test = sample_data(model, outputs, time_interval, p_test, ic, numpoints)
+    problem = ODEProblem(ModelingToolkit.complete(model), ic, time_interval,
+        Dict(ModelingToolkit.parameters(model) .=> p_true))
+    data_true = sample_data(problem, model, outputs, time_interval, p_true, ic, numpoints)
+    
+    problem = ODEProblem(ModelingToolkit.complete(model), ic, time_interval,
+        Dict(ModelingToolkit.parameters(model) .=> p_test))
+    data_test = sample_data(problem, model, outputs, time_interval, p_test, ic, numpoints)
 
     # Extract time points
     t = data_true["t"]
@@ -488,10 +512,12 @@ Takes the same arguments as plot_time_series_comparison plus additional plot opt
 """
 function plot_parameter_result(model::ModelingToolkit.ODESystem,
     outputs::Vector{ModelingToolkit.Equation},
+    ic,
+    time_interval,
     p_true::Union{Vector{T},SVector{N,T}},
     p_test::Union{Vector{T},SVector{N,T}};
     kwargs...) where {N,T<:Number}
-    fig = plot_time_series_comparison(model, outputs, p_true, p_test; kwargs...)
+    fig = plot_time_series_comparison(model, outputs, ic, time_interval, p_true, p_test; kwargs...)
     display(fig)
     return fig
 end
