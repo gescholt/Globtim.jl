@@ -55,7 +55,17 @@ TimerOutputs.@timeit _TO function MainGenerate(
     normalized::Bool=true,
     power_of_two_denom::Bool=false
 )::ApproxPoly
-    m = binomial(n + maximum(d), maximum(d))  # Dimension of vector space
+    D = if d[1] == :one_d_for_all
+        maximum(d[2])  
+    elseif d[1] == :one_d_per_dim
+        maximum(d[2])  
+    elseif d[1] == :fully_custom
+        0
+    else
+        throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."))
+    end
+
+    m = binomial(n + D, D)  # Dimension of vector space
     K = calculate_samples(m, delta, alpha)
 
     # Use provided GN if given, otherwise compute it

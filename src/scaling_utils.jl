@@ -43,14 +43,19 @@ Type-stable norm computation that dispatches based on scale_factor type.
 """
 function compute_norm(scale_factor::Float64, VL, sol, F, grid, n, d)
     # Scalar scale_factor version
-    residual = x -> (VL*sol.u-F)[findfirst(y -> y == x, reshape(grid, :))]
+    evals = (VL*sol.u-F)
+    # @info "" grid
+    # @info "" evals
+    
+    # residual = x -> evals[findfirst(y -> y == x, reshape(grid, :))]
+    residual = idx -> evals[idx]
     discrete_l2_norm_riemann(residual, grid)
 end
 
 function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, grid, n, d)
     # Vector scale_factor version
-    function residual(x)
-        idx = findfirst(y -> y == x, reshape(grid, :))
+    function residual(idx)
+        # idx = findfirst(y -> y == x, reshape(grid, :))
         return (VL*sol.u-F)[idx]
     end
     discrete_l2_norm_riemann(residual, grid)

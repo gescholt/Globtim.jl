@@ -99,7 +99,7 @@ Converts coefficients to the specified precision for arithmetic operations.
 function construct_orthopoly_polynomial(
     x::Vector{<:Variable},
     coeffs::Vector{<:Number},
-    degree::Int,
+    degree,
     basis::Symbol=:chebyshev,
     precision::PrecisionType=RationalPrecision;
     normalized::Bool=true,
