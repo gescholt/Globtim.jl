@@ -320,7 +320,7 @@ Construct a multivariate Chebyshev polynomial approximation.
 function construct_chebyshev_approx(
     x_vars::Vector{<:Variable},
     coeffs::Vector{<:Number},
-    degree::Int;
+    degree;
     precision::PrecisionType=RationalPrecision,
     normalized::Bool=true,
     power_of_two_denom::Bool=false
@@ -340,6 +340,7 @@ function construct_chebyshev_approx(
 
     # Cache Chebyshev polynomial coefficients up to max degree
     max_degree = maximum(lambda)
+    @info "" lambda max_degree
     chebyshev_coeffs = get_chebyshev_coeffs(
         max_degree;
         precision=precision,

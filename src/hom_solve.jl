@@ -97,7 +97,7 @@ and ensures the result is compatible with homotopy continuation.
 function main_nd(
     x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
     n::Int,
-    d::Int,
+    d,
     coeffs::Vector;
     basis=:chebyshev,
     precision::PrecisionType=RationalPrecision,

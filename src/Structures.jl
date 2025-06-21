@@ -7,7 +7,7 @@ A structure to represent the polynomial approximation and related data.
 
 # Fields
 - `coeffs::Vector{T}`: The coefficients of the polynomial approximation. Could be floats or Big rationals.
-- `degree::Int`: The degree of the polynomial approximation.
+- `degree`: The degree of the polynomial approximation.
 - `nrm::Float64`: The norm of the polynomial approximation.
 - `N::Int`: The number of grid points used in the approximation.
 - `scale_factor::S`: Scaling factor(s) applied to the domain (type-stable).
@@ -25,7 +25,7 @@ The type parameter `S` makes the scale_factor field type-stable, eliminating run
 """
 struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     coeffs::Vector{T}
-    degree::Int
+    degree
     nrm::Float64
     N::Int
     scale_factor::S
@@ -40,7 +40,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Original constructor (backward compatibility) - scalar scale_factor
     function ApproxPoly{T}(
         coeffs::Vector{T},
-        degree::Int,
+        degree,
         nrm::Float64,
         N::Int,
         scale_factor::Float64,
@@ -57,7 +57,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Vector scale_factor constructor (backward compatibility)
     function ApproxPoly{T}(
         coeffs::Vector{T},
-        degree::Int,
+        degree,
         nrm::Float64,
         N::Int,
         scale_factor::Vector{Float64},
@@ -74,7 +74,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Extended constructor with basis parameters (scalar scale_factor)
     function ApproxPoly{T}(
         coeffs::Vector{T},
-        degree::Int,
+        degree,
         nrm::Float64,
         N::Int,
         scale_factor::Float64,
@@ -96,7 +96,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Extended constructor with basis parameters (vector scale_factor)
     function ApproxPoly{T}(
         coeffs::Vector{T},
-        degree::Int,
+        degree,
         nrm::Float64,
         N::Int,
         scale_factor::Vector{Float64},
@@ -118,7 +118,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Constructor from solver result
     function ApproxPoly{T}(
         sol,
-        degree::Int,
+        degree,
         nrm::Float64,
         N::Int,
         scale_factor::Union{Float64,Vector{Float64}},
@@ -141,7 +141,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # General constructor with both type parameters
     function ApproxPoly{T,S}(
         coeffs::Vector{T},
-        degree::Int,
+        degree,
         nrm::Float64,
         N::Int,
         scale_factor::S,
@@ -164,7 +164,7 @@ end
 # Smart constructor that infers types automatically
 function ApproxPoly(
     coeffs::Vector{T},
-    degree::Int,
+    degree,
     nrm::Float64,
     N::Int,
     scale_factor::S,

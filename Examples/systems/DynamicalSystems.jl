@@ -19,7 +19,8 @@ export define_lotka_volterra_model,
     plot_error_function_2D,
     log_L2_norm,
     L1_norm,
-    L2_norm
+    L2_norm,
+    EllipseSupport
 
 function define_fitzhugh_nagumo_3D_model()
     @independent_variables t
@@ -127,10 +128,11 @@ Optional kwargs:
 Returns:
     OrderedDict containing time series data for each measured variable
 """
-function sample_data(model::ModelingToolkit.ODESystem,
+function sample_data(problem,
+    model,
     measured_data::Vector{ModelingToolkit.Equation},
     time_interval::Vector{T},
-    p_true::SVector{N,T}, 
+    p_true::AbstractVector{T}, 
     u0::Vector{T},
     num_points::Int;
     uneven_sampling=false,
@@ -140,10 +142,9 @@ function sample_data(model::ModelingToolkit.ODESystem,
     mean_noise=zero(T),
     stddev_noise=one(T),
     abstol=convert(T, 1e-14),
-    reltol=convert(T, 1e-14)) where {N,T<:Number}
+    reltol=convert(T, 1e-14)) where {T<:Number}
 
     @assert length(time_interval) == 2 "Time interval must be [start_time, end_time]"
-    @assert N == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
 
     if uneven_sampling
         if length(uneven_sampling_times) == 0
@@ -157,9 +158,7 @@ function sample_data(model::ModelingToolkit.ODESystem,
         sampling_times = range(time_interval[1], time_interval[2], length=num_points)
     end
 
-    problem = ODEProblem(ModelingToolkit.complete(model), u0, time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_true))
-
+    problem.p.tunable .= p_true
     solution_true = ModelingToolkit.solve(problem, solver,
         saveat=sampling_times;
         abstol, reltol)
@@ -219,7 +218,10 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
     @assert time_interval[2] > time_interval[1] "End time must be greater than start time"
 
     # Generate reference solution once during function creation
-    data_sample_true = sample_data(model, outputs, time_interval, p_true, initial_conditions, numpoints)
+    problem = ODEProblem(ModelingToolkit.complete(model), initial_conditions, time_interval,
+        Dict(ModelingToolkit.parameters(model) .=> p_true))
+    
+    data_sample_true = sample_data(problem, model, outputs, time_interval, p_true, initial_conditions, numpoints)
     Y_true = data_sample_true[first(keys(data_sample_true))]
 
     if add_noise_in_time_series !== nothing
@@ -231,13 +233,14 @@ function make_error_distance(model::ModelingToolkit.ODESystem,
         time_interval=time_interval,
         datasize=numpoints) where {N}
 
+        # problem = remake(problem, p = Dict(ModelingToolkit.parameters(model) .=> p_test))
         try
             if datasize != length(Y_true)
                 println("case 1")
                 return NaN
             end
 
-            data_sample_test = sample_data(model, measured_data, time_interval, p_test, initial_conditions, datasize)
+            data_sample_test = sample_data(problem, model, measured_data, time_interval, p_test, initial_conditions, datasize)
 
             if isempty(data_sample_test) || !haskey(data_sample_test, first(keys(data_sample_test)))
                 println("case 2")

@@ -1,3 +1,61 @@
+
+function EllipseSupport(center::Vector{T}, coeffs::Vector{T}, radius) where {T<:Number}
+    @assert length(center) == length(coeffs) "Center and coefficients must have the same length"
+    
+    n = length(center)
+    @assert n > 0 "n must be a positive number"
+
+    lambda_vectors = Vector{Vector{T}}()
+    
+    exps = get_lambda_exponent_vectors((:one_d_for_all, radius), length(center))
+    for exp in exps
+        if sum(exp .^ 2 .* (1 ./ coeffs .^2)) <= radius
+            push!(lambda_vectors, exp)
+        end
+    end
+
+    lambda_vectors
+end
+
+function get_lambda_exponent_vectors(d, n)
+    if d[1] == :one_d_for_all
+        d = d[2]
+
+        estimated_size = binomial(n + d, d)
+        lambda_vectors = Vector{Vector{Int}}(undef, estimated_size)
+        count = 0
+
+        ranges = fill(0:d, n)
+        for idx in Iterators.product(ranges...)
+            if sum(idx) <= d
+                count += 1
+                lambda_vectors[count] = collect(Int, idx)
+            end
+        end
+
+        resize!(lambda_vectors, count)
+        return lambda_vectors
+    elseif d[1] == :one_d_per_dim
+        d = d[2]
+
+        ranges = Iterators.product((0:di for di in d)...)
+        lambda_vectors = Vector{Vector{Int}}(undef, length(ranges))
+        count = 0
+        for idx in ranges
+            count += 1
+            lambda_vectors[count] = collect(Int, idx)
+        end
+        resize!(lambda_vectors, count)
+        return lambda_vectors
+    elseif d[1] == :fully_custom
+        @assert all(e -> length(e) == n, d[2]) "All exponent vectors must have length n"
+        return d[2]  # Assuming d[2] is already a vector of exponent vectors
+    else
+        throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim."))
+    end
+
+end
+
 """
     SupportGen(n::Int, d::Int)::NamedTuple
 
@@ -20,35 +78,28 @@ Compute the support of a dense polynomial of total degree at most d in n variabl
 support = SupportGen(2, 3)
 # Returns a NamedTuple with monomial exponents for polynomials in 2 variables up to degree 3
 """
-
 function SupportGen(n::Int, d)::NamedTuple
     n ≥ 1 || throw(ArgumentError("Number of variables must be positive"))
-    minimum(d) ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
+    # minimum(d) ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
 
-    if all(==(0), d)
+    D = if d[1] == :one_d_for_all
+        maximum(d[2])  
+    elseif d[1] == :one_d_per_dim
+        maximum(d[2])  
+    elseif d[1] == :fully_custom
+        Inf
+    else
+        throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."))
+    end
+
+    if D == 0
         return (data = zeros(Int, 1, n), size = (1, n))
     end
 
-    estimated_size = binomial(n + maximum(d), maximum(d))
-    lambda_vectors = Vector{Vector{Int}}(undef, estimated_size)
-    count = 0
+    lambda_vectors = get_lambda_exponent_vectors(d, n)
+    @info "" lambda_vectors
 
-    # if isinteger(d)
-    #     d = fill(d, n)  # Ensure d is a vector of length n
-    # end
-    # ranges = [0:di for di in d]
-    ranges = fill(0:d, n)
-    for idx in Iterators.product(ranges...)
-        sum(idx) ≤ d || continue
-        count += 1
-        lambda_vectors[count] = collect(Int, idx)
-    end
-
-    # @info "" lambda_vectors
-
-    resize!(lambda_vectors, count)
-
-    lambda_matrix = count > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
+    lambda_matrix = length(lambda_vectors) > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
 
     return (data = lambda_matrix, size = size(lambda_matrix))
 end

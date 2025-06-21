@@ -79,7 +79,8 @@ export test_input,
     simple_lambda_vandermonde,
     create_level_set_animation,
     create_level_set_visualization,
-    process_crit_pts # Function previously giving trouble in test
+    process_crit_pts, # Function previously giving trouble in test,
+    EllipseSupport
 
 # Precision type export
 export PrecisionType, Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision

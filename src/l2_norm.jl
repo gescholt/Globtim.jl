@@ -68,7 +68,7 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N
     volumes = reshape(volumes, fill(GN + 1, N)...)
 
     # Compute Riemann sum
-    sum_squares = sum(abs2(f(x)) * v for (x, v) in zip(grid, volumes))
+    sum_squares = sum(abs2(f(i)) * v for (i, v) in zip(eachindex(grid), volumes))
 
     return sqrt(sum_squares)
 end
