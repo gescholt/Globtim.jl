@@ -33,8 +33,9 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     basis=:chebyshev,
     precision::PrecisionType=RationalPrecision,
     normalized::Bool=true,
-    power_of_two_denom::Bool=false
-)::Vector{Vector{Float64}}
+    power_of_two_denom::Bool=false,
+    return_system=false
+)
     # Use the updated main_nd function with all parameters
     pol = main_nd(
         x, n, d, coeffs;
@@ -49,7 +50,12 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     sys = System(grad)
     solutions = solve(sys, start_system=:total_degree)
     rl_sol = real_solutions(solutions; only_real=true, multiple_results=false)
-    return rl_sol
+    
+    if return_system
+        return rl_sol, (pol, sys, length(solutions))
+    else
+        return rl_sol
+    end
 end
 
 """
