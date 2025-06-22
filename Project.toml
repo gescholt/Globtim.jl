@@ -33,7 +33,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 CSV = "0.10"
-CairoMakie = "0.12"
+CairoMakie = "0.12, 0.15"
 Colors = "0.13"
 DataFrames = "1.7"
 DataStructures = "0.18"
