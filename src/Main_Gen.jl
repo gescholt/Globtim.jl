@@ -152,7 +152,7 @@ TimerOutputs.@timeit _TO function Constructor(
         p = MainGenerate(
             T.objective,
             T.dim,
-            degree,
+            (:one_d_for_all, degree),
             T.prec[2],
             T.prec[1],
             T.sample_range,
@@ -174,7 +174,7 @@ TimerOutputs.@timeit _TO function Constructor(
         p = MainGenerate(
             T.objective,
             T.dim,
-            degree,
+            (:one_d_for_all, degree),
             T.prec[2],
             T.prec[1],
             T.sample_range,

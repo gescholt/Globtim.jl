@@ -106,8 +106,15 @@ function construct_orthopoly_polynomial(
     power_of_two_denom::Bool=false,
     verbose::Bool=false
 )
+    # Handle backward compatibility: convert integer degree to tuple format
+    degree_tuple = if isa(degree, Int)
+        (:one_d_for_all, degree)
+    else
+        degree
+    end
+    
     n = length(x)
-    lambda = SupportGen(n, degree)
+    lambda = SupportGen(n, degree_tuple)
     m = lambda.size[1]
 
     if verbose

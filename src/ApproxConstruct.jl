@@ -75,7 +75,7 @@ Compute the support of a dense polynomial of total degree at most d in n variabl
 
 # Example
 ```julia
-support = SupportGen(2, 3)
+support = SupportGen(2, (:one_d_for_all, 3))
 # Returns a NamedTuple with monomial exponents for polynomials in 2 variables up to degree 3
 """
 function SupportGen(n::Int, d)::NamedTuple

@@ -261,15 +261,22 @@ Construct a multivariate Legendre polynomial approximation.
 function construct_legendre_approx(
     x_vars::Vector{<:Variable},
     coeffs::Vector{<:Number},
-    degree::Int;
+    degree;
     precision::PrecisionType=RationalPrecision,
     normalized::Bool=true,
     power_of_two_denom::Bool=false
 )
     n = length(x_vars)  # number of variables
 
+    # Handle backward compatibility: convert integer degree to tuple format
+    degree_tuple = if isa(degree, Int)
+        (:one_d_for_all, degree)
+    else
+        degree
+    end
+
     # Generate multi-index set for given degree
-    lambda = SupportGen(n, degree).data
+    lambda = SupportGen(n, degree_tuple).data
     m = size(lambda, 1)
 
     # Check coefficients length matches space dimension
