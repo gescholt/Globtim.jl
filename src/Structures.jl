@@ -25,6 +25,7 @@ The type parameter `S` makes the scale_factor field type-stable, eliminating run
 """
 struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     coeffs::Vector{T}
+    support
     degree
     nrm::Float64
     N::Int
@@ -48,7 +49,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         z::Vector{Float64}
     ) where {T<:Number}
         new{T,Float64}(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
+            coeffs, nothing, degree, nrm, N, scale_factor, grid, z,
             :chebyshev, RationalPrecision, true, false,
             1.0
         )
@@ -65,7 +66,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         z::Vector{Float64}
     ) where {T<:Number}
         new{T,Vector{Float64}}(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
+            coeffs, nothing, degree, nrm, N, scale_factor, grid, z,
             :chebyshev, RationalPrecision, true, false,
             1.0
         )
@@ -74,6 +75,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Extended constructor with basis parameters (scalar scale_factor)
     function ApproxPoly{T}(
         coeffs::Vector{T},
+        support,
         degree,
         nrm::Float64,
         N::Int,
@@ -87,7 +89,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         cond_vandermonde::Float64
     ) where {T<:Number}
         new{T,Float64}(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
+            coeffs, support, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom,
             cond_vandermonde
         )
@@ -96,6 +98,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Extended constructor with basis parameters (vector scale_factor)
     function ApproxPoly{T}(
         coeffs::Vector{T},
+        support,
         degree,
         nrm::Float64,
         N::Int,
@@ -109,7 +112,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         cond_vandermonde::Float64
     ) where {T<:Number}
         new{T,Vector{Float64}}(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
+            coeffs, support, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom,
             cond_vandermonde
         )
@@ -118,6 +121,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Constructor from solver result
     function ApproxPoly{T}(
         sol,
+        support,
         degree,
         nrm::Float64,
         N::Int,
@@ -132,7 +136,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     ) where {T<:Number}
         S = typeof(scale_factor)
         new{T,S}(
-            sol.u, degree, nrm, N, scale_factor, grid, z,
+            sol.u, support, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom,
             cond_vandermonde
         )
@@ -141,6 +145,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
     # General constructor with both type parameters
     function ApproxPoly{T,S}(
         coeffs::Vector{T},
+        support,
         degree,
         nrm::Float64,
         N::Int,
@@ -154,7 +159,7 @@ struct ApproxPoly{T<:Number, S<:Union{Float64,Vector{Float64}}}
         cond_vandermonde::Float64
     ) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
         new{T,S}(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
+            coeffs, support, degree, nrm, N, scale_factor, grid, z,
             basis, precision, normalized, power_of_two_denom,
             cond_vandermonde
         )
@@ -164,6 +169,7 @@ end
 # Smart constructor that infers types automatically
 function ApproxPoly(
     coeffs::Vector{T},
+    support,
     degree,
     nrm::Float64,
     N::Int,
@@ -177,7 +183,7 @@ function ApproxPoly(
     cond_vandermonde::Float64=1.0
 ) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
     return ApproxPoly{T}(
-        coeffs, degree, nrm, N, scale_factor, grid, z,
+        coeffs, support, degree, nrm, N, scale_factor, grid, z,
         basis, precision, normalized, power_of_two_denom,
         cond_vandermonde
     )

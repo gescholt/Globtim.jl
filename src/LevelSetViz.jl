@@ -243,7 +243,6 @@ function plot_polyapprox_levelset(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
-    df_min::DataFrame;
     figure_size::Tuple{Int,Int} = (1000, 600),
     z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
     chebyshev_levels::Bool = false,
@@ -260,7 +259,6 @@ function plot_polyapprox_levelset(
         if isnothing(z_limits)
             z_values = Float64[]
             append!(z_values, df.z)
-            append!(z_values, df_min.value)
             z_limits = (minimum(z_values), maximum(z_values))
         end
 
@@ -341,36 +339,17 @@ function plot_polyapprox_levelset(
             push!(legend_entries, "All points")
         end
 
-        # Uncaptured points
-        if !isempty(df_min)
-            uncaptured_idx = .!df_min.captured
-            captured_idx = df_min.captured
-
-            if any(uncaptured_idx)
-                scatter!(
-                    ax,
-                    df_min.x1[uncaptured_idx],
-                    df_min.x2[uncaptured_idx],
-                    markersize = 15,
-                    marker = :diamond,
-                    color = :red,
-                    label = "Uncaptured",
-                )
-                push!(legend_entries, "Uncaptured")
-            end
-
-            if any(captured_idx)
-                scatter!(
-                    ax,
-                    df_min.x1[captured_idx],
-                    df_min.x2[captured_idx],
-                    markersize = 15,
-                    marker = :diamond,
-                    color = :blue,
-                    label = "Captured",
-                )
-                push!(legend_entries, "Captured")
-            end
+        if !isempty(df)
+            # Plot all points with z-values
+            scatter!(
+                ax,
+                df.x1,
+                df.x2,
+                markersize = 15,
+                marker = :diamond,
+                color = :blue,
+                label = "All found critical points",
+            )
         end
 
         # Only create legend if we have entries

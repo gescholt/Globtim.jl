@@ -347,7 +347,7 @@ function construct_chebyshev_approx(
 
     # Cache Chebyshev polynomial coefficients up to max degree
     max_degree = maximum(lambda)
-    @info "" lambda max_degree
+    # @info "" lambda max_degree
     chebyshev_coeffs = get_chebyshev_coeffs(
         max_degree;
         precision=precision,

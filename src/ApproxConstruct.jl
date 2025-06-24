@@ -97,7 +97,7 @@ function SupportGen(n::Int, d)::NamedTuple
     end
 
     lambda_vectors = get_lambda_exponent_vectors(d, n)
-    @info "" lambda_vectors
+    # @info "" lambda_vectors
 
     lambda_matrix = length(lambda_vectors) > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
 
