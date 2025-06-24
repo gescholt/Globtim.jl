@@ -129,7 +129,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     # Store the basis parameters in the ApproxPoly object
     # Use the smart constructor to get correct type parameters
     return ApproxPoly(
-        sol.u, d, nrm, actual_GN, scale_factor, matrix_from_grid, F,
+        sol.u, Lambda.data, d, nrm, actual_GN, scale_factor, matrix_from_grid, F,
         basis, precision, normalized, power_of_two_denom, cond_vandermonde
     )
 end
@@ -152,7 +152,7 @@ TimerOutputs.@timeit _TO function Constructor(
         p = MainGenerate(
             T.objective,
             T.dim,
-            (:one_d_for_all, degree),
+            degree isa Tuple ? degree : (:one_d_for_all, degree),
             T.prec[2],
             T.prec[1],
             T.sample_range,
