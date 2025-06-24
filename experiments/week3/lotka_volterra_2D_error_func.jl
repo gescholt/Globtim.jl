@@ -1,8 +1,4 @@
-#
-
 using Pkg
-# Pkg.activate(joinpath(@__DIR__, "./../../globtim"))
-# Pkg.status()
 using Revise
 using Globtim
 using DynamicPolynomials, DataFrames
@@ -15,6 +11,7 @@ using DataStructures
 using LinearAlgebra
 using TimerOutputs
 using Makie
+using GLMakie
 
 #
 
@@ -28,6 +25,20 @@ const T = Float64
 using DynamicPolynomials
 using HomotopyContinuation, ProgressLogging
 
+config = (
+    n = 2,
+    d = (:one_d_for_all, 10),
+    GN = 50,
+    time_interval = T[0.0, 1.0],
+    p_true = T[0.2, 0.4],
+    ic = T[0.3, 0.6],
+    num_points = 20,
+    sample_range = 0.25,
+    p_center = p_true + T[0.2, 0.4],
+    distance = log_L2_norm,
+    model_func = define_lotka_volterra_2D_model_v2,
+)
+
 n = 2
 d = (:one_d_for_all, 10)
 GN = 50
@@ -35,14 +46,16 @@ time_interval = T[0.0, 1.0]
 p_true = T[0.2, 0.4]
 ic = T[0.3, 0.6]
 num_points = 20
-model, params, states, outputs = define_lotka_volterra_2D_model_v2()
+sample_range = 0.25
+p_center = p_true + [0.10, 0.0]
 distance = log_L2_norm
+model, params, states, outputs = define_lotka_volterra_2D_model_v2()
+
 error_func = make_error_distance(
     model, outputs, ic, p_true, time_interval, num_points,
     distance)
-sample_range = 0.25
+
 @polyvar(x[1:n]); # Define polynomial ring 
-p_center = p_true + [0.10, 0.0]
 TR = test_input(error_func,
     dim=n,
     center=p_center,
@@ -55,24 +68,27 @@ real_pts_cheb = solve_polynomial_system(
     x, n, d, pol_cheb.coeffs;
     basis=pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
-# df_cheb, df_min_cheb = analyze_critical_points(
-#     error_func, df_cheb, TR, tol_dist=0.05,
-#     max_iters_in_optim=100);
 
-using GLMakie
-# fig = Globtim.create_level_set_visualization(error_func, new_grid, df_cheb, (0., 1000.))
-fig = Globtim.plot_polyapprox_levelset(pol_cheb, TR, df_cheb)
+plot_range = [-0.3:0.002:0.3, -0.3:0.002:0.3]
 
-# Makie.save(
-#     joinpath(@__DIR__, "images", "lotka_volterra_3D_parameter_map_oscillating_02.png"), 
-#     fig;
-#     px_per_unit=1.0
-# )
+fig = Globtim.plot_polyapprox_levelset_2D(
+    pol_cheb, TR, df_cheb, p_true, plot_range, distance;
+    xlabel = "Parameter 1", ylabel = "Parameter 2",
+    colorbar = true, colorbar_label = "Loss Value"
+)
 
 @info "" df_cheb
 
+display(fig)
+
+Makie.save(
+    joinpath(@__DIR__, "images", "lotka_volterra_2D_error_func1.png"), 
+    fig;
+    px_per_unit=1.5
+)
+
 println("########################################")
-println("Lotka-Volterra 3D model with Chebyshev basis")
+println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Configuration:")
 println("n = ", n)
 println("d = ", d)
