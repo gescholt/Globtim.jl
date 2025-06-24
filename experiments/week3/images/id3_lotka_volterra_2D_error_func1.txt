@@ -1,0 +1,38 @@
+config = (n = 2, d = (:one_d_for_all, 20), GN = 200, time_interval = [0.0, 1.0], p_true = [0.2, 0.4], ic = [0.3, 0.6], num_points = 20, sample_range = 0.25, p_center = [0.30000000000000004, 0.4], distance = Main.DynamicalSystems.L1_norm, model_func = Main.DynamicalSystems.define_lotka_volterra_2D_model_v2, basis = :chebyshev, precision = RationalPrecision, my_eps = 0.02, fine_step = 0.002, plot_range = StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64}[-0.27:0.002:0.27, -0.27:0.002:0.27])
+
+
+Condition number of the Vandermonde system: 4.000000000000011
+L2 norm (error of approximation): 1.596814647216528
+Polynomial system:
+   Number of sols: 361
+   Bezout bound: [19, 19] which is 361
+Critical points found:
+1×3 DataFrame
+ Row │ x1        x2        z
+     │ Float64   Float64   Float64
+─────┼─────────────────────────────
+   1 │ 0.246001  0.334985  0.81747
+
+(before optimization) Best critical points:
+DataFrameRow
+ Row │ x1        x2        z
+     │ Float64   Float64   Float64
+─────┼─────────────────────────────
+   1 │ 0.246001  0.334985  0.81747
+─────────────────────────────────────────────────────────────────────────────────────────
+                                                Time                    Allocations      
+                                       ───────────────────────   ────────────────────────
+           Tot / % measured:                39.7s /  24.2%           25.1GiB /   6.9%    
+
+Section                        ncalls     time    %tot     avg     alloc    %tot      avg
+─────────────────────────────────────────────────────────────────────────────────────────
+solve_polynomial_system             1    5.73s   59.7%   5.73s    612MiB   34.6%   612MiB
+Constructor                         1    3.86s   40.3%   3.86s   1.13GiB   65.4%  1.13GiB
+  MainGenerate                      1    3.77s   39.3%   3.77s   1.13GiB   65.3%  1.13GiB
+    evaluation                      1    3.32s   34.6%   3.32s   1.03GiB   59.8%  1.03GiB
+    lambda_vandermonde              1    354ms    3.7%   354ms   71.6MiB    4.0%  71.6MiB
+    generate_grid                   1   57.1ms    0.6%  57.1ms   20.4MiB    1.1%  20.4MiB
+    linear_solve_vandermonde        1   4.89ms    0.1%  4.89ms    457KiB    0.0%   457KiB
+    norm_computation                1   4.86ms    0.1%  4.86ms   2.25MiB    0.1%  2.25MiB
+test_input                          1   1.76μs    0.0%  1.76μs      240B    0.0%     240B
+─────────────────────────────────────────────────────────────────────────────────────────
