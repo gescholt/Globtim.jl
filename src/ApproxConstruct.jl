@@ -1,15 +1,19 @@
 
-function EllipseSupport(center::Vector{T}, coeffs::Vector{T}, radius) where {T<:Number}
-    @assert length(center) == length(coeffs) "Center and coefficients must have the same length"
-    
-    n = length(center)
+struct EllipseSupport{T}
+    center::Vector{T}
+    coeffs::Vector{T}
+    radius::T
+end
+
+function get_lambda_vectors(es::EllipseSupport)    
+    n = length(es.center)
     @assert n > 0 "n must be a positive number"
 
-    lambda_vectors = Vector{Vector{T}}()
+    lambda_vectors = Vector{Vector{Int}}()
     
-    exps = get_lambda_exponent_vectors((:one_d_for_all, radius), length(center))
+    exps = get_lambda_exponent_vectors((:one_d_for_all, es.radius), length(es.center))
     for exp in exps
-        if sum(exp .^ 2 .* (1 ./ coeffs .^2)) <= radius
+        if sum(exp .^ 2 .* (1 ./ es.coeffs .^2)) <= es.radius
             push!(lambda_vectors, exp)
         end
     end
@@ -48,8 +52,9 @@ function get_lambda_exponent_vectors(d, n)
         resize!(lambda_vectors, count)
         return lambda_vectors
     elseif d[1] == :fully_custom
-        @assert all(e -> length(e) == n, d[2]) "All exponent vectors must have length n"
-        return d[2]  # Assuming d[2] is already a vector of exponent vectors
+        lambda_vectors = get_lambda_vectors(d[2])
+        @assert all(e -> length(e) == n, lambda_vectors) "All exponent vectors must have length n"
+        return lambda_vectors
     else
         throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim."))
     end

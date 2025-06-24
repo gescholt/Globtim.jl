@@ -241,6 +241,8 @@ function plot_polyapprox_levelset_2D(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
+    x,
+    wd_in_std_basis,
     p_true,
     plot_range,
     distance;
@@ -263,17 +265,19 @@ function plot_polyapprox_levelset_2D(
     pushforward(x) = pol.scale_factor * x .+ TR.center
     fine_grid_pullback = map(pullback, fine_grid)
 
-    @info "" fine_grid  fine_grid_pullback
+    @info "" fine_grid fine_grid_pullback
 
     # f(x) on [a, b] ± [c, d]
     fine_values_f = map(TR.objective, fine_grid)
 
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
-    poly_func = x -> sum((prod.(eachcol(x .^ pol.support')) .* pol.coeffs))
+    poly_func = p -> DynamicPolynomials.coefficients(DynamicPolynomials.subs(wd_in_std_basis, x => p))[1]
     fine_values_wd = map(poly_func, fine_grid_pullback)
 
+    @info "" fine_values_f fine_values_wd
+
     # ||f - w_d||_s 
-    fine_values_f_minus_wd = (fine_values_wd .- fine_values_f) .^ 2
+    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f))
 
     z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
     z_limits_wd = (minimum(fine_values_wd), maximum(fine_values_wd))
@@ -282,12 +286,21 @@ function plot_polyapprox_levelset_2D(
     @info "" z_limits_f z_limits_wd z_limits_f_minus_wd
 
     # Combine z_limits
+    # Option 1
     z_limits = (
         min(z_limits_f[1], z_limits_wd[1]),
         max(z_limits_f[2], z_limits_wd[2]),
     )
+    # Option 2
+    z_limits = z_limits_f
+    z_limits = (
+        z_limits[1] - 0.1 * abs(z_limits[2] - z_limits[1]),
+        z_limits[2] + 0.1 * abs(z_limits[2] - z_limits[1]),
+    )
+    @info "" z_limits
+
     levels = range(z_limits[1], z_limits[2], length = num_levels)
-    levels_f_wd = logrange(
+    levels_f_wd = range(
         z_limits_f_minus_wd[1],
         z_limits_f_minus_wd[2],
         length = num_levels,
@@ -305,24 +318,23 @@ function plot_polyapprox_levelset_2D(
         colormap = chosen_colormap,
         levels = levels
     )
-    # scatter!(
+    pt = scatter!(
+        ax,
+        p_true[1],
+        p_true[2],
+        markersize = 10,
+        color = :green,
+        marker = :diamond,
+    )
+    # pt = arc!(
     #     ax,
-    #     p_true[1],
-    #     p_true[2],
-    #     markersize = 10,
+    #     p_true,
+    #     (maximum(plot_range[1]) - minimum(plot_range[1])) / 20,
+    #     0,
+    #     2π,
     #     color = :green,
-    #     marker = :diamond,
     #     label = "p_true",
     # )
-    pt = arc!(
-        ax,
-        p_true,
-        (maximum(plot_range[1]) - minimum(plot_range[1])) / 20,
-        0,
-        2π,
-        color = :green,
-        label = "p_true",
-    )
     cp = scatter!(
         ax,
         df.x1,
@@ -361,16 +373,16 @@ function plot_polyapprox_levelset_2D(
 
     Colorbar(fig[1, 3], cf, label="")
 
-    ax = Axis(fig[2, 1], title = "(f(x) - w_d(x))^2", xlabel = xlabel, ylabel = ylabel)
+    ax = Axis(fig[2, 1], title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))", xlabel = xlabel, ylabel = ylabel)
 
-    @info "" levels_f_wd log2.(levels_f_wd)
+    @info "" levels_f_wd
     cf_f_minus_wd = contourf!(
         ax, 
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_f_minus_wd,
         # colormap = chosen_colormap, 
-        levels = log2.(levels_f_wd)
+        levels = levels_f_wd
     )
     
     sp = scatter!(
@@ -380,6 +392,7 @@ function plot_polyapprox_levelset_2D(
         markersize = 2,
         color = :black,
         marker = :circle,
+        alpha = 0.2
     )
 
     rct = lines!(
@@ -392,7 +405,20 @@ function plot_polyapprox_levelset_2D(
     )
 
     Colorbar(fig[2, 3], cf_f_minus_wd,
-            ticks = (log2.(levels_f_wd[1:4:end]), string.("2^" .* string.(round.(Int,log2.(levels_f_wd[1:4:end]))))))
+            ticks = (levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length=9))], string.("2^" .* string.(round.(Int,levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length=9))])))))
+
+    # (fine grained: $(round(sqrt(sum((fine_values_f .- fine_values_wd).^2)), digits=3)))
+    ax = Axis(fig[2, 2], title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))", xlabel = xlabel, ylabel = ylabel)
+
+    rare_levels = levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length=9))]
+    cf_f_minus_wd = contourf!(
+        ax, 
+        map(first, fine_grid),
+        map(last, fine_grid),
+        fine_values_f_minus_wd,
+        # colormap = chosen_colormap, 
+        levels = rare_levels
+    )
 
     Legend(
         fig[3, 1],
@@ -401,9 +427,8 @@ function plot_polyapprox_levelset_2D(
         orientation = :horizontal,  # Make legend horizontal for better space usage
         tellwidth = false,         # Don't have legend width affect layout
         tellheight = true,
-        patchsize = (50, 20)
+        patchsize = (30, 20)
     )
-
 
     fig
 end
