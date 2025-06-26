@@ -11,7 +11,6 @@ Manifest.toml
 # Development and personal files
 .claude/
 .vscode/
-CLAUDE.md
 CLAUDE_REFACTORED.md
 TYPE_INSTABILITY_ANALYSIS.md
 SCALE_FACTOR_REFACTORING_PLAN.md
