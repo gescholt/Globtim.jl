@@ -6,7 +6,16 @@
 # Proper initialization for examples
 using Pkg
 using Revise 
-Pkg.activate(joinpath(@__DIR__, "../"))
+Pkg.activate(joinpath(@__DIR__, "../../"))
+
+# Force reload to avoid stale session issues
+try
+    # Try reloading if already loaded
+    Base.reload("Globtim")
+catch
+    # If that fails, just continue with normal loading
+end
+
 using Globtim
 using DynamicPolynomials
 using DataFrames
@@ -16,15 +25,23 @@ using Statistics
 # Explicitly import DataFrames functions to avoid conflicts
 import DataFrames: combine, groupby
 
+# Verify that tref_3d is available
+if !isdefined(Main, :tref_3d)
+    @warn "tref_3d not found in Main namespace, trying to access via Globtim module"
+    f = Globtim.tref_3d
+else
+    f = tref_3d
+end
+
 # Optional visualization (comment out if not needed)
 # using CairoMakie
 
 println("=== Trefethen 3D Phase 2 Hessian Analysis Demo ===\n")
 
 # Problem setup
-const n, a, b = 3, 12, 100 
+const n, a, b = 3, 20, 100 
 const scale_factor = a / b   # Scaling factor for domain
-f = tref_3d  # Complex 3D test function with multiple critical points
+# f is already defined above with error handling
 
 println("Function: tref_3d (3D challenging test function)")
 println("Scale factor: $scale_factor")
@@ -410,10 +427,10 @@ println("  • Numerical stability assessment")
 println("  • Comprehensive statistical analysis")
 println("  • Ready for Phase 3 visualization improvements")
 
-# Optional visualization section (uncomment if CairoMakie is available)
-"""
-# Uncomment this section to generate Phase 2 visualizations
+# Optional visualization section (comment out if visualization causes issues)
+# This section demonstrates Phase 2 visualizations
 
+# NOTE: Load CairoMakie first to enable extension functions
 println("\n=== Phase 2 Visualizations ===")
 using CairoMakie
 
@@ -421,15 +438,11 @@ using CairoMakie
 fig1 = plot_hessian_norms(df_enhanced)
 display(fig1)
 
-# Condition number analysis  
+# # Condition number analysis  
 fig2 = plot_condition_numbers(df_enhanced)
 display(fig2)
 
-# Critical eigenvalue analysis
+# # Critical eigenvalue analysis
 fig3 = plot_critical_eigenvalues(df_enhanced)
 display(fig3)
 
-println("Phase 2 visualizations generated!")
-"""
-
-nothing  # Suppress final output
