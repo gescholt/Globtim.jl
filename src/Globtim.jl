@@ -119,6 +119,7 @@ include("ParsingOutputs.jl") #functions to parse the output of the polynomial ap
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
 include("hessian_visualization.jl") #Phase 2: Hessian visualization functions
+include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
@@ -127,4 +128,9 @@ export points_in_hypercube, points_in_range
 export compute_hessians, classify_critical_points, store_all_eigenvalues, 
        extract_critical_eigenvalues, compute_hessian_norms, compute_eigenvalue_stats,
        plot_hessian_norms, plot_condition_numbers, plot_critical_eigenvalues
+
+# Phase 3: Enhanced statistical tables and analysis
+export analyze_critical_points_with_tables, display_statistical_table, export_analysis_tables,
+       create_statistical_summary, quick_table_preview, compute_type_specific_statistics,
+       render_table, render_console_table, render_comparative_table
 end

@@ -19,3 +19,8 @@ benchmark_scale_factor.jl
 test_scale_factor_*.jl
 src/*_backup.jl
 Examples/test_compat.jl
+
+# Phase 3 development/testing files
+Examples/ForwardDiff_Certification/debug_*.jl
+Examples/ForwardDiff_Certification/phase3_implementation_demo.jl
+Examples/ForwardDiff_Certification/phase3_table_demo.jl
