@@ -365,7 +365,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     TR::test_input;
     tol_dist=0.025,
     verbose=true,
-    max_iters_in_optim=50,
+    max_iters_in_optim=100,
     enable_hessian=true,
     hessian_tol_zero=1e-8
 )
