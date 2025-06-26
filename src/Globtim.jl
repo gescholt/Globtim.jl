@@ -1,6 +1,5 @@
 module Globtim
 
-using Requires
 using CSV
 using StaticArrays
 using DataFrames
@@ -12,6 +11,9 @@ using Random
 using Parameters
 using TOML
 using TimerOutputs
+using ForwardDiff
+using Clustering
+using Optim
 
 @enum PrecisionType Float64Precision RationalPrecision BigFloatPrecision BigIntPrecision
 
@@ -114,42 +116,15 @@ include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("msolve_system.jl") #polynomial system solving with Msolve.
 include("hom_solve.jl") #polynomial system solving with homotopy Continuation. 
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
+include("refine.jl") #functions for critical point analysis and refinement.
+include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
+include("hessian_visualization.jl") #Phase 2: Hessian visualization functions
 
-function __init__()
-    # This code only runs if/when GLMakie is loaded
-    @require GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
-        include("graphs_makie.jl")
-        export plot_polyapprox_3d
-        include("LevelSetViz.jl")
-        export LevelSetData,
-            VisualizationParameters,
-            prepare_level_set_data,
-            to_makie_format,
-            plot_level_set,
-            create_level_set_visualization,
-            plot_polyapprox_rotate,
-            plot_polyapprox_levelset,
-            plot_polyapprox_flyover,
-            plot_polyapprox_animate,
-            plot_polyapprox_animate2
-    end
+# Export non-plotting functions that are always available
+export points_in_hypercube, points_in_range
 
-    # Add CairoMakie functionality
-    @require CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0" begin
-        include("graphs_cairo.jl")
-        export plot_convergence_analysis,
-            capture_histogram,
-            create_legend_figure,
-            plot_discrete_l2,
-            plot_convergence_captured,
-            plot_filtered_y_distances,
-            cairo_plot_polyapprox_levelset,
-            plot_distance_statistics
-    end
-
-    @require Optim = "429524aa-4258-5aef-a3af-852621145aeb" begin
-        include("refine.jl")
-        export analyze_critical_points, points_in_hypercube, points_in_range
-    end
-end
+# Phase 2: Hessian analysis functions
+export compute_hessians, classify_critical_points, store_all_eigenvalues, 
+       extract_critical_eigenvalues, compute_hessian_norms, compute_eigenvalue_stats,
+       plot_hessian_norms, plot_condition_numbers, plot_critical_eigenvalues
 end

@@ -400,7 +400,7 @@ end
 
 end
 
-@doc nothing function Rastringin(x::AbstractVector)::Float64
+@doc nothing function Rastringin(x::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Rastringin function
