@@ -24,9 +24,12 @@ function compute_hessians(f::Function, points::Matrix{Float64})::Vector{Matrix{F
     for i = 1:n_points
         try
             point = points[i, :]
+            @debug "Computing Hessian for point $i: $point"
             H = ForwardDiff.hessian(f, point)
+            @debug "Point $i Hessian computed successfully: size=$(size(H)), det=$(det(H))"
             hessians[i] = H
         catch e
+            @debug "Point $i: Hessian computation failed with error: $e"
             # Fallback for points where Hessian computation fails
             hessians[i] = fill(NaN, n_dims, n_dims)
         end
@@ -60,6 +63,7 @@ function classify_critical_points(hessians::Vector{Matrix{Float64}};
         
         # Check for NaN matrices (computation failed)
         if any(isnan, H)
+            @debug "Point $i: Hessian contains NaN values, classifying as :error"
             classifications[i] = :error
             continue
         end
@@ -73,17 +77,24 @@ function classify_critical_points(hessians::Vector{Matrix{Float64}};
             n_zero = count(λ -> abs(λ) < tol_zero, eigenvals)
             n_dims = length(eigenvals)
             
+            @debug "Point $i: eigenvals=$eigenvals, n_pos=$n_positive, n_neg=$n_negative, n_zero=$n_zero, dims=$n_dims"
+            
             if n_zero > 0
+                @debug "Point $i: Classified as :degenerate (n_zero=$n_zero)"
                 classifications[i] = :degenerate
             elseif n_positive == n_dims
+                @debug "Point $i: Classified as :minimum (all positive)"
                 classifications[i] = :minimum
             elseif n_negative == n_dims
+                @debug "Point $i: Classified as :maximum (all negative)"
                 classifications[i] = :maximum
             else
+                @debug "Point $i: Classified as :saddle (mixed signs)"
                 classifications[i] = :saddle
             end
             
         catch e
+            @debug "Point $i: Exception in eigenvalue computation: $e, classifying as :error"
             classifications[i] = :error
         end
     end

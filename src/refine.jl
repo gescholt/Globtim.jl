@@ -569,6 +569,8 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         for i = 1:n_dims
             points_matrix[:, i] = df[!, Symbol("x$i")]
         end
+        @debug "analyze_critical_points: points_matrix size: $(size(points_matrix))"
+        @debug "analyze_critical_points: First few points: $(points_matrix[1:min(3, nrow(df)), :])"
         hessians = compute_hessians(f, points_matrix)
         
         # 2. Store all eigenvalues
@@ -582,6 +584,8 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
             println("Classifying critical points...")
         end
         classifications = classify_critical_points(hessians, tol_zero=hessian_tol_zero)
+        @debug "analyze_critical_points: Classifications: $classifications"
+        @debug "analyze_critical_points: Classification counts: $([(c, count(==(c), classifications)) for c in unique(classifications)])"
         df[!, :critical_point_type] = classifications
         
         # 4. Extract critical eigenvalues for minima/maxima
