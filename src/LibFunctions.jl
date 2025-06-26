@@ -284,7 +284,7 @@ end
 #     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
 #     return term1 + term2
 # end
-function Deuflhard(xx::Union{Vector{Float64},SVector{N,Float64}} where {N})::Float64
+function Deuflhard(xx::AbstractVector)
     term1 = (exp(xx[1]^2 + xx[2]^2) - 3)^2
     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
     return term1 + term2
