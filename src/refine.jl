@@ -1,6 +1,200 @@
 # Sasha: This files seems not Revise-able.
 
 """
+    assign_spatial_regions(df::DataFrame, TR::test_input, n_regions_per_dim::Int=5)::Vector{Int}
+
+Assign spatial region IDs to critical points for convergence analysis.
+
+Divides the domain into n_regions_per_dim^n cubic regions and assigns each point
+to its corresponding region for spatial statistics computation.
+
+# Returns
+Vector{Int}: Region ID (1 to n_regions_per_dim^n) for each point in df
+"""
+function assign_spatial_regions(df::DataFrame, TR::test_input, n_regions_per_dim::Int=5)::Vector{Int}
+    n_dims = count(col -> startswith(string(col), "x"), names(df))
+    n_points = nrow(df)
+    region_ids = Vector{Int}(undef, n_points)
+    
+    # Get domain bounds
+    if isa(TR.sample_range, Number)
+        bounds_min = TR.center .- TR.sample_range
+        bounds_max = TR.center .+ TR.sample_range
+    else
+        bounds_min = TR.center .- TR.sample_range
+        bounds_max = TR.center .+ TR.sample_range
+    end
+    
+    # Compute region size per dimension
+    region_sizes = (bounds_max .- bounds_min) ./ n_regions_per_dim
+    
+    for i = 1:n_points
+        region_coords = Vector{Int}(undef, n_dims)
+        for j = 1:n_dims
+            coord = df[i, Symbol("x$j")]
+            # Clamp to avoid boundary issues
+            normalized = (coord - bounds_min[j]) / region_sizes[j]
+            region_coords[j] = clamp(floor(Int, normalized), 0, n_regions_per_dim - 1)
+        end
+        
+        # Convert n-dimensional region coordinates to single ID
+        region_id = 1
+        multiplier = 1
+        for j = 1:n_dims
+            region_id += region_coords[j] * multiplier
+            multiplier *= n_regions_per_dim
+        end
+        region_ids[i] = region_id
+    end
+    
+    return region_ids
+end
+
+"""
+    cluster_function_values(z_values::Vector{Float64}, n_clusters::Int=5)::Vector{Int}
+
+Cluster critical points by function values using k-means.
+
+# Returns  
+Vector{Int}: Cluster assignment (1 to n_clusters) for each point
+"""
+function cluster_function_values(z_values::Vector{Float64}, n_clusters::Int=5)::Vector{Int}
+    # Handle edge cases
+    if length(z_values) <= n_clusters
+        return collect(1:length(z_values))
+    end
+    
+    # Reshape for clustering (k-means expects matrix)
+    data = reshape(z_values, 1, :)
+    
+    # Use fewer clusters if we have too few unique values
+    unique_vals = length(unique(z_values))
+    actual_clusters = min(n_clusters, unique_vals)
+    
+    try
+        result = kmeans(data, actual_clusters)
+        return result.assignments
+    catch e
+        # Fallback: simple binning
+        min_z, max_z = extrema(z_values)
+        bin_size = (max_z - min_z) / actual_clusters
+        return [clamp(floor(Int, (z - min_z) / bin_size) + 1, 1, actual_clusters) for z in z_values]
+    end
+end
+
+"""
+    compute_nearest_neighbors(df::DataFrame, n_dims::Int)::Vector{Float64}
+
+Compute distance to nearest neighbor for each critical point.
+
+# Returns
+Vector{Float64}: Distance to nearest other point for each point
+"""
+function compute_nearest_neighbors(df::DataFrame, n_dims::Int)::Vector{Float64}
+    n_points = nrow(df)
+    distances = Vector{Float64}(undef, n_points)
+    
+    # Extract coordinates
+    coords = Matrix{Float64}(undef, n_points, n_dims)
+    for i = 1:n_dims
+        coords[:, i] = df[!, Symbol("x$i")]
+    end
+    
+    for i = 1:n_points
+        min_dist = Inf
+        for j = 1:n_points
+            if i != j
+                dist = norm(coords[i, :] - coords[j, :])
+                min_dist = min(min_dist, dist)
+            end
+        end
+        distances[i] = min_dist
+    end
+    
+    return distances
+end
+
+"""
+    compute_gradients(f::Function, points::Matrix{Float64})::Vector{Float64}
+
+Compute gradient norms at specified points using automatic differentiation.
+
+# Arguments
+- f: Function to differentiate
+- points: Matrix where each row is a point (n_points × n_dims)
+
+# Returns
+Vector{Float64}: ||∇f(x)|| for each point
+"""
+function compute_gradients(f::Function, points::Matrix{Float64})::Vector{Float64}
+    n_points, n_dims = size(points)
+    grad_norms = Vector{Float64}(undef, n_points)
+    
+    for i = 1:n_points
+        try
+            point = points[i, :]
+            grad = ForwardDiff.gradient(f, point)
+            grad_norms[i] = norm(grad)
+        catch e
+            # Fallback for points where gradient computation fails
+            grad_norms[i] = NaN
+        end
+    end
+    
+    return grad_norms
+end
+
+"""
+    analyze_basins(df::DataFrame, df_min::DataFrame, n_dims::Int, tol_dist::Float64)
+
+Analyze basin of attraction properties for each unique minimizer.
+
+# Returns
+Tuple{Vector{Int}, Vector{Float64}, Vector{Int}}: 
+- Basin sizes (point count for each minimizer)
+- Average convergence steps for each minimizer  
+- Region coverage count for each minimizer
+"""
+function analyze_basins(
+    df::DataFrame, 
+    df_min::DataFrame, 
+    n_dims::Int, 
+    tol_dist::Float64
+)::Tuple{Vector{Int}, Vector{Float64}, Vector{Int}}
+    n_minimizers = nrow(df_min)
+    basin_sizes = zeros(Int, n_minimizers)
+    avg_steps = zeros(Float64, n_minimizers)
+    region_coverage = zeros(Int, n_minimizers)
+    
+    # For each minimizer, find which critical points converge to it
+    for i = 1:n_minimizers
+        minimizer = [df_min[i, Symbol("x$j")] for j = 1:n_dims]
+        converging_points = Int[]
+        total_steps = 0.0
+        regions_covered = Set{Int}()
+        
+        for k = 1:nrow(df)
+            if df[k, :converged]
+                optimized_point = [df[k, Symbol("y$j")] for j = 1:n_dims]
+                if norm(optimized_point - minimizer) < tol_dist
+                    push!(converging_points, k)
+                    total_steps += df[k, :steps]
+                    if :region_id in names(df)
+                        push!(regions_covered, df[k, :region_id])
+                    end
+                end
+            end
+        end
+        
+        basin_sizes[i] = length(converging_points)
+        avg_steps[i] = basin_sizes[i] > 0 ? total_steps / basin_sizes[i] : 0.0
+        region_coverage[i] = length(regions_covered)
+    end
+    
+    return basin_sizes, avg_steps, region_coverage
+end
+
+"""
 Applies a mask to the dataframe based on the hypercube defined in the test input TR. 
 The mask is a boolean array where each element corresponds to a row in the dataframe. 
 If the point is within the hypercube, the mask value is true; otherwise, it is false.
@@ -73,13 +267,107 @@ function points_in_range(df::DataFrame, TR, value_range::Float64)
     return in_range
 end
 
+"""
+    analyze_critical_points(f::Function, df::DataFrame, TR::test_input; kwargs...)
+
+Comprehensive critical point analysis with Phase 1 enhanced statistics and optional Phase 2 Hessian-based classification.
+
+This function performs detailed analysis of critical points found by polynomial approximation, including:
+- BFGS refinement of critical points
+- Clustering and proximity analysis
+- Enhanced statistical measures (Phase 1)
+- Optional Hessian-based classification and eigenvalue analysis (Phase 2)
+
+# Arguments
+- `f::Function`: The objective function to analyze
+- `df::DataFrame`: DataFrame containing critical points with columns x1, x2, ..., xn, z
+- `TR::test_input`: Test input specification containing domain information
+
+# Keyword Arguments
+- `tol_dist=0.025`: Distance tolerance for clustering critical points
+- `verbose=true`: Enable detailed progress output
+- `max_iters_in_optim=50`: Maximum iterations for BFGS optimization
+- `enable_hessian=true`: Enable Phase 2 Hessian-based classification
+- `hessian_tol_zero=1e-8`: Tolerance for zero eigenvalues in Hessian analysis
+
+# Returns
+- `Tuple{DataFrame, DataFrame}`: (enhanced_df, minimizers_df)
+  - `enhanced_df`: Input DataFrame with additional analysis columns
+  - `minimizers_df`: Subset containing only unique local minimizers
+
+# Phase 1 Enhanced Statistics (always included)
+The enhanced DataFrame includes these additional columns:
+- `region_id`: Cluster identifier for spatially close points
+- `function_value_cluster`: Cluster identifier for points with similar function values
+- `nearest_neighbor_dist`: Distance to nearest neighboring critical point
+- `gradient_norm`: L2 norm of gradient at the critical point
+- `y1, y2, ..., yn`: BFGS-refined coordinates
+- `close`: Boolean indicating if point is close to boundary
+- `steps`: Number of BFGS optimization steps taken
+- `converged`: Boolean indicating if BFGS optimization converged
+
+# Phase 2 Hessian Classification (when `enable_hessian=true`)
+When enabled, adds comprehensive Hessian-based analysis:
+- `critical_point_type`: Classification (:minimum, :maximum, :saddle, :degenerate, :error)
+- `smallest_positive_eigenval`: Smallest positive eigenvalue (for minima validation)
+- `largest_negative_eigenval`: Largest negative eigenvalue (for maxima validation)
+- `hessian_norm`: L2 (Frobenius) norm of Hessian matrix
+- `hessian_eigenvalue_min`: Smallest eigenvalue of Hessian matrix
+- `hessian_eigenvalue_max`: Largest eigenvalue of Hessian matrix
+- `hessian_condition_number`: Condition number κ(H) = |λₘₐₓ|/|λₘᵢₙ|
+- `hessian_determinant`: Determinant of Hessian matrix
+- `hessian_trace`: Trace of Hessian matrix
+
+# Classification Types (Phase 2)
+- `:minimum`: All eigenvalues > `hessian_tol_zero` (local minimum)
+- `:maximum`: All eigenvalues < -`hessian_tol_zero` (local maximum)
+- `:saddle`: Mixed positive and negative eigenvalues (saddle point)
+- `:degenerate`: At least one eigenvalue ≈ 0 (degenerate critical point)
+- `:error`: Hessian computation failed
+
+# Example
+```julia
+# Proper initialization
+using Pkg; using Revise 
+Pkg.activate(joinpath(@__DIR__, "../"))  # Adjust path as needed
+using Globtim; using DynamicPolynomials, DataFrames
+
+# Basic usage with Phase 1 + Phase 2
+f(x) = x[1]^2 + x[2]^2
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+pol = Constructor(TR, 8)
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+df = process_crit_pts(solutions, f, TR)
+
+# Full analysis with Hessian classification
+df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+
+# Phase 1 only (legacy behavior)
+df_phase1, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
+```
+
+# Performance Notes
+- Phase 1 analysis: O(n × m) where n = number of points, m = dimensions
+- Phase 2 analysis: O(n × m²) for Hessian computation, O(n × m³) for eigenvalues
+- Memory usage: Additional O(n × m²) for Hessian storage when `enable_hessian=true`
+
+# Implementation Details
+Phase 2 uses ForwardDiff.jl for automatic differentiation to compute Hessian matrices,
+then performs eigenvalue decomposition for critical point classification. All eigenvalue
+computations include robust error handling for numerical stability.
+
+See also: [`compute_hessians`](@ref), [`classify_critical_points`](@ref), [`process_crit_pts`](@ref)
+"""
 TimerOutputs.@timeit _TO function analyze_critical_points(
     f::Function,
     df::DataFrame,
     TR::test_input;
     tol_dist=0.025,
     verbose=true,
-    max_iters_in_optim=50
+    max_iters_in_optim=50,
+    enable_hessian=true,
+    hessian_tol_zero=1e-8
 )
     n_dims = count(col -> startswith(string(col), "x"), names(df))  # Count x-columns
 
@@ -197,6 +485,160 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
             df[i, :close] = false
             df[i, :steps] = -1
             df[i, :converged] = false
+        end
+    end
+
+    # === PHASE 1 ENHANCEMENTS: Enhanced Statistics Collection ===
+    if verbose
+        println("\n=== Computing Enhanced Statistics ===")
+    end
+
+    # 1. Spatial region analysis
+    if verbose
+        println("Computing spatial regions...")
+    end
+    region_ids = assign_spatial_regions(df, TR)
+    df[!, :region_id] = region_ids
+
+    # 2. Function value clustering  
+    if verbose
+        println("Clustering function values...")
+    end
+    cluster_ids = cluster_function_values(df.z)
+    df[!, :function_value_cluster] = cluster_ids
+
+    # 3. Nearest neighbor distances
+    if verbose
+        println("Computing nearest neighbor distances...")
+    end
+    nn_distances = compute_nearest_neighbors(df, n_dims)
+    df[!, :nearest_neighbor_dist] = nn_distances
+
+    # 4. Gradient norms at critical points
+    if verbose
+        println("Computing gradient norms at critical points...")
+    end
+    points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
+    for i = 1:n_dims
+        points_matrix[:, i] = df[!, Symbol("x$i")]
+    end
+    grad_norms = compute_gradients(f, points_matrix)
+    df[!, :gradient_norm] = grad_norms
+
+    # 5. Basin analysis for df_min (only if we have minimizers)
+    if nrow(df_min) > 0
+        if verbose
+            println("Analyzing basins of attraction...")
+        end
+        basin_sizes, avg_steps, region_coverage_counts = analyze_basins(df, df_min, n_dims, tol_dist)
+        df_min[!, :basin_points] = basin_sizes
+        df_min[!, :average_convergence_steps] = avg_steps  
+        df_min[!, :region_coverage_count] = region_coverage_counts
+
+        # 6. Gradient norms at minimizers
+        if verbose
+            println("Computing gradient norms at minimizers...")
+        end
+        min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
+        for i = 1:n_dims
+            min_points[:, i] = df_min[!, Symbol("x$i")]
+        end
+        min_grad_norms = compute_gradients(f, min_points)
+        df_min[!, :gradient_norm_at_min] = min_grad_norms
+    end
+
+    if verbose
+        println("Enhanced statistics computed successfully!")
+        println("New df columns: region_id, function_value_cluster, nearest_neighbor_dist, gradient_norm")
+        if nrow(df_min) > 0
+            println("New df_min columns: basin_points, average_convergence_steps, region_coverage_count, gradient_norm_at_min")
+        end
+    end
+
+    # === PHASE 2 ENHANCEMENTS: Complete Hessian Analysis ===
+    if enable_hessian
+        if verbose
+            println("\n=== Computing Complete Hessian Analysis ===")
+        end
+        
+        # 1. Compute Hessian matrices at critical points
+        if verbose
+            println("Computing Hessian matrices...")
+        end
+        points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
+        for i = 1:n_dims
+            points_matrix[:, i] = df[!, Symbol("x$i")]
+        end
+        hessians = compute_hessians(f, points_matrix)
+        
+        # 2. Store all eigenvalues
+        if verbose
+            println("Computing all eigenvalues...")
+        end
+        all_eigenvalues = store_all_eigenvalues(hessians)
+        
+        # 3. Classify critical points
+        if verbose
+            println("Classifying critical points...")
+        end
+        classifications = classify_critical_points(hessians, tol_zero=hessian_tol_zero)
+        df[!, :critical_point_type] = classifications
+        
+        # 4. Extract critical eigenvalues for minima/maxima
+        if verbose
+            println("Extracting critical eigenvalues...")
+        end
+        smallest_pos_eigenvals, largest_neg_eigenvals = extract_critical_eigenvalues(classifications, all_eigenvalues)
+        df[!, :smallest_positive_eigenval] = smallest_pos_eigenvals
+        df[!, :largest_negative_eigenval] = largest_neg_eigenvals
+        
+        # 5. Compute Hessian norms
+        if verbose
+            println("Computing Hessian norms...")
+        end
+        hessian_norms = compute_hessian_norms(hessians)
+        df[!, :hessian_norm] = hessian_norms
+        
+        # 6. Compute standard eigenvalue statistics
+        if verbose
+            println("Computing eigenvalue statistics...")
+        end
+        eigenvalue_stats = compute_eigenvalue_stats(hessians)
+        for col in names(eigenvalue_stats)
+            df[!, Symbol("hessian_$col")] = eigenvalue_stats[!, col]
+        end
+        
+        # 7. Hessian analysis for minimizers (if any)
+        if nrow(df_min) > 0
+            if verbose
+                println("Computing Hessian analysis for minimizers...")
+            end
+            min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
+            for i = 1:n_dims
+                min_points[:, i] = df_min[!, Symbol("x$i")]
+            end
+            min_hessians = compute_hessians(f, min_points)
+            min_all_eigenvalues = store_all_eigenvalues(min_hessians)
+            min_classifications = classify_critical_points(min_hessians, tol_zero=hessian_tol_zero)
+            min_smallest_pos, min_largest_neg = extract_critical_eigenvalues(min_classifications, min_all_eigenvalues)
+            min_hessian_norms = compute_hessian_norms(min_hessians)
+            min_eigenvalue_stats = compute_eigenvalue_stats(min_hessians)
+            
+            df_min[!, :critical_point_type] = min_classifications
+            df_min[!, :smallest_positive_eigenval] = min_smallest_pos
+            df_min[!, :largest_negative_eigenval] = min_largest_neg
+            df_min[!, :hessian_norm] = min_hessian_norms
+            for col in names(min_eigenvalue_stats)
+                df_min[!, Symbol("hessian_$col")] = min_eigenvalue_stats[!, col]
+            end
+        end
+        
+        if verbose
+            println("Phase 2 Hessian analysis complete!")
+            println("New df columns: critical_point_type, smallest_positive_eigenval, largest_negative_eigenval, hessian_norm, hessian_*")
+            if nrow(df_min) > 0
+                println("New df_min columns: same Hessian-based columns as df")
+            end
         end
     end
 
