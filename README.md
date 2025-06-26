@@ -4,10 +4,17 @@
 
 The purpose of the Globtim package is to compute the set of all local minima of a real continuous function over a rectangular domain in $$ \R^n $$. This is carried out in 3 main steps:
 
-
 1. The input function $f$ is sampled on a tensorized Chebyshev grid.
 2. A polynomial approximant is constructed via a discrete least squares.
 3. The polynomial system of Partial derivatives is solved by either homotopy continuation (numerical  method) or through exact polynomial system solving (symbolic method).
+
+### Advanced Critical Point Analysis
+
+Globtim provides comprehensive critical point classification through **Phase 2 Hessian Analysis**:
+- **Rigorous Classification**: Automatically identifies minima, maxima, saddle points, and degenerate critical points
+- **Eigenvalue Analysis**: Complete Hessian eigenvalue statistics and condition number analysis
+- **Validation Metrics**: Specialized eigenvalues for mathematical verification of minima/maxima
+- **Visualization Tools**: Dedicated plots for Hessian properties and critical point analysis
 
 ## Project Status
 
