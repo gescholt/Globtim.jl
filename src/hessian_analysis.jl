@@ -278,3 +278,34 @@ function compute_eigenvalue_stats(hessians::Vector{Matrix{Float64}})::DataFrame
         trace = trace
     )
 end
+
+# Visualization function declarations - implementations provided by Makie extensions
+"""
+    plot_hessian_norms(df::DataFrame)
+
+Plot L2 norms of Hessian matrices by critical point type.
+Requires CairoMakie or GLMakie to be loaded.
+
+This function is implemented by the CairoMakie and GLMakie extensions.
+"""
+function plot_hessian_norms end
+
+"""
+    plot_condition_numbers(df::DataFrame)
+
+Plot condition numbers of Hessian matrices by critical point type.
+Requires CairoMakie or GLMakie to be loaded.
+
+This function is implemented by the CairoMakie and GLMakie extensions.
+"""
+function plot_condition_numbers end
+
+"""
+    plot_critical_eigenvalues(df::DataFrame)
+
+Plot critical eigenvalues for minima and maxima validation.
+Requires CairoMakie or GLMakie to be loaded.
+
+This function is implemented by the CairoMakie and GLMakie extensions.
+"""
+function plot_critical_eigenvalues end
