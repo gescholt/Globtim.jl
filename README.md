@@ -52,9 +52,10 @@ df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
 ### Visualization (Extension-Based)
 ```julia
 using CairoMakie  # Load before calling visualization functions
-plot_hessian_norms(df_enhanced)           # Scatter plot of ||H||_F
-plot_condition_numbers(df_enhanced)       # Log-scale condition numbers
-plot_critical_eigenvalues(df_enhanced)    # Minima/maxima eigenvalue validation
+plot_hessian_norms(df_enhanced)                    # Scatter plot of ||H||_F
+plot_condition_numbers(df_enhanced)                # Log-scale condition numbers
+plot_critical_eigenvalues(df_enhanced)             # Minima/maxima eigenvalue validation
+plot_all_eigenvalues(f, df_enhanced)               # Complete eigenvalue spectrum (NEW!)
 ```
 
 ## 📦 What's Included
@@ -133,6 +134,15 @@ using CairoMakie  # Enable visualization extension
 fig1 = plot_hessian_norms(df_enhanced)
 fig2 = plot_condition_numbers(df_enhanced)
 fig3 = plot_critical_eigenvalues(df_enhanced)
+
+# Enhanced eigenvalue visualization (separate subplots, vertically aligned with dotted connections)
+fig4 = plot_all_eigenvalues(f, df_enhanced, sort_by=:magnitude)      # Preserves signs
+fig5 = plot_all_eigenvalues(f, df_enhanced, sort_by=:abs_magnitude)  # Absolute values
+fig6 = plot_all_eigenvalues(f, df_enhanced, sort_by=:spread)         # Ordered by eigenvalue range
+
+# Raw vs refined eigenvalue comparison (NEW!)
+fig7 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced)       # Distance-ordered pairs
+fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function_value_diff)
 ```
 
 ## 📖 Documentation

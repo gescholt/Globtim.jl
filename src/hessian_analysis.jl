@@ -279,6 +279,114 @@ function compute_eigenvalue_stats(hessians::Vector{Matrix{Float64}})::DataFrame
     )
 end
 
+"""
+    extract_all_eigenvalues_for_visualization(f::Function, df::DataFrame)::Vector{Vector{Float64}}
+
+Extract all eigenvalues for each critical point for enhanced visualization purposes.
+This function recomputes Hessians to provide complete eigenvalue information.
+
+# Arguments
+- f: Objective function 
+- df: DataFrame with critical point coordinates (x1, x2, x3, etc.)
+
+# Returns
+Vector{Vector{Float64}}: All eigenvalues for each critical point, sorted by magnitude
+"""
+function extract_all_eigenvalues_for_visualization(f::Function, df::DataFrame)::Vector{Vector{Float64}}
+    n_points = nrow(df)
+    
+    # Determine dimensionality from DataFrame columns
+    x_cols = [col for col in names(df) if startswith(string(col), "x")]
+    n_dims = length(x_cols)
+    
+    # Extract point coordinates
+    points = Matrix{Float64}(undef, n_points, n_dims)
+    for i = 1:n_points
+        for j = 1:n_dims
+            points[i, j] = df[i, Symbol("x$j")]
+        end
+    end
+    
+    # Compute Hessians
+    @debug "Computing Hessians for $n_points critical points"
+    hessians = compute_hessians(f, points)
+    
+    # Extract all eigenvalues
+    all_eigenvalues = store_all_eigenvalues(hessians)
+    
+    return all_eigenvalues
+end
+
+"""
+    match_raw_to_refined_points(df_raw::DataFrame, df_refined::DataFrame)::Vector{Tuple{Int,Int,Float64}}
+
+Match raw polynomial critical points to BFGS-refined points based on minimal Euclidean distance.
+
+# Arguments
+- df_raw: Raw critical points from polynomial system solving
+- df_refined: BFGS-refined critical points
+
+# Returns
+Vector{Tuple{Int,Int,Float64}}: (raw_index, refined_index, distance) pairs sorted by distance
+"""
+function match_raw_to_refined_points(df_raw::DataFrame, df_refined::DataFrame)::Vector{Tuple{Int,Int,Float64}}
+    # Determine dimensionality
+    x_cols = [col for col in names(df_raw) if startswith(string(col), "x")]
+    n_dims = length(x_cols)
+    
+    n_raw = nrow(df_raw)
+    n_refined = nrow(df_refined)
+    
+    # Extract coordinates
+    raw_coords = Matrix{Float64}(undef, n_raw, n_dims)
+    refined_coords = Matrix{Float64}(undef, n_refined, n_dims)
+    
+    for i = 1:n_raw
+        for j = 1:n_dims
+            raw_coords[i, j] = df_raw[i, Symbol("x$j")]
+        end
+    end
+    
+    for i = 1:n_refined
+        for j = 1:n_dims
+            refined_coords[i, j] = df_refined[i, Symbol("x$j")]
+        end
+    end
+    
+    # Find best matches using Hungarian-style greedy matching
+    matches = Tuple{Int,Int,Float64}[]
+    used_refined = Set{Int}()
+    
+    for i = 1:n_raw
+        best_distance = Inf
+        best_refined_idx = 0
+        
+        for j = 1:n_refined
+            if j in used_refined
+                continue
+            end
+            
+            # Compute Euclidean distance
+            distance = norm(raw_coords[i, :] - refined_coords[j, :])
+            
+            if distance < best_distance
+                best_distance = distance
+                best_refined_idx = j
+            end
+        end
+        
+        if best_refined_idx > 0
+            push!(matches, (i, best_refined_idx, best_distance))
+            push!(used_refined, best_refined_idx)
+        end
+    end
+    
+    # Sort by distance (closest pairs first)
+    sort!(matches, by=x -> x[3])
+    
+    return matches
+end
+
 # Visualization function declarations - implementations provided by Makie extensions
 """
     plot_hessian_norms(df::DataFrame)
@@ -309,3 +417,79 @@ Requires CairoMakie or GLMakie to be loaded.
 This function is implemented by the CairoMakie and GLMakie extensions.
 """
 function plot_critical_eigenvalues end
+
+"""
+    plot_all_eigenvalues(f::Function, df::DataFrame; sort_by=:magnitude)
+
+Plot all eigenvalues for each critical point with enhanced visualization.
+Shows complete eigenvalue spectrum (3 eigenvalues for 3D problems).
+Requires CairoMakie or GLMakie to be loaded.
+
+# Arguments
+- f: Objective function (needed to recompute Hessians)
+- df: DataFrame with critical point information
+- sort_by: Sorting criterion (:magnitude, :abs_magnitude, :smallest, :largest, :spread, :index)
+
+# Features
+- Separate subplots for each critical point type (minimum, saddle, maximum)
+- Colors distinguish eigenvalue order: Red (λ₁), Blue (λ₂), Green (λ₃)
+- Stroke colors distinguish critical point types: Green (minimum), Orange (saddle), Red (maximum)
+- Shows complete eigenvalue spectrum with vertical alignment per critical point
+- Dotted lines connect eigenvalues for the same critical point
+- Includes zero reference line for mathematical validation
+- Sorting applied within each critical point type separately
+- Recommended sort_by=:magnitude for best visual clarity
+
+# Examples
+```julia
+using CairoMakie
+# Standard magnitude plot (preserves sign)
+fig1 = plot_all_eigenvalues(f, df_enhanced, sort_by=:magnitude)
+
+# Absolute magnitude plot (compares magnitudes only)
+fig2 = plot_all_eigenvalues(f, df_enhanced, sort_by=:abs_magnitude)
+
+# Eigenvalue spread plot (orders by largest - smallest eigenvalue)
+fig3 = plot_all_eigenvalues(f, df_enhanced, sort_by=:spread)
+```
+
+This function is implemented by the CairoMakie and GLMakie extensions.
+"""
+function plot_all_eigenvalues end
+
+"""
+    plot_raw_vs_refined_eigenvalues(f::Function, df_raw::DataFrame, df_refined::DataFrame; 
+                                   sort_by=:euclidean_distance)
+
+Compare eigenvalues between raw polynomial critical points and BFGS-refined points.
+Shows pairwise comparison with distance-based ordering and vertical alignment.
+Requires CairoMakie or GLMakie to be loaded.
+
+# Arguments
+- f: Objective function (needed to compute Hessians)
+- df_raw: Raw critical points from polynomial system solving
+- df_refined: BFGS-refined critical points with enhanced analysis
+- sort_by: Sorting criterion (:euclidean_distance, :function_value_diff, :eigenvalue_change)
+
+# Features
+- Pairwise matching based on minimal Euclidean distance
+- Distance-based left-to-right ordering (closest pairs first)
+- Vertical columns show raw (top) vs refined (bottom) eigenvalues
+- Connecting lines show eigenvalue evolution during refinement
+- Color coding: Raw points (lighter), Refined points (darker)
+- Separation distance annotations for each pair
+- Side-by-side subplots for different critical point types
+
+# Examples
+```julia
+using CairoMakie
+# Distance-ordered comparison (default)
+fig1 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced)
+
+# Function value difference ordering
+fig2 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function_value_diff)
+```
+
+This function is implemented by the CairoMakie and GLMakie extensions.
+"""
+function plot_raw_vs_refined_eigenvalues end
