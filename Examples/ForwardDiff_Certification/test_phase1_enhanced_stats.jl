@@ -2,7 +2,7 @@
 # Based on Ratstrigin_3.ipynb
 
 using Pkg
-Pkg.activate(joinpath(@__DIR__, "../"))
+Pkg.activate(joinpath(@__DIR__, "../../"))
 using Globtim
 using DynamicPolynomials, DataFrames
 using ProgressLogging

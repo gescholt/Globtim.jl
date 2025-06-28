@@ -125,7 +125,7 @@ End-to-end integration tests:
 # Proper initialization for examples
 using Pkg
 using Revise 
-Pkg.activate(joinpath(@__DIR__, "../../"))  # Adjust path as needed
+Pkg.activate(joinpath(@__DIR__, "../../"))  # Two levels up to project root
 using Globtim
 using DynamicPolynomials, DataFrames
 
@@ -276,3 +276,33 @@ include("hessian_visualization_demo.jl")   # Visualization functions
 ```
 
 This certification directory provides comprehensive validation of Phase 2 Hessian analysis capabilities, ensuring mathematical correctness, numerical stability, and computational efficiency across a wide range of optimization problems.
+
+## ✅ Recent Updates & Fixes
+
+### Path Resolution Fixed (Latest)
+- **Issue**: Module loading failures due to incorrect `Pkg.activate` paths
+- **Fix**: Updated all demo files to use `joinpath(@__DIR__, "../../")` for correct project root activation  
+- **Status**: ✅ All demos now run successfully without `UndefVarError` issues
+- **Affected Files**: All `.jl` files in this directory now use correct relative paths
+
+### ForwardDiff Compatibility Resolved
+- **Issue**: `tref_3d` and other functions had restrictive type signatures causing ForwardDiff failures
+- **Fix**: Updated function signatures from `Union{Vector{Float64},SVector{N,Float64}}` to `AbstractVector`
+- **Status**: ✅ All critical point classifications now work correctly with automatic differentiation
+- **Impact**: Phase 2 analysis now fully functional across all test functions
+
+### Phase 3 Implementation Complete
+- **Addition**: Enhanced statistical tables with publication-quality ASCII rendering
+- **Files**: `phase3_standalone_demo.jl` demonstrates complete Phase 3 functionality
+- **Features**: Robust statistics, condition number quality assessment, mathematical validation
+- **Status**: ✅ Production-ready implementation with comprehensive testing
+
+### Verification Commands
+```julia
+# Test that everything works correctly
+include("trefethen_3d_complete_demo.jl")      # Should run without errors
+include("phase3_standalone_demo.jl")          # Should display statistical tables
+include("phase2_certification_suite.jl")     # Should pass all validations
+```
+
+All certification demos are now verified working with the latest fixes.

@@ -21,6 +21,9 @@ using DynamicPolynomials
 using DataFrames
 using LinearAlgebra
 using Statistics
+using StaticArrays  # Required for SVector in LevelSetViz
+
+# LevelSetViz functions are loaded through the GLMakie extension
 
 # Explicitly import DataFrames functions to avoid conflicts
 import DataFrames: combine, groupby
@@ -49,7 +52,7 @@ println("Expected critical points: Multiple local minima and saddle points\n")
 
 # Domain and approximation setup
 center = [0.0, 0.0, 0.0]
-d = 14  # Polynomial degree
+d = 20  # Polynomial degree
 SMPL = 30  # Number of samples per dimension
 
 println("=== Phase 1: Polynomial Approximation ===")
@@ -409,14 +412,38 @@ for col in phase2_columns
     end
 end
 
-# Optional: Display DataFrame sample
-println("\n=== Sample Enhanced DataFrame ===")
+# Display the 5 smallest minimizers found
+println("\n=== Sample Enhanced DataFrame: 5 Smallest Minimizers ===")
 if nrow(df_enhanced) > 0
-    sample_cols = [:x1, :x2, :x3, :z, :critical_point_type, :hessian_norm, :hessian_condition_number]
-    available_cols = intersect(sample_cols, Symbol.(names(df_enhanced)))
-    sample_size = min(5, nrow(df_enhanced))
-    println("First $sample_size rows (selected columns):")
-    println(df_enhanced[1:sample_size, available_cols])
+    # Filter for minima only
+    minima_mask = df_enhanced.critical_point_type .== :minimum
+    
+    if any(minima_mask)
+        minima_df = df_enhanced[minima_mask, :]
+        
+        # Sort by function value (ascending) to get smallest minimizers
+        sort!(minima_df, :z)
+        
+        sample_cols = [:x1, :x2, :x3, :z, :critical_point_type, :hessian_norm, :hessian_condition_number, :smallest_positive_eigenval]
+        available_cols = intersect(sample_cols, Symbol.(names(minima_df)))
+        sample_size = min(5, nrow(minima_df))
+        
+        println("5 smallest minimizers (sorted by function value):")
+        println(minima_df[1:sample_size, available_cols])
+        
+        # Also show some summary statistics for these minimizers
+        if sample_size > 1
+            smallest_values = minima_df.z[1:sample_size]
+            println("\nSummary of 5 smallest minimizers:")
+            println("  • Global minimum value: $(round(minimum(smallest_values), digits=6))")
+            println("  • Value range: [$(round(minimum(smallest_values), digits=6)), $(round(maximum(smallest_values), digits=6))]")
+            println("  • Average spacing: $(round((maximum(smallest_values) - minimum(smallest_values))/(sample_size-1), digits=6))")
+        end
+    else
+        println("No local minima found in the analysis.")
+    end
+else
+    println("No data available in enhanced DataFrame.")
 end
 
 println("\n=== Demo Complete ===")
@@ -430,19 +457,150 @@ println("  • Ready for Phase 3 visualization improvements")
 # Optional visualization section (comment out if visualization causes issues)
 # This section demonstrates Phase 2 visualizations
 
-# NOTE: Load CairoMakie first to enable extension functions
+# NOTE: Using GLMakie for interactive 3D visualization (avoid loading CairoMakie simultaneously)
 println("\n=== Phase 2 Visualizations ===")
-using CairoMakie
+using GLMakie  # Required for 3D interactive level set visualization
 
-# Hessian norm analysis
-fig1 = plot_hessian_norms(df_enhanced)
-display(fig1)
+# Comment out CairoMakie-based plots to avoid backend conflicts
+# To use these plots, comment out GLMakie above and uncomment CairoMakie below:
+# using CairoMakie
 
-# # Condition number analysis  
-fig2 = plot_condition_numbers(df_enhanced)
-display(fig2)
+# # Hessian norm analysis
+# # fig1 = plot_hessian_norms(df_enhanced)
+# # display(fig1)
 
-# # Critical eigenvalue analysis
-fig3 = plot_critical_eigenvalues(df_enhanced)
-display(fig3)
+# # # Condition number analysis  
+# # fig2 = plot_condition_numbers(df_enhanced)
+# # display(fig2)
+
+# # # Critical eigenvalue analysis
+# # fig3 = plot_critical_eigenvalues(df_enhanced)
+# # display(fig3)
+
+# # Enhanced: All eigenvalues visualization (NEW!)
+# println("\n=== Enhanced All-Eigenvalues Visualization ===")
+# println("This new visualization shows ALL 3 eigenvalues for each critical point")
+# println("Separate subplots for each critical point type (minimum, saddle, maximum)")
+# println("Colors: Red (λ₁), Blue (λ₂), Green (λ₃)")
+# println("Stroke colors: Green (minimum), Orange (saddle), Red (maximum)")
+# println("Eigenvalues are vertically aligned with dotted connecting lines")
+
+# println("\n1. Standard magnitude plot (preserves eigenvalue signs):")
+# fig_all = plot_all_eigenvalues(f, df_enhanced, sort_by=:magnitude)
+# display(fig_all)
+
+# println("\n2. Absolute magnitude plot (compares magnitudes only):")
+# fig_abs = plot_all_eigenvalues(f, df_enhanced, sort_by=:abs_magnitude)
+# display(fig_abs)
+
+# println("\n3. Eigenvalue spread plot (ordered by eigenvalue range):")
+# fig_spread = plot_all_eigenvalues(f, df_enhanced, sort_by=:spread)
+# display(fig_spread)
+
+println("NOTE: CairoMakie-based plots are commented out to avoid conflicts with GLMakie")
+println("To use Phase 2 static plots, comment out GLMakie and uncomment CairoMakie section above")
+
+# =============================================================================
+# NEW: 3D Level Set Visualization
+# =============================================================================
+println("\n=== 3D Interactive Level Set Visualization ===")
+println("Creating interactive 3D level set visualization with critical points...")
+println("This visualization allows you to:")
+println("  • Interactively explore level sets using a slider")
+println("  • See critical points highlighted as diamonds")
+println("  • Navigate through function value ranges")
+println("  • Visualize how critical points relate to level sets")
+
+# Create 3D grid for level set visualization
+println("\n1. Generating 3D visualization grid...")
+grid_resolution = 25  # 26×26×26 = 17,576 points (good balance of detail vs performance)
+vis_grid = generate_grid_small_n(3, grid_resolution)  # Optimized for 3D
+
+# Transform grid to match problem domain
+vis_scale_factor = scale_factor  # Use same scale as problem
+vis_center = center              # Use same center as problem
+
+# Transform from [-1,1]³ to problem domain
+transformed_vis_grid = Array{SVector{3,Float64}}(undef, size(vis_grid))
+for i in eachindex(vis_grid)
+    transformed_vis_grid[i] = SVector{3}(vis_scale_factor .* vis_grid[i] .+ vis_center)
+end
+
+println("   Grid dimensions: $(size(transformed_vis_grid))")
+println("   Total grid points: $(length(transformed_vis_grid))")
+println("   Domain: [$(minimum(minimum(p) for p in transformed_vis_grid)), $(maximum(maximum(p) for p in transformed_vis_grid))]³")
+
+# Prepare critical points DataFrame for visualization
+# Level set visualization expects columns: x1, x2, x3, z
+vis_df = select(df_enhanced, :x1, :x2, :x3, :z)
+
+# Calculate function value range for level set slider
+println("\n2. Computing function value range...")
+z_values_sample = [f(transformed_vis_grid[i]) for i in 1:min(1000, length(transformed_vis_grid))]
+filter!(isfinite, z_values_sample)
+
+if !isempty(z_values_sample)
+    z_min_sample = minimum(z_values_sample)
+    z_max_sample = maximum(z_values_sample)
+    
+    # Expand range slightly and include critical point values
+    crit_z_min = minimum(df_enhanced.z)
+    crit_z_max = maximum(df_enhanced.z)
+    
+    z_range_viz = (
+        min(z_min_sample, crit_z_min) - 0.1 * abs(crit_z_max - crit_z_min),
+        max(z_max_sample, crit_z_max) + 0.1 * abs(crit_z_max - crit_z_min)
+    )
+    
+    println("   Function range on grid sample: [$(round(z_min_sample, digits=4)), $(round(z_max_sample, digits=4))]")
+    println("   Critical points range: [$(round(crit_z_min, digits=4)), $(round(crit_z_max, digits=4))]")
+    println("   Visualization range: [$(round(z_range_viz[1], digits=4)), $(round(z_range_viz[2], digits=4))]")
+    
+    # Create interactive level set visualization
+    println("\n3. Creating interactive 3D level set visualization...")
+    println("   This may take a moment to compute function values on the grid...")
+    
+    # Set visualization parameters
+    viz_params = VisualizationParameters{Float64}(
+        point_tolerance=0.05,     # Tolerance for level set detection
+        point_window=0.1,         # Window for point visibility
+        fig_size=(1200, 900)      # Larger figure for better visibility
+    )
+    
+    try
+        # Create the interactive visualization
+        fig_levelset = create_level_set_visualization(
+            f,
+            transformed_vis_grid,
+            vis_df,
+            z_range_viz,
+            viz_params
+        )
+        
+        println("   ✓ Interactive level set visualization created successfully!")
+        println("   Use the slider to explore different level sets")
+        println("   Orange diamonds show critical points near the current level")
+        println("   Blue points show the level set surface")
+        
+        display(fig_levelset)
+        
+    catch e
+        @warn "Level set visualization failed" exception=e
+        println("   ✗ Level set visualization failed: $e")
+        println("   This might be due to:")
+        println("     • Grid resolution too high (try reducing grid_resolution)")
+        println("     • Function evaluation issues")
+        println("     • GLMakie backend problems")
+    end
+else
+    @warn "Could not compute function value range for level set visualization"
+    println("   ✗ Could not sample function values for level set range")
+end
+
+println("\n=== Level Set Visualization Complete ===")
+println("The 3D level set visualization provides:")
+println("  • Interactive exploration of function level sets")
+println("  • Real-time critical point highlighting")
+println("  • Intuitive understanding of function topology")
+println("  • Visual validation of critical point classifications")
 

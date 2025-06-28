@@ -1,7 +1,7 @@
 # Proper way to initiate example files when developing new features
 using Pkg
 using Revise 
-Pkg.activate(joinpath(@__DIR__, "../"))
+Pkg.activate(joinpath(@__DIR__, "../../"))
 using Globtim
 using DynamicPolynomials, DataFrames
 

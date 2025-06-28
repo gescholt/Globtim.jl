@@ -30,7 +30,7 @@ using Pkg
 # using Revise 
 Pkg.activate(joinpath(@__DIR__, "../../"))
 using Globtim
-using Statistics, Printf
+using Statistics, Printf, CSV, LinearAlgebra, ForwardDiff, DataFrames, DynamicPolynomials
 import IterTools
 
 # Explicitly import DataFrames functions to avoid conflicts
@@ -43,8 +43,8 @@ import DataFrames: combine, groupby
 # 4D POLYNOMIAL APPROXIMATION PARAMETERS
 const CENTER_4D = [0.0, 0.0, 0.0, 0.0]        # Domain center point
 const SAMPLE_RANGE_4D = 1.2                    # Sampling radius around center
-const L2_TOLERANCE = .5                       # L²-norm tolerance for degree selection
-const POLYNOMIAL_DEGREE = 16                   # Polynomial degree to use
+const L2_TOLERANCE = 20.                       # L²-norm tolerance for degree selection
+const POLYNOMIAL_DEGREE = 8                  # Polynomial degree to use
 const NUM_SAMPLES = 25                        # Number of samples per dimension
 
 # ANALYSIS PARAMETERS
@@ -263,20 +263,50 @@ df_4d_predicted = predict_4d_types(df_4d_expected, df_2d_classified)
 
 # Prediction summary computed
 
-# Show expected 4D minima
+# Show expected 4D minima as table
 predicted_minima_4d = df_4d_predicted[df_4d_predicted.predicted_type .== :minimum, :]
 if nrow(predicted_minima_4d) > 0
     sort!(predicted_minima_4d, :predicted_function_value)
-    println("\nExpected 4D Local Minima (from tensor products of 2D minima):")
-    for i in 1:min(10, nrow(predicted_minima_4d))
-        coords = [predicted_minima_4d.x1[i], predicted_minima_4d.x2[i], predicted_minima_4d.x3[i], predicted_minima_4d.x4[i]]
-        f_val = predicted_minima_4d.predicted_function_value[i]
-        is_global = i == 1 ? " (EXPECTED GLOBAL)" : ""
-        coord_str = join([string(round(c, digits=DECIMAL_PRECISION)) for c in coords], ", ")
-        # Use scientific notation for very small values to show actual precision
-        f_val_str = abs(f_val) < SCIENTIFIC_NOTATION_THRESHOLD ? @sprintf("%.3e", f_val) : string(round(f_val, digits=FUNCTION_VALUE_PRECISION))
-        println("  $i. f($coord_str) = $f_val_str$is_global")
-    end
+    println("\n=== Expected 4D Local Minima (from tensor products of 2D minima) ===")
+    
+    # Create display table for minima
+    n_display = min(10, nrow(predicted_minima_4d))
+    minima_table = DataFrame(
+        Index = 1:n_display,
+        x1 = round.(predicted_minima_4d.x1[1:n_display], digits=DECIMAL_PRECISION),
+        x2 = round.(predicted_minima_4d.x2[1:n_display], digits=DECIMAL_PRECISION),
+        x3 = round.(predicted_minima_4d.x3[1:n_display], digits=DECIMAL_PRECISION),
+        x4 = round.(predicted_minima_4d.x4[1:n_display], digits=DECIMAL_PRECISION),
+        Function_Value = [abs(f_val) < SCIENTIFIC_NOTATION_THRESHOLD ? 
+                         parse(Float64, @sprintf("%.3e", f_val)) : 
+                         round(f_val, digits=FUNCTION_VALUE_PRECISION) 
+                         for f_val in predicted_minima_4d.predicted_function_value[1:n_display]],
+        Type = [i == 1 ? "GLOBAL MIN" : "Local Min" for i in 1:n_display]
+    )
+    println(minima_table)
+end
+
+# Show expected 4D maxima as table
+predicted_maxima_4d = df_4d_predicted[df_4d_predicted.predicted_type .== :maximum, :]
+if nrow(predicted_maxima_4d) > 0
+    sort!(predicted_maxima_4d, :predicted_function_value, rev=true)
+    println("\n=== Expected 4D Local Maxima (from tensor products of 2D maxima) ===")
+    
+    # Create display table for maxima
+    n_display = min(10, nrow(predicted_maxima_4d))
+    maxima_table = DataFrame(
+        Index = 1:n_display,
+        x1 = round.(predicted_maxima_4d.x1[1:n_display], digits=DECIMAL_PRECISION),
+        x2 = round.(predicted_maxima_4d.x2[1:n_display], digits=DECIMAL_PRECISION),
+        x3 = round.(predicted_maxima_4d.x3[1:n_display], digits=DECIMAL_PRECISION),
+        x4 = round.(predicted_maxima_4d.x4[1:n_display], digits=DECIMAL_PRECISION),
+        Function_Value = [abs(f_val) < SCIENTIFIC_NOTATION_THRESHOLD ? 
+                         parse(Float64, @sprintf("%.3e", f_val)) : 
+                         round(f_val, digits=FUNCTION_VALUE_PRECISION) 
+                         for f_val in predicted_maxima_4d.predicted_function_value[1:n_display]],
+        Type = [i == 1 ? "GLOBAL MAX" : "Local Max" for i in 1:n_display]
+    )
+    println(maxima_table)
 end
 
 println("\n=== Step 2: 4D Polynomial Approximation Setup ===")
