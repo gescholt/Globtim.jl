@@ -61,6 +61,26 @@ When `analyze_critical_points()` is called with `enable_hessian=true`, the follo
 
 ## Files in This Directory
 
+### 🚀 Main Production Files
+
+#### `deuflhard_4d_complete.jl` **[NEW - CONSOLIDATED]**
+Single definitive file for 4D Deuflhard analysis featuring:
+- Complete 16-orthant decomposition (2^4 = 16 sign combinations)
+- Automatic polynomial degree adaptation until L²-norm ≤ 0.0007
+- BFGS refinement for critical points near minimizers
+- Comprehensive validation against expected global minimum
+- High-precision tolerances and detailed convergence information
+- **Consolidates functionality from 12+ experimental files into one production-ready implementation**
+
+#### `deuflhard_4d_analysis.jl`
+Original comprehensive 4D Deuflhard analysis (kept for reference)
+
+#### `deuflhard_4d_analysis_msolve.jl`
+Alternative implementation using msolve solver instead of HomotopyContinuation.jl
+
+#### `deuflhard_4d_analysis_high_precision.jl`
+High-precision BFGS refinement with ultra-tight tolerances for critical points
+
 ### Core Demonstration Files
 
 #### `trefethen_3d_complete_demo.jl`
@@ -277,7 +297,25 @@ include("hessian_visualization_demo.jl")   # Visualization functions
 
 This certification directory provides comprehensive validation of Phase 2 Hessian analysis capabilities, ensuring mathematical correctness, numerical stability, and computational efficiency across a wide range of optimization problems.
 
+## 📁 Archive Structure
+
+The `archive/` folder contains experimental and legacy files that were consolidated:
+
+- **`archive/experimental/`**: Development versions and orthant decomposition experiments
+- **`archive/comparisons/`**: Various comparison scripts between raw and refined critical points
+- **`archive/debugging/`**: Minimal debugging and testing tools
+- **`documentation/`**: Consolidated documentation files
+
+See `archive/README.md` for detailed information about archived files.
+
 ## ✅ Recent Updates & Fixes
+
+### File Consolidation (Latest)
+- **Achievement**: Consolidated 12+ redundant deuflhard_4d_* files into single `deuflhard_4d_complete.jl`
+- **Structure**: Organized experimental files into clean archive structure
+- **Documentation**: Moved all documentation to dedicated `documentation/` folder
+- **Status**: ✅ Clean, maintainable structure with single definitive implementation
+- **Benefit**: Easy to find and use the best implementation without confusion
 
 ### Path Resolution Fixed (Latest)
 - **Issue**: Module loading failures due to incorrect `Pkg.activate` paths
@@ -300,9 +338,22 @@ This certification directory provides comprehensive validation of Phase 2 Hessia
 ### Verification Commands
 ```julia
 # Test that everything works correctly
+include("deuflhard_4d_complete.jl")           # NEW: Complete 4D analysis
 include("trefethen_3d_complete_demo.jl")      # Should run without errors
 include("phase3_standalone_demo.jl")          # Should display statistical tables
 include("phase2_certification_suite.jl")     # Should pass all validations
+```
+
+### Quick Start for 4D Deuflhard Analysis
+```julia
+# Run the consolidated 4D analysis
+using Pkg; using Revise 
+Pkg.activate(joinpath(@__DIR__, "../../"))
+using Globtim
+
+# Execute complete analysis
+include("deuflhard_4d_complete.jl")
+# This will analyze all 16 orthants with automatic tolerance control and BFGS refinement
 ```
 
 All certification demos are now verified working with the latest fixes.
