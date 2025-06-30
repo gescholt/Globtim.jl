@@ -20,6 +20,18 @@ Pkg.activate(joinpath(@__DIR__, "../../"))
 using Globtim
 using Statistics, Printf, CSV, LinearAlgebra, ForwardDiff, DataFrames, DynamicPolynomials, Optim
 import DataFrames: combine, groupby
+using PrettyTables
+
+# Include enhanced BFGS and ultra-precision components
+# Suppress output from includes
+redirect_stdout(devnull) do
+    if !@isdefined(BFGSConfig)
+        include("step1_bfgs_enhanced.jl")
+    end
+    if !@isdefined(UltraPrecisionConfig)
+        include("step4_ultra_precision.jl")
+    end
+end
 
 # ================================================================================
 # CONFIGURATION 
@@ -145,7 +157,7 @@ for (idx, (signs, label)) in enumerate(all_orthants)
     if valid_points > 0
         orthant_mask = all_orthant_labels .== label
         orthant_values = all_function_values[orthant_mask]
-        best_idx = argmin(orthant_values)
+        local best_idx = argmin(orthant_values)
         best_value = orthant_values[best_idx]
         println("  Best function value: $(Printf.@sprintf("%.6f", best_value))")
     end
@@ -224,74 +236,83 @@ for i in 1:n_show
 end
 
 # ================================================================================
-# BFGS REFINEMENT FOR TOP CRITICAL POINTS
+# ENHANCED BFGS REFINEMENT FOR TOP CRITICAL POINTS
 # ================================================================================
 
 println("\n" * "="^80)
-println("BFGS REFINEMENT")
+println("ENHANCED BFGS REFINEMENT")
 println("="^80)
 
-# Refine top critical points with BFGS optimization
-println("\nRefining top critical points with BFGS optimization...")
-println("Using gradient tolerance: $(Printf.@sprintf("%.1e", BFGS_TOLERANCE))")
-
-refined_results = []
+# Prepare data for enhanced refinement
 n_refine = min(8, length(unique_points))
+refine_points = Vector{Vector{Float64}}()
+refine_values = Float64[]
+refine_labels = String[]
 
 for i in 1:n_refine
     idx = sort_idx[i]
-    initial_point = unique_points[idx]
-    initial_value = unique_values[idx]
-    orthant_label = unique_labels[idx]
-    
-    println("\n" * "-"^60)
-    println("Refining critical point $i from orthant $orthant_label")
-    println("Initial: [$(join([@sprintf("%.6f", x) for x in initial_point], ", "))]")
-    println("Initial value: $(Printf.@sprintf("%.8f", initial_value))")
-    
-    # Choose tolerance based on function value magnitude
-    bfgs_tol = abs(initial_value) < 1e-6 ? HIGH_PRECISION_TOLERANCE : BFGS_TOLERANCE
-    
-    # Run BFGS optimization
-    result = Optim.optimize(deuflhard_4d_composite, initial_point, Optim.BFGS(), 
-                           Optim.Options(iterations=100, g_tol=bfgs_tol, show_trace=false))
-    
-    if Optim.converged(result)
-        refined_point = Optim.minimizer(result)
-        refined_value = Optim.minimum(result)
-        iterations = Optim.iterations(result)
-        
-        # Calculate improvements
-        point_improvement = norm(refined_point - initial_point)
-        value_improvement = abs(refined_value - initial_value)
-        
-        # Calculate gradient norm at solution
-        grad = ForwardDiff.gradient(deuflhard_4d_composite, refined_point)
-        grad_norm = norm(grad)
-        
-        push!(refined_results, (
-            i, initial_point, refined_point, 
-            initial_value, refined_value,
-            orthant_label, iterations,
-            point_improvement, value_improvement,
-            grad_norm, Optim.converged(result)
-        ))
-        
-        println("\nRefined: [$(join([@sprintf("%.6f", x) for x in refined_point], ", "))]")
-        println("Refined value: $(Printf.@sprintf("%.8f", refined_value))")
-        println("BFGS iterations: $iterations")
-        println("Position change: $(Printf.@sprintf("%.3e", point_improvement))")
-        println("Value improvement: $(Printf.@sprintf("%.3e", value_improvement))")
-        println("Final gradient norm: $(Printf.@sprintf("%.3e", grad_norm))")
-        
-        # Check if this might be the global minimum
-        dist_to_expected = norm(refined_point - EXPECTED_GLOBAL_MIN)
-        if dist_to_expected < DISTANCE_TOLERANCE
-            println("*** POTENTIAL GLOBAL MINIMUM FOUND! ***")
-            println("Distance to expected: $(Printf.@sprintf("%.3e", dist_to_expected))")
-        end
-    else
-        println("BFGS did not converge!")
+    push!(refine_points, unique_points[idx])
+    push!(refine_values, unique_values[idx])
+    push!(refine_labels, unique_labels[idx])
+end
+
+println("\nRefining top $n_refine critical points with enhanced BFGS...")
+
+# Configure enhanced BFGS
+bfgs_config = BFGSConfig(
+    standard_tolerance = BFGS_TOLERANCE,
+    high_precision_tolerance = HIGH_PRECISION_TOLERANCE,
+    precision_threshold = 1e-6,
+    max_iterations = 100,
+    track_hyperparameters = true,
+    show_trace = false
+)
+
+# Run enhanced BFGS refinement
+enhanced_results = enhanced_bfgs_refinement(
+    refine_points,
+    refine_values,
+    refine_labels,
+    deuflhard_4d_composite,
+    bfgs_config,
+    expected_minimum = EXPECTED_GLOBAL_MIN
+)
+
+# Display results in formatted table
+println("\nEnhanced BFGS Results:")
+
+# Create results matrix for pretty table
+results_data = Matrix{Any}(undef, length(enhanced_results), 8)
+for (i, result) in enumerate(enhanced_results)
+    results_data[i, :] = [
+        i,
+        result.orthant_label,
+        Printf.@sprintf("%.8e", result.initial_value),
+        Printf.@sprintf("%.8e", result.refined_value),
+        Printf.@sprintf("%.3e", result.value_improvement),
+        result.iterations_used,
+        Printf.@sprintf("%.3e", result.final_grad_norm),
+        Printf.@sprintf("%.3e", result.distance_to_expected)
+    ]
+end
+
+header = ["#", "Orthant", "Initial Value", "Refined Value", "Improvement", "Iters", "Grad Norm", "Dist to Expected"]
+
+pretty_table(
+    results_data,
+    header = header,
+    alignment = [:c, :c, :r, :r, :r, :c, :r, :r],
+    title = "Enhanced BFGS Refinement Results"
+)
+
+# Check for global minimum
+for result in enhanced_results
+    if result.distance_to_expected < DISTANCE_TOLERANCE
+        println("\n*** GLOBAL MINIMUM FOUND! ***")
+        println("Point: [$(join([@sprintf("%.6f", x) for x in result.refined_point], ", "))]")
+        println("Value: $(Printf.@sprintf("%.8f", result.refined_value))")
+        println("Distance to expected: $(Printf.@sprintf("%.3e", result.distance_to_expected))")
+        break
     end
 end
 
@@ -322,9 +343,8 @@ end
 # Check refined results
 global min_dist_refined = Inf
 global closest_refined = nothing
-for result in refined_results
-    _, _, refined_pt, _, refined_val, label, _, _, _, _, _ = result
-    dist = norm(refined_pt - EXPECTED_GLOBAL_MIN)
+for result in enhanced_results
+    dist = result.distance_to_expected
     if dist < min_dist_refined
         global min_dist_refined = dist
         global closest_refined = result
@@ -347,22 +367,20 @@ end
 println("\n" * "-"^60)
 println("After BFGS refinement:")
 if min_dist_refined < DISTANCE_TOLERANCE && closest_refined !== nothing
-    _, _, refined_pt, _, refined_val, label, iters, pos_change, val_change, grad_norm, _ = closest_refined
     println("  ✓ EXPECTED GLOBAL MINIMUM FOUND!")
-    println("  Final point: [$(join([@sprintf("%.6f", x) for x in refined_pt], ", "))]")
-    println("  Final value: $(Printf.@sprintf("%.8f", refined_val))")
+    println("  Final point: [$(join([@sprintf("%.6f", x) for x in closest_refined.refined_point], ", "))]")
+    println("  Final value: $(Printf.@sprintf("%.8f", closest_refined.refined_value))")
     println("  Distance to expected: $(Printf.@sprintf("%.3e", min_dist_refined))")
-    println("  Value error: $(Printf.@sprintf("%.3e", abs(refined_val - EXPECTED_VALUE)))")
-    println("  Final gradient norm: $(Printf.@sprintf("%.3e", grad_norm))")
-    println("  BFGS iterations: $iters")
-    println("  Found in orthant: $label")
+    println("  Value error: $(Printf.@sprintf("%.3e", abs(closest_refined.refined_value - EXPECTED_VALUE)))")
+    println("  Final gradient norm: $(Printf.@sprintf("%.3e", closest_refined.final_grad_norm))")
+    println("  BFGS iterations: $(closest_refined.iterations_used)")
+    println("  Found in orthant: $(closest_refined.orthant_label)")
 else
     println("  ✗ Expected global minimum NOT found")
     if closest_refined !== nothing
         println("  Closest distance: $(Printf.@sprintf("%.3e", min_dist_refined))")
-        _, _, _, _, refined_val, label, _, _, _, _, _ = closest_refined
-        println("  Closest value: $(Printf.@sprintf("%.6f", refined_val))")
-        println("  Closest orthant: $label")
+        println("  Closest value: $(Printf.@sprintf("%.6f", closest_refined.refined_value))")
+        println("  Closest orthant: $(closest_refined.orthant_label)")
     end
 end
 
@@ -378,28 +396,98 @@ println("\nOrthant Analysis Results:")
 println("  Total orthants analyzed: 16")
 println("  Total critical points found: $n_total")
 println("  Unique critical points: $(length(unique_points))")
-println("  Points refined with BFGS: $(length(refined_results))")
+println("  Points refined with BFGS: $(length(enhanced_results))")
 
-if length(refined_results) > 0
+if length(enhanced_results) > 0
     println("\nBFGS Refinement Statistics:")
-    local total_pos_improvement = sum([r[8] for r in refined_results])
-    local total_val_improvement = sum([r[9] for r in refined_results])
-    local avg_pos_improvement = total_pos_improvement / length(refined_results)
-    local avg_val_improvement = total_val_improvement / length(refined_results)
-    local avg_grad_norm = sum([r[10] for r in refined_results]) / length(refined_results)
+    local total_pos_improvement = sum([r.point_improvement for r in enhanced_results])
+    local total_val_improvement = sum([r.value_improvement for r in enhanced_results])
+    local avg_pos_improvement = total_pos_improvement / length(enhanced_results)
+    local avg_val_improvement = total_val_improvement / length(enhanced_results)
+    local avg_grad_norm = sum([r.final_grad_norm for r in enhanced_results]) / length(enhanced_results)
     
     println("  Average position improvement: $(Printf.@sprintf("%.3e", avg_pos_improvement))")
     println("  Average value improvement: $(Printf.@sprintf("%.3e", avg_val_improvement))")
     println("  Average final gradient norm: $(Printf.@sprintf("%.3e", avg_grad_norm))")
     
     # Best function values
-    best_refined_val = minimum([r[5] for r in refined_results])
+    best_refined_val = minimum([r.refined_value for r in enhanced_results])
     best_raw_val = minimum(unique_values)
     
     println("\nBest Function Values:")
     println("  Raw polynomial solver: $(Printf.@sprintf("%.8f", best_raw_val))")
     println("  After BFGS refinement: $(Printf.@sprintf("%.8f", best_refined_val))")
     println("  Total improvement: $(Printf.@sprintf("%.3e", best_raw_val - best_refined_val))")
+end
+
+# ================================================================================
+# ULTRA-PRECISION REFINEMENT FOR BEST RESULTS
+# ================================================================================
+
+if length(enhanced_results) > 0
+    println("\n" * "="^80)
+    println("ULTRA-PRECISION REFINEMENT")
+    println("="^80)
+    
+    # Select top 3 results for ultra-precision
+    sorted_results = sort(enhanced_results, by=r->r.refined_value)
+    n_ultra = min(3, length(sorted_results))
+    
+    ultra_points = [r.refined_point for r in sorted_results[1:n_ultra]]
+    ultra_values = [r.refined_value for r in sorted_results[1:n_ultra]]
+    ultra_labels = ["ultra_$(r.orthant_label)" for r in sorted_results[1:n_ultra]]
+    
+    println("\nApplying ultra-precision refinement to top $n_ultra results...")
+    
+    # Configure ultra-precision
+    ultra_config = UltraPrecisionConfig(
+        base_config = BFGSConfig(
+            standard_tolerance = 1e-12,
+            high_precision_tolerance = 1e-16,
+            max_iterations = 500
+        ),
+        max_precision_stages = 3,
+        stage_tolerance_factors = [1.0, 0.1, 0.01],
+        use_nelder_mead_final = true
+    )
+    
+    # Run ultra-precision refinement
+    ultra_results, stage_histories = ultra_precision_refinement(
+        ultra_points,
+        ultra_values,
+        deuflhard_4d_composite,
+        1e-30,  # Target precision (theoretical minimum)
+        ultra_config,
+        labels = ultra_labels
+    )
+    
+    # Display stage progression
+    format_stage_history_table(stage_histories, ultra_labels)
+    
+    # Validate precision achievement
+    println("\n" * "="^80)
+    println("PRECISION VALIDATION")
+    println("="^80)
+    
+    validation = validate_precision_achievement(ultra_results, EXPECTED_VALUE, 1e-30)
+    
+    println("\nValidation Results:")
+    println("  • Best value found: $(Printf.@sprintf("%.15e", validation[:best_value_found]))")
+    println("  • Target value: $(Printf.@sprintf("%.15e", validation[:target_value]))")
+    println("  • Absolute error: $(Printf.@sprintf("%.3e", validation[:absolute_error]))")
+    println("  • Relative error: $(Printf.@sprintf("%.3e", validation[:relative_error]))")
+    println("  • Precision gap (orders): $(Printf.@sprintf("%.1f", validation[:precision_gap_orders]))")
+    println("  • Recommendation: $(validation[:recommendation])")
+    
+    # Final best result
+    best_ultra_idx = argmin([r.refined_value for r in ultra_results])
+    best_ultra = ultra_results[best_ultra_idx]
+    
+    println("\nBest Ultra-Precision Result:")
+    println("  • Point: [$(join([@sprintf("%.8f", x) for x in best_ultra.refined_point], ", "))]")
+    println("  • Value: $(Printf.@sprintf("%.15e", best_ultra.refined_value))")
+    println("  • Final gradient norm: $(Printf.@sprintf("%.3e", best_ultra.final_grad_norm))")
+    println("  • Distance to expected: $(Printf.@sprintf("%.3e", norm(best_ultra.refined_point - EXPECTED_GLOBAL_MIN)))")
 end
 
 println("\nPolynomial Approximation Quality:")
@@ -432,4 +520,9 @@ else
     println("- ⚠ Expected global minimum not found (may need parameter adjustment)")
 end
 
-println("\nThis analysis represents the definitive 4D Deuflhard critical point study.")
+println("\nThis enhanced analysis includes:")
+println("- Structured BFGS refinement with hyperparameter tracking")
+println("- Ultra-precision multi-stage optimization")
+println("- Comprehensive validation and precision achievement metrics")
+println("- Publication-quality formatted output tables")
+println("\nThis represents the definitive 4D Deuflhard critical point study.")
