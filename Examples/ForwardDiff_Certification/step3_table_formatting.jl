@@ -94,7 +94,7 @@ function format_bfgs_results_table(bfgs_results::Vector{BFGSResult})
         # Color code improvements
         improvement_str = @sprintf("%.2e", result.value_improvement)
         if result.value_improvement > 1e-3
-            improvement_str = crayon"green" * improvement_str * crayon"reset"
+            improvement_str = string(crayon"green") * improvement_str * string(crayon"reset")
         end
         
         data_matrix[i, :] = [
@@ -106,7 +106,7 @@ function format_bfgs_results_table(bfgs_results::Vector{BFGSResult})
             result.iterations_used,                     # BFGS Iterations
             @sprintf("%.2e", result.final_grad_norm),   # Final Gradient Norm
             tolerance_type,                             # Tolerance Type
-            convergence_color * convergence_symbol * crayon"reset"  # Converged Status (colored)
+            string(convergence_color) * convergence_symbol * string(crayon"reset")  # Converged Status (colored)
         ]
     end
     
@@ -133,12 +133,12 @@ function format_bfgs_results_table(bfgs_results::Vector{BFGSResult})
     println("  • Average value improvement: $(Printf.@sprintf("%.2e", avg_improvement))")
     
     grad_color = avg_grad_norm < 1e-8 ? TABLE_COLORS[:good] : TABLE_COLORS[:warning]
-    println("  • Average final gradient norm: " * grad_color * 
-            Printf.@sprintf("%.2e", avg_grad_norm) * crayon"reset")
+    println("  • Average final gradient norm: " * string(grad_color) * 
+            Printf.@sprintf("%.2e", avg_grad_norm) * string(crayon"reset"))
     
     conv_color = convergence_rate == 100 ? TABLE_COLORS[:good] : TABLE_COLORS[:warning]
-    println("  • Convergence rate: " * conv_color * 
-            Printf.@sprintf("%.1f", convergence_rate) * "%" * crayon"reset")
+    println("  • Convergence rate: " * string(conv_color) * 
+            Printf.@sprintf("%.1f", convergence_rate) * "%" * string(crayon"reset"))
 end
 
 # ================================================================================
@@ -165,25 +165,25 @@ function format_orthant_distribution_table(all_orthants, unique_labels, unique_v
             
             # Color-coded status
             status_str = if best_value < -1.5
-                TABLE_COLORS[:good] * "✓ Global candidate" * crayon"reset"
+                string(TABLE_COLORS[:good]) * "✓ Global candidate" * string(crayon"reset")
             elseif n_points > 2
-                TABLE_COLORS[:highlight] * "Multiple found" * crayon"reset"
+                string(TABLE_COLORS[:highlight]) * "Multiple found" * string(crayon"reset")
             elseif n_points > 0
                 "Points found"
             else
-                TABLE_COLORS[:error] * "Empty" * crayon"reset"
+                string(TABLE_COLORS[:error]) * "Empty" * string(crayon"reset")
             end
         else
             best_value = NaN
             avg_degree = NaN
-            status_str = crayon"dim" * "Empty" * crayon"reset"
+            status_str = string(crayon"dark_gray") * "Empty" * string(crayon"reset")
         end
         
         # Color code point count
         count_str = if n_points == 0
-            crayon"dim" * string(n_points) * crayon"reset"
+            string(crayon"dark_gray") * string(n_points) * string(crayon"reset")
         elseif n_points > 2
-            crayon"bold" * string(n_points) * crayon"reset"
+            string(crayon"bold") * string(n_points) * string(crayon"reset")
         else
             string(n_points)
         end
@@ -191,9 +191,9 @@ function format_orthant_distribution_table(all_orthants, unique_labels, unique_v
         data_matrix[i, :] = [
             label,                                              # Orthant
             count_str,                                          # Points Found (colored)
-            isnan(best_value) ? crayon"dim" * "—" * crayon"reset" : 
+            isnan(best_value) ? string(crayon"dark_gray") * "—" * string(crayon"reset") : 
                 @sprintf("%.6f", best_value),                   # Best Value
-            isnan(avg_degree) ? crayon"dim" * "—" * crayon"reset" : 
+            isnan(avg_degree) ? string(crayon"dark_gray") * "—" * string(crayon"reset") : 
                 @sprintf("%.1f", avg_degree),                   # Avg Degree
             status_str,                                         # Status (colored)
             @sprintf("%.1f%%", n_points/total_points*100)      # Coverage %
@@ -246,23 +246,23 @@ function format_analysis_summary_table(
             ("Avg L²-norm", @sprintf("%.2e", avg_l2_norm)),
             ("Target L²-norm", @sprintf("%.2e", target_l2)),
             ("L²-norm Compliance", avg_l2_norm ≤ target_l2 ? 
-                TABLE_COLORS[:good] * "✓ Pass" * crayon"reset" : 
-                TABLE_COLORS[:error] * "✗ Fail" * crayon"reset")
+                string(TABLE_COLORS[:good]) * "✓ Pass" * string(crayon"reset") : 
+                string(TABLE_COLORS[:error]) * "✗ Fail" * string(crayon"reset"))
         ]),
         ("Global Minimum Status", [
             ("Expected Minimum Found", global_found ? 
-                TABLE_COLORS[:good] * "✓ Yes" * crayon"reset" : 
-                TABLE_COLORS[:warning] * "⚠ No" * crayon"reset")
+                string(TABLE_COLORS[:good]) * "✓ Yes" * string(crayon"reset") : 
+                string(TABLE_COLORS[:warning]) * "⚠ No" * string(crayon"reset"))
         ])
     ]
     
     println("\n")
-    println(crayon"bold" * "="^70 * crayon"reset")
-    println(crayon"bold" * " "^20 * "COMPREHENSIVE ANALYSIS SUMMARY" * crayon"reset")
-    println(crayon"bold" * "="^70 * crayon"reset")
+    println(string(crayon"bold") * "="^70 * string(crayon"reset"))
+    println(string(crayon"bold") * " "^20 * "COMPREHENSIVE ANALYSIS SUMMARY" * string(crayon"reset"))
+    println(string(crayon"bold") * "="^70 * string(crayon"reset"))
     
     for (section_name, items) in sections
-        println("\n" * crayon"bold underline" * section_name * crayon"reset")
+        println("\n" * string(crayon"bold underline") * section_name * string(crayon"reset"))
         
         for (metric, value) in items
             # Right-align metrics and left-align values
@@ -270,7 +270,7 @@ function format_analysis_summary_table(
         end
     end
     
-    println("\n" * crayon"bold" * "="^70 * crayon"reset")
+    println("\n" * string(crayon"bold") * "="^70 * string(crayon"reset"))
 end
 
 # ================================================================================
