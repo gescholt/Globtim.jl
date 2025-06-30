@@ -458,7 +458,8 @@ if length(enhanced_results) > 0
         deuflhard_4d_composite,
         1e-30,  # Target precision (theoretical minimum)
         ultra_config,
-        labels = ultra_labels
+        labels = ultra_labels,
+        expected_minimum = EXPECTED_GLOBAL_MIN
     )
     
     # Display stage progression

@@ -393,7 +393,8 @@ if any(minima_mask)
             f,
             target_value,  # Target is 10% better than current best
             ultra_config,
-            labels = ["global_minimum_candidate"]
+            labels = ["global_minimum_candidate"],
+            expected_minimum = Float64[]  # No known expected minimum for Trefethen
         )
         
         # Display stage progression
