@@ -108,8 +108,8 @@ function ultra_precision_refinement(
                 Optim.BFGS(),
                 Optim.Options(
                     g_tol = tolerance,
-                    f_tol = tolerance^2,     # Quadratically tighter
-                    x_tol = tolerance / 10,   # Even tighter position tolerance
+                    f_abstol = tolerance^2,     # Quadratically tighter
+                    x_abstol = tolerance / 10,   # Even tighter position tolerance
                     iterations = 200 * stage, # More iterations per stage
                     show_trace = false
                 )
@@ -165,7 +165,7 @@ function ultra_precision_refinement(
                 current_point,
                 Optim.NelderMead(),
                 Optim.Options(
-                    f_tol = 1e-30,
+                    f_abstol = 1e-30,
                     iterations = 1000,
                     show_trace = false
                 )
