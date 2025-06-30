@@ -76,7 +76,8 @@ function ultra_precision_refinement(
     objective_function::Function,
     target_precision::Float64,
     config::UltraPrecisionConfig;
-    labels::Vector{String} = ["point$i" for i in 1:length(initial_points)]
+    labels::Vector{String} = ["point$i" for i in 1:length(initial_points)],
+    expected_minimum::Vector{Float64} = Float64[]
 )
     
     enhanced_results = BFGSResult[]
@@ -208,7 +209,7 @@ function ultra_precision_refinement(
             norm(current_point - point),
             abs(current_value - value),
             label,
-            norm(current_point - EXPECTED_GLOBAL_MIN),
+            isempty(expected_minimum) ? 0.0 : norm(current_point - expected_minimum),
             0.0  # Timing tracked separately
         )
         

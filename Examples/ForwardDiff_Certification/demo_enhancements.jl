@@ -31,7 +31,8 @@ println("1. Finding critical points...")
 TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
 pol = Constructor(TR, 8, verbose=false)
 @polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+actual_degree = pol.degree isa Tuple ? pol.degree[2] : pol.degree
+solutions = solve_polynomial_system(x, 2, actual_degree, pol.coeffs)
 df_raw = process_crit_pts(solutions, f, TR)
 println("   Found $(nrow(df_raw)) critical points\n")
 
@@ -87,7 +88,8 @@ ultra_results, histories = ultra_precision_refinement(
     f,
     -0.87107,  # Target (known minimum)
     ultra_config,
-    labels = ["best"]
+    labels = ["best"],
+    expected_minimum = [0.7412, -0.7412]  # Known minimum for 2D Deuflhard
 )
 
 if length(ultra_results) > 0
