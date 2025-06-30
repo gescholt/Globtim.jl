@@ -22,11 +22,26 @@ using DataFrames
 using LinearAlgebra
 using Statistics
 using StaticArrays  # Required for SVector in LevelSetViz
+using ForwardDiff
+using Optim
+using PrettyTables
+using Printf
 
 # LevelSetViz functions are loaded through the GLMakie extension
 
 # Explicitly import DataFrames functions to avoid conflicts
 import DataFrames: combine, groupby
+
+# Include enhanced BFGS and ultra-precision components
+# Suppress output from includes
+redirect_stdout(devnull) do
+    if !@isdefined(BFGSConfig)
+        include("step1_bfgs_enhanced.jl")
+    end
+    if !@isdefined(UltraPrecisionConfig)
+        include("step4_ultra_precision.jl")
+    end
+end
 
 # Verify that tref_3d is available
 if !isdefined(Main, :tref_3d)
@@ -39,7 +54,12 @@ end
 # Optional visualization (comment out if not needed)
 # using CairoMakie
 
-println("=== Trefethen 3D Phase 2 Hessian Analysis Demo ===\n")
+# Configuration for enhanced analysis
+const ENABLE_ULTRA_PRECISION = true
+const VERBOSE_OUTPUT = true
+
+println("=== Trefethen 3D Enhanced Analysis Demo ===\n")
+println("Using enhanced BFGS and ultra-precision refinement")
 
 # Problem setup
 const n, a, b = 3, 20, 100 
@@ -264,6 +284,146 @@ if nrow(df_min) > 0
     end
 end
 
+# ================================================================================
+# ENHANCED BFGS REFINEMENT SECTION
+# ================================================================================
+
+println("\n" * "="^80)
+println("ENHANCED BFGS REFINEMENT")
+println("="^80)
+
+# Select promising points for enhanced refinement
+minima_mask = df_enhanced.critical_point_type .== :minimum
+if any(minima_mask)
+    minima_df = df_enhanced[minima_mask, :]
+    sort!(minima_df, :z)
+    
+    # Take top 5 minima for refinement
+    n_refine = min(5, nrow(minima_df))
+    refine_points = Vector{Vector{Float64}}()
+    refine_values = Float64[]
+    refine_labels = String[]
+    
+    for i in 1:n_refine
+        point = [minima_df[i, Symbol("x$j")] for j in 1:n]
+        push!(refine_points, point)
+        push!(refine_values, minima_df[i, :z])
+        push!(refine_labels, "minimum_$i")
+    end
+    
+    println("\nRefining top $n_refine local minima with enhanced BFGS...")
+    
+    # Configure enhanced BFGS
+    bfgs_config = BFGSConfig(
+        standard_tolerance = 1e-10,
+        high_precision_tolerance = 1e-14,
+        precision_threshold = 1e-6,
+        max_iterations = 200,
+        track_hyperparameters = true,
+        show_trace = false
+    )
+    
+    # Run enhanced BFGS refinement
+    enhanced_results = enhanced_bfgs_refinement(
+        refine_points,
+        refine_values,
+        refine_labels,
+        f,
+        bfgs_config,
+        expected_minimum = Float64[]  # No known expected minimum for Trefethen
+    )
+    
+    # Display results in formatted table
+    println("\nEnhanced BFGS Results:")
+    
+    # Create results matrix for pretty table
+    results_data = Matrix{Any}(undef, length(enhanced_results), 7)
+    for (i, result) in enumerate(enhanced_results)
+        results_data[i, :] = [
+            result.orthant_label,
+            Printf.@sprintf("%.8e", result.initial_value),
+            Printf.@sprintf("%.8e", result.refined_value),
+            Printf.@sprintf("%.3e", result.value_improvement),
+            result.iterations_used,
+            Printf.@sprintf("%.3e", result.final_grad_norm),
+            result.converged ? "✓" : "✗"
+        ]
+    end
+    
+    header = ["Point", "Initial Value", "Refined Value", "Improvement", "Iterations", "Grad Norm", "Converged"]
+    
+    pretty_table(
+        results_data,
+        header = header,
+        alignment = [:l, :r, :r, :r, :c, :r, :c],
+        title = "Enhanced BFGS Refinement Results"
+    )
+    
+    # Ultra-precision refinement for best result
+    if ENABLE_ULTRA_PRECISION && length(enhanced_results) > 0
+        println("\n" * "="^80)
+        println("ULTRA-PRECISION REFINEMENT")
+        println("="^80)
+        
+        # Find best result
+        best_idx = argmin([r.refined_value for r in enhanced_results])
+        best_result = enhanced_results[best_idx]
+        
+        println("\nApplying ultra-precision refinement to best minimum...")
+        println("Initial value: $(Printf.@sprintf("%.15e", best_result.refined_value))")
+        
+        # Configure ultra-precision
+        ultra_config = UltraPrecisionConfig(
+            base_config = BFGSConfig(
+                standard_tolerance = 1e-12,
+                high_precision_tolerance = 1e-16,
+                max_iterations = 500
+            ),
+            max_precision_stages = 3,
+            stage_tolerance_factors = [1.0, 0.1, 0.01],
+            use_nelder_mead_final = true
+        )
+        
+        # Run ultra-precision refinement
+        # For Trefethen, we use the best found value minus a small offset as target
+        target_value = best_result.refined_value - abs(best_result.refined_value) * 0.1
+        ultra_results, stage_histories = ultra_precision_refinement(
+            [best_result.refined_point],
+            [best_result.refined_value],
+            f,
+            target_value,  # Target is 10% better than current best
+            ultra_config,
+            labels = ["global_minimum_candidate"]
+        )
+        
+        # Display stage progression
+        if VERBOSE_OUTPUT
+            format_stage_history_table(stage_histories, ["global_minimum_candidate"])
+        end
+        
+        # Validate precision achievement
+        println("\n" * "="^80)
+        println("PRECISION VALIDATION")
+        println("="^80)
+        
+        if length(ultra_results) > 0
+            final_result = ultra_results[1]
+            println("\nFinal refinement results:")
+            println("  • Final value: $(Printf.@sprintf("%.15e", final_result.refined_value))")
+            println("  • Total improvement: $(Printf.@sprintf("%.3e", abs(final_result.refined_value - final_result.initial_value)))")
+            println("  • Final gradient norm: $(Printf.@sprintf("%.3e", final_result.final_grad_norm))")
+            println("  • Total iterations: $(final_result.iterations_used)")
+            
+            # Note: Trefethen function doesn't have a known theoretical minimum
+            # We'll just display the achieved precision
+            println("\nAchieved precision:")
+            println("  • Best value found: $(Printf.@sprintf("%.15e", final_result.refined_value))")
+            println("  • Gradient norm: $(Printf.@sprintf("%.3e", final_result.final_grad_norm))")
+            println("  • Note: Trefethen 3D has no known theoretical minimum for comparison")
+        end
+    end
+end
+
 # Eigenvalue Distribution Analysis
 println("\n=== Eigenvalue Distribution Analysis ===")
 
@@ -452,6 +612,8 @@ println("  • Rigorous mathematical classification of critical points")
 println("  • Eigenvalue-based validation of minima/maxima")  
 println("  • Numerical stability assessment")
 println("  • Comprehensive statistical analysis")
+println("  • Enhanced BFGS refinement with hyperparameter tracking")
+println("  • Ultra-precision multi-stage optimization")
 println("  • Ready for Phase 3 visualization improvements")
 
 # Optional visualization section (comment out if visualization causes issues)
