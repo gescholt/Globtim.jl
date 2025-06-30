@@ -54,10 +54,10 @@ end
 const EXPECTED_GLOBAL_MIN = [-0.7412, 0.7412, -0.7412, 0.7412]  # f = -1.74214
 const EXPECTED_VALUE = deuflhard_4d_composite(EXPECTED_GLOBAL_MIN)
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("4D DEUFLHARD - COMPLETE ANALYSIS")
 println("="^80)
-println("\\nExpected global minimum:")
+println("\nExpected global minimum:")
 println("  Point: [$(join([@sprintf("%.4f", x) for x in EXPECTED_GLOBAL_MIN], ", "))]")
 println("  Value: $(Printf.@sprintf("%.6f", EXPECTED_VALUE))")
 
@@ -65,7 +65,7 @@ println("  Value: $(Printf.@sprintf("%.6f", EXPECTED_VALUE))")
 # ORTHANT ANALYSIS - ALL 16 ORTHANTS
 # ================================================================================
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("ORTHANT DECOMPOSITION - ALL 16 ORTHANTS")
 println("="^80)
 
@@ -77,9 +77,9 @@ for s1 in [-1, 1], s2 in [-1, 1], s3 in [-1, 1], s4 in [-1, 1]
     push!(all_orthants, (signs, label))
 end
 
-println("\\nAnalyzing all 16 orthants (2^4 = 16)")
+println("\nAnalyzing all 16 orthants (2^4 = 16)")
 println("Each orthant represents a unique sign combination in 4D space.")
-println("Using tolerance-controlled polynomial approximation (L²-norm ≤ $(L2_TOLERANCE))\\n")
+println("Using tolerance-controlled polynomial approximation (L²-norm ≤ $(L2_TOLERANCE))\n")
 
 # Storage for all critical points
 all_critical_points = Vector{Vector{Float64}}()
@@ -155,12 +155,12 @@ end
 # DUPLICATE REMOVAL AND RANKING
 # ================================================================================
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("DUPLICATE REMOVAL AND RANKING")
 println("="^80)
 
 n_total = length(all_critical_points)
-println("\\nTotal critical points found: $n_total")
+println("\nTotal critical points found: $n_total")
 
 # Remove duplicates using distance tolerance
 unique_points = Vector{Vector{Float64}}()
@@ -201,7 +201,7 @@ println("Unique critical points after duplicate removal: $(length(unique_points)
 sort_idx = sortperm(unique_values)
 
 # Display top critical points
-println("\\nTop 10 Critical Points (Raw Polynomial Results):")
+println("\nTop 10 Critical Points (Raw Polynomial Results):")
 println("="^70)
 n_show = min(10, length(unique_points))
 
@@ -213,7 +213,7 @@ for i in 1:n_show
     degree = unique_degrees[idx]
     l2_norm = unique_norms[idx]
     
-    println("\\n$i. Orthant: $label")
+    println("\n$i. Orthant: $label")
     println("   Point: [$(join([@sprintf("%.6f", x) for x in point], ", "))]")
     println("   Value: $(Printf.@sprintf("%.8f", value))")
     println("   Degree: $degree, L²-norm: $(Printf.@sprintf("%.2e", l2_norm))")
@@ -227,12 +227,12 @@ end
 # BFGS REFINEMENT FOR TOP CRITICAL POINTS
 # ================================================================================
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("BFGS REFINEMENT")
 println("="^80)
 
 # Refine top critical points with BFGS optimization
-println("\\nRefining top critical points with BFGS optimization...")
+println("\nRefining top critical points with BFGS optimization...")
 println("Using gradient tolerance: $(Printf.@sprintf("%.1e", BFGS_TOLERANCE))")
 
 refined_results = []
@@ -244,7 +244,7 @@ for i in 1:n_refine
     initial_value = unique_values[idx]
     orthant_label = unique_labels[idx]
     
-    println("\\n" * "-"^60)
+    println("\n" * "-"^60)
     println("Refining critical point $i from orthant $orthant_label")
     println("Initial: [$(join([@sprintf("%.6f", x) for x in initial_point], ", "))]")
     println("Initial value: $(Printf.@sprintf("%.8f", initial_value))")
@@ -277,7 +277,7 @@ for i in 1:n_refine
             grad_norm, Optim.converged(result)
         ))
         
-        println("\\nRefined: [$(join([@sprintf("%.6f", x) for x in refined_point], ", "))]")
+        println("\nRefined: [$(join([@sprintf("%.6f", x) for x in refined_point], ", "))]")
         println("Refined value: $(Printf.@sprintf("%.8f", refined_value))")
         println("BFGS iterations: $iterations")
         println("Position change: $(Printf.@sprintf("%.3e", point_improvement))")
@@ -299,12 +299,12 @@ end
 # VALIDATION AND GLOBAL MINIMUM SEARCH
 # ================================================================================
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("VALIDATION AND GLOBAL MINIMUM SEARCH")
 println("="^80)
 
 # Find closest points to expected global minimum
-println("\\nSearching for expected global minimum:")
+println("\nSearching for expected global minimum:")
 println("Expected: [$(join([@sprintf("%.4f", x) for x in EXPECTED_GLOBAL_MIN], ", "))]")
 println("Expected value: $(Printf.@sprintf("%.6f", EXPECTED_VALUE))")
 
@@ -331,7 +331,7 @@ for result in refined_results
     end
 end
 
-println("\\n" * "-"^60)
+println("\n" * "-"^60)
 println("Raw polynomial solver results:")
 if min_dist_raw < DISTANCE_TOLERANCE
     println("  ✓ Found close to expected minimum")
@@ -344,7 +344,7 @@ else
     println("  Closest value: $(Printf.@sprintf("%.6f", unique_values[closest_raw_idx]))")
 end
 
-println("\\n" * "-"^60)
+println("\n" * "-"^60)
 println("After BFGS refinement:")
 if min_dist_refined < DISTANCE_TOLERANCE && closest_refined !== nothing
     _, _, refined_pt, _, refined_val, label, iters, pos_change, val_change, grad_norm, _ = closest_refined
@@ -370,18 +370,18 @@ end
 # COMPREHENSIVE SUMMARY
 # ================================================================================
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("COMPREHENSIVE SUMMARY")
 println("="^80)
 
-println("\\nOrthant Analysis Results:")
+println("\nOrthant Analysis Results:")
 println("  Total orthants analyzed: 16")
 println("  Total critical points found: $n_total")
 println("  Unique critical points: $(length(unique_points))")
 println("  Points refined with BFGS: $(length(refined_results))")
 
 if length(refined_results) > 0
-    println("\\nBFGS Refinement Statistics:")
+    println("\nBFGS Refinement Statistics:")
     local total_pos_improvement = sum([r[8] for r in refined_results])
     local total_val_improvement = sum([r[9] for r in refined_results])
     local avg_pos_improvement = total_pos_improvement / length(refined_results)
@@ -396,30 +396,30 @@ if length(refined_results) > 0
     best_refined_val = minimum([r[5] for r in refined_results])
     best_raw_val = minimum(unique_values)
     
-    println("\\nBest Function Values:")
+    println("\nBest Function Values:")
     println("  Raw polynomial solver: $(Printf.@sprintf("%.8f", best_raw_val))")
     println("  After BFGS refinement: $(Printf.@sprintf("%.8f", best_refined_val))")
     println("  Total improvement: $(Printf.@sprintf("%.3e", best_raw_val - best_refined_val))")
 end
 
-println("\\nPolynomial Approximation Quality:")
-local avg_degree = sum(unique_degrees) / length(unique_degrees)
-local avg_l2_norm = sum(unique_norms) / length(unique_norms)
+println("\nPolynomial Approximation Quality:")
+avg_degree = sum(unique_degrees) / length(unique_degrees)
+avg_l2_norm = sum(unique_norms) / length(unique_norms)
 println("  Average polynomial degree: $(Printf.@sprintf("%.1f", avg_degree))")
 println("  Average L²-norm: $(Printf.@sprintf("%.2e", avg_l2_norm))")
 println("  Target L²-norm: $(Printf.@sprintf("%.2e", L2_TOLERANCE))")
 
 # Orthant distribution
-println("\\nCritical Points Distribution by Orthant:")
+println("\nCritical Points Distribution by Orthant:")
 for (signs, label) in all_orthants
     count = sum(unique_labels .== label)
     println("  $label: $count unique critical points")
 end
 
-println("\\n" * "="^80)
+println("\n" * "="^80)
 println("ANALYSIS COMPLETE")
 println("="^80)
-println("\\nKey Findings:")
+println("\nKey Findings:")
 println("- Comprehensive 16-orthant coverage ensures no critical points missed")
 println("- Tolerance-controlled polynomial approximation provides high accuracy")
 println("- BFGS refinement is essential for precise critical point location")
@@ -432,4 +432,4 @@ else
     println("- ⚠ Expected global minimum not found (may need parameter adjustment)")
 end
 
-println("\\nThis analysis represents the definitive 4D Deuflhard critical point study.")
+println("\nThis analysis represents the definitive 4D Deuflhard critical point study.")
