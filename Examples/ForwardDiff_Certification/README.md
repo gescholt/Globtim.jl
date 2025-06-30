@@ -61,27 +61,60 @@ When `analyze_critical_points()` is called with `enable_hessian=true`, the follo
 
 ## Files in This Directory
 
-### 🚀 Main Production Files
+### 🚀 Production Files
 
-#### `deuflhard_4d_complete.jl` **[NEW - CONSOLIDATED]**
-Single definitive file for 4D Deuflhard analysis featuring:
+#### `deuflhard_4d_complete.jl` **[PRIMARY IMPLEMENTATION]**
+Single authoritative file for 4D Deuflhard analysis featuring:
 - Complete 16-orthant decomposition (2^4 = 16 sign combinations)
 - Automatic polynomial degree adaptation until L²-norm ≤ 0.0007
-- BFGS refinement for critical points near minimizers
+- BFGS refinement for critical points near minimizers with high-precision tolerances
 - Comprehensive validation against expected global minimum
-- High-precision tolerances and detailed convergence information
-- **Consolidates functionality from 12+ experimental files into one production-ready implementation**
+- Detailed convergence information and statistical summaries
+- **Consolidates all experimental work into one production-ready implementation**
 
-#### `deuflhard_4d_analysis.jl`
-Original comprehensive 4D Deuflhard analysis (kept for reference)
+### 🎯 Enhanced Production Components (New)
 
-#### `deuflhard_4d_analysis_msolve.jl`
-Alternative implementation using msolve solver instead of HomotopyContinuation.jl
+#### `step1_bfgs_enhanced.jl` - BFGS Hyperparameter Tracking & Return Strategy
+Enhanced BFGS implementation with comprehensive tracking:
+- `BFGSConfig` structure for configuration management
+- `BFGSResult` structure with detailed optimization metadata
+- Automatic tolerance selection based on function value magnitude
+- Complete hyperparameter tracking and convergence diagnostics
+- Performance timing and improvement metrics
 
-#### `deuflhard_4d_analysis_high_precision.jl`
-High-precision BFGS refinement with ultra-tight tolerances for critical points
+#### `step2_automated_tests.jl` - Automated Testing Framework
+Comprehensive automated testing framework:
+- Mathematical correctness validation (gradients, Hessians, critical points)
+- Algorithmic behavior testing (convergence, tolerance selection)
+- Performance regression prevention
+- Edge case handling and error recovery
+- @testset integration for CI/CD pipelines
 
-### Core Demonstration Files
+#### `step3_table_formatting.jl` - Table Formatting & Display Improvements
+Professional table formatting with PrettyTables.jl:
+- Critical point summary tables with type-specific formatting
+- BFGS refinement results with convergence metrics
+- Orthant distribution analysis tables
+- Precision achievement validation summaries
+- Color-coded output for terminal display
+
+#### `step4_ultra_precision.jl` - Ultra-High Precision BFGS Enhancement
+Multi-stage ultra-precision optimization achieving ~1e-19 accuracy:
+- `UltraPrecisionConfig` for stage-based refinement control
+- Progressive tolerance reduction strategies
+- Optional Nelder-Mead final polishing
+- Stage-by-stage history tracking
+- Precision validation and fallback mechanisms
+
+#### `step5_comprehensive_tests.jl` - Comprehensive Testing Suite
+Complete test coverage for all enhanced components:
+- 6 test sections: Mathematical Foundation, BFGS Enhancement, Table Formatting, Ultra-Precision, Performance, Integration
+- 50+ individual test cases covering all functionality
+- Performance benchmarks and memory usage tracking
+- Regression prevention with expected results validation
+- End-to-end integration testing
+
+### 📋 Demonstration Files
 
 #### `trefethen_3d_complete_demo.jl`
 Comprehensive demonstration using the challenging Trefethen 3D function, featuring:
@@ -91,12 +124,11 @@ Comprehensive demonstration using the challenging Trefethen 3D function, featuri
 - Statistical breakdown by critical point type
 - Enhanced performance metrics and condition number analysis
 
-#### `phase2_certification_suite.jl`
-Comprehensive certification test suite covering:
-- Multiple test functions (quadratic, Rastringin, Deuflhard, etc.)
-- Edge case handling (singular matrices, computation failures)
-- Performance benchmarks and memory usage analysis
-- Numerical stability validation across different function types
+#### `raw_vs_refined_eigenvalue_demo.jl`
+Comparative eigenvalue visualization between raw and refined critical points:
+- Point matching analysis with distance-based ordering
+- Eigenvalue change visualization for refinement quality assessment
+- Specialized 2D demonstration of refinement effectiveness
 
 #### `eigenvalue_analysis_demo.jl`
 Specialized demonstration of eigenvalue distribution analysis:
@@ -121,23 +153,79 @@ Advanced visualization techniques following the Phase 2 Visualization Improvemen
 - Statistical overlay systems (quartiles, medians, confidence intervals)
 - Comparative analysis dashboards
 
-### Test and Validation Files
+### 🧪 Test Files
 
-#### `forward_diff_unit_tests.jl`
+**Located in `tests/` directory:**
+
+#### `tests/forward_diff_unit_tests.jl`
 Unit tests for core ForwardDiff integration:
 - Simple quadratic functions with known Hessian properties
 - Numerical precision and accuracy tests
 - Error handling and edge case validation
 - Performance benchmarks for different problem sizes
 
-#### `integration_validation.jl`
-End-to-end integration tests:
-- Complete workflow validation from polynomial construction to classification
-- Cross-validation with analytical solutions where available
-- Stability tests across different polynomial degrees and dimensions
-- Memory usage and computational efficiency analysis
+#### `tests/phase2_certification_suite.jl`
+Comprehensive certification test suite:
+- Multiple test functions (quadratic, Rastringin, Deuflhard, etc.)
+- Edge case handling (singular matrices, computation failures)
+- Performance benchmarks and memory usage analysis
+- Numerical stability validation across different function types
 
 ## Usage Examples
+
+### Using the Enhanced Production Components
+
+```julia
+# Load the enhanced BFGS and ultra-precision components
+include("step1_bfgs_enhanced.jl")
+include("step4_ultra_precision.jl")
+
+# Configure BFGS with hyperparameter tracking
+config = BFGSConfig(
+    standard_tolerance = 1e-8,
+    high_precision_tolerance = 1e-12,
+    track_hyperparameters = true,
+    show_trace = false
+)
+
+# Run enhanced BFGS refinement
+results = enhanced_bfgs_refinement(
+    critical_points, 
+    function_values, 
+    labels,
+    deuflhard_4d_composite,
+    config
+)
+
+# Apply ultra-precision refinement to best candidates
+ultra_config = UltraPrecisionConfig(
+    max_precision_stages = 3,
+    stage_tolerance_factors = [1.0, 0.1, 0.01]
+)
+
+ultra_results, histories = ultra_precision_refinement(
+    [results[1].refined_point],
+    [results[1].refined_value],
+    deuflhard_4d_composite,
+    1e-20,  # Target precision
+    ultra_config
+)
+
+# Display results with professional formatting
+include("step3_table_formatting.jl")
+display_critical_points_summary(results)
+display_bfgs_results_table(results)
+```
+
+### Running the Comprehensive Test Suite
+
+```julia
+# Run all tests
+include("step5_comprehensive_tests.jl")
+
+# Or run specific test sections
+include("step2_automated_tests.jl")
+```
 
 ### Basic Phase 2 Workflow
 
@@ -283,9 +371,8 @@ When adding new certification tests or demonstrations:
 ### Running All Certification Tests
 ```julia
 # From the Examples/ForwardDiff_Certification directory
-include("phase2_certification_suite.jl")
-include("forward_diff_unit_tests.jl")
-include("integration_validation.jl")
+include("tests/phase2_certification_suite.jl")
+include("tests/forward_diff_unit_tests.jl")
 ```
 
 ### Individual Component Testing
@@ -299,23 +386,63 @@ This certification directory provides comprehensive validation of Phase 2 Hessia
 
 ## 📁 Archive Structure
 
-The `archive/` folder contains experimental and legacy files that were consolidated:
+The `archive/` folder contains experimental, legacy, and development files that were consolidated:
 
-- **`archive/experimental/`**: Development versions and orthant decomposition experiments
-- **`archive/comparisons/`**: Various comparison scripts between raw and refined critical points
-- **`archive/debugging/`**: Minimal debugging and testing tools
-- **`documentation/`**: Consolidated documentation files
+### Archive Organization
+- **`archive/experimental/`**: Development versions and orthant decomposition experiments (6 files)
+- **`archive/comparisons/`**: Various comparison scripts between raw and refined critical points (5 files)
+- **`archive/debugging/`**: Debug scripts, minimal testing tools, and verification utilities (6 files)
+- **`archive/phase1_validation/`**: Phase 1 enhanced statistics and legacy validation files (1 file)
+- **`archive/basic_version/`**: Original 4D analysis implementation (superseded by complete version)
+- **`archive/precision_experiments/`**: High-precision BFGS refinement experiments
+- **`archive/solver_alternatives/`**: Alternative solver implementations (msolve variant)
+- **`documentation/`**: Technical documentation and implementation guides (5 files)
+
+### Archive Benefits
+- **Historical Reference**: Documents the development process and debugging efforts
+- **Educational Value**: Shows systematic debugging approaches and experimental iterations
+- **Feature Extraction**: Specific experimental features can be extracted if needed
+- **Clean Structure**: Removes clutter while preserving all development work
 
 See `archive/README.md` for detailed information about archived files.
+
+## 📋 Directory Organization Summary
+
+### Quick File Reference
+
+#### **Primary Usage (5 files)**
+1. **`deuflhard_4d_complete.jl`** - Main 4D analysis (use this for production)
+2. **`trefethen_3d_complete_demo.jl`** - Primary demonstration file
+3. **`README.md`** - This comprehensive guide
+4. **`CERTIFICATION_SUMMARY.md`** - Official certification status
+
+#### **Demonstration Files (4 files)**
+- **`eigenvalue_analysis_demo.jl`** - Specialized eigenvalue analysis
+- **`hessian_visualization_demo.jl`** - Visualization demonstrations
+- **`raw_vs_refined_eigenvalue_demo.jl`** - Eigenvalue visualization
+- **`phase3_standalone_demo.jl`** - Phase 3 preview
+
+#### **Test Files (2 files)**
+- **`tests/forward_diff_unit_tests.jl`** - Unit testing
+- **`tests/phase2_certification_suite.jl`** - Comprehensive testing suite
+
+#### **Archive (22+ files)**
+- All experimental, debugging, and legacy files moved to `archive/` with organized subdirectories
+- Phase 1 validation files in `archive/phase1_validation/`
+- Verification utilities in `archive/debugging/`
 
 ## ✅ Recent Updates & Fixes
 
 ### File Consolidation (Latest)
-- **Achievement**: Consolidated 12+ redundant deuflhard_4d_* files into single `deuflhard_4d_complete.jl`
-- **Structure**: Organized experimental files into clean archive structure
-- **Documentation**: Moved all documentation to dedicated `documentation/` folder
-- **Status**: ✅ Clean, maintainable structure with single definitive implementation
-- **Benefit**: Easy to find and use the best implementation without confusion
+- **Major Cleanup**: Consolidated 15+ redundant files into clean structure with single authoritative implementations
+- **Archive Organization**: Created systematic archive with 6 organized subdirectories
+- **Documentation Enhancement**: Merged redundant documentation into comprehensive guides
+- **Status**: ✅ Clean, maintainable structure with clear file hierarchy
+- **Benefits**: 
+  - Single authoritative 4D analysis: `deuflhard_4d_complete.jl`
+  - Clear purpose for each remaining file
+  - No functionality lost - all unique features preserved
+  - Easy navigation with 12 primary files vs 30+ scattered files
 
 ### Path Resolution Fixed (Latest)
 - **Issue**: Module loading failures due to incorrect `Pkg.activate` paths
@@ -338,10 +465,11 @@ See `archive/README.md` for detailed information about archived files.
 ### Verification Commands
 ```julia
 # Test that everything works correctly
-include("deuflhard_4d_complete.jl")           # NEW: Complete 4D analysis
+include("deuflhard_4d_complete.jl")           # Complete 4D analysis
 include("trefethen_3d_complete_demo.jl")      # Should run without errors
 include("phase3_standalone_demo.jl")          # Should display statistical tables
-include("phase2_certification_suite.jl")     # Should pass all validations
+include("tests/phase2_certification_suite.jl")     # Should pass all validations
+include("tests/forward_diff_unit_tests.jl")        # Should pass all unit tests
 ```
 
 ### Quick Start for 4D Deuflhard Analysis
