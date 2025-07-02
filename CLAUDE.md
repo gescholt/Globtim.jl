@@ -42,11 +42,17 @@ pol = Constructor(TR, 4)  # Starting degree, will auto-increase
 # AVOID: Fixed GN parameter that prevents adaptation
 ```
 
-### 4. **Extension Loading**
+### 4. **Extension Loading & Visualization**
 ```julia
 # PATTERN: Visualization requires explicit backend loading
 using CairoMakie  # or GLMakie - MUST load before plot functions
 plot_hessian_norms(df)  # Now available
+
+# PATTERN: Enhanced plotting with window display (default) vs file saving
+generate_enhanced_plots(raw_distances, bfgs_distances, point_types, 
+                       theoretical_points, theoretical_values)  # Display in windows
+                       
+generate_enhanced_plots(..., save_plots=true)  # Also save to files
 
 # The package uses weak dependencies for optional features
 ```
