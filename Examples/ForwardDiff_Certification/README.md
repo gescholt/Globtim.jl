@@ -282,8 +282,8 @@ Comprehensive certification test suite:
 
 ```julia
 # Load the enhanced BFGS and ultra-precision components
-include("step1_bfgs_enhanced.jl")
-include("step4_ultra_precision.jl")
+include("step_implementations/step1_bfgs_enhanced.jl")
+include("step_implementations/step4_ultra_precision.jl")
 
 # Configure BFGS with hyperparameter tracking
 config = BFGSConfig(
@@ -317,7 +317,7 @@ ultra_results, histories = ultra_precision_refinement(
 )
 
 # Display results with professional formatting
-include("step3_table_formatting.jl")
+include("step_implementations/step3_table_formatting.jl")
 display_critical_points_summary(results)
 display_bfgs_results_table(results)
 ```
@@ -326,10 +326,10 @@ display_bfgs_results_table(results)
 
 ```julia
 # Run all tests
-include("step5_comprehensive_tests.jl")
+include("step_implementations/step5_comprehensive_tests.jl")
 
 # Or run specific test sections
-include("step2_automated_tests.jl")
+include("step_implementations/step2_automated_tests.jl")
 ```
 
 ### Basic Phase 2 Workflow
@@ -513,41 +513,215 @@ See `archive/README.md` for detailed information about archived files.
 
 ## 📋 Directory Organization Summary
 
-### Quick File Reference
+The ForwardDiff_Certification folder has been systematically organized into logical groups for improved navigation and maintainability:
 
-#### **Primary Usage (5 files)**
-1. **`deuflhard_4d_complete.jl`** - Main 4D analysis (use this for production)
-2. **`trefethen_3d_complete_demo.jl`** - Primary demonstration file
-3. **`README.md`** - This comprehensive guide
-4. **`CERTIFICATION_SUMMARY.md`** - Official certification status
+### **Root Level Files** (Core Production & Documentation)
+- **`deuflhard_4d_complete.jl`** - Main 4D analysis implementation (primary production file)
+- **`deuflhard_4d_systematic.jl`** - Systematic validation against theoretical critical points with enhanced plotting (displays in windows by default, optional file saving)
+- **`README.md`** - This comprehensive guide (591 lines)
+- **`CERTIFICATION_SUMMARY.md`** - Official Phase 2 certification status
+- **`STEP_TESTS_GUIDE.md`** - Guide to the 5-step enhancement test suite
 
-#### **Demonstration Files (4 files)**
+### **Organized Folders**
+
+#### **`current_demos/`** (10 files) - Active Demonstration Files
+- **`trefethen_3d_complete_demo.jl`** - Primary 3D demonstration
+- **`demo_enhancements.jl`** - Enhanced BFGS and ultra-precision demos
+- **`demo_integration_bridge.jl`** - Integration workflow demonstrations
+- **`demo_phase2_usage.jl`** - Phase 2 usage examples
 - **`eigenvalue_analysis_demo.jl`** - Specialized eigenvalue analysis
 - **`hessian_visualization_demo.jl`** - Visualization demonstrations
-- **`raw_vs_refined_eigenvalue_demo.jl`** - Eigenvalue visualization
-- **`phase3_standalone_demo.jl`** - Phase 3 preview
+- **`phase2_core_visualizations.jl`** - Core Phase 2 plotting functions
+- **`phase3_advanced_analytics.jl`** - Advanced analytics preview
+- **`phase3_standalone_demo.jl`** - Phase 3 statistical tables demo
+- **`raw_vs_refined_eigenvalue_demo.jl`** - Eigenvalue comparison visualization
 
-#### **Test Files (2 files)**
-- **`tests/forward_diff_unit_tests.jl`** - Unit testing
-- **`tests/phase2_certification_suite.jl`** - Comprehensive testing suite
+#### **`step_implementations/`** (6 files) - Enhanced Implementation Suite
+- **`step1_bfgs_enhanced.jl`** - Enhanced BFGS with hyperparameter tracking
+- **`step2_automated_tests.jl`** - 129 comprehensive automated tests
+- **`step3_table_formatting.jl`** - Professional table formatting with PrettyTables
+- **`step4_ultra_precision.jl`** - Multi-stage ultra-high precision optimization
+- **`step5_comprehensive_tests.jl`** - Complete test coverage validation
+- **`step5_comprehensive_tests_fast.jl`** - Fast version of comprehensive tests
 
-#### **Archive (22+ files)**
-- All experimental, debugging, and legacy files moved to `archive/` with organized subdirectories
-- Phase 1 validation files in `archive/phase1_validation/`
-- Verification utilities in `archive/debugging/`
+#### **`integration_tools/`** (7 files) - Infrastructure & Testing
+- **`integration_bridge.jl`** - Cross-phase integration utilities
+- **`phase1_data_infrastructure.jl`** - Phase 1 foundation components
+- **`run_all_tests_clean.jl`** - Clean test execution framework
+- **`test_integration_bridge.jl`** - Integration testing
+- **`test_phase1_infrastructure_clean.jl`** - Phase 1 infrastructure tests
+- **`test_phase2_visualizations_clean.jl`** - Phase 2 visualization tests
+- **`verify_updates.jl`** - Update verification utilities
+
+#### **`tests/`** (2 files) - Core Testing Suite
+- **`forward_diff_unit_tests.jl`** - Unit testing for ForwardDiff integration
+- **`phase2_certification_suite.jl`** - Comprehensive Phase 2 certification tests
+
+#### **`documentation/`** (10 files) - Comprehensive Technical Documentation
+- **`graphing_convergence.md`** - Enhanced visualization strategy (see [Visualization Strategy](#visualization-strategy))
+- **`UPDATE_SUMMARY.md`** - Recent changes and fixes documentation
+- **`phase1_implementation_summary.md`** - Phase 1 documentation (111 tests)
+- **`phase2_implementation_summary.md`** - Phase 2 implementation details
+- **`bfgs_precision_improvements.md`** - BFGS enhancement documentation
+- **`bfgs_refinement_summary.md`** - BFGS refinement analysis
+- **`deuflhard_4d_analysis_upgrade_plan.md`** - System upgrade planning
+- **`implementation_summary.md`** - Implementation overview
+- **`orthant_analysis_summary.md`** - Orthant decomposition analysis
+- **`orthant_decomposition_summary.md`** - Detailed orthant methodology
+- **`step2_fixes_summary.md`** - Step 2 implementation fixes
+
+#### **`outputs/`** (3 files) - Generated Results & Plots
+- **`bfgs_improvement_min_min.png`** - BFGS improvement visualization
+- **`distance_distributions_all_points.png`** - Distance distribution analysis
+- **`distance_distributions_min_min_only.png`** - Min+min specific analysis
+
+#### **`phase2_demo_plots/`** (9 files + subfolder) - Visualization Assets
+Generated plots implementing the strategy from `documentation/graphing_convergence.md`:
+- Convergence dashboards, efficiency frontiers, heatmaps
+- **`publication_suite/`** subfolder with publication-ready versions
+
+#### **`archive/`** (7 subdirectories, 22+ files) - Historical & Experimental
+- **`experimental/`** - Development versions and orthant experiments (6 files)
+- **`comparisons/`** - Raw vs refined comparison scripts (5 files)
+- **`debugging/`** - Debug tools and verification utilities (6 files)
+- **`phase1_validation/`** - Legacy Phase 1 validation (1 file)
+- **`basic_version/`** - Original 4D implementation (superseded)
+- **`precision_experiments/`** - High-precision BFGS experiments
+- **`solver_alternatives/`** - Alternative solver implementations
+
+### **Quick Navigation by Use Case**
+
+#### **For Production Use:**
+```julia
+include("deuflhard_4d_complete.jl")  # Main 4D analysis
+include("deuflhard_4d_systematic.jl")  # Systematic validation
+```
+
+#### **For Demonstrations:**
+```julia
+include("current_demos/trefethen_3d_complete_demo.jl")  # 3D demo
+include("current_demos/phase3_standalone_demo.jl")      # Phase 3 preview
+```
+
+#### **For Enhanced Features:**
+```julia
+include("step_implementations/step1_bfgs_enhanced.jl")    # Enhanced BFGS
+include("step_implementations/step4_ultra_precision.jl")  # Ultra-precision
+```
+
+#### **For Testing:**
+```julia
+include("tests/phase2_certification_suite.jl")  # Comprehensive tests
+include("step_implementations/step2_automated_tests.jl")  # 129 automated tests
+```
+
+## 📊 Visualization Strategy
+
+The `documentation/graphing_convergence.md` file outlines a comprehensive visualization strategy for analyzing polynomial approximation convergence as L²-norm tolerances tighten. The visualization system is organized into several components:
+
+### **Core Visualization Files**
+
+#### **In `current_demos/`:**
+- **`phase2_core_visualizations.jl`** - Implements core Phase 2 plotting functions
+- **`hessian_visualization_demo.jl`** - Demonstrates Hessian norm and condition number analysis
+- **`raw_vs_refined_eigenvalue_demo.jl`** - Comparative eigenvalue visualization
+
+#### **In `phase2_demo_plots/`:**
+Generated visualization assets implementing the strategy from `graphing_convergence.md`:
+
+1. **Convergence Tracking Dashboard** (`convergence_dashboard.png`)
+   - Success rate evolution vs L²-tolerance  
+   - Polynomial degree requirements
+   - Computational cost scaling
+   - Distance quality improvement
+
+2. **Orthant Performance Analysis** (Multiple heatmaps)
+   - `orthant_success_rate_heatmap.png` - Success rates across 16 orthants
+   - `orthant_polynomial_degree_heatmap.png` - Degree requirements by orthant
+   - `orthant_median_distance_heatmap.png` - Distance quality by region
+   - `orthant_computation_time_heatmap.png` - Performance characteristics
+
+3. **Multi-Scale Analysis** (`multiscale_distance_analysis.png`)
+   - Distance distributions across tolerance levels
+   - Point type performance comparison
+   - Statistical validation overlays
+
+4. **Efficiency Analysis** (`efficiency_frontier.png`)
+   - Trade-offs between accuracy and computational cost
+   - Tolerance "sweet spots" identification
+   - Resource optimization guidance
+
+### **Visualization Implementation Pattern**
+
+Following the strategy outlined in `graphing_convergence.md`, visualization functions use:
+
+```julia
+# Load visualization backend (required for plotting)
+using CairoMakie  # or GLMakie for interactive plots
+
+# Core plotting functions available in phase2_core_visualizations.jl
+plot_convergence_dashboard(tolerance_sequence, results_by_tolerance)
+plot_orthant_heatmaps(orthant_data, metric_type)
+plot_distance_distributions(raw_distances, bfgs_distances, point_types)
+plot_efficiency_frontier(tolerance_levels, computational_costs, accuracy_metrics)
+
+# Enhanced plotting with window display (default behavior)
+generate_enhanced_plots(raw_distances, bfgs_distances, point_types, 
+                       theoretical_points, theoretical_values)  # Shows in windows
+
+# Optional file saving
+generate_enhanced_plots(..., save_plots=true)  # Also saves to files
+```
+
+### **Publication-Ready Output**
+
+The `phase2_demo_plots/publication_suite/` folder contains high-resolution versions of all plots optimized for academic publication, following the specifications in `graphing_convergence.md` for:
+- Figure sizing and DPI requirements
+- Color schemes for accessibility
+- Statistical overlay formatting
+- Multi-panel layout optimization
+
+### **Integration with Analysis Pipeline**
+
+The visualization strategy integrates seamlessly with the core analysis files:
+- `deuflhard_4d_complete.jl` generates distance distribution plots
+- `deuflhard_4d_systematic.jl` produces comparative analysis visualizations  
+- `current_demos/` files demonstrate specific visualization techniques
+- `step_implementations/` files include visualization of performance metrics
 
 ## ✅ Recent Updates & Fixes
 
-### File Consolidation (Latest)
+### File Consolidation & Organization (Latest)
 - **Major Cleanup**: Consolidated 15+ redundant files into clean structure with single authoritative implementations
-- **Archive Organization**: Created systematic archive with 6 organized subdirectories
-- **Documentation Enhancement**: Merged redundant documentation into comprehensive guides
+- **Organized Folder Structure**: Created 6 logical folders for improved navigation:
+  - `current_demos/` - Active demonstration files (11 files)
+  - `step_implementations/` - Enhanced implementation suite (6 files)  
+  - `integration_tools/` - Infrastructure and testing utilities (8 files)
+  - `tests/` - Core testing suite (2 files)
+  - `documentation/` - Technical documentation (7 files)
+  - `archive/` - Historical and experimental files (22+ files in 7 subfolders)
+- **Path Updates**: Updated all include statements to reflect new folder organization
 - **Status**: ✅ Clean, maintainable structure with clear file hierarchy
 - **Benefits**: 
   - Single authoritative 4D analysis: `deuflhard_4d_complete.jl`
   - Clear purpose for each remaining file
   - No functionality lost - all unique features preserved
-  - Easy navigation with 12 primary files vs 30+ scattered files
+  - Easy navigation with organized folders vs 30+ scattered files
+
+### ⚠️ Important Path Resolution Note
+Files that depend on the step implementations (like `deuflhard_4d_systematic.jl`) need updated include paths:
+```julia
+# OLD (will cause "No such file or directory" errors):
+include("step1_bfgs_enhanced.jl")
+
+# NEW (correct path after organization):
+include("step_implementations/step1_bfgs_enhanced.jl")
+```
+
+Files affected by the reorganization:
+- `deuflhard_4d_systematic.jl` - needs step implementation paths updated
+- Files in `current_demos/` - may reference moved files
+- Integration tests - may reference moved components
 
 ### Path Resolution Fixed (Latest)
 - **Issue**: Module loading failures due to incorrect `Pkg.activate` paths
@@ -571,8 +745,8 @@ See `archive/README.md` for detailed information about archived files.
 ```julia
 # Test that everything works correctly
 include("deuflhard_4d_complete.jl")           # Complete 4D analysis
-include("trefethen_3d_complete_demo.jl")      # Should run without errors
-include("phase3_standalone_demo.jl")          # Should display statistical tables
+include("current_demos/trefethen_3d_complete_demo.jl")      # Should run without errors
+include("current_demos/phase3_standalone_demo.jl")          # Should display statistical tables
 include("tests/phase2_certification_suite.jl")     # Should pass all validations
 include("tests/forward_diff_unit_tests.jl")        # Should pass all unit tests
 ```
@@ -590,3 +764,7 @@ include("deuflhard_4d_complete.jl")
 ```
 
 All certification demos are now verified working with the latest fixes.
+
+---
+
+*This README provides comprehensive documentation for the ForwardDiff Certification project, including the complete folder organization, visualization strategy, and usage guidelines for the Phase 2 Hessian analysis certification suite.*
