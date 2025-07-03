@@ -40,8 +40,8 @@ end
 # Domain parameters
 const CENTER_4D = [0.0, 0.0, 0.0, 0.0]        # 4D domain center
 const SAMPLE_RANGE_4D = 0.5                    # Sampling range per dimension
-const POLYNOMIAL_DEGREE = 4                    # Initial polynomial degree (auto-increases)
-const L2_TOLERANCE = 0.0007                    # L²-norm tolerance for polynomial accuracy
+const POLYNOMIAL_DEGREE = 6                    # Initial polynomial degree (auto-increases)
+const L2_TOLERANCE = 0.0003                    # L²-norm tolerance for polynomial accuracy
 const DISTANCE_TOLERANCE = 0.05                # Distance threshold for duplicate removal
 const BFGS_TOLERANCE = 1e-8                    # BFGS gradient tolerance
 const HIGH_PRECISION_TOLERANCE = 1e-12         # For critical points near zero
@@ -112,7 +112,7 @@ for (idx, (signs, label)) in enumerate(all_orthants)
     orthant_range = 0.4 * SAMPLE_RANGE_4D
     
     # Create test input with tolerance control
-    TR = test_input(deuflhard_4d_composite, dim=4, 
+    TR = test_input(deuflhard_4d_composite, dim=4, GN = 10,
                    center=orthant_center, sample_range=orthant_range,
                    tolerance=L2_TOLERANCE)
     
