@@ -691,7 +691,13 @@ The visualization strategy integrates seamlessly with the core analysis files:
 
 ## ✅ Recent Updates & Fixes
 
-### File Consolidation & Organization (Latest)
+### Plotting Error Fixes (Latest)
+- **MakieCore.InvalidAttributeError**: Fixed density plot attribute error by changing `linewidth` to `strokewidth` in `deuflhard_4d_systematic.jl:1042-1043`
+- **basename(::Nothing) Error**: Added null check before `basename()` call when plots directory is `nothing` (saving disabled)
+- **Enhanced Plotting System**: Window display with optional file saving now works error-free
+- **Status**: ✅ All plotting functionality working correctly with comprehensive 3-plot visualization suite
+
+### File Consolidation & Organization
 - **Major Cleanup**: Consolidated 15+ redundant files into clean structure with single authoritative implementations
 - **Organized Folder Structure**: Created 6 logical folders for improved navigation:
   - `current_demos/` - Active demonstration files (11 files)

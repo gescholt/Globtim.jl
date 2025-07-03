@@ -69,6 +69,21 @@ Optim.Options(
 )
 ```
 
+### 6. **Makie Plotting Attributes**
+```julia
+# LEARNED: Makie.jl density plot attribute changes
+# OLD: linewidth parameter for density plots (causes InvalidAttributeError)
+density!(ax, data, color=(:blue, 0.5), linewidth=3, label="Data")
+
+# NEW: strokewidth parameter for density plots
+density!(ax, data, color=(:blue, 0.5), strokewidth=3, label="Data")
+
+# PATTERN: Always check for null before basename() calls
+if plots_directory !== nothing
+    println("Output: $(basename(plots_directory))")
+end
+```
+
 ## 🚀 Essential Commands
 
 ```julia

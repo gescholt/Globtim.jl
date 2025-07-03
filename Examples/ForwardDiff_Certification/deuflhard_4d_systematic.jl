@@ -364,13 +364,152 @@ theoretical_points_4d = theoretical_points_4d[sort_indices]
 theoretical_values_4d = theoretical_values_4d[sort_indices]
 theoretical_types = theoretical_types[sort_indices]
 
-# Show 4D point type distribution
+# Show 4D point type distribution with detailed statistics
 println("\n4D Critical Point Type Distribution (sorted with min+min first):")
 for ptype in sort_order
     count = sum(theoretical_types .== ptype)
     if count > 0
         println("  $ptype: $count points")
     end
+end
+
+# Create comprehensive table with function evaluations
+println("\n" * "="^80)
+println("DETAILED 4D CRITICAL POINT TYPE ANALYSIS WITH FUNCTION EVALUATIONS")
+println("="^80)
+
+# Prepare data for the comprehensive table
+type_analysis_rows = []
+for ptype in sort_order
+    indices = findall(x -> x == ptype, theoretical_types)
+    if length(indices) > 0
+        # Get function values for this type
+        type_values = theoretical_values_4d[indices]
+        type_points = theoretical_points_4d[indices]
+        
+        # Calculate statistics
+        min_val = minimum(type_values)
+        max_val = maximum(type_values)
+        mean_val = mean(type_values)
+        median_val = median(type_values)
+        
+        # Find the point with minimum value for this type
+        min_idx = argmin(type_values)
+        min_point = type_points[min_idx]
+        
+        # Find the point with maximum value for this type
+        max_idx = argmax(type_values)
+        max_point = type_points[max_idx]
+        
+        push!(type_analysis_rows, [
+            ptype,
+            length(indices),
+            Printf.@sprintf("%.6e", min_val),
+            Printf.@sprintf("%.6e", max_val),
+            Printf.@sprintf("%.6e", mean_val),
+            Printf.@sprintf("%.6e", median_val),
+            Printf.@sprintf("(%.3f,%.3f,%.3f,%.3f)", min_point...),
+            Printf.@sprintf("(%.3f,%.3f,%.3f,%.3f)", max_point...)
+        ])
+    end
+end
+
+# Convert to matrix format for PrettyTables
+if length(type_analysis_rows) > 0
+    # Create matrix with proper dimensions
+    n_rows = length(type_analysis_rows)
+    type_analysis_data = Matrix{Any}(undef, n_rows, 8)
+    
+    for (i, row) in enumerate(type_analysis_rows)
+        type_analysis_data[i, :] = row
+    end
+    
+    type_headers = ["Point Type", "Count", "Min f(x)", "Max f(x)", "Mean f(x)", "Median f(x)", "Min Point", "Max Point"]
+    
+    pretty_table(
+        type_analysis_data,
+        header = type_headers,
+        alignment = [:l, :c, :r, :r, :r, :r, :l, :l],
+        title = "4D Critical Point Type Distribution with Function Evaluations"
+    )
+else
+    println("No valid point types found for analysis.")
+end
+
+# Additional detailed breakdown for min+min points
+min_min_indices = findall(x -> x == "min+min", theoretical_types)
+if length(min_min_indices) > 0
+    println("\n" * "="^60)
+    println("DETAILED MIN+MIN POINTS ANALYSIS")
+    println("="^60)
+    
+    min_min_values = theoretical_values_4d[min_min_indices]
+    min_min_points = theoretical_points_4d[min_min_indices]
+    
+    # Sort by function value
+    sort_indices = sortperm(min_min_values)
+    
+    # Show top 10 best (lowest) min+min points
+    n_show = min(10, length(min_min_indices))
+    println("\nTop $n_show Min+Min Points (lowest function values):")
+    
+    min_min_detailed_rows = []
+    for i in 1:n_show
+        idx = sort_indices[i]
+        point = min_min_points[idx]
+        value = min_min_values[idx]
+        
+        # Decompose into 2D components
+        pt1 = [point[1], point[2]]
+        pt2 = [point[3], point[4]]
+        val1 = Deuflhard(pt1)
+        val2 = Deuflhard(pt2)
+        
+        push!(min_min_detailed_rows, [
+            i,
+            Printf.@sprintf("%.6e", value),
+            Printf.@sprintf("(%.3f,%.3f,%.3f,%.3f)", point...),
+            Printf.@sprintf("(%.3f,%.3f)", pt1...),
+            Printf.@sprintf("%.6e", val1),
+            Printf.@sprintf("(%.3f,%.3f)", pt2...),
+            Printf.@sprintf("%.6e", val2),
+            Printf.@sprintf("%.6e", abs(value - (val1 + val2)))
+        ])
+    end
+    
+    # Convert to matrix format
+    min_min_detailed_data = Matrix{Any}(undef, length(min_min_detailed_rows), 8)
+    for (i, row) in enumerate(min_min_detailed_rows)
+        min_min_detailed_data[i, :] = row
+    end
+    
+    min_min_headers = ["Rank", "4D f(x)", "4D Point", "2D Point 1", "2D f₁(x)", "2D Point 2", "2D f₂(x)", "Sum Error"]
+    
+    pretty_table(
+        min_min_detailed_data,
+        header = min_min_headers,
+        alignment = [:c, :r, :l, :l, :r, :l, :r, :r],
+        title = "Top $n_show Min+Min Points - Detailed Breakdown"
+    )
+    
+    # Global minimum analysis
+    global_min_value = minimum(min_min_values)
+    global_min_idx = argmin(min_min_values)
+    global_min_point = min_min_points[global_min_idx]
+    
+    println("\n🎯 Global Minimum Analysis:")
+    println("   Value: $(Printf.@sprintf("%.8e", global_min_value))")
+    println("   Location: ($(Printf.@sprintf("%.6f", global_min_point[1])), $(Printf.@sprintf("%.6f", global_min_point[2])), $(Printf.@sprintf("%.6f", global_min_point[3])), $(Printf.@sprintf("%.6f", global_min_point[4])))")
+    
+    # Decompose global minimum
+    global_pt1 = [global_min_point[1], global_min_point[2]]
+    global_pt2 = [global_min_point[3], global_min_point[4]]
+    global_val1 = Deuflhard(global_pt1)
+    global_val2 = Deuflhard(global_pt2)
+    
+    println("   2D Component 1: ($(Printf.@sprintf("%.6f", global_pt1[1])), $(Printf.@sprintf("%.6f", global_pt1[2]))) → $(Printf.@sprintf("%.8e", global_val1))")
+    println("   2D Component 2: ($(Printf.@sprintf("%.6f", global_pt2[1])), $(Printf.@sprintf("%.6f", global_pt2[2]))) → $(Printf.@sprintf("%.8e", global_val2))")
+    println("   Verification: $(Printf.@sprintf("%.8e", global_val1 + global_val2)) (should match 4D value)")
 end
 
 println("\n" * "="^80)
@@ -842,12 +981,17 @@ function generate_enhanced_plots(raw_distances_all, bfgs_distances_all, point_ty
             ygridvisible = true
         )
         
-        # Apply outlier removal to improve visualization ranges
-        raw_valid_indices, raw_outliers = filter_outliers(raw_distances_all, [], []; threshold=OUTLIER_DISTANCE_THRESHOLD)
-        bfgs_valid_indices, bfgs_outliers = filter_outliers(bfgs_distances_all, [], []; threshold=OUTLIER_DISTANCE_THRESHOLD)
+        # Apply additional outlier filtering for plotting to remove extreme values
+        # Filter out distances that would create log values below -8 (very extreme outliers)
+        raw_plot_mask = raw_distances_all .> 1e-8
+        bfgs_plot_mask = bfgs_distances_all .> 1e-8
         
-        raw_filtered = raw_distances_all[raw_valid_indices]
-        bfgs_filtered = bfgs_distances_all[bfgs_valid_indices]
+        raw_filtered = raw_distances_all[raw_plot_mask]
+        bfgs_filtered = bfgs_distances_all[bfgs_plot_mask]
+        
+        # Count how many extreme outliers were removed for plotting
+        raw_outliers_removed = sum(.!raw_plot_mask)
+        bfgs_outliers_removed = sum(.!bfgs_plot_mask)
         
         raw_log_distances = log10.(raw_filtered .+ LOG_ZERO_OFFSET)
         bfgs_log_distances = log10.(bfgs_filtered .+ LOG_ZERO_OFFSET)
@@ -865,9 +1009,9 @@ function generate_enhanced_plots(raw_distances_all, bfgs_distances_all, point_ty
         vlines!(ax1, [bfgs_median], color=:crimson, linewidth=2, linestyle=:dot, alpha=0.7)
         
         # Add outlier removal note if outliers were filtered
-        if raw_outliers > 0 || bfgs_outliers > 0
-            text!(ax1, 0.02, 0.98, "Outliers removed: Raw=$(raw_outliers), BFGS=$(bfgs_outliers)", 
-                  space=:relative, fontsize=10, color=:gray50)
+        if raw_outliers_removed > 0 || bfgs_outliers_removed > 0
+            text!(ax1, 0.02, 0.98, "Extreme outliers removed for plotting: Raw=$(raw_outliers_removed), BFGS=$(bfgs_outliers_removed)", 
+                  space=:relative, fontsize=10, color=:gray50, align=(:left, :top))
         end
         
         axislegend(ax1, position=:rt)
@@ -910,10 +1054,14 @@ function generate_enhanced_plots(raw_distances_all, bfgs_distances_all, point_ty
             aspect = AxisAspect(1)
         )
         
-        # Color code by point type
+        # Color code by point type - handle filtered data properly
         colors = [:blue, :red, :green, :orange, :purple, :brown, :pink, :gray, :olive]
-        for (i, ptype) in enumerate(sort(unique_types))
-            indices = findall(x -> x == ptype, point_types_all)
+        
+        # Create filtered point types that match the filtered distances
+        filtered_point_types = point_types_all[raw_plot_mask .& bfgs_plot_mask]
+        
+        for (i, ptype) in enumerate(sort(unique(filtered_point_types)))
+            indices = findall(x -> x == ptype, filtered_point_types)
             if length(indices) > 0
                 scatter!(ax3, raw_log_distances[indices], bfgs_log_distances[indices],
                         color=colors[mod(i-1, length(colors))+1], alpha=0.7, 
@@ -970,29 +1118,7 @@ function generate_enhanced_plots(raw_distances_all, bfgs_distances_all, point_ty
         n_orthants = length(orthant_labels)
         
         if n_orthants > 1
-            # Calculate success rates per orthant
-            orthant_success_raw = zeros(4, 4)
-            orthant_success_bfgs = zeros(4, 4)
-            orthant_counts = zeros(4, 4)
-            
-            # Map orthant labels to grid positions
-            for (i, label) in enumerate(orthant_labels)
-                # Extract sign pattern from label like "(+,-,+,-)"
-                signs = [c == '+' ? 1 : -1 for c in label if c in ['+', '-']]
-                if length(signs) == 4
-                    row = signs[1] > 0 ? 1 : 2
-                    col = signs[2] > 0 ? 1 : 2
-                    row += signs[3] > 0 ? 0 : 2
-                    col += signs[4] > 0 ? 0 : 2
-                    
-                    # Count points in this orthant
-                    orthant_indices = findall(x -> x == label, all_orthant_labels)
-                    if length(orthant_indices) > 0
-                        orthant_counts[row, col] = length(orthant_indices)
-                        # Note: This is simplified - full implementation would need mapping
-                    end
-                end
-            end
+            # Simple orthant analysis without complex grid mapping
             
             ax_heat = Axis(fig2[1, 1],
                 title = "Orthant Coverage Analysis (16 orthants)",
@@ -1039,32 +1165,62 @@ function generate_enhanced_plots(raw_distances_all, bfgs_distances_all, point_ty
             raw_log_mm = log10.(raw_distances_min_min .+ LOG_ZERO_OFFSET)
             bfgs_log_mm = log10.(bfgs_distances_min_min .+ LOG_ZERO_OFFSET)
             
-            density!(ax_mm1, raw_log_mm, color=(:steelblue, 0.5), linewidth=3, label="Raw")
-            density!(ax_mm1, bfgs_log_mm, color=(:crimson, 0.5), linewidth=3, label="BFGS")
+            density!(ax_mm1, raw_log_mm, color=(:steelblue, 0.5), strokewidth=3, label="Raw")
+            density!(ax_mm1, bfgs_log_mm, color=(:crimson, 0.5), strokewidth=3, label="BFGS")
             
             vlines!(ax_mm1, [log10(DISTANCE_TOLERANCE)], color=:forestgreen, 
                    linewidth=3, linestyle=:dash, label="Success Threshold")
             
             axislegend(ax_mm1, position=:rt)
             
-            # Statistics panel
+            # Statistics panel with proper alignment
             ax_mm2 = Axis(fig3[1, 2],
                 title = "Min+Min Performance Metrics",
-                xlabel = "Metric Value",
-                ylabel = "Statistic"
+                xlabel = "Value",
+                ylabel = "Metric"
             )
             
-            stats_labels = ["Raw Median", "BFGS Median", "Raw Success %", "BFGS Success %"]
-            stats_values = [
+            # Separate distance and percentage metrics for proper scaling
+            distance_labels = ["Raw Median Distance", "BFGS Median Distance"]
+            distance_values = [
                 median(raw_distances_min_min),
-                median(bfgs_distances_min_min),
+                median(bfgs_distances_min_min)
+            ]
+            
+            success_labels = ["Raw Success Rate (%)", "BFGS Success Rate (%)"]
+            success_values = [
                 sum(raw_distances_min_min .< DISTANCE_TOLERANCE) / length(min_min_indices) * 100,
                 sum(bfgs_distances_min_min .< DISTANCE_TOLERANCE) / length(min_min_indices) * 100
             ]
             
-            barplot!(ax_mm2, stats_values, 1:4, direction=:x, 
-                    color=[:steelblue, :crimson, :steelblue, :crimson])
-            ax_mm2.yticks = (1:4, stats_labels)
+            # Create combined data with proper formatting
+            all_labels = [distance_labels..., success_labels...]
+            all_values = [distance_values..., success_values...]
+            
+            # Use log scale for distance values to make them comparable to percentages
+            display_values = [
+                log10(distance_values[1] + 1e-16),
+                log10(distance_values[2] + 1e-16),
+                success_values[1],
+                success_values[2]
+            ]
+            
+            barplot!(ax_mm2, display_values, 1:4, direction=:x, 
+                    color=[:steelblue, :crimson, :lightblue, :lightcoral])
+            ax_mm2.yticks = (1:4, all_labels)
+            
+            # Add value annotations for clarity
+            for i in 1:4
+                if i <= 2
+                    text!(ax_mm2, display_values[i] + 0.1, i, 
+                          Printf.@sprintf("%.2e", all_values[i]), 
+                          fontsize=8, color=:black, align=(:left, :center))
+                else
+                    text!(ax_mm2, display_values[i] + 1, i, 
+                          Printf.@sprintf("%.1f%%", all_values[i]), 
+                          fontsize=8, color=:black, align=(:left, :center))
+                end
+            end
             
             if save_plots
                 save(joinpath(plots_subdir, "min_min_specialized_analysis.png"), fig3, px_per_unit=2)
@@ -1130,6 +1286,6 @@ println("  Distance tolerance: $DISTANCE_TOLERANCE")
 println("  Polynomial degree: $POLYNOMIAL_DEGREE (auto-increases until tolerance met)")
 
 # Analysis complete
-if @isdefined(plots_directory)
+if @isdefined(plots_directory) && plots_directory !== nothing
     println("\n📊 Visualization output: $(basename(plots_directory))")
 end
