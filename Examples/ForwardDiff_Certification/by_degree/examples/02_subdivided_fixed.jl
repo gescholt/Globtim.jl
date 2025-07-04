@@ -25,7 +25,9 @@ using Common4DDeuflhard
 using SubdomainManagement
 using TheoreticalPoints
 using AnalysisUtilities
-using PlottingUtilities
+using EnhancedAnalysisUtilities
+using EnhancedPlottingUtilities
+using PlottingUtilities  # Keep for legacy functions
 using TableGeneration
 using PlotDescriptions
 
@@ -134,23 +136,40 @@ function run_fixed_degree_subdivision_analysis()
     
     # Create combined plot showing all degrees together
     combined_results = Dict{String, Vector{DegreeAnalysisResult}}()
+    enhanced_combined_results = Dict{String, Vector{EnhancedDegreeAnalysisResult}}()
+    
     for (degree, degree_results) in all_results
         for (label, result) in degree_results
             if !haskey(combined_results, label)
                 combined_results[label] = DegreeAnalysisResult[]
+                enhanced_combined_results[label] = EnhancedDegreeAnalysisResult[]
             end
             push!(combined_results[label], result)
+            
+            # Convert to enhanced format
+            subdomain = subdivisions[findfirst(s -> s.label == label, subdivisions)]
+            theoretical_points, theoretical_values, theoretical_types = 
+                load_theoretical_points_for_subdomain_orthant(subdomain)
+            
+            enhanced = convert_to_enhanced(
+                result,
+                theoretical_points,
+                findall(t -> t == "min+min", theoretical_types),
+                label
+            )
+            push!(enhanced_combined_results[label], enhanced)
         end
     end
     
     # Generate the combined plots
-    if !isempty(combined_results)
-        # L²-norm convergence plot
-        fig = plot_subdivision_convergence(
-            combined_results,
+    if !isempty(enhanced_combined_results)
+        # L²-norm convergence plot with dual scale
+        fig = plot_l2_convergence_dual_scale(
+            enhanced_combined_results,
             title = "L²-Norm Convergence: (+,-,+,-) Orthant Subdivisions",
             tolerance_line = L2_TOLERANCE_REFERENCE,
-            save_path = joinpath(output_dir, "fixed_subdivision_l2_convergence.png")
+            save_plots = true,
+            plots_directory = output_dir
         )
         @info "Saved combined L²-norm convergence plot"
         
@@ -158,25 +177,37 @@ function run_fixed_degree_subdivision_analysis()
         l2_desc = describe_subdivision_convergence(combined_results, tolerance_line = L2_TOLERANCE_REFERENCE)
         println("\n" * l2_desc)
         
-        # Recovery rate plots (all critical points and min+min only)
-        fig_recovery = plot_subdivision_recovery_rates(
-            combined_results,
-            title = "Recovery Rates: (+,-,+,-) Orthant Subdivisions",
-            save_path = joinpath(output_dir, "fixed_subdivision_recovery_rates.png")
+        # Critical point recovery histogram
+        fig_recovery = plot_critical_point_recovery_histogram(
+            enhanced_combined_results,
+            title = "Critical Point Recovery: (+,-,+,-) Orthant Subdivisions",
+            save_plots = true,
+            plots_directory = output_dir
         )
-        @info "Saved combined recovery rate plots"
+        @info "Saved critical point recovery histogram"
         
         # Generate and display plot description
         recovery_desc = describe_subdivision_recovery_rates(combined_results)
         println("\n" * recovery_desc)
         
-        # Min+min distance plots
-        fig_min_min = plot_subdivision_min_min_distances(
-            combined_results,
+        # Min+min distance plot with dual scale
+        fig_min_min = plot_min_min_distances_dual_scale(
+            enhanced_combined_results,
             title = "Min+Min Distance: Fixed Degree Subdivisions",
-            save_path = joinpath(output_dir, "fixed_subdivision_min_min_distances.png")
+            tolerance_line = 0.001,
+            save_plots = true,
+            plots_directory = output_dir
         )
         @info "Saved min+min distance plots"
+        
+        # Min+min capture methods histogram
+        fig_capture = plot_min_min_capture_methods(
+            enhanced_combined_results,
+            title = "Min+Min Capture Methods: Fixed Degree Subdivisions",
+            save_plots = true,
+            plots_directory = output_dir
+        )
+        @info "Saved min+min capture methods histogram"
         
         # Generate and display plot description
         min_min_desc = describe_subdivision_min_min_distances(combined_results)

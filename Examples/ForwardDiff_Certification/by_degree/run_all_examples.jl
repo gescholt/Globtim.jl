@@ -15,6 +15,11 @@ println("\nAll outputs will be saved to: outputs/HH-MM/")
 println("\n1. Testing shared utilities...")
 include("test/test_shared_utilities.jl")
 
+# Add shared directory to load path for enhanced utilities
+push!(LOAD_PATH, joinpath(@__DIR__, "shared"))
+using EnhancedAnalysisUtilities
+using EnhancedPlottingUtilities
+
 println("\n" * "="^80)
 
 # Example A: Orthant domain analysis
