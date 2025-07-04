@@ -97,19 +97,19 @@ function plot_l2_convergence_dual_scale(results;
         hidespines!(ax_right, :l, :t, :b)
         
         # Plot subdomain results on left axis
-        subdomain_colors = [:blue, :cyan, :teal, :navy, :dodgerblue]
+        # Use single color with transparency for all L²-norm curves
+        # This shows the density and spread of convergence rates
+        
         for (idx, (name, result_vec)) in enumerate(sort(collect(results), by=x->x[1]))
             if !isempty(result_vec)
                 degrees = [r.degree for r in result_vec]
                 l2_norms = [r.l2_norm for r in result_vec]
-                color_idx = mod1(idx, length(subdomain_colors))
                 lines!(ax_left, degrees, l2_norms,
-                    color=subdomain_colors[color_idx],
-                    linewidth=2,
-                    label=name)
+                    color=(:blue, 0.3),  # Semi-transparent blue
+                    linewidth=2)
                 scatter!(ax_left, degrees, l2_norms,
-                    color=subdomain_colors[color_idx],
-                    markersize=8)
+                    color=(:blue, 0.5),  # Slightly more opaque for points
+                    markersize=6)
             end
         end
         
@@ -127,8 +127,8 @@ function plot_l2_convergence_dual_scale(results;
                 marker=:diamond)
         end
         
-        # Create legend
-        axislegend(ax_left, position=:rt, labelsize=12)
+        # Create legend only for right axis (which has labeled plots)
+        # Left axis uses single color without labels, so no legend needed
         axislegend(ax_right, position=:rb, labelsize=12)
         
     else
@@ -818,7 +818,12 @@ function plot_critical_point_recovery_histogram(results;
     
     # Set y-axis limits to show full theoretical count
     max_theoretical = maximum(theoretical_counts)
-    ylims!(ax, 0, max_theoretical * 1.1)
+    if max_theoretical > 0
+        ylims!(ax, 0, max_theoretical * 1.1)
+    else
+        # If no theoretical points, show at least up to 10
+        ylims!(ax, 0, 10)
+    end
     
     # Add legend
     axislegend(ax, position=:lt, labelsize=12, framevisible=true)
