@@ -50,10 +50,10 @@ end
 
 # Test AnalysisUtilities
 println("\nTesting AnalysisUtilities...")
-# Create dummy result
+# Create dummy result with all 11 fields including min_min_distances
 dummy_result = DegreeAnalysisResult(
     4, 0.01, 225, 200, 180, 0.8, 10.5, false,
-    Vector{Vector{Float64}}(), 0.85
+    Vector{Vector{Float64}}(), 0.85, Float64[]  # Added min_min_distances field
 )
 println("  Created DegreeAnalysisResult: degree=$(dummy_result.degree), L²-norm=$(dummy_result.l2_norm)")
 
