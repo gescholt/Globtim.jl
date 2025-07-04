@@ -55,12 +55,16 @@ function analyze_subdomain_at_degree(subdomain::Subdomain, degree::Int)
     theoretical_points, theoretical_values, theoretical_types = 
         load_theoretical_points_for_subdomain_orthant(subdomain)
     
+    # Note: We analyze ALL subdomains, even those without theoretical points
+    # This gives us L²-norm convergence data for the entire orthant
     if isempty(theoretical_points)
-        @warn "No theoretical points in subdomain $(subdomain.label), skipping"
-        return nothing
+        @info "No theoretical points in subdomain $(subdomain.label), analyzing anyway" degree=degree
+        # Create empty arrays for analysis
+        theoretical_points = Vector{Vector{Float64}}()
+        theoretical_types = String[]
+    else
+        @info "Analyzing subdomain $(subdomain.label)" degree=degree n_theoretical=length(theoretical_points)
     end
-    
-    @info "Analyzing subdomain $(subdomain.label)" degree=degree n_theoretical=length(theoretical_points)
     
     # Run analysis
     result = analyze_single_degree(

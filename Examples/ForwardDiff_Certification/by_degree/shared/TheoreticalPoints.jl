@@ -131,22 +131,22 @@ end
 """
     load_2d_critical_points_orthant()
 
-Load and classify 2D Deuflhard critical points that lie in the (+,-) orthant.
+Load and classify 2D Deuflhard critical points that lie in the (+,-) orthant within bounds [0,1] × [-1,0].
 
 # Returns
-- `critical_2d::Vector{Vector{Float64}}`: 2D critical point coordinates in (+,-) orthant
+- `critical_2d::Vector{Vector{Float64}}`: 2D critical point coordinates in (+,-) orthant within bounds
 - `critical_2d_types::Vector{String}`: Point classifications ("min", "max", "saddle")
 """
 function load_2d_critical_points_orthant()
     # Get all 2D critical points
     all_critical_2d, all_critical_2d_types = load_2d_critical_points()
     
-    # Filter for (+,-) orthant: x > 0, y < 0
+    # Filter for (+,-) orthant with specific bounds: x ∈ [0,1], y ∈ [-1,0]
     critical_2d = Vector{Vector{Float64}}()
     critical_2d_types = String[]
     
     for (i, pt) in enumerate(all_critical_2d)
-        if pt[1] > 0 && pt[2] < 0
+        if pt[1] >= 0 && pt[1] <= 1 && pt[2] >= -1 && pt[2] <= 0
             push!(critical_2d, pt)
             push!(critical_2d_types, all_critical_2d_types[i])
         end
