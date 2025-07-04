@@ -1,10 +1,10 @@
 # ================================================================================
-# Example A: Full Domain Analysis
+# Example A: (+,-,+,-) Orthant Analysis
 # ================================================================================
 # 
-# Analyze polynomial approximation on the entire [-1,1]^4 domain with degree sweep.
-# This example demonstrates L²-norm convergence and critical point recovery rates
-# as polynomial degree increases from 2 to 12.
+# Analyze the 4D Deuflhard composite function in the (+,-,+,-) orthant:
+# Domain: [0,1] × [-1,0] × [0,1] × [-1,0]
+# This reduces the problem to 25 critical points (5×5 tensor product).
 #
 # Expected outputs:
 # - L²-norm convergence plot
@@ -25,6 +25,7 @@ using TheoreticalPoints
 using AnalysisUtilities
 using PlottingUtilities
 using TableGeneration
+using PlotDescriptions
 
 # Standard packages
 using Printf, Dates
@@ -35,22 +36,22 @@ using CairoMakie
 # ================================================================================
 
 const DEGREE_MIN = 2                    # Starting polynomial degree
-const DEGREE_MAX = 4                    # Maximum polynomial degree (capped at 4 for fast testing)
-const L2_TOLERANCE = 1e-3               # Target L²-norm for convergence
+const DEGREE_MAX = 6                    # Maximum polynomial degree
+const L2_TOLERANCE = 1e-2               # Target L²-norm for convergence
 const MAX_RUNTIME_PER_DEGREE = 180     # 3 minute timeout per degree
 
 # ================================================================================
 # MAIN ANALYSIS
 # ================================================================================
 
-function run_full_domain_analysis()
-    @info "Starting Full Domain Analysis" timestamp=Dates.format(now(), "yyyy-mm-dd HH:MM:SS")
-    @info "Parameters" degree_range="$DEGREE_MIN:$DEGREE_MAX" L2_tolerance=L2_TOLERANCE GN=GN_FIXED
+function run_orthant_domain_analysis()
+    @info "Starting (+,-,+,-) Orthant Analysis" timestamp=Dates.format(now(), "yyyy-mm-dd HH:MM:SS")
+    @info "Parameters" dimensions=4 domain="[0,1]×[-1,0]×[0,1]×[-1,0]" degree_range="$DEGREE_MIN:$DEGREE_MAX" GN=GN_FIXED
     
-    # Load theoretical points for validation
-    @info "Loading theoretical critical points..."
-    theoretical_points, theoretical_values, theoretical_types = load_theoretical_4d_points()
-    @info "Loaded $(length(theoretical_points)) theoretical points"
+    # Load theoretical points for (+,-,+,-) orthant
+    @info "Loading theoretical critical points for (+,-,+,-) orthant..."
+    theoretical_points, theoretical_values, theoretical_types = load_theoretical_4d_points_orthant()
+    @info "Loaded $(length(theoretical_points)) theoretical points in orthant"
     
     # Count point types
     n_min_min = count(t -> t == "min+min", theoretical_types)
@@ -74,8 +75,8 @@ function run_full_domain_analysis()
         result = analyze_single_degree(
             deuflhard_4d_composite, 
             degree,
-            [0.0, 0.0, 0.0, 0.0],  # Center at origin
-            ORIGINAL_DOMAIN_RANGE,   # Full [-1,1]^4 domain
+            [0.5, -0.5, 0.5, -0.5],  # Center of (+,-,+,-) orthant
+            0.5,                      # Half-width in each dimension
             theoretical_points,
             theoretical_types,
             gn = GN_FIXED,
@@ -97,8 +98,8 @@ function run_full_domain_analysis()
     total_runtime = time() - analysis_start_time
     @info "Degree sweep complete" degrees_tested=length(results) total_runtime=@sprintf("%.1f", total_runtime)
     
-    # Create output directory
-    output_dir = joinpath(@__DIR__, "../outputs", "full_domain_$(Dates.format(now(), "yyyy-mm-dd_HH-MM"))")
+    # Create shared output directory with HH-MM timestamp
+    output_dir = joinpath(@__DIR__, "../outputs", Dates.format(now(), "HH-MM"))
     mkpath(output_dir)
     @info "Created output directory" path=output_dir
     
@@ -108,26 +109,46 @@ function run_full_domain_analysis()
     # L²-norm convergence plot
     fig_l2 = plot_l2_convergence(
         results,
-        title = "Full Domain L²-Norm Convergence",
+        title = "L²-Norm Convergence: (+,-,+,-) Orthant",
         tolerance_line = L2_TOLERANCE,
-        save_path = joinpath(output_dir, "l2_convergence.png")
+        save_path = joinpath(output_dir, "orthant_l2_convergence.png")
     )
     @info "L²-norm plot saved"
+    
+    # Generate and display plot description
+    l2_desc = describe_l2_convergence(results, tolerance_line = L2_TOLERANCE)
+    println("\n" * l2_desc)
     
     # Recovery rates plot
     fig_recovery = plot_recovery_rates(
         results,
-        title = "Critical Point Recovery Rates",
-        save_path = joinpath(output_dir, "recovery_rates.png")
+        title = "Critical Point Recovery: (+,-,+,-) Orthant",
+        save_path = joinpath(output_dir, "orthant_recovery_rates.png")
     )
     @info "Recovery rates plot saved"
     
+    # Generate and display plot description
+    recovery_desc = describe_recovery_rates(results)
+    println("\n" * recovery_desc)
+    
+    # Min+min distance plot
+    fig_min_min = plot_min_min_distances(
+        results,
+        title = "Min+Min Distance to Closest Critical Point: (+,-,+,-) Orthant",
+        save_path = joinpath(output_dir, "orthant_min_min_distances.png")
+    )
+    @info "Min+min distance plot saved"
+    
+    # Generate and display plot description
+    min_min_desc = describe_min_min_distances(results)
+    println("\n" * min_min_desc)
+    
     # Generate summary table
     @info "\nSummary Statistics:"
-    generate_degree_summary_table(results, title="Full Domain Degree Analysis")
+    generate_degree_summary_table(results, title="(+,-,+,-) Orthant Analysis Summary")
     
     # Export to CSV
-    csv_path = joinpath(output_dir, "full_domain_results.csv")
+    csv_path = joinpath(output_dir, "orthant_results.csv")
     export_results_to_csv(results, csv_path)
     
     # Final analysis
@@ -151,7 +172,7 @@ function run_full_domain_analysis()
     best_minmin = results[best_minmin_idx]
     @info "Best min+min recovery" degree=best_minmin.degree min_min_rate=@sprintf("%.1f%%", best_minmin.min_min_success_rate*100)
     
-    @info "Full domain analysis complete!" output_directory=output_dir
+    @info "Orthant domain analysis complete!" output_directory=output_dir
     
     return results, output_dir
 end
@@ -161,5 +182,5 @@ end
 # ================================================================================
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    results, output_dir = run_full_domain_analysis()
+    results, output_dir = run_orthant_domain_analysis()
 end

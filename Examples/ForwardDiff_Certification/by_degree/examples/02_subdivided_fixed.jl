@@ -1,13 +1,14 @@
 # ================================================================================
-# Example B: Subdivided Fixed Degree Analysis
+# Example B: Subdivided Fixed Degree Analysis (+,-,+,-) Orthant
 # ================================================================================
 # 
-# Apply the same polynomial degree to all 16 spatial subdomains of [-1,1]^4.
-# This example reveals which regions of the domain are harder to approximate
-# and helps identify spatial patterns in approximation difficulty.
+# Apply the same polynomial degree to all 16 spatial subdomains of the (+,-,+,-) orthant.
+# Domain: [0,1] × [-1,0] × [0,1] × [-1,0] divided into 16 subdomains.
+# This example reveals which regions of the orthant are harder to approximate.
 #
 # Expected outputs:
 # - Combined L²-norm plot for all 16 subdomains
+# - Recovery rate plots (all critical points and min+min only)
 # - Spatial difficulty analysis
 # - Summary table by subdomain
 # - CSV export with detailed results
@@ -26,6 +27,7 @@ using TheoreticalPoints
 using AnalysisUtilities
 using PlottingUtilities
 using TableGeneration
+using PlotDescriptions
 
 # Standard packages
 using Printf, Dates, Statistics
@@ -36,7 +38,7 @@ using DataFrames, CSV
 # PARAMETERS
 # ================================================================================
 
-const FIXED_DEGREES = [2, 3, 4]         # Degrees to test across all subdomains (capped at 4 for fast testing)
+const FIXED_DEGREES = [2, 3, 4, 5, 6]  # Test degrees up to 6
 const MAX_RUNTIME_PER_SUBDOMAIN = 60   # 1 minute timeout per subdomain
 const L2_TOLERANCE_REFERENCE = 1e-2    # Reference line for plots
 
@@ -47,9 +49,9 @@ const L2_TOLERANCE_REFERENCE = 1e-2    # Reference line for plots
 function analyze_subdomain_at_degree(subdomain::Subdomain, degree::Int)
     """Analyze a single subdomain at a fixed degree."""
     
-    # Load theoretical points for this subdomain
+    # Load theoretical points for this subdomain within the orthant
     theoretical_points, theoretical_values, theoretical_types = 
-        load_theoretical_points_for_subdomain(subdomain)
+        load_theoretical_points_for_subdomain_orthant(subdomain)
     
     if isempty(theoretical_points)
         @warn "No theoretical points in subdomain $(subdomain.label), skipping"
@@ -78,15 +80,15 @@ end
 # ================================================================================
 
 function run_fixed_degree_subdivision_analysis()
-    @info "Starting Fixed Degree Subdivision Analysis" timestamp=Dates.format(now(), "yyyy-mm-dd HH:MM:SS")
-    @info "Parameters" fixed_degrees=FIXED_DEGREES GN=GN_FIXED
+    @info "Starting Fixed Degree Subdivision Analysis (+,-,+,-) Orthant" timestamp=Dates.format(now(), "yyyy-mm-dd HH:MM:SS")
+    @info "Parameters" domain="[0,1]×[-1,0]×[0,1]×[-1,0]" fixed_degrees=FIXED_DEGREES GN=GN_FIXED
     
-    # Generate 16 subdomains
-    subdivisions = generate_16_subdivisions()
-    @info "Generated $(length(subdivisions)) subdomains"
+    # Generate 16 subdomains within the (+,-,+,-) orthant
+    subdivisions = generate_16_subdivisions_orthant()
+    @info "Generated $(length(subdivisions)) subdomains in (+,-,+,-) orthant"
     
-    # Create output directory
-    output_dir = joinpath(@__DIR__, "../outputs", "subdivided_fixed_$(Dates.format(now(), "yyyy-mm-dd_HH-MM"))")
+    # Create shared output directory with HH-MM timestamp
+    output_dir = joinpath(@__DIR__, "../outputs", Dates.format(now(), "HH-MM"))
     mkpath(output_dir)
     @info "Created output directory" path=output_dir
     
@@ -123,23 +125,63 @@ function run_fixed_degree_subdivision_analysis()
         degree_runtime = time() - degree_start_time
         @info "Degree $degree analysis complete" n_subdomains=length(degree_results) runtime=@sprintf("%.1f", degree_runtime)
         
-        # Generate plots for this degree
-        if !isempty(degree_results)
-            # Convert to format expected by plotting function
-            results_vector = Dict(label => [result] for (label, result) in degree_results)
-            
-            fig = plot_subdivision_convergence(
-                results_vector,
-                title = "L²-Norm Distribution: Degree $degree",
-                tolerance_line = L2_TOLERANCE_REFERENCE,
-                save_path = joinpath(output_dir, "l2_distribution_degree_$(degree).png")
-            )
-            @info "Saved L²-norm distribution plot for degree $degree"
-        end
+        # Store results for combined plotting later
+        @info "Stored results for degree $degree"
     end
     
     # Comparative analysis across degrees
     @info "\nGenerating comparative analysis..."
+    
+    # Create combined plot showing all degrees together
+    combined_results = Dict{String, Vector{DegreeAnalysisResult}}()
+    for (degree, degree_results) in all_results
+        for (label, result) in degree_results
+            if !haskey(combined_results, label)
+                combined_results[label] = DegreeAnalysisResult[]
+            end
+            push!(combined_results[label], result)
+        end
+    end
+    
+    # Generate the combined plots
+    if !isempty(combined_results)
+        # L²-norm convergence plot
+        fig = plot_subdivision_convergence(
+            combined_results,
+            title = "L²-Norm Convergence: (+,-,+,-) Orthant Subdivisions",
+            tolerance_line = L2_TOLERANCE_REFERENCE,
+            save_path = joinpath(output_dir, "fixed_subdivision_l2_convergence.png")
+        )
+        @info "Saved combined L²-norm convergence plot"
+        
+        # Generate and display plot description
+        l2_desc = describe_subdivision_convergence(combined_results, tolerance_line = L2_TOLERANCE_REFERENCE)
+        println("\n" * l2_desc)
+        
+        # Recovery rate plots (all critical points and min+min only)
+        fig_recovery = plot_subdivision_recovery_rates(
+            combined_results,
+            title = "Recovery Rates: (+,-,+,-) Orthant Subdivisions",
+            save_path = joinpath(output_dir, "fixed_subdivision_recovery_rates.png")
+        )
+        @info "Saved combined recovery rate plots"
+        
+        # Generate and display plot description
+        recovery_desc = describe_subdivision_recovery_rates(combined_results)
+        println("\n" * recovery_desc)
+        
+        # Min+min distance plots
+        fig_min_min = plot_subdivision_min_min_distances(
+            combined_results,
+            title = "Min+Min Distance: Fixed Degree Subdivisions",
+            save_path = joinpath(output_dir, "fixed_subdivision_min_min_distances.png")
+        )
+        @info "Saved min+min distance plots"
+        
+        # Generate and display plot description
+        min_min_desc = describe_subdivision_min_min_distances(combined_results)
+        println("\n" * min_min_desc)
+    end
     
     # Collect statistics for each degree
     for degree in FIXED_DEGREES
@@ -170,7 +212,7 @@ function run_fixed_degree_subdivision_analysis()
             @info "\nSummary for degree $degree:"
             # Convert to expected format
             results_for_table = Dict(label => [result] for (label, result) in all_results[degree])
-            generate_subdivision_summary_table(results_for_table, title="Degree $degree Subdivision Analysis")
+            generate_subdivision_summary_table(results_for_table, title="Degree $degree Orthant Subdivision Analysis")
         end
     end
     
@@ -194,7 +236,7 @@ function run_fixed_degree_subdivision_analysis()
     
     if !isempty(csv_rows)
         df = DataFrame(csv_rows)
-        csv_path = joinpath(output_dir, "fixed_degree_results.csv")
+        csv_path = joinpath(output_dir, "fixed_subdivision_results.csv")
         CSV.write(csv_path, df)
         @info "Results exported to CSV" path=csv_path n_rows=nrow(df)
     end
@@ -227,7 +269,7 @@ function run_fixed_degree_subdivision_analysis()
         end
     end
     
-    @info "Fixed degree subdivision analysis complete!" output_directory=output_dir
+    @info "Fixed degree orthant subdivision analysis complete!" output_directory=output_dir
     
     return all_results, output_dir
 end

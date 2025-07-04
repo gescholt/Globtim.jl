@@ -1,15 +1,16 @@
 # ================================================================================
-# Example C: Subdivided Adaptive Degree Analysis
+# Example C: Subdivided Adaptive Degree Analysis (+,-,+,-) Orthant
 # ================================================================================
 # 
-# Adaptively increase polynomial degree for each subdomain until L²-norm tolerance
-# is achieved. This example demonstrates computational requirements across spatial
-# regions and identifies which areas need higher degree approximations.
+# Adaptively increase polynomial degree for each subdomain of the (+,-,+,-) orthant
+# until L²-norm tolerance is achieved. Domain: [0,1] × [-1,0] × [0,1] × [-1,0].
+# This example identifies which regions need higher degree approximations.
 #
 # Expected outputs:
 # - Degree requirements map (which subdomain needs what degree)
 # - Computational cost analysis
 # - Convergence progression visualization
+# - Recovery rate plots
 # - CSV export with adaptive history
 #
 
@@ -26,6 +27,7 @@ using TheoreticalPoints
 using AnalysisUtilities
 using PlottingUtilities
 using TableGeneration
+using PlotDescriptions
 
 # Standard packages
 using Printf, Dates, Statistics
@@ -37,7 +39,7 @@ using DataFrames, CSV
 # ================================================================================
 
 const DEGREE_MIN = 2                    # Starting polynomial degree
-const DEGREE_MAX = 4                    # Maximum polynomial degree (capped at 4 for fast testing)
+const DEGREE_MAX = 6                    # Maximum polynomial degree
 const L2_TOLERANCE_TARGET = 1e-2       # L²-norm convergence target
 const MAX_RUNTIME_PER_SUBDOMAIN = 300  # 5 minute timeout per subdomain
 const MAX_RUNTIME_PER_DEGREE = 60      # 1 minute timeout per degree
@@ -49,9 +51,9 @@ const MAX_RUNTIME_PER_DEGREE = 60      # 1 minute timeout per degree
 function analyze_subdomain_adaptive(subdomain::Subdomain)
     """Adaptively increase degree until L²-norm tolerance is met."""
     
-    # Load theoretical points for this subdomain
+    # Load theoretical points for this subdomain within the orthant
     theoretical_points, theoretical_values, theoretical_types = 
-        load_theoretical_points_for_subdomain(subdomain)
+        load_theoretical_points_for_subdomain_orthant(subdomain)
     
     if isempty(theoretical_points)
         @warn "No theoretical points in subdomain $(subdomain.label), skipping"
@@ -117,15 +119,15 @@ end
 # ================================================================================
 
 function run_adaptive_subdivision_analysis()
-    @info "Starting Adaptive Subdivision Analysis" timestamp=Dates.format(now(), "yyyy-mm-dd HH:MM:SS")
-    @info "Parameters" degree_range="$DEGREE_MIN:$DEGREE_MAX" L2_target=L2_TOLERANCE_TARGET GN=GN_FIXED
+    @info "Starting Adaptive Subdivision Analysis (+,-,+,-) Orthant" timestamp=Dates.format(now(), "yyyy-mm-dd HH:MM:SS")
+    @info "Parameters" domain="[0,1]×[-1,0]×[0,1]×[-1,0]" degree_range="$DEGREE_MIN:$DEGREE_MAX" L2_target=L2_TOLERANCE_TARGET GN=GN_FIXED
     
-    # Generate 16 subdomains
-    subdivisions = generate_16_subdivisions()
-    @info "Generated $(length(subdivisions)) subdomains"
+    # Generate 16 subdomains within the (+,-,+,-) orthant
+    subdivisions = generate_16_subdivisions_orthant()
+    @info "Generated $(length(subdivisions)) subdomains in (+,-,+,-) orthant"
     
-    # Create output directory
-    output_dir = joinpath(@__DIR__, "../outputs", "subdivided_adaptive_$(Dates.format(now(), "yyyy-mm-dd_HH-MM"))")
+    # Create shared output directory with HH-MM timestamp
+    output_dir = joinpath(@__DIR__, "../outputs", Dates.format(now(), "HH-MM"))
     mkpath(output_dir)
     @info "Created output directory" path=output_dir
     
@@ -147,11 +149,41 @@ function run_adaptive_subdivision_analysis()
     @info "Generating convergence progression plot..."
     fig = plot_subdivision_convergence(
         all_results,
-        title = "Adaptive L²-Norm Convergence: 16 Subdomains",
+        title = "Adaptive L²-Norm Convergence: (+,-,+,-) Orthant",
         tolerance_line = L2_TOLERANCE_TARGET,
-        save_path = joinpath(output_dir, "adaptive_convergence_progression.png")
+        save_path = joinpath(output_dir, "adaptive_subdivision_l2_convergence.png")
     )
     @info "Convergence plot saved"
+    
+    # Generate and display plot description
+    l2_desc = describe_subdivision_convergence(all_results, tolerance_line = L2_TOLERANCE_TARGET)
+    println("\n" * l2_desc)
+    
+    # Generate recovery rate plots
+    @info "Generating recovery rate plots..."
+    fig_recovery = plot_subdivision_recovery_rates(
+        all_results,
+        title = "Adaptive Recovery Rates: (+,-,+,-) Orthant",
+        save_path = joinpath(output_dir, "adaptive_subdivision_recovery_rates.png")
+    )
+    @info "Recovery rate plots saved"
+    
+    # Generate and display plot description
+    recovery_desc = describe_subdivision_recovery_rates(all_results)
+    println("\n" * recovery_desc)
+    
+    # Generate min+min distance plots
+    @info "Generating min+min distance plots..."
+    fig_min_min = plot_subdivision_min_min_distances(
+        all_results,
+        title = "Min+Min Distance: Adaptive Subdivisions",
+        save_path = joinpath(output_dir, "adaptive_subdivision_min_min_distances.png")
+    )
+    @info "Min+min distance plots saved"
+    
+    # Generate and display plot description
+    min_min_desc = describe_subdivision_min_min_distances(all_results)
+    println("\n" * min_min_desc)
     
     # Generate degree requirements visualization
     @info "Analyzing degree requirements..."
@@ -231,7 +263,7 @@ function run_adaptive_subdivision_analysis()
     
     # Generate summary table
     @info "\nGenerating summary table..."
-    generate_subdivision_summary_table(all_results, title="Adaptive Subdivision Analysis")
+    generate_subdivision_summary_table(all_results, title="Adaptive Orthant Subdivision Analysis")
     
     # Export detailed results to CSV
     csv_rows = []
@@ -254,7 +286,7 @@ function run_adaptive_subdivision_analysis()
     
     if !isempty(csv_rows)
         df = DataFrame(csv_rows)
-        csv_path = joinpath(output_dir, "adaptive_analysis_history.csv")
+        csv_path = joinpath(output_dir, "adaptive_subdivision_results.csv")
         CSV.write(csv_path, df)
         @info "Detailed history exported to CSV" path=csv_path n_rows=nrow(df)
     end
@@ -279,7 +311,7 @@ function run_adaptive_subdivision_analysis()
         end
     end
     
-    @info "\nAdaptive subdivision analysis complete!" output_directory=output_dir
+    @info "\nAdaptive orthant subdivision analysis complete!" output_directory=output_dir
     
     return all_results, degree_requirements, output_dir
 end

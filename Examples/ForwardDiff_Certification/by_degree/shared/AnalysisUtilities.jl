@@ -26,6 +26,7 @@ Structure containing analysis results for a single polynomial degree.
 - `converged::Bool`: Whether L²-norm met target tolerance
 - `computed_points::Vector{Vector{Float64}}`: Found critical points
 - `min_min_success_rate::Float64`: Success rate for min+min points only
+- `min_min_distances::Vector{Float64}`: Distances from each min+min theoretical point to closest computed point
 """
 struct DegreeAnalysisResult
     degree::Int
@@ -38,6 +39,7 @@ struct DegreeAnalysisResult
     converged::Bool
     computed_points::Vector{Vector{Float64}}
     min_min_success_rate::Float64
+    min_min_distances::Vector{Float64}
 end
 
 """
@@ -100,7 +102,8 @@ function analyze_single_degree(f, degree, center, range, theoretical_points, the
             runtime,
             converged,
             computed_points,
-            metrics.min_min_success_rate
+            metrics.min_min_success_rate,
+            metrics.min_min_distances
         )
         
     catch e
@@ -117,7 +120,8 @@ function analyze_single_degree(f, degree, center, range, theoretical_points, the
             runtime,
             false,
             Vector{Vector{Float64}}(),
-            0.0
+            0.0,
+            Vector{Float64}()
         )
     end
 end
@@ -144,7 +148,8 @@ function compute_recovery_metrics(computed_points, theoretical_points, theoretic
             n_successful_recoveries = 0,
             success_rate = 0.0,
             min_min_success_rate = 0.0,
-            closest_distances = Float64[]
+            closest_distances = Float64[],
+            min_min_distances = Float64[]
         )
     end
     
@@ -161,8 +166,11 @@ function compute_recovery_metrics(computed_points, theoretical_points, theoretic
     
     # Min+min specific metrics
     min_min_indices = findall(t -> t == "min+min", theoretical_types)
+    min_min_distances = Float64[]
+    
     if !isempty(min_min_indices)
-        min_min_recoveries = sum(closest_distances[min_min_indices] .< DISTANCE_TOLERANCE)
+        min_min_distances = closest_distances[min_min_indices]
+        min_min_recoveries = sum(min_min_distances .< DISTANCE_TOLERANCE)
         min_min_success_rate = min_min_recoveries / length(min_min_indices)
     else
         min_min_success_rate = 0.0
@@ -172,7 +180,8 @@ function compute_recovery_metrics(computed_points, theoretical_points, theoretic
         n_successful_recoveries = successful_recoveries,
         success_rate = success_rate,
         min_min_success_rate = min_min_success_rate,
-        closest_distances = closest_distances
+        closest_distances = closest_distances,
+        min_min_distances = min_min_distances
     )
 end
 
