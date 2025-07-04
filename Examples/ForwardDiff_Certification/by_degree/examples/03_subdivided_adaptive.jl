@@ -25,7 +25,9 @@ using Common4DDeuflhard
 using SubdomainManagement
 using TheoreticalPoints
 using AnalysisUtilities
-using PlottingUtilities
+using EnhancedAnalysisUtilities
+using EnhancedPlottingUtilities
+using PlottingUtilities  # Keep for legacy functions
 using TableGeneration
 using PlotDescriptions
 
@@ -145,13 +147,37 @@ function run_adaptive_subdivision_analysis()
     total_runtime = time() - analysis_start_time
     @info "\nAdaptive analysis complete" total_runtime=@sprintf("%.1f", total_runtime)
     
+    # Convert results to enhanced format
+    enhanced_all_results = Dict{String, Vector{EnhancedDegreeAnalysisResult}}()
+    
+    for (label, results) in all_results
+        enhanced_results = EnhancedDegreeAnalysisResult[]
+        subdomain = subdivisions[findfirst(s -> s.label == label, subdivisions)]
+        
+        theoretical_points, theoretical_values, theoretical_types = 
+            load_theoretical_points_for_subdomain_orthant(subdomain)
+        
+        for result in results
+            enhanced = convert_to_enhanced(
+                result,
+                theoretical_points,
+                findall(t -> t == "min+min", theoretical_types),
+                label
+            )
+            push!(enhanced_results, enhanced)
+        end
+        
+        enhanced_all_results[label] = enhanced_results
+    end
+    
     # Generate convergence progression plot
     @info "Generating convergence progression plot..."
-    fig = plot_subdivision_convergence(
-        all_results,
+    fig = plot_l2_convergence_dual_scale(
+        enhanced_all_results,
         title = "Adaptive L²-Norm Convergence: (+,-,+,-) Orthant",
         tolerance_line = L2_TOLERANCE_TARGET,
-        save_path = joinpath(output_dir, "adaptive_subdivision_l2_convergence.png")
+        save_plots = true,
+        plots_directory = output_dir
     )
     @info "Convergence plot saved"
     
@@ -159,27 +185,39 @@ function run_adaptive_subdivision_analysis()
     l2_desc = describe_subdivision_convergence(all_results, tolerance_line = L2_TOLERANCE_TARGET)
     println("\n" * l2_desc)
     
-    # Generate recovery rate plots
-    @info "Generating recovery rate plots..."
-    fig_recovery = plot_subdivision_recovery_rates(
-        all_results,
+    # Critical point recovery histogram
+    @info "Generating critical point recovery histogram..."
+    fig_recovery = plot_critical_point_recovery_histogram(
+        enhanced_all_results,
         title = "Adaptive Recovery Rates: (+,-,+,-) Orthant",
-        save_path = joinpath(output_dir, "adaptive_subdivision_recovery_rates.png")
+        save_plots = true,
+        plots_directory = output_dir
     )
-    @info "Recovery rate plots saved"
+    @info "Critical point recovery histogram saved"
     
     # Generate and display plot description
     recovery_desc = describe_subdivision_recovery_rates(all_results)
     println("\n" * recovery_desc)
     
-    # Generate min+min distance plots
+    # Min+min distance plot with dual scale
     @info "Generating min+min distance plots..."
-    fig_min_min = plot_subdivision_min_min_distances(
-        all_results,
+    fig_min_min = plot_min_min_distances_dual_scale(
+        enhanced_all_results,
         title = "Min+Min Distance: Adaptive Subdivisions",
-        save_path = joinpath(output_dir, "adaptive_subdivision_min_min_distances.png")
+        tolerance_line = 0.001,
+        save_plots = true,
+        plots_directory = output_dir
     )
     @info "Min+min distance plots saved"
+    
+    # Min+min capture methods histogram
+    fig_capture = plot_min_min_capture_methods(
+        enhanced_all_results,
+        title = "Min+Min Capture Methods: Adaptive Subdivisions",
+        save_plots = true,
+        plots_directory = output_dir
+    )
+    @info "Min+min capture methods histogram saved"
     
     # Generate and display plot description
     min_min_desc = describe_subdivision_min_min_distances(all_results)

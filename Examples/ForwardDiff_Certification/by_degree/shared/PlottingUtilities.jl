@@ -121,7 +121,7 @@ function plot_recovery_rates(results; save_path=nothing,
             label = "90% Target")
     
     # Add legend
-    axislegend(ax, position = :rb, framevisible = true)
+    axislegend(ax, position = :rt, framevisible = true)
     
     # Save if path provided
     if save_path !== nothing
@@ -200,8 +200,8 @@ function plot_subdivision_convergence(all_results; save_path=nothing,
                 
                 # Use thin lines with transparency
                 lines!(ax, valid_degrees, valid_l2_norms, 
-                       color = (base_colors[color_idx], 0.6), 
-                       linewidth = 1.0, 
+                       color = (base_colors[color_idx], 0.7), 
+                       linewidth = 1.5, 
                        linestyle = line_styles[style_idx])
             end
         end
@@ -232,6 +232,11 @@ function plot_subdivision_convergence(all_results; save_path=nothing,
         hlines!(ax, [tolerance_line], color = :black, linestyle = :dash, linewidth = 2,
                 label = "L² Tolerance")
     end
+    
+    # Add annotation showing number of subdomains
+    n_subdomains = length(all_results)
+    text!(ax, 0.02, 0.98, text = "$(n_subdomains) subdomain trajectories (colored/styled) + average (thick black)",
+          align = (:left, :top), space = :relative, fontsize = 12)
     
     # Save if path provided
     if save_path !== nothing

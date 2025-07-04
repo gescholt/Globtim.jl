@@ -5,11 +5,22 @@ This folder contains a structured suite of examples analyzing polynomial approxi
 ## Overview
 
 The analysis suite provides three main examples demonstrating different approximation strategies:
-1. **Full Domain**: Single polynomial on entire [-1,1]⁴ domain
+1. **Full Domain**: Single polynomial on entire (+,-,+,-) orthant of [-1,1]⁴
 2. **Subdivided Fixed**: Same degree applied to all 16 spatial subdomains
 3. **Subdivided Adaptive**: Degree increased per subdomain until L²-tolerance achieved
 
 All examples use fixed sample count (GN=10) and CairoMakie for stable file-based plotting.
+
+## Enhanced Plotting Suite
+
+The analysis now includes four specialized plot types with enhanced data structures:
+
+1. **L²-Norm Convergence with Dual Scale** - Shows convergence patterns with optional dual-axis for multi-domain
+2. **Min+Min Distance Analysis** - Tracks both minimal and average distances to theoretical min+min points
+3. **Critical Point Recovery Histogram** - 3-layer stacked visualization of recovery success
+4. **Min+Min Capture Methods** - Distinguishes between direct tolerance capture vs BFGS refinement
+
+See `CONVERGENCE_PLOTS.md` for detailed documentation of plotting functions.
 
 ## Visualization Types Implemented
 
@@ -28,13 +39,15 @@ All examples use fixed sample count (GN=10) and CairoMakie for stable file-based
 ```
 by_degree/
 ├── README.md                           # This documentation
-├── EXAMPLE_PLAN.md                     # Detailed implementation plan
+├── CONVERGENCE_PLOTS.md                # Detailed plotting documentation
 ├── shared/                             # Reusable utility modules
 │   ├── Common4DDeuflhard.jl           # Core function and constants
 │   ├── SubdomainManagement.jl         # Subdomain structures
 │   ├── TheoreticalPoints.jl           # Reference point loading
 │   ├── AnalysisUtilities.jl           # Analysis patterns
-│   ├── PlottingUtilities.jl           # CairoMakie plotting
+│   ├── EnhancedAnalysisUtilities.jl   # Enhanced data structures
+│   ├── PlottingUtilities.jl           # Legacy plotting functions
+│   ├── EnhancedPlottingUtilities.jl   # Enhanced plotting suite
 │   └── TableGeneration.jl             # Summary tables
 ├── examples/                           # Main example scripts
 │   ├── 01_full_domain.jl              # Full domain analysis

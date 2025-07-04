@@ -23,7 +23,9 @@ push!(LOAD_PATH, joinpath(@__DIR__, "../shared"))
 using Common4DDeuflhard
 using TheoreticalPoints
 using AnalysisUtilities
-using PlottingUtilities
+using EnhancedAnalysisUtilities
+using EnhancedPlottingUtilities
+using PlottingUtilities  # Keep for legacy functions still in use
 using TableGeneration
 using PlotDescriptions
 
@@ -106,12 +108,25 @@ function run_orthant_domain_analysis()
     # Generate plots
     @info "Generating convergence plots..."
     
-    # L²-norm convergence plot
-    fig_l2 = plot_l2_convergence(
-        results,
+    # Convert results to enhanced format
+    enhanced_results = EnhancedDegreeAnalysisResult[]
+    for result in results
+        enhanced = convert_to_enhanced(
+            result,
+            theoretical_points,
+            findall(t -> t == "min+min", theoretical_types),
+            "full_orthant"
+        )
+        push!(enhanced_results, enhanced)
+    end
+    
+    # L²-norm convergence plot with enhanced function
+    fig_l2 = plot_l2_convergence_dual_scale(
+        enhanced_results,
         title = "L²-Norm Convergence: (+,-,+,-) Orthant",
         tolerance_line = L2_TOLERANCE,
-        save_path = joinpath(output_dir, "orthant_l2_convergence.png")
+        save_plots = true,
+        plots_directory = output_dir
     )
     @info "L²-norm plot saved"
     
@@ -119,25 +134,37 @@ function run_orthant_domain_analysis()
     l2_desc = describe_l2_convergence(results, tolerance_line = L2_TOLERANCE)
     println("\n" * l2_desc)
     
-    # Recovery rates plot
-    fig_recovery = plot_recovery_rates(
-        results,
+    # Critical point recovery histogram with enhanced function
+    fig_recovery = plot_critical_point_recovery_histogram(
+        enhanced_results,
         title = "Critical Point Recovery: (+,-,+,-) Orthant",
-        save_path = joinpath(output_dir, "orthant_recovery_rates.png")
+        save_plots = true,
+        plots_directory = output_dir
     )
-    @info "Recovery rates plot saved"
+    @info "Critical point recovery histogram saved"
     
     # Generate and display plot description
     recovery_desc = describe_recovery_rates(results)
     println("\n" * recovery_desc)
     
-    # Min+min distance plot
-    fig_min_min = plot_min_min_distances(
-        results,
+    # Min+min distance plot with enhanced function
+    fig_min_min = plot_min_min_distances_dual_scale(
+        enhanced_results,
         title = "Min+Min Distance to Closest Critical Point: (+,-,+,-) Orthant",
-        save_path = joinpath(output_dir, "orthant_min_min_distances.png")
+        tolerance_line = 0.001,  # Standard BFGS tolerance
+        save_plots = true,
+        plots_directory = output_dir
     )
     @info "Min+min distance plot saved"
+    
+    # Min+min capture methods histogram
+    fig_capture = plot_min_min_capture_methods(
+        enhanced_results,
+        title = "Min+Min Capture Methods: (+,-,+,-) Orthant",
+        save_plots = true,
+        plots_directory = output_dir
+    )
+    @info "Min+min capture methods histogram saved"
     
     # Generate and display plot description
     min_min_desc = describe_min_min_distances(results)
