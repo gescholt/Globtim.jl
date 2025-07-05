@@ -3,7 +3,7 @@
 module SubdomainManagement
 
 export Subdomain, generate_16_subdivisions, is_point_in_subdomain
-export generate_16_subdivisions_orthant
+export generate_16_subdivisions_orthant, assign_point_to_unique_subdomain
 
 """
     Subdomain
@@ -92,7 +92,8 @@ end
     generate_16_subdivisions_orthant()
 
 Generate all 16 subdomains by dividing the (+,-,+,-) orthant.
-Domain: [0,1] × [-1,0] × [0,1] × [-1,0]
+Domain: [-0.1,1.1] × [-1.1,0.1] × [-0.1,1.1] × [-1.1,0.1]
+(Stretched by 0.1 on each side to include all theoretical minimizers)
 
 # Returns
 - `Vector{Subdomain}`: Array of 16 subdomain structures with labels and centers
@@ -104,9 +105,10 @@ Labels use binary encoding relative to the orthant structure.
 function generate_16_subdivisions_orthant()
     subdivisions = Subdomain[]
     
-    # Define the orthant bounds: [0,1] × [-1,0] × [0,1] × [-1,0]
-    orthant_bounds = [(0.0, 1.0), (-1.0, 0.0), (0.0, 1.0), (-1.0, 0.0)]
-    orthant_ranges = [0.5, 0.5, 0.5, 0.5]  # Half-width for each dimension
+    # Define the orthant bounds: stretched by 0.1 on each side
+    # Original: [0,1] × [-1,0] × [0,1] × [-1,0]
+    # Stretched: [-0.1,1.1] × [-1.1,0.1] × [-0.1,1.1] × [-1.1,0.1]
+    orthant_bounds = [(-0.1, 1.1), (-1.1, 0.1), (-0.1, 1.1), (-1.1, 0.1)]
     
     for i in 0:15
         # Convert to 4-bit binary representation
@@ -131,12 +133,56 @@ function generate_16_subdivisions_orthant()
             end
         end
         
-        # Range is 0.25 because each subdomain is half of 0.5 in each dimension
-        subdomain = Subdomain(binary_repr, center, 0.25, bounds)
+        # Range is 0.3 because each subdomain is half of 0.6 in each dimension
+        subdomain = Subdomain(binary_repr, center, 0.3, bounds)
         push!(subdivisions, subdomain)
     end
     
     return subdivisions
+end
+
+"""
+    assign_point_to_unique_subdomain(point, subdomains)
+
+Assign a point to exactly one subdomain using lexicographic ordering for tie-breaking.
+This ensures each point is assigned to exactly one subdomain, avoiding multiple counting.
+
+# Arguments
+- `point::Vector{Float64}`: The point to assign
+- `subdomains::Vector{Subdomain}`: All available subdomains
+
+# Returns
+- `Subdomain`: The unique subdomain containing the point
+- `nothing`: If point is not in any subdomain
+"""
+function assign_point_to_unique_subdomain(point::Vector{Float64}, subdomains::Vector{Subdomain})
+    # Find all subdomains that could contain this point
+    candidates = Subdomain[]
+    
+    for subdomain in subdomains
+        contains_point = true
+        for (dim, coord) in enumerate(point)
+            lower, upper = subdomain.bounds[dim]
+            if coord < lower || coord > upper
+                contains_point = false
+                break
+            end
+        end
+        if contains_point
+            push!(candidates, subdomain)
+        end
+    end
+    
+    if length(candidates) == 0
+        return nothing  # Point not in any subdomain
+    elseif length(candidates) == 1
+        return candidates[1]
+    else
+        # Multiple candidates - use lexicographic ordering of binary labels
+        # Choose the smallest binary label for consistent assignment
+        sort!(candidates, by = s -> s.label)
+        return candidates[1]
+    end
 end
 
 end # module

@@ -1,26 +1,36 @@
 # Degree Convergence Analysis for 4D Deuflhard Function
 
-This folder contains a structured suite of examples analyzing polynomial approximation performance across different degrees and spatial decompositions for the 4D Deuflhard composite function.
+This folder contains a comprehensive analysis framework for studying polynomial approximation convergence and local minimizer recovery for the 4D Deuflhard composite function.
 
 ## Overview
 
-The analysis suite provides three main examples demonstrating different approximation strategies:
-1. **Full Domain**: Single polynomial on entire (+,-,+,-) orthant of [-1,1]⁴
-2. **Subdivided Fixed**: Same degree applied to all 16 spatial subdomains
-3. **Subdivided Adaptive**: Degree increased per subdomain until L²-tolerance achieved
+The analysis focuses on tracking how polynomial approximations improve with degree, specifically monitoring:
+- L²-norm convergence across 16 spatial subdomains
+- Recovery of 9 true local minimizers from the stretched (+,-,+,-) orthant
+- Comparison between subdivided and global approximation strategies
 
-All examples use fixed sample count (GN=10) and CairoMakie for stable file-based plotting.
+**Latest Implementation**: Enhanced Analysis V2 with improved visualizations and global domain comparison.
 
-## Enhanced Plotting Suite
+## Enhanced Visualization Suite (V2)
 
-The analysis now includes four specialized plot types with enhanced data structures:
+The latest implementation provides three key visualizations:
 
-1. **L²-Norm Convergence with Dual Scale** - Shows convergence patterns with optional dual-axis for multi-domain
-2. **Min+Min Distance Analysis** - Tracks both minimal and average distances to theoretical min+min points
-3. **Critical Point Recovery Histogram** - 3-layer stacked visualization of recovery success
-4. **Min+Min Capture Methods** - Distinguishes between direct tolerance capture vs BFGS refinement
+1. **Enhanced Distance Convergence Plot**
+   - Median distance with shaded quartile bands (25-75% and 10-90%)
+   - Side-by-side comparison of subdivided vs global approximation
+   - Log scale visualization with recovery threshold reference
 
-See `CONVERGENCE_PLOTS.md` for detailed documentation of plotting functions.
+2. **L²-Norm Convergence Analysis**
+   - Average L²-norm across 16 subdomains
+   - Individual subdomain traces showing variation
+   - Global domain comparison when available
+
+3. **Minimizer Recovery Overview**
+   - Recovery rate percentage by degree
+   - Point classification (near minimizers vs spurious)
+   - Clean single-axis visualization (histogram removed)
+
+See `ENHANCED_ANALYSIS_SUMMARY.md` for implementation details.
 
 ## Visualization Types Implemented
 
@@ -39,23 +49,21 @@ See `CONVERGENCE_PLOTS.md` for detailed documentation of plotting functions.
 ```
 by_degree/
 ├── README.md                           # This documentation
-├── CONVERGENCE_PLOTS.md                # Detailed plotting documentation
+├── ENHANCED_ANALYSIS_SUMMARY.md        # V2 implementation details
+├── run_all_examples.jl                 # Main entry point
 ├── shared/                             # Reusable utility modules
 │   ├── Common4DDeuflhard.jl           # Core function and constants
-│   ├── SubdomainManagement.jl         # Subdomain structures
-│   ├── TheoreticalPoints.jl           # Reference point loading
-│   ├── AnalysisUtilities.jl           # Analysis patterns
-│   ├── EnhancedAnalysisUtilities.jl   # Enhanced data structures
-│   ├── PlottingUtilities.jl           # Legacy plotting functions
-│   ├── EnhancedPlottingUtilities.jl   # Enhanced plotting suite
-│   └── TableGeneration.jl             # Summary tables
-├── examples/                           # Main example scripts
-│   ├── 01_full_domain.jl              # Full domain analysis
-│   ├── 02_subdivided_fixed.jl         # Fixed degree subdivision
-│   └── 03_subdivided_adaptive.jl      # Adaptive subdivision
-├── test/                               # Validation scripts
-│   └── test_shared_utilities.jl       # Module testing
-└── outputs/                            # Generated results
+│   └── SubdomainManagement.jl         # Subdomain structures
+├── examples/                           # Main analysis scripts
+│   ├── degree_convergence_analysis_enhanced_v2.jl  # Current implementation
+│   └── [legacy examples archived]
+├── points_deufl/                       # Reference data
+│   ├── 4d_min_min_domain.csv         # 9 true minimizers
+│   └── 2d_coords.csv                  # 2D reference points
+├── outputs/                            # Generated results
+│   └── enhanced_v2_*/                 # Timestamped output directories
+└── documentation/                      # Detailed documentation
+    └── [various workflow docs]
 ```
 
 ## Implementation Strategy
@@ -99,13 +107,16 @@ julia> include("examples/03_subdivided_adaptive.jl")
 ## Quick Start
 
 ```julia
-# Run all three examples in sequence
+# Run the enhanced analysis
 julia> include("run_all_examples.jl")
 
-# Or run examples individually:
-julia> include("examples/01_full_domain.jl")
-julia> include("examples/02_subdivided_fixed.jl")  
-julia> include("examples/03_subdivided_adaptive.jl")
+# Or run with custom parameters:
+julia> include("examples/degree_convergence_analysis_enhanced_v2.jl")
+julia> summary_df, distance_data = run_enhanced_analysis_v2(
+    [2, 3, 4, 5, 6],  # Polynomial degrees
+    16,               # Grid points per dimension
+    analyze_global = true  # Include global comparison
+)
 ```
 
 ## Example Descriptions
@@ -138,24 +149,25 @@ julia> include("examples/03_subdivided_adaptive.jl")
 - **Extends**: Notebook patterns to 4D tensor product functions
 - **Enables**: Quick convergence assessment before running full systematic analysis
 
-## Key Functions
+## Key Functions (V2)
 
 ### Core Analysis
-- `analyze_degrees_4d()`: Multi-degree polynomial analysis
-- `compute_tensor_critical_points()`: Generate 4D theoretical reference points
-- `track_convergence_metrics()`: Monitor approximation improvement
+- `run_enhanced_analysis_v2()`: Main analysis function with global comparison
+- `compute_enhanced_distance_stats()`: Calculate quartile-based distance statistics
+- `compute_minimizer_recovery()`: Track recovery with improved per-subdomain metrics
+- `analyze_global_domain()`: Compare with single global approximation
 
 ### Visualization
-- `plot_degree_convergence()`: L²-norm and distance convergence
-- `plot_critical_point_recovery()`: Success rates by degree and point type
-- `plot_4d_projections()`: 2D slices through 4D critical point space
+- `create_enhanced_distance_plot()`: Quartile bands with global comparison
+- `create_enhanced_l2_plot()`: L²-norm convergence with individual traces
+- `create_recovery_overview()`: Clean recovery rate visualization
 
-## Expected Insights
+## Key Insights from Analysis
 
-1. **Degree Requirements**: Minimum degree needed for reliable 4D critical point recovery
-2. **Convergence Rates**: How quickly approximation error decreases with degree
-3. **Point Type Sensitivity**: Which critical point types (min+min vs saddle+saddle) are harder to capture
-4. **Computational Efficiency**: Optimal degree/accuracy tradeoff for 4D problems
+1. **Minimizer Recovery**: All 9 true minimizers are recovered by degree 3 with threshold 0.2
+2. **Distance Persistence**: Maximum distances remain high (~1.4) due to spurious critical points in the stretched domain
+3. **Subdivision Benefits**: Subdivided approach shows lower median distances and tighter quartile bands compared to global approximation
+4. **L²-norm Convergence**: Exponential decrease from ~7.2 (degree 2) to ~0.05 (degree 6)
 
 ## Performance Expectations
 

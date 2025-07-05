@@ -289,6 +289,9 @@ This function performs detailed analysis of critical points found by polynomial 
 - `max_iters_in_optim=50`: Maximum iterations for BFGS optimization
 - `enable_hessian=true`: Enable Phase 2 Hessian-based classification
 - `hessian_tol_zero=1e-8`: Tolerance for zero eigenvalues in Hessian analysis
+- `bfgs_g_tol=1e-8`: Gradient tolerance for BFGS optimization
+- `bfgs_f_abstol=1e-8`: Absolute function tolerance for BFGS optimization
+- `bfgs_x_abstol=0.0`: Absolute parameter tolerance for BFGS optimization
 
 # Returns
 - `Tuple{DataFrame, DataFrame}`: (enhanced_df, minimizers_df)
@@ -367,7 +370,10 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     verbose=true,
     max_iters_in_optim=100,
     enable_hessian=true,
-    hessian_tol_zero=1e-8
+    hessian_tol_zero=1e-8,
+    bfgs_g_tol=1e-8,
+    bfgs_f_abstol=1e-8,
+    bfgs_x_abstol=0.0
 )
     n_dims = count(col -> startswith(string(col), "x"), names(df))  # Count x-columns
 
@@ -404,6 +410,9 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
                 Optim.Options(
                     show_trace=false, 
                     f_calls_limit=max_iters_in_optim,
+                    g_tol=bfgs_g_tol,
+                    f_abstol=bfgs_f_abstol,
+                    x_abstol=bfgs_x_abstol
                 ),
                 # https://discourse.julialang.org/t/how-to-properly-specify-maximum-interations-in-optimization/109144/5
             )

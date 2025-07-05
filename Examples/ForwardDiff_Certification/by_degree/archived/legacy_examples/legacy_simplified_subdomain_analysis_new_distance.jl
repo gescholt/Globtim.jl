@@ -31,7 +31,7 @@ using Statistics: mean, median  # Ensure we have mean and median
 # PARAMETERS
 # ================================================================================
 
-const DEGREES = [2, 3, 4, 5, 6]  # Degrees to test
+const DEGREES = [2, 3, 4, 5, 6, 7, 8]  # Degrees to test
 const GN = 16                     # Grid points per dimension for L²-norm
 const TOLERANCE = 0.01            # Reference tolerance for L²-norm
 const POINT_MATCHING_TOLERANCE = 1e-3  # Tolerance for matching critical points
@@ -208,21 +208,23 @@ end
 
 function compute_minimizer_separation_distances(degree::Int, subdivisions::Vector{Subdomain})
     """
-    Compute separation distances from all 9 theoretical minimizers 
+    Compute separation distances from ALL theoretical minimizers 
     to the combined set of critical points from all subdomains.
     """
     
-    # Get the 9 theoretical minimizers
+    # Define all 9 theoretical minimizers in (+,-,+,-) orthant
+    # These are tensor products of the 3 2D minimizers:
+    # [0.2566, -1.0162], [0.7412, -0.7412], [1.0162, -0.2566]
     theoretical_minimizers = [
-        [0.0, 0.0, 0.0, 0.0],          # Central minimizer
-        [0.0, -1.0, 0.0, 0.0],         # Face centers
-        [0.0, 1.0, 0.0, 0.0],
-        [0.0, 0.0, -1.0, 0.0],
-        [0.0, 0.0, 1.0, 0.0],
-        [0.0, 0.0, 0.0, -1.0],
-        [0.0, 0.0, 0.0, 1.0],
-        [-1.0, 0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0, 0.0]
+        [0.256625076922502, -1.01624596361443, 0.256625076922502, -1.01624596361443],
+        [0.256625076922502, -1.01624596361443, 0.74115190368376, -0.741151903683748],
+        [0.256625076922502, -1.01624596361443, 1.01624596361443, -0.256625076922483],
+        [0.74115190368376, -0.741151903683748, 0.256625076922502, -1.01624596361443],
+        [0.74115190368376, -0.741151903683748, 0.74115190368376, -0.741151903683748],
+        [0.74115190368376, -0.741151903683748, 1.01624596361443, -0.256625076922483],
+        [1.01624596361443, -0.256625076922483, 0.256625076922502, -1.01624596361443],
+        [1.01624596361443, -0.256625076922483, 0.74115190368376, -0.741151903683748],
+        [1.01624596361443, -0.256625076922483, 1.01624596361443, -0.256625076922483]
     ]
     
     # Collect all critical points
@@ -336,7 +338,9 @@ function run_new_distance_analysis()
     println("Output directory: $output_dir")
     println("Degrees to analyze: $DEGREES")
     println("Number of subdomains: 16")
-    println("Theoretical minimizers: 9")
+    
+    # Display theoretical minimizers count
+    println("Theoretical minimizers: 9 (tensor products of 3 2D minimizers)")
     
     # Generate 16 subdomains
     subdivisions = generate_16_subdivisions_orthant()
