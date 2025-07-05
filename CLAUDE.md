@@ -84,6 +84,22 @@ if plots_directory !== nothing
 end
 ```
 
+### 7. **Critical Point Processing from Globtim**
+```julia
+# LEARNED: process_crit_pts returns DataFrame with :z column, not :function_value
+df_crit = process_crit_pts(solve_polynomial_system(...), f, TR)
+for row in eachrow(df_crit)
+    pt = [row[Symbol("x$i")] for i in 1:dim]  # Already in actual coordinates
+    fval = row.z  # NOT row.function_value
+end
+
+# PATTERN: Points are automatically transformed from [-1,1]^n to actual domain
+# actual_pt = TR.sample_range * normalized_pt + TR.center
+```
+
+### 8. **Function Development Best Practices**
+- always document input/output structures of functions you write 
+
 ## 🚀 Essential Commands
 
 ```julia

@@ -53,7 +53,9 @@ function process_crit_pts(
 
     # Handle case with no valid points
     if isempty(filtered_points)
-        return DataFrame(Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim))
+        result = Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim)
+        result[:z] = Float64[]
+        return DataFrame(result)
     end
 
     # Transform points using test_input parameters with support for per-coordinate scaling
