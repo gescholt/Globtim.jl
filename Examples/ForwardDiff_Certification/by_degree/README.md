@@ -9,14 +9,15 @@ The analysis focuses on tracking how polynomial approximations improve with degr
 - Recovery of 9 true local minimizers from the stretched (+,-,+,-) orthant
 - Comparison between subdivided and global approximation strategies
 
-**Latest Implementation**: Enhanced Analysis V2 with improved visualizations and global domain comparison.
+**Latest Implementation**: Enhanced Analysis V3 with per-subdomain distance tracking and improved visualizations.
 
-## Enhanced Visualization Suite (V2)
+## Enhanced Visualization Suite (V3)
 
-The latest implementation provides three key visualizations:
+The latest implementation provides enhanced visualizations with per-subdomain tracking:
 
-1. **Enhanced Distance Convergence Plot**
-   - Median distance with shaded quartile bands (25-75% and 10-90%)
+1. **Enhanced Distance Convergence Plot with Subdomain Traces**
+   - Individual subdomain traces showing convergence (similar to L²-norm plot style)
+   - Average distance with min-max range bands
    - Side-by-side comparison of subdivided vs global approximation
    - Log scale visualization with recovery threshold reference
 
@@ -49,21 +50,36 @@ See `ENHANCED_ANALYSIS_SUMMARY.md` for implementation details.
 ```
 by_degree/
 ├── README.md                           # This documentation
-├── ENHANCED_ANALYSIS_SUMMARY.md        # V2 implementation details
 ├── run_all_examples.jl                 # Main entry point
-├── shared/                             # Reusable utility modules
+├── src/                                # Core source modules
 │   ├── Common4DDeuflhard.jl           # Core function and constants
-│   └── SubdomainManagement.jl         # Subdomain structures
+│   ├── SubdomainManagement.jl         # Subdomain structures
+│   ├── MinimizerTracking.jl          # Per-subdomain minimizer tracking
+│   └── EnhancedVisualization.jl      # Enhanced plotting with subdomain traces
 ├── examples/                           # Main analysis scripts
-│   ├── degree_convergence_analysis_enhanced_v2.jl  # Current implementation
-│   └── [legacy examples archived]
-├── points_deufl/                       # Reference data
+│   ├── degree_convergence_analysis_enhanced_v3.jl  # Current implementation (V3)
+│   └── README.md                      # Examples documentation
+├── data/                               # Reference data
 │   ├── 4d_min_min_domain.csv         # 9 true minimizers
 │   └── 2d_coords.csv                  # 2D reference points
+├── docs/                               # Comprehensive documentation
+│   ├── README.md                      # Documentation index
+│   ├── implementation/                # Implementation details
+│   │   ├── V3_IMPLEMENTATION_SUMMARY.md
+│   │   ├── implementation_summary.md
+│   │   ├── critical_code_decisions.md
+│   │   └── data_flow_diagram.md
+│   └── reference/                     # Reference documentation
+│       ├── function_io_reference.md
+│       ├── orthant_restriction.md
+│       └── output_structure.md
 ├── outputs/                            # Generated results
-│   └── enhanced_v2_*/                 # Timestamped output directories
-└── documentation/                      # Detailed documentation
-    └── [various workflow docs]
+│   └── enhanced_v3_*/                 # Timestamped output directories
+└── archive/                            # Historical development
+    ├── 2025_01_cleanup/               # Previous cleanup effort
+    ├── legacy_examples/               # Old example versions
+    ├── legacy_v2/                     # V2 implementation
+    └── archived_outputs/              # Historical results
 ```
 
 ## Implementation Strategy
@@ -111,11 +127,12 @@ julia> include("examples/03_subdivided_adaptive.jl")
 julia> include("run_all_examples.jl")
 
 # Or run with custom parameters:
-julia> include("examples/degree_convergence_analysis_enhanced_v2.jl")
+julia> include("examples/degree_convergence_analysis_enhanced_v3.jl")
 julia> summary_df, distance_data = run_enhanced_analysis_v2(
     [2, 3, 4, 5, 6],  # Polynomial degrees
     16,               # Grid points per dimension
-    analyze_global = true  # Include global comparison
+    analyze_global = true,  # Include global comparison
+    threshold = 0.1    # Distance threshold for minimizer recovery
 )
 ```
 

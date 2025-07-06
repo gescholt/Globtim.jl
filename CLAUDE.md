@@ -100,6 +100,9 @@ end
 ### 8. **Function Development Best Practices**
 - always document input/output structures of functions you write 
 
+### 9. **Polynomial Approximation**
+- the degrees are always integers
+
 ## 🚀 Essential Commands
 
 ```julia
