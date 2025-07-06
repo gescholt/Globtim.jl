@@ -3,10 +3,10 @@
 # ================================================================================
 
 # Polynomial degrees to test
-const DEGREES = [2, 3, 4, 5, 6]
+const DEGREES = [2, 3, 4, 5, 6, 7, 8, 9]
 
 # Grid points per dimension (fixed - no tolerance adaptation)
-const GN = 20
+const GN = 26
 
 # Load and run the enhanced analysis v2
 include("examples/degree_convergence_analysis_enhanced_v2.jl")
