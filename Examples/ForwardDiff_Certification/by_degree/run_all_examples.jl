@@ -6,7 +6,7 @@
 const DEGREES = [2, 3, 4, 5, 6]
 
 # Grid points per dimension (fixed - no tolerance adaptation)
-const GN = 16
+const GN = 20
 
 # Load and run the enhanced analysis v2
 include("examples/degree_convergence_analysis_enhanced_v2.jl")
