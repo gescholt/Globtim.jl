@@ -390,56 +390,52 @@ end
 # ================================================================================
 
 """
-Create enhanced distance plot with quartile bands and global comparison.
+Create enhanced distance plot with clean visualization showing average and min-max range.
 """
 function create_enhanced_distance_plot(distance_data::Dict{Int, EnhancedDistanceStats},
                                      global_data::Dict{Int, EnhancedDistanceStats},
                                      output_dir::String)
     fig = Figure(size=(1000, 600))
     ax = Axis(fig[1, 1], 
-              title = "Distance to True Minimizers: Subdivided vs Global Approximation",
+              title = "Distance to True Minimizers",
               xlabel = "Polynomial Degree", 
               ylabel = "Distance to Nearest True Minimizer", 
               yscale = log10)
     
     degrees = sort(collect(keys(distance_data)))
     
-    # Extract subdivided statistics
-    medians = [distance_data[d].median for d in degrees]
-    q25s = [distance_data[d].q25 for d in degrees]
-    q75s = [distance_data[d].q75 for d in degrees]
-    q10s = [distance_data[d].q10 for d in degrees]
-    q90s = [distance_data[d].q90 for d in degrees]
-    mins = [distance_data[d].min for d in degrees]
+    # Combined subdomains data (all critical points from 16 subdomains)
+    subdomain_means = [distance_data[d].mean for d in degrees]
+    subdomain_mins = [distance_data[d].min for d in degrees]
+    subdomain_maxs = [distance_data[d].max for d in degrees]
     
-    # Plot subdivided results with quartile bands
-    band!(ax, degrees, q10s, q90s, color=(:blue, 0.2), label="10-90% range (subdivided)")
-    band!(ax, degrees, q25s, q75s, color=(:blue, 0.4), label="25-75% range (subdivided)")
-    lines!(ax, degrees, medians, linewidth=3, color=:blue, label="Median (subdivided)")
-    scatter!(ax, degrees, medians, markersize=10, color=:blue)
-    lines!(ax, degrees, mins, linewidth=2, color=:blue, linestyle=:dash, 
-           label="Minimum (subdivided)")
+    # Plot combined subdomains with min-max range
+    band!(ax, degrees, subdomain_mins, subdomain_maxs, 
+          color=(:orange, 0.3), label="Range (combined subdomains)")
+    lines!(ax, degrees, subdomain_means, 
+           linewidth=3, color=:orange, label="Average (combined subdomains)")
+    scatter!(ax, degrees, subdomain_means, markersize=10, color=:orange)
     
-    # Add global approximation if available
+    # Global approximant data (critical points from single polynomial on whole domain)
     if !isempty(global_data)
-        global_medians = [global_data[d].median for d in degrees]
-        global_q25s = [global_data[d].q25 for d in degrees]
-        global_q75s = [global_data[d].q75 for d in degrees]
+        global_means = [global_data[d].mean for d in degrees]
         global_mins = [global_data[d].min for d in degrees]
+        global_maxs = [global_data[d].max for d in degrees]
         
-        band!(ax, degrees, global_q25s, global_q75s, color=(:red, 0.3))
-        lines!(ax, degrees, global_medians, linewidth=3, color=:red, 
-               label="Median (global)")
-        scatter!(ax, degrees, global_medians, markersize=10, color=:red)
-        lines!(ax, degrees, global_mins, linewidth=2, color=:red, linestyle=:dash,
-               label="Minimum (global)")
+        # Plot global approximant with min-max range
+        band!(ax, degrees, global_mins, global_maxs, 
+              color=(:blue, 0.3), label="Range (global)")
+        lines!(ax, degrees, global_means, 
+               linewidth=3, color=:blue, label="Average (global)")
+        scatter!(ax, degrees, global_means, markersize=10, color=:blue)
     end
     
     # Add threshold line
     hlines!(ax, [0.2], color=:black, linestyle=:dot, linewidth=2, 
             label="Recovery threshold")
     
-    axislegend(ax, position=:rt)
+    # Clean legend in top right corner
+    axislegend(ax, position=:rt, framevisible=false)
     
     save(joinpath(output_dir, "enhanced_distance_convergence.png"), fig)
     display(fig)
@@ -488,49 +484,6 @@ function create_enhanced_l2_plot(summary_df::DataFrame,
     display(fig)
 end
 
-"""
-Create minimizer recovery overview (without histogram).
-"""
-function create_recovery_overview(summary_df::DataFrame, output_dir::String)
-    fig = Figure(size=(800, 600))
-    
-    # Single plot: Recovery rate
-    ax = Axis(fig[1, 1], 
-              title = "Minimizer Recovery Analysis", 
-              xlabel = "Polynomial Degree", 
-              ylabel = "Recovery Rate (%)")
-    
-    lines!(ax, summary_df.degree, summary_df.recovery_rate, 
-           linewidth=3, color=:green, label="Recovery rate")
-    scatter!(ax, summary_df.degree, summary_df.recovery_rate, 
-             markersize=12, color=:green)
-    
-    # Add secondary y-axis for point counts
-    ax2 = Axis(fig[1, 1], 
-               ylabel = "Point Count",
-               yaxisposition = :right,
-               yticklabelcolor = :orange,
-               ylabelcolor = :orange)
-    hidespines!(ax2)
-    hidexdecorations!(ax2)
-    
-    lines!(ax2, summary_df.degree, summary_df.points_near_minimizers, 
-           linewidth=2, color=:orange, linestyle=:dash,
-           label="Points near minimizers")
-    lines!(ax2, summary_df.degree, summary_df.spurious_points, 
-           linewidth=2, color=:red, linestyle=:dot,
-           label="Spurious points")
-    
-    # Reference lines
-    hlines!(ax, [100], color=:black, linestyle=:dash, linewidth=1, alpha=0.5)
-    
-    # Legends
-    axislegend(ax, position=:rb)
-    axislegend(ax2, position=:rt)
-    
-    save(joinpath(output_dir, "recovery_overview.png"), fig)
-    display(fig)
-end
 
 """
 Create all enhanced plots.
@@ -544,7 +497,6 @@ function create_enhanced_plots_v2(summary_df::DataFrame,
     # Create individual plots
     create_enhanced_distance_plot(distance_data, global_data, output_dir)
     create_enhanced_l2_plot(summary_df, l2_data_by_degree, global_l2_by_degree, output_dir)
-    create_recovery_overview(summary_df, output_dir)
     
     println("\n✅ All plots saved to: $(basename(output_dir))")
 end
