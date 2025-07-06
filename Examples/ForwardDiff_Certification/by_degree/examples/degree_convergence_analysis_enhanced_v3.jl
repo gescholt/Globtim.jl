@@ -156,13 +156,16 @@ function compute_minimizer_recovery(true_minimizers::Vector{Vector{Float64}},
         
         # Compute recovery status
         found_minimizer = false
+        min_distance = Inf
+        
         if subdomain_has_minimizer && !isempty(computed_pts)
-            # Check if we found the minimizer in this subdomain
-            min_dist = [minimum(norm(tm - cp) for cp in computed_pts) for tm in [true_minimizers[subdomain_minimizer_idx]]]
-            for (ind , x) in enumerate(subdomain_minimizer_idx)
-                if min_dist[ind] < threshold
-                    minimizers_recovered[x] = true
-                end
+            # Calculate distance from the true minimizer to nearest computed point
+            true_min = true_minimizers[subdomain_minimizer_idx]
+            min_distance = minimum(norm(true_min - cp) for cp in computed_pts)
+            
+            if min_distance < threshold
+                found_minimizer = true
+                minimizers_recovered[subdomain_minimizer_idx] = true
             end
         end
         
@@ -171,6 +174,7 @@ function compute_minimizer_recovery(true_minimizers::Vector{Vector{Float64}},
             computed_points = length(computed_pts),
             has_minimizer = subdomain_has_minimizer,
             found_minimizer = found_minimizer,
+            min_distance = subdomain_has_minimizer && !isempty(computed_pts) ? min_distance : NaN,
             accuracy = subdomain_has_minimizer ? (found_minimizer ? 100.0 : 0.0) : 
                       (isempty(computed_pts) ? 100.0 : 0.0)  # No false positives is good
         ))
