@@ -55,13 +55,19 @@ by_degree/
 │   ├── Common4DDeuflhard.jl           # Core function and constants
 │   ├── SubdomainManagement.jl         # Subdomain structures
 │   ├── MinimizerTracking.jl          # Per-subdomain minimizer tracking
-│   └── EnhancedVisualization.jl      # Enhanced plotting with subdomain traces
+│   ├── EnhancedVisualization.jl      # Enhanced plotting with subdomain traces
+│   └── TheoreticalPoints.jl          # Generate theoretical critical points
 ├── examples/                           # Main analysis scripts
 │   ├── degree_convergence_analysis_enhanced_v3.jl  # Current implementation (V3)
 │   └── README.md                      # Examples documentation
+├── scripts/                            # Utility scripts
+│   ├── generate_all_4d_critical_points.jl      # Generate 4D points (simple)
+│   └── generate_theoretical_critical_points.jl  # Generate using TheoreticalPoints module
 ├── data/                               # Reference data
-│   ├── 4d_min_min_domain.csv         # 9 true minimizers
-│   └── 2d_coords.csv                  # 2D reference points
+│   ├── 2d_coords.csv                  # 2D Deuflhard critical points (15 points)
+│   ├── 4d_min_min_domain.csv         # 9 true minimizers in (+,-,+,-) orthant
+│   ├── 4d_all_critical_points_orthant.csv  # All 25 critical points in orthant
+│   └── 4d_all_critical_points_full.csv    # All 225 critical points (15×15)
 ├── docs/                               # Comprehensive documentation
 │   ├── README.md                      # Documentation index
 │   ├── implementation/                # Implementation details
@@ -80,6 +86,38 @@ by_degree/
     ├── legacy_examples/               # Old example versions
     ├── legacy_v2/                     # V2 implementation
     └── archived_outputs/              # Historical results
+```
+
+## Critical Point Generation
+
+### Theoretical Critical Points
+
+The analysis uses theoretical critical points as ground truth for validation:
+
+1. **2D Critical Points** (`data/2d_coords.csv`):
+   - 15 critical points of 2D Deuflhard function
+   - Classified as min (6), max (2), or saddle (7) using Hessian analysis
+
+2. **4D Tensor Products**:
+   - Generated from tensor product: (x₁,x₂) × (x₃,x₄) → 15×15 = 225 points
+   - Classification rule:
+     - min+min → min (36 points)
+     - max+max → max (4 points)  
+     - all others → saddle (185 points)
+
+3. **Domain Filtering**:
+   - Full domain: All 225 points (`4d_all_critical_points_full.csv`)
+   - (+,-,+,-) orthant [0,1.1]×[-1.1,0]×[0,1.1]×[-1.1,0]: 25 points (`4d_all_critical_points_orthant.csv`)
+   - Minimizers only: 9 min+min points (`4d_min_min_domain.csv`)
+
+### Generation Scripts
+
+```julia
+# Using TheoreticalPoints module (recommended)
+julia> include("scripts/generate_theoretical_critical_points.jl")
+
+# Direct generation (simple approach)
+julia> include("scripts/generate_all_4d_critical_points.jl")
 ```
 
 ## Implementation Strategy
