@@ -18,6 +18,7 @@ Named tuple with:
 - `subdomain_tables`: V4 tables for each subdomain
 - `refinement_metrics`: BFGS refinement effectiveness metrics
 - `all_min_refined_points`: Refined points by degree
+- `function_value_error_summary`: Summary table of function value errors
 
 # Examples
 ```julia
@@ -83,3 +84,4 @@ println("\nThe function returns:")
 println("  - results.subdomain_tables   # V4 tables by subdomain")
 println("  - results.refinement_metrics # BFGS refinement summary")
 println("  - results.all_min_refined_points # Refined points by degree")
+println("  - results.function_value_error_summary # Function value error summary table")

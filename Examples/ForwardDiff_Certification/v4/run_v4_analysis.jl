@@ -51,6 +51,14 @@ using .RefinedPointAnalysis
 include("src/V4PlottingEnhanced.jl")
 using .V4PlottingEnhanced
 
+# Function value analysis
+include("src/FunctionValueAnalysis.jl")
+using .FunctionValueAnalysis
+
+# Function value error summary
+include("src/FunctionValueErrorSummary.jl")
+using .FunctionValueErrorSummary
+
 # Additional dependencies
 using CSV, DataFrames, Dates, Statistics, LinearAlgebra
 
@@ -165,7 +173,56 @@ for degree in degrees
     end
 end
 
-# Step 6: Save outputs
+# Step 6: Function Value Analysis
+println("\n📊 Analyzing function values at critical points...")
+function_value_tables = Dict{String, DataFrame}()
+for degree in degrees
+    if haskey(all_critical_points_with_labels, degree)
+        df_cheb = all_critical_points_with_labels[degree]
+        
+        for subdomain in subdomains
+            subdomain_label = subdomain.label
+            
+            # Filter points for this subdomain
+            subdomain_mask = df_cheb.subdomain .== subdomain_label
+            subdomain_cheb = df_cheb[subdomain_mask, :]
+            
+            # Get theoretical points for this subdomain
+            subdomain_theoretical_points = [p for (p, t) in zip(theoretical_points, theoretical_types) 
+                if SubdomainManagement.is_point_in_subdomain(p, subdomain)]
+            subdomain_theoretical_types = [t for (p, t) in zip(theoretical_points, theoretical_types) 
+                if SubdomainManagement.is_point_in_subdomain(p, subdomain)]
+            
+            if !isempty(subdomain_theoretical_points) && nrow(subdomain_cheb) > 0
+                fval_table = create_function_value_comparison_table(
+                    subdomain_theoretical_points,
+                    subdomain_theoretical_types,
+                    subdomain_cheb,
+                    deuflhard_4d_composite,
+                    degree,
+                    subdomain_label
+                )
+                
+                table_key = "$(subdomain_label)_d$(degree)"
+                function_value_tables[table_key] = fval_table
+            end
+        end
+    end
+end
+
+# Create summary of function value errors using new format
+println("\n📊 Generating function value error summary...")
+summary_table = generate_error_summary_table(
+    all_critical_points_with_labels,
+    theoretical_points,
+    theoretical_types,
+    degrees,
+    deuflhard_4d_composite
+)
+
+print_error_summary_table(summary_table)
+
+# Step 7: Save outputs
 mkpath(output_dir)
 
 # Save V4 tables
@@ -199,9 +256,21 @@ end
 
 CSV.write(joinpath(output_dir, "refinement_summary.csv"), refinement_summary)
 
+# Save function value analysis
+if !isempty(function_value_tables)
+    # Save individual tables
+    for (label, table) in function_value_tables
+        filename = joinpath(output_dir, "function_values_$(label).csv")
+        CSV.write(filename, table)
+    end
+    
+    # Save new summary table
+    CSV.write(joinpath(output_dir, "function_value_error_summary.csv"), summary_table)
+end
+
 println("\n✅ Tables saved to: $output_dir")
 
-# Step 7: Create enhanced plots
+# Step 8: Create enhanced plots
 println("\n📊 Creating enhanced V4 plots...")
 
 # Prepare data for enhanced plotting
@@ -263,11 +332,14 @@ println("\nResults saved to: $output_dir/")
 println("\nFiles generated:")
 println("  - subdomain_*_v4.csv : V4 theoretical point tables")
 println("  - refinement_summary.csv : BFGS refinement effectiveness")
+println("  - function_values_*.csv : Function value comparisons by subdomain")
+println("  - function_value_error_summary.csv : Summary of function value errors")
 println("  - v4_*.png : Standard and enhanced visualization plots")
 
 # Return results
 (
     subdomain_tables = subdomain_tables_v4,
     refinement_metrics = refinement_metrics,
-    all_min_refined_points = all_min_refined_points
+    all_min_refined_points = all_min_refined_points,
+    function_value_error_summary = summary_table
 )
