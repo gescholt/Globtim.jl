@@ -171,18 +171,33 @@ plot_from_existing_tables("outputs/my_analysis", degrees=[3,4])
 ```
 
 ### 4. Running from Julia REPL
+
+#### Option A: Using the wrapper function (recommended)
+```julia
+# Load the wrapper function
+include("run_v4_analysis_wrapper.jl")
+
+# Run with default parameters
+results = run_v4_analysis()
+
+# Run with custom parameters
+results = run_v4_analysis(degrees=[3,4,5,6], GN=30)
+
+# The old function name also works
+results = run_v4_enhanced(degrees=[3,4,5], GN=25)
+
+# Access results
+results.subdomain_tables["0000"]  # View table for subdomain 0000
+results.refinement_metrics        # View refinement effectiveness
+```
+
+#### Option B: Direct script inclusion
 ```julia
 # From the v4 directory
 include("run_v4_analysis.jl")
 
 # This runs the full analysis and returns results
 (subdomain_tables, refinement_metrics, all_min_refined_points) = ans
-
-# Examine specific subdomain results
-subdomain_tables["0000"]  # View table for subdomain 0000
-
-# Check refinement effectiveness
-refinement_metrics[4]  # Metrics for degree 4
 ```
 
 ## Understanding the Plots
@@ -246,21 +261,22 @@ julia test/run_all_tests.jl
 
 ```
 v4/
-├── run_v4_analysis.jl      # Main analysis script
-├── README.md               # This file
-├── src/                    # Core implementation modules
+├── run_v4_analysis.jl          # Main analysis script
+├── run_v4_analysis_wrapper.jl  # Function wrapper for interactive use
+├── README.md                   # This file
+├── src/                        # Core implementation modules
 │   ├── TheoreticalPointTables.jl
 │   ├── RefinedPointAnalysis.jl
 │   ├── V4Plotting.jl
 │   ├── V4PlottingEnhanced.jl
 │   ├── run_analysis_no_plots.jl
 │   └── run_analysis_with_refinement.jl
-├── test/                   # Test suite
-├── examples/               # Example scripts
-├── outputs/                # Analysis results
-└── archived_scripts/       # Previous versions and documentation
-    ├── docs/              # Planning documents
-    └── *.jl               # Old script versions
+├── test/                       # Test suite
+├── examples/                   # Example scripts
+├── outputs/                    # Analysis results
+└── archived_scripts/           # Previous versions and documentation
+    ├── docs/                  # Planning documents
+    └── *.jl                   # Old script versions
 ```
 
 ## Troubleshooting
