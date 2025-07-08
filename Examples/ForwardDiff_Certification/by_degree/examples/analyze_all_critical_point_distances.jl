@@ -32,10 +32,15 @@ function analyze_critical_point_distances(
     degrees::Vector{Int};
     threshold::Float64 = 0.1
 )
-    # Load all 25 theoretical critical points
+    # Load all theoretical critical points
     println("📊 Loading theoretical critical points...")
     df = CSV.read(joinpath(@__DIR__, "../data/4d_all_critical_points_orthant.csv"), DataFrame)
-    theoretical_points = [[row.x1, row.x2, row.x3, row.x4] for row in eachrow(df)]
+    
+    # Determine dimensionality from df columns
+    dim_cols = [col for col in names(df) if startswith(String(col), "x")]
+    n_dims = length(dim_cols)
+    
+    theoretical_points = [[row[Symbol("x$i")] for i in 1:n_dims] for row in eachrow(df)]
     
     println("   Found $(length(theoretical_points)) theoretical critical points")
     

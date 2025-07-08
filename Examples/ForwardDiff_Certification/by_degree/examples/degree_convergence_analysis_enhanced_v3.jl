@@ -205,14 +205,17 @@ Analyze the global domain approximation for comparison.
 - Distance statistics for global approximation
 """
 function analyze_global_domain(degree::Int, gn::Int, true_minimizers::Vector{Vector{Float64}})
+    # Infer dimension from true minimizers
+    dim = length(true_minimizers[1])
+    
     # Global domain covers all subdomains
-    global_center = [0.5, -0.5, 0.5, -0.5]
+    global_center = dim == 4 ? [0.5, -0.5, 0.5, -0.5] : zeros(dim)
     global_range = 0.6  # From -0.1 to 1.1 is 1.2, so range is 0.6
     
     # Construct global approximant
     TR = test_input(
         deuflhard_4d_composite,
-        dim = 4,
+        dim = dim,
         center = global_center,
         sample_range = global_range,
         GN = gn
@@ -221,11 +224,11 @@ function analyze_global_domain(degree::Int, gn::Int, true_minimizers::Vector{Vec
     pol = Constructor(TR, degree, verbose=0)
     
     # Find critical points
-    @polyvar x[1:4]
+    @polyvar x[1:dim]
     actual_degree = pol.degree isa Tuple ? pol.degree[2] : pol.degree
     
     df_crit = process_crit_pts(
-        solve_polynomial_system(x, 4, actual_degree, pol.coeffs),
+        solve_polynomial_system(x, dim, actual_degree, pol.coeffs),
         deuflhard_4d_composite,
         TR
     )
@@ -233,7 +236,7 @@ function analyze_global_domain(degree::Int, gn::Int, true_minimizers::Vector{Vec
     # Collect all points
     global_points = Vector{Float64}[]
     for row in eachrow(df_crit)
-        pt = [row[Symbol("x$i")] for i in 1:4]
+        pt = [row[Symbol("x$i")] for i in 1:dim]
         push!(global_points, pt)
     end
     
@@ -251,7 +254,6 @@ end
     run_enhanced_analysis_v2(degrees, gn; output_dir, threshold, analyze_global)
 
 Run enhanced degree convergence analysis with improved visualizations.
---> what do we output here ? 
 
 # Arguments
 - `degrees`: Polynomial degrees to test
@@ -263,6 +265,9 @@ Run enhanced degree convergence analysis with improved visualizations.
 # Returns
 - `summary_df`: Summary statistics by degree
 - `distance_data`: Enhanced distance statistics by degree
+- `all_computed_points_by_degree`: Dictionary mapping degree to all computed critical points
+- `output_dir`: Directory where plots and results are saved
+- `computed_by_subdomain_by_degree`: Dictionary mapping degree -> subdomain_label -> computed points
 """
 function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
                                  output_dir::Union{String,Nothing} = nothing,
@@ -292,19 +297,29 @@ function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
     l2_data_by_degree = Dict{Int, Vector{Float64}}()
     global_l2_by_degree = Dict{Int, Float64}()
     subdomain_distance_data = Dict{Int, Dict{String, SubdomainDistanceData}}()
+    all_computed_points_by_degree = Dict{Int, Vector{Vector{Float64}}}()
+    # NEW: Store computed points by subdomain for each degree
+    computed_by_subdomain_by_degree = Dict{Int, Dict{String, Vector{Vector{Float64}}}}()
+    # NEW: Store all critical points with subdomain labels
+    all_critical_points_with_labels_by_degree = Dict{Int, DataFrame}()
+    
+    # Infer dimension from true minimizers
+    dim = length(true_minimizers[1])
     
     for degree in degrees
         println("\n🔄 Processing degree $degree...")
         
         l2_norms = Float64[]
         computed_by_subdomain = Dict{String, Vector{Vector{Float64}}}()
+        # NEW: Collect all critical points with subdomain labels
+        all_critical_points_df = DataFrame()
         
         # Process each subdomain
         for subdomain in subdomains
             # Construct approximant
             TR = test_input(
                 deuflhard_4d_composite,
-                dim = 4,
+                dim = dim,
                 center = subdomain.center,
                 sample_range = subdomain.range,
                 GN = gn
@@ -314,11 +329,11 @@ function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
             push!(l2_norms, pol.nrm)
             
             # Find critical points
-            @polyvar x[1:4]
+            @polyvar x[1:dim]
             actual_degree = pol.degree isa Tuple ? pol.degree[2] : pol.degree
             
             df_crit = process_crit_pts(
-                solve_polynomial_system(x, 4, actual_degree, pol.coeffs),
+                solve_polynomial_system(x, dim, actual_degree, pol.coeffs),
                 deuflhard_4d_composite,
                 TR
             )
@@ -326,9 +341,19 @@ function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
             # Collect points in subdomain
             subdomain_points = Vector{Float64}[]
             for row in eachrow(df_crit)
-                pt = [row[Symbol("x$i")] for i in 1:4]
+                pt = [row[Symbol("x$i")] for i in 1:dim]
                 if is_point_in_subdomain(pt, subdomain)
                     push!(subdomain_points, pt)
+                    # NEW: Add to comprehensive dataframe with subdomain label
+                    # Create row dynamically based on dimension
+                    crit_pt_row = DataFrame()
+                    for i in 1:dim
+                        crit_pt_row[!, Symbol("x$i")] = [pt[i]]
+                    end
+                    crit_pt_row.function_value = [row.z]
+                    crit_pt_row.subdomain = [subdomain.label]
+                    crit_pt_row.degree = [degree]
+                    append!(all_critical_points_df, crit_pt_row)
                 end
             end
             
@@ -336,6 +361,11 @@ function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
         end
         # `computed_by_subdomain` is the dictionary with labelled subdomains "0000" to "1111"
         # For each label, it contains all the computed critical points (at the given degree)
+        
+        # NEW: Store computed points by subdomain for this degree
+        computed_by_subdomain_by_degree[degree] = deepcopy(computed_by_subdomain)
+        # NEW: Store the labeled dataframe
+        all_critical_points_with_labels_by_degree[degree] = deepcopy(all_critical_points_df)
 
         # Store L2 data
         l2_data_by_degree[degree] = l2_norms
@@ -365,6 +395,9 @@ function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
         for pts in values(computed_by_subdomain)
             append!(all_computed_points, pts)
         end
+        
+        # Store all computed points for this degree
+        all_computed_points_by_degree[degree] = deepcopy(all_computed_points)
         
         # Compute enhanced distance statistics
         stats = compute_enhanced_distance_stats(all_computed_points, true_minimizers, threshold=threshold)
@@ -422,7 +455,7 @@ function run_enhanced_analysis_v2(degrees::Vector{Int}, gn::Int;
     # Save results
     CSV.write(joinpath(output_dir, "summary.csv"), summary_df)
     
-    return summary_df, distance_data
+    return summary_df, distance_data, all_computed_points_by_degree, output_dir, computed_by_subdomain_by_degree, all_critical_points_with_labels_by_degree
 end
 
 # ================================================================================
@@ -494,15 +527,3 @@ function create_enhanced_plots_v3(summary_df::DataFrame,
     println("\n✅ All plots saved to: $(basename(output_dir))")
 end
 
-# ================================================================================
-# EXECUTE IF RUN DIRECTLY
-# ================================================================================
-
-if abspath(PROGRAM_FILE) == @__FILE__
-    # Run with default parameters
-    summary_df, distance_data = run_enhanced_analysis_v2(
-        [2, 3, 4, 5, 6], 
-        16,
-        analyze_global = true
-    )
-end
