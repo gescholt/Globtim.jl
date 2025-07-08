@@ -35,7 +35,17 @@ include("src/V4Plotting.jl")
 using .V4Plotting
 
 # Run analysis
-function run_v4_analysis(degrees=[3,4], GN=20; output_dir=nothing, plot_results=false)
+function run_v4_analysis(degrees=[3,4], GN=20; output_dir=nothing, plot_results=false, enhanced=false, tol_dist=0.05)
+    # If enhanced mode requested, use the enhanced version
+    if enhanced
+        include(joinpath(@__DIR__, "run_v4_analysis_enhanced.jl"))
+        return run_v4_analysis_enhanced(degrees, GN, 
+                                      output_dir=output_dir, 
+                                      plot_results=plot_results,
+                                      compute_refined_points=true,
+                                      tol_dist=tol_dist)
+    end
+    
     println("\n" * "="^80)
     println("🚀 V4 ANALYSIS: Theoretical Point-Centric Tables")
     println("="^80)
