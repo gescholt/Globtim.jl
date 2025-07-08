@@ -13,7 +13,7 @@ export plot_v4_l2_convergence, plot_v4_distance_convergence,
        plot_critical_point_distance_evolution, create_v4_plots,
        plot_refinement_comparison, plot_refinement_effectiveness,
        plot_theoretical_minima_to_refined, plot_refined_to_cheb_distances,
-       create_all_v4_plots
+       create_all_v4_plots, plot_minimizer_distance_evolution
 
 # ================================================================================
 # L2 CONVERGENCE PLOTTING (with removed axis labels)
@@ -410,6 +410,171 @@ function plot_critical_point_distance_evolution(subdomain_tables::Dict{String, D
     end
     
     return fig, legend_fig
+end
+
+# ================================================================================
+# MINIMIZER-FOCUSED DISTANCE EVOLUTION PLOT
+# ================================================================================
+
+"""
+    plot_minimizer_distance_evolution(subdomain_tables, degrees; output_dir=nothing)
+
+Create a focused plot showing only the 9 minimizers with individual curve labels.
+Each minimizer is labeled 1-9 and uses distinct colors for better visibility.
+"""
+function plot_minimizer_distance_evolution(subdomain_tables::Dict{String, DataFrame},
+                                         degrees::Vector{Int};
+                                         output_dir::Union{String, Nothing} = nothing)
+    
+    fig = Figure(size=(1200, 800))
+    ax = Axis(fig[1, 1], 
+             yscale = log10,
+             xgridvisible = true,
+             ygridvisible = true,
+             xgridstyle = :dash,
+             ygridstyle = :dash)
+    
+    sorted_degrees = sort(degrees)
+    
+    # Define 9 distinct colors for minimizers
+    minimizer_colors = [
+        :blue, :red, :green, :orange, :purple,
+        :brown, :pink, :olive, :cyan
+    ]
+    
+    # Collect all minimizer data
+    minimizer_data = []
+    
+    for (subdomain_label, table) in subdomain_tables
+        # Filter for minimizers only (excluding AVERAGE rows)
+        min_rows = table[(table.theoretical_point_id .!= "AVERAGE") .& (table.type .== "min"), :]
+        
+        for row in eachrow(min_rows)
+            # Extract distances for this minimizer
+            distances = Float64[]
+            valid_degrees = Int[]
+            
+            for deg in sorted_degrees
+                col = Symbol("d$deg")
+                if hasproperty(row, col) && !isnan(row[col])
+                    push!(distances, row[col])
+                    push!(valid_degrees, deg)
+                end
+            end
+            
+            if !isempty(distances)
+                push!(minimizer_data, (
+                    subdomain = subdomain_label,
+                    point_id = row.theoretical_point_id,
+                    degrees = valid_degrees,
+                    distances = distances,
+                    final_distance = distances[end]  # Last distance for sorting
+                ))
+            end
+        end
+    end
+    
+    # Sort minimizers by their final distance for consistent numbering
+    sort!(minimizer_data, by = x -> x.final_distance)
+    
+    # Plot each minimizer with its label
+    for (idx, data) in enumerate(minimizer_data)
+        color = minimizer_colors[idx]
+        
+        # Plot the line
+        lines!(ax, data.degrees, data.distances,
+               color = color,
+               linewidth = 3,
+               alpha = 0.9)
+        
+        # Add markers at data points
+        scatter!(ax, data.degrees, data.distances,
+                color = color,
+                markersize = 10,
+                alpha = 0.9)
+        
+        # Add label at the end of the curve
+        last_deg = data.degrees[end]
+        last_dist = data.distances[end]
+        
+        # Position label slightly to the right of the last point
+        label_x = last_deg + 0.15
+        label_y = last_dist
+        
+        # Add the label with a background for readability
+        text!(ax, label_x, label_y,
+              text = string(idx),
+              fontsize = 16,
+              font = "bold",
+              color = color,
+              align = (:left, :center))
+    end
+    
+    # Add threshold line
+    hlines!(ax, [0.1], color = :black, linestyle = :dot, linewidth = 2)
+    
+    # Add text label for threshold
+    text!(ax, sorted_degrees[1] + 0.1, 0.12,
+          text = "Recovery threshold",
+          fontsize = 12,
+          color = :black)
+    
+    # Set axis limits with some padding
+    xlims!(ax, sorted_degrees[1] - 0.2, sorted_degrees[end] + 0.5)
+    
+    # Save main plot
+    if output_dir !== nothing
+        save(joinpath(output_dir, "v4_minimizer_distance_evolution.png"), fig)
+    end
+    
+    # Create information table showing minimizer details
+    info_fig = Figure(size=(600, 400))
+    
+    # Prepare table data
+    table_data = DataFrame(
+        Label = 1:length(minimizer_data),
+        Subdomain = [d.subdomain for d in minimizer_data],
+        Point_ID = [d.point_id for d in minimizer_data],
+        Final_Distance = [@sprintf("%.2e", d.final_distance) for d in minimizer_data]
+    )
+    
+    # Create simple text display of the table
+    ax_info = Axis(info_fig[1, 1], 
+                   limits = (0, 10, 0, 10),
+                   aspect = 1)
+    hidedecorations!(ax_info)
+    hidespines!(ax_info)
+    
+    # Add title
+    text!(ax_info, 5, 9.5, 
+          text = "Minimizer Information",
+          fontsize = 18,
+          font = "bold",
+          align = (:center, :center))
+    
+    # Add table headers
+    text!(ax_info, 1, 8.5, text = "Label", fontsize = 14, font = "bold")
+    text!(ax_info, 3, 8.5, text = "Subdomain", fontsize = 14, font = "bold")
+    text!(ax_info, 5.5, 8.5, text = "Point ID", fontsize = 14, font = "bold")
+    text!(ax_info, 8, 8.5, text = "Final Dist", fontsize = 14, font = "bold")
+    
+    # Add table data
+    for (i, row) in enumerate(eachrow(table_data))
+        y_pos = 8.5 - i * 0.8
+        color = minimizer_colors[i]
+        
+        text!(ax_info, 1, y_pos, text = string(row.Label), 
+              fontsize = 12, color = color, font = "bold")
+        text!(ax_info, 3, y_pos, text = row.Subdomain, fontsize = 12)
+        text!(ax_info, 5.5, y_pos, text = row.Point_ID, fontsize = 12)
+        text!(ax_info, 8, y_pos, text = row.Final_Distance, fontsize = 12)
+    end
+    
+    if output_dir !== nothing
+        save(joinpath(output_dir, "v4_minimizer_info_table.png"), info_fig)
+    end
+    
+    return fig, info_fig
 end
 
 # ================================================================================
@@ -851,6 +1016,14 @@ function create_all_v4_plots(data_dict::Dict;
         )
         figures["critical_point_evolution"] = fig
         figures["critical_point_evolution_legend"] = legend_fig
+        
+        # NEW: Minimizer-focused plot
+        fig_min, info_fig = plot_minimizer_distance_evolution(
+            data_dict["subdomain_tables"], data_dict["degrees"],
+            output_dir=output_dir
+        )
+        figures["minimizer_evolution"] = fig_min
+        figures["minimizer_info"] = info_fig
     end
     
     # New refined point plots
