@@ -3,6 +3,13 @@
 ## Overview
 V4 restructures subdomain tables to focus on theoretical critical points, with each row representing a theoretical point and columns showing minimal distances to computed points by degree. This implementation now includes comprehensive plotting capabilities integrated from the by_degree analysis.
 
+### NEW: Enhanced V4 with BFGS Refined Point Analysis
+The enhanced version adds collection and analysis of BFGS-refined points (df_min_refined) from `analyze_critical_points`, providing:
+- Distances from df_min_refined to df_cheb points
+- Distances from theoretical minima to df_min_refined (BFGS convergence quality)
+- Refinement effectiveness metrics
+- Comparative visualizations with color-coded plots
+
 ## Implementation Steps
 
 ### Step 1: Basic Table Structure ✅
@@ -50,11 +57,17 @@ V4 restructures subdomain tables to focus on theoretical critical points, with e
 - `add_summary_row()`: Adds AVERAGE row with statistics
 - `generate_theoretical_point_tables()`: Main function generating all tables
 
-### `V4Plotting.jl` (NEW)
+### `V4Plotting.jl` and `V4PlottingEnhanced.jl`
+Standard plots (all without axis labels):
 - `plot_v4_l2_convergence()`: L2-norm convergence with subdomain traces
 - `plot_v4_distance_convergence()`: Distance convergence with subdomain traces
 - `plot_critical_point_distance_evolution()`: Per-critical-point distance evolution
-- `create_v4_plots()`: Convenience function to create all plots at once
+
+Enhanced plots (new):
+- `plot_refinement_comparison()`: Compares theoretical→df_cheb vs df_min_refined→df_cheb (blue vs green)
+- `plot_theoretical_minima_to_refined()`: Shows BFGS convergence to theoretical minima (red)
+- `plot_refinement_effectiveness()`: Bar charts of point counts and improvement ratios (purple)
+- `plot_refined_to_cheb_distances()`: Statistical view of refinement distances (green)
 
 ## Quick Start Guide
 
@@ -87,6 +100,9 @@ include("run_v4_analysis.jl")
 # Run with default parameters (degrees 3-4, GN=20)
 subdomain_tables = run_v4_analysis()
 
+# Or run enhanced version with BFGS refined point analysis
+results = run_v4_analysis([3,4], 20, enhanced=true, plot_results=true)
+
 # Or specify custom parameters
 subdomain_tables = run_v4_analysis([3,4,5], 30)  # degrees 3-5, GN=30
 
@@ -102,12 +118,18 @@ end
 
 ### 2. Analysis with Automatic Plotting
 ```julia
-# Generate tables AND plots in one command
+# Standard analysis with plots
 subdomain_tables = run_v4_analysis([3,4], 20, 
                                   output_dir="outputs/my_analysis",
                                   plot_results=true)
 
-# This creates:
+# Enhanced analysis with refined point plots
+results = run_v4_analysis([3,4], 20,
+                         output_dir="outputs/enhanced_analysis",
+                         plot_results=true,
+                         enhanced=true)
+
+# Standard analysis creates:
 # outputs/my_analysis/
 #   ├── subdomain_0000_v4.csv          # V4 tables for each subdomain
 #   ├── subdomain_0010_v4.csv
@@ -116,6 +138,13 @@ subdomain_tables = run_v4_analysis([3,4], 20,
 #   ├── v4_distance_convergence.png    # Distance convergence plot
 #   ├── v4_distance_convergence_legend.png  # Separate legend
 #   └── v4_critical_point_distance_evolution.png  # Per-point evolution
+
+# Enhanced analysis additionally creates:
+#   ├── refinement_summary.csv         # Refinement effectiveness metrics
+#   ├── v4_refinement_comparison.png   # Blue vs green comparison
+#   ├── v4_theoretical_minima_to_refined.png  # BFGS convergence quality
+#   ├── v4_refinement_effectiveness.png       # Bar charts
+#   └── v4_refined_to_cheb_distances.png      # Statistical distances
 ```
 
 ### 3. Plot from Existing Tables
@@ -177,6 +206,25 @@ fig = plot_critical_point_distance_evolution(
 - Each line represents one theoretical critical point
 - Useful for identifying which specific points are hard to recover
 
+### Enhanced Plots (when enhanced=true):
+
+### 4. **v4_refinement_comparison.png**
+- Blue line: Average distance from theoretical points to df_cheb
+- Green line: Average distance from df_min_refined to df_cheb
+- Shows how BFGS refinement changes the landscape
+- Lower green line indicates successful refinement
+
+### 5. **v4_theoretical_minima_to_refined.png**
+- Red lines: Distances from theoretical minima to BFGS-refined points
+- Light red traces: Individual subdomain performance
+- Dark red: Overall average
+- Shows BFGS convergence quality to true minima
+
+### 6. **v4_refinement_effectiveness.png**
+- Left panel: Bar chart comparing |df_cheb| vs |df_min_refined|
+- Right panel: Improvement ratios with percentage labels
+- Purple bars show distance reduction effectiveness
+
 ## Tests
 
 Run individual tests:
@@ -215,6 +263,9 @@ julia test/run_all_tests.jl
   - Critical point distance evolution (NEW)
 - **Created examples for plotting from existing tables**
 - **Plotting is optional** - controlled by `plot_results` parameter
+- **Added enhanced mode** with BFGS refined point analysis
+- **Removed axis labels** from all plots for cleaner appearance
+- **Color-coded plots**: Blue (theoretical→df_cheb), Green (refined distances), Red (minima convergence)
 
 ## Troubleshooting
 
