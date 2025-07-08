@@ -1,0 +1,5 @@
+degree,n_computed,n_refined,avg_theo_to_cheb,avg_theo_to_refined,avg_refined_to_cheb,improvement_pct
+3,16,9,0.078,0.0,0.078,100.0
+4,25,9,0.0845,0.0,0.0845,100.0
+5,36,9,0.0395,0.0,0.0395,100.0
+6,25,9,0.0535,0.0,0.0535,100.0
