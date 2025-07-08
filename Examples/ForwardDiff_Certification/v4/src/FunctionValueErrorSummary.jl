@@ -4,8 +4,9 @@ using DataFrames
 using Statistics
 using Printf
 using LinearAlgebra
+using PrettyTables
 
-export generate_error_summary_table, print_error_summary_table
+export generate_error_summary_table, print_error_summary_table, to_latex_summary, save_latex_summary
 
 """
 Generate a summary table showing captured points and error statistics by degree.
@@ -206,6 +207,88 @@ function print_error_summary_table(summary_table::DataFrame)
     println("  - Avg Rel Error: Average relative error for matched minima")
     println("  - Max Error: Maximum absolute error for matched minima")
     println("  - Avg/Max Error (Saddle): Absolute errors for matched saddle points")
+end
+
+"""
+Convert the error summary table to LaTeX format using PrettyTables.
+Returns a string containing the complete LaTeX table.
+"""
+function to_latex_summary(summary_table::DataFrame; 
+                         caption::String = "Function value error summary by polynomial degree",
+                         label::String = "tab:error_summary",
+                         use_booktabs::Bool = true)
+    io = IOBuffer()
+    
+    # Write table wrapper
+    println(io, "\\begin{table}[htbp]")
+    println(io, "\\centering")
+    println(io, "\\caption{$caption}")
+    println(io, "\\label{$label}")
+    
+    # Use PrettyTables to generate the tabular part
+    tf = use_booktabs ? tf_latex_booktabs : tf_latex_default
+    
+    # Custom header names for better LaTeX formatting
+    header = (
+        ["Degree", "Captured", "Avg. Rel. Error", "Max Error", "Captured", "Avg. Error", "Max Error"],
+        ["", "\\multicolumn{2}{c}{Local Minima}", "", "\\multicolumn{2}{c}{Saddle Points}", ""]
+    )
+    
+    # Generate the table
+    pretty_table(io, summary_table,
+        backend = Val(:latex),
+        tf = tf,
+        show_subheader = false,  # Don't show type row
+        alignment = [:c, :c, :r, :r, :c, :r, :r]
+    )
+    
+    println(io, "\\end{table}")
+    
+    return String(take!(io))
+end
+
+"""
+Save the error summary table to a LaTeX file using PrettyTables.
+Also creates a simpler version without table environment wrapper.
+"""
+function save_latex_summary(summary_table::DataFrame, filepath::String; 
+                           caption::String = "Function value error summary by polynomial degree",
+                           label::String = "tab:error_summary",
+                           use_booktabs::Bool = true,
+                           wrap_table::Bool = true)
+    
+    open(filepath, "w") do io
+        if wrap_table
+            # Full table with wrapper
+            println(io, "\\begin{table}[htbp]")
+            println(io, "\\centering")
+            println(io, "\\caption{$caption}")
+            println(io, "\\label{$label}")
+        end
+        
+        # Generate the tabular part
+        tf = use_booktabs ? tf_latex_booktabs : tf_latex_default
+        pretty_table(io, summary_table,
+            backend = Val(:latex),
+            tf = tf,
+            show_subheader = false,
+            alignment = [:c, :c, :r, :r, :c, :r, :r]
+        )
+        
+        if wrap_table
+            println(io, "\\end{table}")
+        end
+    end
+    
+    println("LaTeX table saved to: $filepath")
+    
+    # Also save a simple version without wrapper
+    if wrap_table
+        simple_filepath = replace(filepath, ".tex" => "_simple.tex")
+        save_latex_summary(summary_table, simple_filepath; 
+                          caption=caption, label=label, use_booktabs=use_booktabs, 
+                          wrap_table=false)
+    end
 end
 
 end # module

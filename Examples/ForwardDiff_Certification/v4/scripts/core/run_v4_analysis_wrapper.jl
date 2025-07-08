@@ -59,7 +59,7 @@ function run_v4_analysis(; degrees=[3,4], GN=20, output_dir=nothing)
         end
         
         # Include and run the main script
-        result = include(joinpath(@__DIR__, "run_v4_analysis.jl"))
+        result = include(joinpath(@__DIR__, "../..", "run_v4_analysis.jl"))
         
         return result
         

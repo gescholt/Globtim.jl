@@ -28,22 +28,22 @@ println("  GN: $GN")
 println("\n📚 Loading modules...")
 
 # Core modules
-include("src/TheoreticalPointTables.jl")
+include("../../src/TheoreticalPointTables.jl")
 using .TheoreticalPointTables
 
-include("../by_degree/src/Common4DDeuflhard.jl")
+include("../../../by_degree/src/Common4DDeuflhard.jl")
 using .Common4DDeuflhard
 
-include("../by_degree/src/SubdomainManagement.jl")
+include("../../../by_degree/src/SubdomainManagement.jl")
 using .SubdomainManagement
 
-include("../by_degree/src/TheoreticalPoints.jl")
+include("../../../by_degree/src/TheoreticalPoints.jl")
 using .TheoreticalPoints: load_theoretical_4d_points_orthant
 
-include("src/run_analysis_with_refinement.jl")
+include("../core/run_analysis_with_refinement.jl")
 using .Main: run_enhanced_analysis_with_refinement
 
-include("src/FunctionValueAnalysis.jl")
+include("../../src/FunctionValueAnalysis.jl")
 using .FunctionValueAnalysis
 
 println("✅ Modules loaded")
