@@ -1,5 +1,22 @@
 # V4 Implementation: Theoretical Point-Centric Tables with Enhanced Plotting
 
+## Quick Start
+
+Run the enhanced V4 analysis with BFGS refinement:
+```bash
+julia run_v4_analysis.jl
+```
+
+Or with custom parameters:
+```bash
+julia run_v4_analysis.jl "3,4,5" 30 "outputs/my_run"
+```
+
+Arguments:
+1. Degrees (comma-separated, default: "3,4")  
+2. Grid resolution GN (default: 20)
+3. Output directory (default: "outputs/enhanced_HH-MM")
+
 ## Overview
 V4 restructures subdomain tables to focus on theoretical critical points, with each row representing a theoretical point and columns showing minimal distances to computed points by degree. This implementation now includes comprehensive plotting capabilities integrated from the by_degree analysis.
 
@@ -313,3 +330,6 @@ julia test/run_all_tests.jl
    - Run table generation without plots first
    - Check individual subdomain tables
    - Use `plot_all_points=false` for cleaner evolution plots
+## Note on Script Organization
+
+Previous versions of run scripts have been archived in `archived_scripts/` directory. The main run file is now `run_v4_analysis.jl` which includes all enhanced features with BFGS refinement.
