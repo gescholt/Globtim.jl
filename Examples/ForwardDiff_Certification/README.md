@@ -4,9 +4,35 @@ This directory contains comprehensive demonstrations and certification tests for
 
 ## 📚 Quick Navigation
 
+- **[v4/](v4/)** - **NEW**: V4 Implementation with theoretical point-centric tables and enhanced plotting
 - **[STEP_TESTS_GUIDE.md](STEP_TESTS_GUIDE.md)** - Detailed guide to the 5-step enhancement test suite
 - **[CERTIFICATION_SUMMARY.md](CERTIFICATION_SUMMARY.md)** - Official certification status and results
 - **[deuflhard_4d_complete.jl](deuflhard_4d_complete.jl)** - Main production implementation for 4D analysis
+
+## 🚀 Quick Start: V4 Analysis
+
+The new V4 implementation provides the most comprehensive analysis with enhanced plotting:
+
+```bash
+cd v4
+julia
+```
+
+```julia
+# Run complete analysis with plotting
+include("run_v4_analysis.jl")
+subdomain_tables = run_v4_analysis([3,4], 20, 
+                                  output_dir="outputs/my_run",
+                                  plot_results=true)
+```
+
+This generates:
+- Theoretical point-centric tables showing distance convergence
+- L2-norm convergence plots
+- Distance convergence plots with subdomain traces
+- Critical point distance evolution plots
+
+See [v4/README.md](v4/README.md) for detailed usage instructions.
 
 ## Overview
 

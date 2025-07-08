@@ -1,7 +1,7 @@
-# V4 Implementation: Theoretical Point-Centric Tables
+# V4 Implementation: Theoretical Point-Centric Tables with Enhanced Plotting
 
 ## Overview
-V4 restructures subdomain tables to focus on theoretical critical points, with each row representing a theoretical point and columns showing minimal distances to computed points by degree.
+V4 restructures subdomain tables to focus on theoretical critical points, with each row representing a theoretical point and columns showing minimal distances to computed points by degree. This implementation now includes comprehensive plotting capabilities integrated from the by_degree analysis.
 
 ## Implementation Steps
 
@@ -56,56 +56,141 @@ V4 restructures subdomain tables to focus on theoretical critical points, with e
 - `plot_critical_point_distance_evolution()`: Per-critical-point distance evolution
 - `create_v4_plots()`: Convenience function to create all plots at once
 
-## Usage
+## Quick Start Guide
 
-### Basic Analysis (Tables Only)
+### Fastest Way to Start
+```bash
+cd Examples/ForwardDiff_Certification/v4
+julia quick_start.jl
+```
+This interactive script guides you through common analysis options.
+
+### Manual Setup
+1. Navigate to the v4 directory:
+```bash
+cd Examples/ForwardDiff_Certification/v4
+```
+
+2. Ensure Julia is activated in the Globtim project:
 ```julia
-# Load and run the v4 analysis
-include("Examples/ForwardDiff_Certification/v4/run_v4_analysis.jl")
-subdomain_tables = run_v4_analysis([3,4], 20)
+using Pkg
+Pkg.activate("../../../")  # Activate Globtim root
+```
+
+## Usage Examples
+
+### 1. Basic Analysis (Tables Only - No Plotting)
+```julia
+# From the v4 directory, run:
+include("run_v4_analysis.jl")
+
+# Run with default parameters (degrees 3-4, GN=20)
+subdomain_tables = run_v4_analysis()
+
+# Or specify custom parameters
+subdomain_tables = run_v4_analysis([3,4,5], 30)  # degrees 3-5, GN=30
 
 # View a specific subdomain table
 subdomain_tables["0000"]
 
-# View all tables
+# View all tables with summary
 for (label, table) in sort(collect(subdomain_tables), by=x->x[1])
     println("\n📊 Subdomain $label:")
     show(table, allrows=true, allcols=true)
 end
-
-# Save tables to CSV files
-subdomain_tables = run_v4_analysis([3,4], 20, output_dir="v4_output")
 ```
 
-### Analysis with Plotting
+### 2. Analysis with Automatic Plotting
 ```julia
-# Run analysis with plotting enabled
+# Generate tables AND plots in one command
 subdomain_tables = run_v4_analysis([3,4], 20, 
-                                  output_dir="v4_output",
+                                  output_dir="outputs/my_analysis",
                                   plot_results=true)
 
-# This generates:
-# - v4_l2_convergence.png - L2-norm convergence with subdomain traces
-# - v4_distance_convergence.png - Distance convergence with subdomain traces
-# - v4_distance_convergence_legend.png - Separate legend
-# - v4_critical_point_distance_evolution.png - Evolution for all critical points
+# This creates:
+# outputs/my_analysis/
+#   ├── subdomain_0000_v4.csv          # V4 tables for each subdomain
+#   ├── subdomain_0010_v4.csv
+#   ├── ...
+#   ├── v4_l2_convergence.png          # L2-norm convergence plot
+#   ├── v4_distance_convergence.png    # Distance convergence plot
+#   ├── v4_distance_convergence_legend.png  # Separate legend
+#   └── v4_critical_point_distance_evolution.png  # Per-point evolution
 ```
 
-### Plot from Existing Tables
+### 3. Plot from Existing Tables
 ```julia
-# If you already have V4 tables saved, you can plot them directly
-include("Examples/ForwardDiff_Certification/v4/examples/plot_existing_tables.jl")
-plot_from_existing_tables("path/to/v4_output", degrees=[3,4])
+# If you already have saved V4 tables, generate plots without re-running analysis
+
+# Method 1: Using the example script
+julia examples/plot_existing_tables.jl outputs/my_analysis
+
+# Method 2: From Julia REPL
+include("examples/plot_existing_tables.jl")
+plot_from_existing_tables("outputs/my_analysis", degrees=[3,4])
 ```
+
+### 4. Custom Analysis Workflow
+```julia
+# Step 1: Run analysis without plots (faster)
+subdomain_tables = run_v4_analysis([3,4,5,6], 40, 
+                                  output_dir="outputs/high_degree")
+
+# Step 2: Examine results
+println("Summary of results:")
+for (label, table) in subdomain_tables
+    avg_row = table[end, :]  # AVERAGE row
+    println("$label: d3=$(avg_row.d3), d4=$(avg_row.d4)")
+end
+
+# Step 3: Generate plots selectively
+include("src/V4Plotting.jl")
+using .V4Plotting
+
+# Just the distance evolution plot
+fig = plot_critical_point_distance_evolution(
+    subdomain_tables, [3,4,5,6],
+    output_dir = "outputs/high_degree",
+    plot_all_points = false  # Only show averages
+)
+```
+
+## Understanding the Plots
+
+### 1. **v4_l2_convergence.png**
+- Shows L2-norm error convergence as polynomial degree increases
+- Orange thick line: Global L2 norm (if available)
+- Thin colored lines: Individual subdomain L2 norms
+- Y-axis is log scale - downward trend indicates convergence
+
+### 2. **v4_distance_convergence.png**
+- Shows distance from theoretical to computed critical points
+- Orange thick line: Average distance across all points
+- Thin orange lines: Individual subdomain traces
+- Black dotted line: Recovery threshold (default 0.1)
+- Points below threshold are considered "recovered"
+
+### 3. **v4_critical_point_distance_evolution.png**
+- Shows evolution of distance for each individual theoretical point
+- Blue lines: Minima
+- Red lines: Saddle points
+- Each line represents one theoretical critical point
+- Useful for identifying which specific points are hard to recover
 
 ## Tests
 
 Run individual tests:
 ```bash
-cd v4
+# From the v4 directory
 julia test/test_table_structure.jl
 julia test/test_distance_calculation.jl
 julia test/test_summary_row.jl
+julia test/test_v4_plotting.jl
+```
+
+Run all tests:
+```bash
+julia test/run_all_tests.jl
 ```
 
 ## Progress Log
@@ -131,13 +216,49 @@ julia test/test_summary_row.jl
 - **Created examples for plotting from existing tables**
 - **Plotting is optional** - controlled by `plot_results` parameter
 
-## Known Issues and Solutions
+## Troubleshooting
 
-### Module Loading Order
-The modules must be loaded in this specific order:
-1. `Common4DDeuflhard.jl` (required by TheoreticalPoints)
-2. `SubdomainManagement.jl` 
-3. `TheoreticalPoints.jl`
+### Common Issues
 
-### Plotting Dependencies
-To avoid plotting-related errors, the v4 implementation uses a minimal analysis function that excludes CairoMakie and other plotting libraries. This allows focus on table generation without dealing with plotting extension issues.
+1. **"UndefVarError: `hasprop` not defined"**
+   - **Fixed in latest version** - was a typo, should be `hasproperty`
+   - If you see this, pull the latest code: `git pull`
+
+2. **Module Loading Errors**
+   - Ensure you're in the correct directory: `cd Examples/ForwardDiff_Certification/v4`
+   - Activate Globtim project: `Pkg.activate("../../../")`
+   - The modules load in a specific order (handled automatically by run_v4_analysis.jl)
+
+3. **Plotting Backend Issues**
+   - V4 uses CairoMakie directly (not through Globtim extensions)
+   - If plots don't appear, ensure CairoMakie is installed: `] add CairoMakie`
+
+4. **Memory Issues with High Degrees**
+   - Use smaller GN values for testing: `run_v4_analysis([3,4], 10)`
+   - Process fewer degrees at once
+   - Run without plotting first, then plot from saved tables
+
+### Performance Tips
+
+1. **For Quick Testing**:
+   ```julia
+   # Small grid, few degrees
+   run_v4_analysis([3,4], 10)
+   ```
+
+2. **For Production Runs**:
+   ```julia
+   # Higher accuracy, save results
+   run_v4_analysis([3,4,5,6], 40, 
+                   output_dir="outputs/production",
+                   plot_results=false)
+   
+   # Plot later from saved tables
+   include("examples/plot_existing_tables.jl")
+   plot_from_existing_tables("outputs/production", degrees=[3,4,5,6])
+   ```
+
+3. **For Debugging**:
+   - Run table generation without plots first
+   - Check individual subdomain tables
+   - Use `plot_all_points=false` for cleaner evolution plots
