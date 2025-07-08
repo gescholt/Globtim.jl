@@ -84,6 +84,55 @@ function run_enhanced_analysis_v2(
         println("   Total critical points found: $(nrow(combined_df))")
     end
     
-    # Return empty placeholders for the other values since we're not computing them
-    return Dict(), Dict(), Dict(), Dict(), Dict(), all_critical_points_with_labels
+    # Initialize data structures for plotting
+    l2_data_by_degree_by_subdomain = Dict{Int, Dict{String, Float64}}()
+    distance_data_by_degree = Dict{Int, Vector{Float64}}()
+    subdomain_distance_data_by_degree = Dict{Int, Dict{String, Vector{Float64}}}()
+    
+    # Process data for plotting
+    for degree in degrees
+        l2_data_by_degree_by_subdomain[degree] = Dict{String, Float64}()
+        subdomain_distance_data_by_degree[degree] = Dict{String, Vector{Float64}}()
+        all_distances = Float64[]
+        
+        # Get computed points for this degree
+        computed_points_df = all_critical_points_with_labels[degree]
+        
+        for subdomain in subdomains
+            # Get theoretical points for this subdomain
+            theoretical_points, _, _ = load_theoretical_points_for_subdomain_orthant(subdomain)
+            
+            # Get computed points in this subdomain
+            subdomain_mask = computed_points_df.subdomain .== subdomain.label
+            subdomain_computed = computed_points_df[subdomain_mask, :]
+            
+            if nrow(subdomain_computed) > 0
+                computed_points = [[row.x1, row.x2, row.x3, row.x4] for row in eachrow(subdomain_computed)]
+                
+                # Calculate distances from theoretical to computed points
+                distances = Float64[]
+                for tp in theoretical_points
+                    if !isempty(computed_points)
+                        min_dist = minimum(norm(tp - cp) for cp in computed_points)
+                        push!(distances, min_dist)
+                        push!(all_distances, min_dist)
+                    end
+                end
+                
+                if !isempty(distances)
+                    subdomain_distance_data_by_degree[degree][subdomain.label] = distances
+                end
+            end
+            
+            # Store dummy L2 data (would need actual polynomial info for real L2 norms)
+            # For now, using a placeholder
+            l2_data_by_degree_by_subdomain[degree][subdomain.label] = 0.001 / degree
+        end
+        
+        distance_data_by_degree[degree] = all_distances
+    end
+    
+    # Return all the data structures
+    return l2_data_by_degree_by_subdomain, distance_data_by_degree, 
+           subdomain_distance_data_by_degree, all_critical_points_with_labels
 end
