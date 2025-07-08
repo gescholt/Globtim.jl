@@ -50,8 +50,15 @@ V4 restructures subdomain tables to focus on theoretical critical points, with e
 - `add_summary_row()`: Adds AVERAGE row with statistics
 - `generate_theoretical_point_tables()`: Main function generating all tables
 
+### `V4Plotting.jl` (NEW)
+- `plot_v4_l2_convergence()`: L2-norm convergence with subdomain traces
+- `plot_v4_distance_convergence()`: Distance convergence with subdomain traces
+- `plot_critical_point_distance_evolution()`: Per-critical-point distance evolution
+- `create_v4_plots()`: Convenience function to create all plots at once
+
 ## Usage
 
+### Basic Analysis (Tables Only)
 ```julia
 # Load and run the v4 analysis
 include("Examples/ForwardDiff_Certification/v4/run_v4_analysis.jl")
@@ -68,6 +75,27 @@ end
 
 # Save tables to CSV files
 subdomain_tables = run_v4_analysis([3,4], 20, output_dir="v4_output")
+```
+
+### Analysis with Plotting
+```julia
+# Run analysis with plotting enabled
+subdomain_tables = run_v4_analysis([3,4], 20, 
+                                  output_dir="v4_output",
+                                  plot_results=true)
+
+# This generates:
+# - v4_l2_convergence.png - L2-norm convergence with subdomain traces
+# - v4_distance_convergence.png - Distance convergence with subdomain traces
+# - v4_distance_convergence_legend.png - Separate legend
+# - v4_critical_point_distance_evolution.png - Evolution for all critical points
+```
+
+### Plot from Existing Tables
+```julia
+# If you already have V4 tables saved, you can plot them directly
+include("Examples/ForwardDiff_Certification/v4/examples/plot_existing_tables.jl")
+plot_from_existing_tables("path/to/v4_output", degrees=[3,4])
 ```
 
 ## Tests
@@ -95,6 +123,13 @@ julia test/test_summary_row.jl
 - Fixed Constructor GN parameter issue (moved to test_input)
 - Successfully generated tables showing distance improvement from d3 to d4
 - Tables now properly show theoretical points as rows with degree columns
+- **Added standalone V4 plotting module** (`V4Plotting.jl`)
+- **Integrated three key plots from by_degree**:
+  - L2-norm convergence with subdomain traces
+  - Distance convergence with subdomain traces  
+  - Critical point distance evolution (NEW)
+- **Created examples for plotting from existing tables**
+- **Plotting is optional** - controlled by `plot_results` parameter
 
 ## Known Issues and Solutions
 

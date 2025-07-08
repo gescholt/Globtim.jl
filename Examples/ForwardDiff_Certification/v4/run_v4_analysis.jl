@@ -6,6 +6,7 @@ using Pkg
 Pkg.activate(joinpath(@__DIR__, "../../../"))
 
 using CSV  # Load at top level
+using Dates  # For timestamp generation
 
 # Load V4 modules
 include("src/TheoreticalPointTables.jl")
@@ -29,8 +30,12 @@ using .TheoreticalPoints: load_theoretical_4d_points_orthant
 include("src/run_analysis_no_plots.jl")
 using .Main: run_enhanced_analysis_v2
 
+# Include V4 plotting module if requested
+include("src/V4Plotting.jl")
+using .V4Plotting
+
 # Run analysis
-function run_v4_analysis(degrees=[3,4], GN=20; output_dir=nothing)
+function run_v4_analysis(degrees=[3,4], GN=20; output_dir=nothing, plot_results=false)
     println("\n" * "="^80)
     println("🚀 V4 ANALYSIS: Theoretical Point-Centric Tables")
     println("="^80)
@@ -47,7 +52,7 @@ function run_v4_analysis(degrees=[3,4], GN=20; output_dir=nothing)
     
     # Step 3: Run existing analysis to get computed points
     println("\n📊 Running degree analysis...")
-    _, _, _, _, _, all_critical_points_with_labels = run_enhanced_analysis_v2(
+    l2_data, distance_data, subdomain_distance_data, all_critical_points_with_labels = run_enhanced_analysis_v2(
         degrees, GN, 
         analyze_global=false, 
         threshold=0.1
@@ -100,6 +105,30 @@ function run_v4_analysis(degrees=[3,4], GN=20; output_dir=nothing)
         end
         
         println("\n✅ Tables saved to: $output_dir")
+    end
+    
+    # Step 5: Create plots if requested
+    if plot_results
+        println("\n📊 Creating V4 plots...")
+        
+        # Ensure output directory exists for plots
+        if output_dir === nothing
+            output_dir = joinpath(@__DIR__, "outputs", "v4_$(Dates.format(Dates.now(), "HH-MM"))")
+            mkpath(output_dir)
+        end
+        
+        # Create all plots
+        plots = create_v4_plots(
+            subdomain_tables_v4,
+            degrees,
+            l2_data,
+            distance_data,
+            subdomain_distance_data = subdomain_distance_data,
+            output_dir = output_dir,
+            plot_config = Dict("threshold" => 0.1)
+        )
+        
+        println("\n✅ Plots saved to: $output_dir")
     end
     
     return subdomain_tables_v4
