@@ -303,7 +303,7 @@ function plot_critical_point_distance_evolution(subdomain_tables::Dict{String, D
                 valid_degrees = Int[]
                 for deg in sorted_degrees
                     col = Symbol("d$deg")
-                    if hasprop(row, col) && !isnan(row[col])
+                    if hasproperty(row, col) && !isnan(row[col])
                         push!(distances, row[col])
                         push!(valid_degrees, deg)
                     end
@@ -353,7 +353,7 @@ function plot_critical_point_distance_evolution(subdomain_tables::Dict{String, D
             for row in eachrow(data_rows)
                 for deg in sorted_degrees
                     col = Symbol("d$deg")
-                    if hasprop(row, col) && !isnan(row[col])
+                    if hasproperty(row, col) && !isnan(row[col])
                         if row.type == "min"
                             push!(min_distances_by_degree[deg], row[col])
                         else

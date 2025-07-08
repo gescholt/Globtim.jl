@@ -23,7 +23,7 @@
 using Dates, CSV
 
 # Polynomial degrees to test
-const DEGREES = [2, 3, 4, 5, 6, 7, 8]
+const DEGREES = [3,4,5]
 
 # Grid points per dimension (fixed - no tolerance adaptation)
 const GN = 20
@@ -39,7 +39,7 @@ println("📊 This creates plots showing individual subdomain convergence traces
 println("   (similar to the L2-norm plot style)\n")
 
 # CHANGE: Now capturing the additional computed points data AND output directory
-summary_df, distance_data, all_computed_points, output_dir, computed_by_subdomain_by_degree = run_enhanced_analysis_v2(DEGREES, GN, analyze_global=true, threshold=TRESH)
+summary_df, distance_data, all_computed_points, output_dir, computed_by_subdomain_by_degree, all_critical_points_with_labels = run_enhanced_analysis_v2(DEGREES, GN, analyze_global=true, threshold=TRESH)
 
 # ================================================================================
 # NEW: Analysis of ALL Critical Points (not just minima)
@@ -56,11 +56,11 @@ include("examples/analyze_all_critical_point_distances.jl")
 critical_results = analyze_critical_point_distances(all_computed_points, DEGREES, threshold=TRESH)
 
 # Use the SAME output directory as the main analysis
-plot_critical_point_distances(critical_results, 
-                            output_file = joinpath(output_dir, "critical_point_distances.png"))
+# plot_critical_point_distances(critical_results, 
+#                             output_file = joinpath(output_dir, "critical_point_distances.png"))
 
 # Save the critical point analysis results
-CSV.write(joinpath(output_dir, "critical_point_distances.csv"), critical_results)
+# CSV.write(joinpath(output_dir, "critical_point_distances.csv"), critical_results)
 
 println("\n📊 Critical point analysis complete!")
 println("   All plots saved to: $(basename(output_dir))")
@@ -89,8 +89,8 @@ CSV.write(joinpath(output_dir, "critical_point_distance_matrix.csv"), matrix_df)
 df_theory = CSV.read(joinpath(@__DIR__, "data/4d_all_critical_points_orthant.csv"), DataFrame)
 
 # Create the new distance evolution plot
-plot_distance_evolution(distance_matrix, DEGREES, df_theory,
-                       output_file = joinpath(output_dir, "critical_point_distance_evolution.png"))
+# plot_distance_evolution(distance_matrix, DEGREES, df_theory,
+#                        output_file = joinpath(output_dir, "critical_point_distance_evolution.png"))
 
 # Analyze convergence patterns
 patterns = analyze_convergence_patterns(distance_matrix, DEGREES, df_theory)
@@ -104,6 +104,93 @@ if haskey(patterns, "saddle_convergence_rate")
 end
 
 println("\n✅ Distance matrix saved to: $(joinpath(output_dir, "critical_point_distance_matrix.csv"))")
+
+# ================================================================================
+# NEW: Critical Point Tables by Subdomain
+# ================================================================================
+
+println("\n" * "="^80)
+println("📋 Generating critical point tables by subdomain...")
+println("="^80)
+
+# Load the table generation module
+include("src/CriticalPointTablesV2.jl")
+using .CriticalPointTablesV2
+
+# Load theoretical points
+include("src/TheoreticalPoints.jl")
+using .TheoreticalPoints: load_theoretical_4d_points_orthant
+
+# SubdomainManagement is already loaded by analyze_critical_point_distance_matrix.jl
+# We need to use the same instance to avoid type conflicts
+
+# Get theoretical points and subdomains
+theoretical_points, _, _, theoretical_types = load_theoretical_4d_points_orthant()
+subdomains = SubdomainManagement.generate_16_subdivisions_orthant()
+
+# Generate tables
+subdomain_tables = CriticalPointTablesV2.generate_subdomain_critical_point_tables(
+    theoretical_points, 
+    theoretical_types,
+    all_critical_points_with_labels,
+    DEGREES,
+    subdomains,
+    tolerance = 0.0,  # Use same tolerance as theoretical point assignment
+    is_point_in_subdomain_func = SubdomainManagement.is_point_in_subdomain
+)
+
+# Export tables
+tables_dir = joinpath(output_dir, "critical_point_tables")
+CriticalPointTablesV2.export_tables_to_csv(subdomain_tables, tables_dir)
+
+# Generate LaTeX tables for paper
+latex_file = joinpath(output_dir, "critical_point_tables.tex")
+CriticalPointTablesV2.generate_latex_tables(subdomain_tables, latex_file)
+
+# Create summary table
+summary_table = CriticalPointTablesV2.create_summary_table(subdomain_tables, DEGREES)
+CSV.write(joinpath(output_dir, "subdomain_summary.csv"), summary_table)
+
+# Also create a summary of computed points
+computed_summary = CriticalPointTablesV2.create_computed_points_summary(all_critical_points_with_labels, DEGREES)
+CSV.write(joinpath(output_dir, "computed_points_summary.csv"), computed_summary)
+
+println("\n📊 Critical point tables generated:")
+println("   Tables directory: $(basename(tables_dir))")
+println("   LaTeX file: $(basename(latex_file))")
+println("   Summary: $(basename(output_dir))/subdomain_summary.csv")
+println("   Computed points: $(basename(output_dir))/computed_points_summary.csv")
+
+# Display summary
+println("\n📈 Subdomain Recovery Summary:")
+for row in eachrow(summary_table)
+    println("   $(row.subdomain): $(row.n_theoretical) points ($(row.n_minima) min, $(row.n_saddles) saddle)")
+end
+
+# Show which subdomains had computed points
+println("\n🔍 Subdomains with computed critical points by degree:")
+if !isempty(computed_summary)
+    for degree in DEGREES
+        degree_data = filter(row -> row.degree == degree, computed_summary)
+        if !isempty(degree_data)
+            active_subdomains = sort(unique(degree_data.subdomain))
+            println("   Degree $degree: $(join(active_subdomains, ", "))")
+        end
+    end
+end
+
+# ================================================================================
+# NEW: Subdomain-Clustered Distance Evolution Plot (Using Table Data)
+# ================================================================================
+
+println("\n" * "="^80)
+println("🔍 Creating subdomain-clustered distance evolution plot...")
+println("="^80)
+
+# Create the subdomain-clustered plot
+plot_subdomain_distance_evolution(distance_matrix, DEGREES, df_theory, all_critical_points_with_labels,
+                                output_file = joinpath(output_dir, "subdomain_distance_evolution.png"),
+                                subdomain_tables = subdomain_tables)  # Pass tables for direct data access
 
 # ================================================================================
 # Summary of Changes:

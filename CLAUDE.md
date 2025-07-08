@@ -103,6 +103,9 @@ end
 ### 9. **Polynomial Approximation**
 - the degrees are always integers
 
+### 10. **Plotting Guidelines**
+- the plots we generate are destined to go into a paper, so do not add title directly on the figure 
+
 ## 🚀 Essential Commands
 
 ```julia

@@ -1,0 +1,17 @@
+subdomain,computed_points,has_minimizer,found_minimizer,min_distance,accuracy
+0000,1,true,true,0.03357430978305013,100.0
+0001,1,false,false,NaN,0.0
+0010,2,true,false,0.10549031904288324,0.0
+0011,1,true,true,0.03357430978304419,100.0
+0100,1,false,false,NaN,0.0
+0101,1,false,false,NaN,0.0
+0110,2,false,false,NaN,0.0
+0111,1,false,false,NaN,0.0
+1000,2,true,false,0.1054903190428835,0.0
+1001,2,false,false,NaN,0.0
+1010,4,true,false,0.14535879934193952,0.0
+1011,2,true,false,0.10549031904288114,0.0
+1100,1,true,true,0.03357430978304405,100.0
+1101,1,false,false,NaN,0.0
+1110,2,true,false,0.10549031904288117,0.0
+1111,1,true,true,0.03357430978303807,100.0

@@ -16,6 +16,10 @@ using PrettyTables
 using Printf
 using CairoMakie
 
+# Import subdomain management functions at the module level
+include("../src/SubdomainManagement.jl")
+using .SubdomainManagement: generate_16_subdivisions_orthant, is_point_in_subdomain
+
 """
     create_critical_point_distance_matrix(computed_points_by_degree, degrees)
 
@@ -27,14 +31,14 @@ the nearest computed point for each polynomial degree.
 - `degrees`: Vector of polynomial degrees
 
 # Returns
-- `distance_matrix`: 25×|degrees| matrix of distances
+- `distance_matrix`: (n_critical_points × |degrees|) matrix of distances
 - `results_df`: DataFrame with critical point info and distances
 """
 function create_critical_point_distance_matrix(
     computed_points_by_degree::Dict{Int, Vector{Vector{Float64}}},
     degrees::Vector{Int}
 )
-    # Load all 25 theoretical critical points
+    # Load all theoretical critical points
     println("\n📊 Creating Critical Point Distance Matrix...")
     df_theory = CSV.read(joinpath(@__DIR__, "../data/4d_all_critical_points_orthant.csv"), DataFrame)
     
@@ -44,9 +48,13 @@ function create_critical_point_distance_matrix(
     # Initialize distance matrix
     distance_matrix = zeros(n_points, n_degrees)
     
+    # Determine dimensionality from df_theory columns
+    dim_cols = [col for col in names(df_theory) if startswith(String(col), "x")]
+    n_dims = length(dim_cols)
+    
     # Compute distances for each theoretical point and degree
     for (i, row) in enumerate(eachrow(df_theory))
-        theoretical_point = [row.x1, row.x2, row.x3, row.x4]
+        theoretical_point = [row[Symbol("x$i")] for i in 1:n_dims]
         
         for (j, degree) in enumerate(degrees)
             computed_points = computed_points_by_degree[degree]
@@ -326,4 +334,261 @@ function plot_distance_evolution(distance_matrix::Matrix{Float64},
     display(fig)
     
     println("\n✅ Distance evolution plot saved to: $output_file")
+end
+
+"""
+    plot_subdomain_distance_evolution(distance_matrix, degrees, df_theory, 
+                                    all_critical_points_with_labels;
+                                    output_file="subdomain_distance_evolution.png",
+                                    subdomain_tables=nothing)
+
+Create a plot showing average distance evolution for each subdomain that contains
+theoretical critical points, grouped by subdomain.
+
+# Implementation Note (Plan B)
+This function uses a clean two-step workflow:
+1. Data Preparation: All subdomain data is prepared upfront into a clean structure
+2. Plotting: The prepared data is then plotted without complex logic
+
+This avoids variable reuse and ensures all subdomains with valid data are plotted.
+
+# Arguments
+- `distance_matrix`: (n_critical_points × |degrees|) matrix of distances
+- `degrees`: Vector of polynomial degrees
+- `df_theory`: DataFrame with theoretical critical point information
+- `all_critical_points_with_labels`: Dict mapping degree to DataFrame with computed points and subdomain labels
+- `output_file`: Where to save the plot
+- `subdomain_tables`: Optional pre-computed tables from CriticalPointTablesV2
+"""
+function plot_subdomain_distance_evolution(distance_matrix::Matrix{Float64},
+                                         degrees::Vector{Int},
+                                         df_theory::DataFrame,
+                                         all_critical_points_with_labels::Dict{Int, DataFrame};
+                                         output_file::String = "subdomain_distance_evolution.png",
+                                         subdomain_tables::Union{Dict{String, DataFrame}, Nothing} = nothing)
+    
+    # Generate subdomains
+    subdomains = generate_16_subdivisions_orthant()
+    
+    # Assign theoretical critical points to subdomains
+    subdomain_assignments = Dict{String, Vector{Int}}()
+    for subdomain in subdomains
+        subdomain_assignments[subdomain.label] = Int[]
+    end
+    
+    # Determine dimensionality from df_theory columns
+    dim_cols = [col for col in names(df_theory) if startswith(String(col), "x")]
+    n_dims = length(dim_cols)
+    
+    for (idx, row) in enumerate(eachrow(df_theory))
+        theoretical_point = [row[Symbol("x$i")] for i in 1:n_dims]
+        for subdomain in subdomains
+            if is_point_in_subdomain(theoretical_point, subdomain, tolerance=0.0)
+                push!(subdomain_assignments[subdomain.label], idx)
+                break
+            end
+        end
+    end
+    
+    # Filter out subdomains with no theoretical critical points
+    active_subdomains = [(label, indices) for (label, indices) in subdomain_assignments if !isempty(indices)]
+    sort!(active_subdomains, by=x->x[1])  # Sort by label for consistent ordering
+    
+    println("\n📊 Subdomains with theoretical critical points:")
+    for (label, indices) in active_subdomains
+        n_min = sum(df_theory.type_4d[indices] .== "min")
+        n_saddle = sum(df_theory.type_4d[indices] .== "saddle")
+        println("   $label: $(length(indices)) points ($n_min min, $n_saddle saddle)")
+    end
+    
+    # Compute average distances for each subdomain across degrees
+    # PLAN B: Clean workflow with clear data preparation
+    # Step 1: Prepare all plotting data in a clean structure
+    plotting_data = []
+    
+    if subdomain_tables !== nothing
+        # Use pre-computed table data
+        println("\n📊 Using pre-computed subdomain tables for distance data")
+        println("   Found $(length(subdomain_tables)) subdomain tables")
+        
+        # Process each subdomain table to extract plotting data
+        for (subdomain_label, table) in subdomain_tables
+            # Skip empty tables
+            if isempty(table)
+                continue
+            end
+            
+            # Compute average distances for this subdomain across all degrees
+            avg_distances = Float64[]
+            
+            for degree in degrees
+                col_name = Symbol("degree_$degree")
+                
+                # Check if this degree column exists (using String comparison fix)
+                if String(col_name) in names(table)
+                    # Extract distances from the table
+                    distances = table[!, col_name]
+                    
+                    # Debug output for key subdomains
+                    if subdomain_label in ["1010", "1000", "1110"] && degree == degrees[1]
+                        println("   Debug $subdomain_label degree $degree:")
+                        println("     Raw distances: $distances")
+                        println("     NaN count: $(sum(isnan.(distances)))")
+                    end
+                    
+                    # Filter out NaN values to get finite distances
+                    finite_distances = filter(!isnan, distances)
+                    
+                    if isempty(finite_distances)
+                        # No valid distances for this degree
+                        push!(avg_distances, NaN)
+                    else
+                        # Compute and store the average
+                        avg_dist = mean(finite_distances)
+                        push!(avg_distances, avg_dist)
+                    end
+                else
+                    # Column doesn't exist for this degree
+                    push!(avg_distances, NaN)
+                end
+            end
+            
+            # Skip this subdomain if all averages are NaN
+            if all(isnan.(avg_distances))
+                continue
+            end
+            
+            # Count the types of critical points in this subdomain
+            n_min = count(x -> x == "min", table.type)
+            n_saddle = count(x -> x == "saddle", table.type)
+            
+            # Store all data needed for plotting this subdomain
+            push!(plotting_data, (
+                label = subdomain_label,
+                avg_distances = avg_distances,
+                n_min = n_min,
+                n_saddle = n_saddle
+            ))
+        end
+        
+        # Sort by label for consistent ordering
+        sort!(plotting_data, by=x->x.label)
+        
+        println("   Prepared plotting data for $(length(plotting_data)) subdomains")
+    else
+        # Original computation from distance matrix
+        # Process each subdomain that has theoretical critical points
+        for (subdomain_label, theory_indices) in active_subdomains
+            avg_distances = Float64[]
+            
+            for (j, degree) in enumerate(degrees)
+                # Get distances for theoretical points in this subdomain
+                subdomain_distances = distance_matrix[theory_indices, j]
+                
+                # Compute average (excluding Inf values)
+                finite_distances = filter(!isinf, subdomain_distances)
+                if isempty(finite_distances)
+                    push!(avg_distances, NaN)
+                else
+                    push!(avg_distances, mean(finite_distances))
+                end
+            end
+            
+            # Skip if all averages are NaN
+            if all(isnan.(avg_distances))
+                continue
+            end
+            
+            # Count point types for this subdomain
+            n_min = sum(df_theory.type_4d[theory_indices] .== "min")
+            n_saddle = sum(df_theory.type_4d[theory_indices] .== "saddle")
+            
+            # Store plotting data
+            push!(plotting_data, (
+                label = subdomain_label,
+                avg_distances = avg_distances,
+                n_min = n_min,
+                n_saddle = n_saddle
+            ))
+        end
+        
+        # Sort by label for consistent ordering
+        sort!(plotting_data, by=x->x.label)
+        
+        println("   Prepared plotting data for $(length(plotting_data)) subdomains")
+    end
+    
+    # Create the plot
+    fig = Figure(size=(1000, 700))
+    ax = Axis(fig[1, 1],
+              xlabel = "Polynomial Degree",
+              ylabel = "Average Distance to Nearest Computed Point",
+              yscale = log10)
+    
+    # Color palette for subdomains
+    colors = [:blue, :red, :green, :orange, :purple, :brown, :pink, :gray,
+              :olive, :cyan, :magenta, :yellow, :teal, :navy, :maroon, :lime]
+    
+    # PLAN B: Plot using the clean data structure
+    # Step 2: Plot each subdomain's average distance evolution
+    println("\n📊 Plotting subdomain distance evolution:")
+    println("   Subdomains with data: $(length(plotting_data))")
+    
+    # Plot each subdomain
+    for (i, data) in enumerate(plotting_data)
+        # Get color (cycle if more than 16 subdomains)
+        color = colors[mod(i-1, length(colors)) + 1]
+        
+        # Create label with point counts
+        label = "$(data.label) ($(data.n_min) min, $(data.n_saddle) sad)"
+        
+        # Extract valid (non-NaN) data points for plotting
+        valid_mask = .!isnan.(data.avg_distances)
+        valid_degrees = degrees[valid_mask]
+        valid_distances = data.avg_distances[valid_mask]
+        
+        # Skip if no valid data points
+        if isempty(valid_degrees)
+            continue
+        end
+        
+        # Plot line and scatter points
+        lines!(ax, valid_degrees, valid_distances,
+               color = color,
+               linewidth = 2.5,
+               label = label)
+        scatter!(ax, valid_degrees, valid_distances,
+                 color = color,
+                 markersize = 8)
+    end
+    
+    println("   Successfully plotted $(length(plotting_data)) subdomains")
+    
+    # Add legend only if there are subdomains plotted
+    if !isempty(plotting_data)
+        n_active = length(plotting_data)
+        ncols = n_active > 8 ? 2 : 1
+        Legend(fig[1, 2], ax, framevisible=true, tellwidth=true, 
+               labelsize=12, nbanks=ncols)
+    else
+        println("⚠️  No subdomains had valid data to plot")
+        # Add text to explain
+        text!(ax, 0.5, 0.5, text = "No valid subdomain data available", 
+              align = (:center, :center), fontsize = 20, color = :gray)
+    end
+    
+    # Set x-axis ticks to match degrees
+    ax.xticks = degrees
+    
+    # Add grid for better readability
+    ax.xgridvisible = true
+    ax.ygridvisible = true
+    ax.xgridstyle = :dash
+    ax.ygridstyle = :dash
+    
+    # Save and display
+    save(output_file, fig)
+    display(fig)
+    
+    println("\n✅ Subdomain distance evolution plot saved to: $output_file")
 end
