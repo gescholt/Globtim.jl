@@ -1,8 +1,9 @@
-# V4 Implementation: Theoretical Point-Centric Tables with Enhanced Plotting
+# V4 Implementation: Enhanced Analysis with BFGS Refinement
+
+A comprehensive analysis tool for the 4D Deuflhard function that tracks convergence of polynomial approximations to theoretical critical points across 16 subdomains.
 
 ## Quick Start
 
-Run the enhanced V4 analysis with BFGS refinement:
 ```bash
 julia run_v4_analysis.jl
 ```
@@ -12,8 +13,8 @@ Or with custom parameters:
 julia run_v4_analysis.jl "3,4,5" 30 "outputs/my_run"
 ```
 
-Arguments:
-1. Degrees (comma-separated, default: "3,4")  
+**Arguments:**
+1. Polynomial degrees (comma-separated, default: "3,4")  
 2. Grid resolution GN (default: 20)
 3. Output directory (default: "outputs/enhanced_HH-MM")
 
@@ -88,14 +89,7 @@ Enhanced plots (new):
 
 ## Quick Start Guide
 
-### Fastest Way to Start
-```bash
-cd Examples/ForwardDiff_Certification/v4
-julia quick_start.jl
-```
-This interactive script guides you through common analysis options.
-
-### Manual Setup
+### Running the Analysis
 1. Navigate to the v4 directory:
 ```bash
 cd Examples/ForwardDiff_Certification/v4
@@ -176,29 +170,19 @@ include("examples/plot_existing_tables.jl")
 plot_from_existing_tables("outputs/my_analysis", degrees=[3,4])
 ```
 
-### 4. Custom Analysis Workflow
+### 4. Running from Julia REPL
 ```julia
-# Step 1: Run analysis without plots (faster)
-subdomain_tables = run_v4_analysis([3,4,5,6], 40, 
-                                  output_dir="outputs/high_degree")
+# From the v4 directory
+include("run_v4_analysis.jl")
 
-# Step 2: Examine results
-println("Summary of results:")
-for (label, table) in subdomain_tables
-    avg_row = table[end, :]  # AVERAGE row
-    println("$label: d3=$(avg_row.d3), d4=$(avg_row.d4)")
-end
+# This runs the full analysis and returns results
+(subdomain_tables, refinement_metrics, all_min_refined_points) = ans
 
-# Step 3: Generate plots selectively
-include("src/V4Plotting.jl")
-using .V4Plotting
+# Examine specific subdomain results
+subdomain_tables["0000"]  # View table for subdomain 0000
 
-# Just the distance evolution plot
-fig = plot_critical_point_distance_evolution(
-    subdomain_tables, [3,4,5,6],
-    output_dir = "outputs/high_degree",
-    plot_all_points = false  # Only show averages
-)
+# Check refinement effectiveness
+refinement_metrics[4]  # Metrics for degree 4
 ```
 
 ## Understanding the Plots
@@ -258,31 +242,26 @@ Run all tests:
 julia test/run_all_tests.jl
 ```
 
-## Progress Log
+## Directory Structure
 
-### 2025-01-08
-- Created v4 directory structure
-- Implemented complete table generation pipeline
-- Added comprehensive test suite
-- Integrated with existing degree analysis
-- Tables show clear distance convergence per theoretical point
-- Fixed module loading issues (UndefVarError for Common4DDeuflhard)
-- Removed plotting dependencies to focus on table generation
-- Created minimal analysis function (`run_analysis_no_plots.jl`) without CairoMakie
-- Fixed project activation path to correctly point to Globtim root
-- Fixed Constructor GN parameter issue (moved to test_input)
-- Successfully generated tables showing distance improvement from d3 to d4
-- Tables now properly show theoretical points as rows with degree columns
-- **Added standalone V4 plotting module** (`V4Plotting.jl`)
-- **Integrated three key plots from by_degree**:
-  - L2-norm convergence with subdomain traces
-  - Distance convergence with subdomain traces  
-  - Critical point distance evolution (NEW)
-- **Created examples for plotting from existing tables**
-- **Plotting is optional** - controlled by `plot_results` parameter
-- **Added enhanced mode** with BFGS refined point analysis
-- **Removed axis labels** from all plots for cleaner appearance
-- **Color-coded plots**: Blue (theoretical→df_cheb), Green (refined distances), Red (minima convergence)
+```
+v4/
+├── run_v4_analysis.jl      # Main analysis script
+├── README.md               # This file
+├── src/                    # Core implementation modules
+│   ├── TheoreticalPointTables.jl
+│   ├── RefinedPointAnalysis.jl
+│   ├── V4Plotting.jl
+│   ├── V4PlottingEnhanced.jl
+│   ├── run_analysis_no_plots.jl
+│   └── run_analysis_with_refinement.jl
+├── test/                   # Test suite
+├── examples/               # Example scripts
+├── outputs/                # Analysis results
+└── archived_scripts/       # Previous versions and documentation
+    ├── docs/              # Planning documents
+    └── *.jl               # Old script versions
+```
 
 ## Troubleshooting
 
@@ -330,6 +309,11 @@ julia test/run_all_tests.jl
    - Run table generation without plots first
    - Check individual subdomain tables
    - Use `plot_all_points=false` for cleaner evolution plots
-## Note on Script Organization
+## Script Organization
 
-Previous versions of run scripts have been archived in `archived_scripts/` directory. The main run file is now `run_v4_analysis.jl` which includes all enhanced features with BFGS refinement.
+- **Main Script**: `run_v4_analysis.jl` - The enhanced V4 analysis with BFGS refinement
+- **Source Modules**: Located in `src/` for core functionality
+- **Tests**: Located in `test/` for validation
+- **Archives**: Previous versions and documentation in `archived_scripts/`
+
+All analysis should be run using the main `run_v4_analysis.jl` script, which provides the complete enhanced analysis pipeline.

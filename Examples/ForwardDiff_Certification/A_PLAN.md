@@ -9,5 +9,8 @@ We subdivide this domain even further by cutting it into 16 subdomains, each of 
 
 We run a routine relatively similar to the 2d case, we iteratively increase the degree of the polynomial approximant and we collect all the critical points we compute (by degree) by going over all the subdomains.
 
-What do we want in the return plots?
+The plots we have:
+_ convergence of polynomial approximant in L2-norm by degree `v4_l2_convergence.png`
+_ convergence of critical points of `w_d` towards the critical points of the original function `v4_distance_convergence` 
+
 _ the convergence curve for the critical points in each subdomain. 
