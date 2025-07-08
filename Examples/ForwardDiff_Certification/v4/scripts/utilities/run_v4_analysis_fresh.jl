@@ -4,7 +4,7 @@
 # This ensures the updated FunctionValueErrorSummary module is loaded
 
 # First, manually include the wrapper to get the function
-include("run_v4_analysis_wrapper.jl")
+include("../core/run_v4_analysis_wrapper.jl")
 
 # Parse any command line arguments
 degrees = length(ARGS) >= 1 ? parse.(Int, split(ARGS[1], ",")) : [3, 4]

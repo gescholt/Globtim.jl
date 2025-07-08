@@ -327,9 +327,31 @@ v4/
    - Use `plot_all_points=false` for cleaner evolution plots
 ## Script Organization
 
-- **Main Script**: `run_v4_analysis.jl` - The enhanced V4 analysis with BFGS refinement
-- **Source Modules**: Located in `src/` for core functionality
-- **Tests**: Located in `test/` for validation
-- **Archives**: Previous versions and documentation in `archived_scripts/`
+The run scripts are organized by purpose and usage frequency:
 
-All analysis should be run using the main `run_v4_analysis.jl` script, which provides the complete enhanced analysis pipeline.
+```
+v4/
+├── run_v4_analysis.jl              # Main entry point - Enhanced V4 analysis with BFGS refinement
+├── scripts/                        # Organized helper scripts
+│   ├── core/                       # Essential components
+│   │   ├── run_analysis_with_refinement.jl  # Core analysis engine
+│   │   └── run_v4_analysis_wrapper.jl       # Function interface for interactive use
+│   ├── utilities/                  # Specialized tools
+│   │   ├── run_v4_analysis_fresh.jl         # For module caching issues
+│   │   └── run_function_value_analysis_only.jl # Quick function value checks
+│   └── deprecated/                 # Scripts being phased out
+│       └── run_analysis_no_plots.jl # Superseded by run_analysis_with_refinement.jl
+├── src/                            # Core modules (no run scripts)
+├── test/                           # Test suites
+└── archived_scripts/               # Historical versions
+
+```
+
+### Usage Guidelines:
+
+1. **Primary Analysis**: Always use `run_v4_analysis.jl` as the main entry point
+2. **Interactive Use**: Load `scripts/core/run_v4_analysis_wrapper.jl` for function interface
+3. **Module Issues**: Use `scripts/utilities/run_v4_analysis_fresh.jl` if experiencing caching problems
+4. **Quick Checks**: Use `scripts/utilities/run_function_value_analysis_only.jl` for rapid function value analysis
+
+All production analysis should use the main `run_v4_analysis.jl` script, which provides the complete enhanced analysis pipeline.

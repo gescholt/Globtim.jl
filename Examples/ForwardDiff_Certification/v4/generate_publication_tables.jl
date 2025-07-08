@@ -33,7 +33,7 @@ using .Common4DDeuflhard
 include("../by_degree/src/TheoreticalPoints.jl")
 using .TheoreticalPoints: load_theoretical_4d_points_orthant
 
-include("src/run_analysis_with_refinement.jl")
+include("scripts/core/run_analysis_with_refinement.jl")
 using .Main: run_enhanced_analysis_with_refinement
 
 include("src/PublicationTablesSimple.jl")

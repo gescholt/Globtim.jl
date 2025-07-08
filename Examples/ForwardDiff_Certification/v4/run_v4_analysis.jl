@@ -40,7 +40,7 @@ include("../by_degree/src/TheoreticalPoints.jl")
 using .TheoreticalPoints: load_theoretical_4d_points_orthant
 
 # Analysis modules
-include("src/run_analysis_with_refinement.jl")
+include("scripts/core/run_analysis_with_refinement.jl")
 using .Main: run_enhanced_analysis_with_refinement
 
 # Refined point analysis
@@ -266,6 +266,12 @@ if !isempty(function_value_tables)
     
     # Save new summary table
     CSV.write(joinpath(output_dir, "function_value_error_summary.csv"), summary_table)
+    
+    # Save LaTeX version
+    latex_path = joinpath(output_dir, "function_value_error_summary.tex")
+    FunctionValueErrorSummary.save_latex_summary(summary_table, latex_path,
+                      caption="Function value errors for 4D Deuflhard composite function by polynomial degree",
+                      label="tab:deuflhard_4d_errors")
 end
 
 println("\n✅ Tables saved to: $output_dir")
