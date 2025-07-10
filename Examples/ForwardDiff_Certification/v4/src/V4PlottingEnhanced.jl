@@ -57,6 +57,9 @@ function plot_v4_l2_convergence(degrees::Vector{Int},
         if !isempty(l2_values)
             line = lines!(ax, valid_degrees, l2_values, 
                          linewidth=0.5, color=(:blue, 0.3), alpha=0.5)
+            # Add nodes at each degree for subdomain traces
+            scatter!(ax, valid_degrees, l2_values,
+                    markersize=4, color=(:blue, 0.3), alpha=0.5)
             if idx == 1
                 subdomain_line = line
             end
@@ -302,12 +305,22 @@ function plot_critical_point_distance_evolution(subdomain_tables::Dict{String, D
                            linewidth = linewidth,
                            alpha = alpha,
                            label = point_type)
+                    # Add nodes at each degree
+                    scatter!(ax, valid_degrees, distances,
+                            color = color,
+                            markersize = 8,
+                            alpha = alpha)
                     legend_added[point_type] = true
                 else
                     lines!(ax, valid_degrees, distances,
                            color = color,
                            linewidth = linewidth,
                            alpha = alpha)
+                    # Add nodes at each degree
+                    scatter!(ax, valid_degrees, distances,
+                            color = color,
+                            markersize = 8,
+                            alpha = alpha)
                 end
             end
         end
