@@ -418,6 +418,8 @@ export plot_convergence_analysis,
     plot_condition_numbers,
     plot_critical_eigenvalues,
     plot_all_eigenvalues,
-    plot_raw_vs_refined_eigenvalues
+    plot_raw_vs_refined_eigenvalues,
+    histogram_enhanced,
+    histogram_minimizers_only
 
 end
