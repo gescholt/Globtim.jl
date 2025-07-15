@@ -21,7 +21,9 @@ export define_lotka_volterra_model,
     log_L2_norm,
     L1_norm,
     L2_norm,
-    EllipseSupport
+    EllipseSupport,
+    define_simple_2D_model_locally_identifiable,
+    define_simple_2D_model_locally_identifiable_square
 
 function define_fitzhugh_nagumo_3D_model()
     @independent_variables t
@@ -95,6 +97,34 @@ function define_lotka_volterra_2D_model_v2()
     @named model = ODESystem(
         [D(x1) ~ a * x1 + b * x1 * x2,
             D(x2) ~ b * x1 * x2 + 0.1*x2],
+        t, states, params)
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
+function define_simple_2D_model_locally_identifiable()
+    @independent_variables t
+    @variables x1(t) y1(t)
+    @parameters a b
+    D = Differential(t)
+    params = [a, b]
+    states = [x1]
+    @named model = ODESystem(
+        [D(x1) ~ a * b * x1 + (a + b),],
+        t, states, params)
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
+function define_simple_2D_model_locally_identifiable_square()
+    @independent_variables t
+    @variables x1(t) y1(t)
+    @parameters a b
+    D = Differential(t)
+    params = [a, b]
+    states = [x1]
+    @named model = ODESystem(
+        [D(x1) ~ a*x1 + b^2,],
         t, states, params)
     outputs = [y1 ~ x1]
     return model, params, states, outputs

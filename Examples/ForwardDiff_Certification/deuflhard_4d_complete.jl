@@ -16,7 +16,8 @@
 # into a single, production-ready implementation.
 
 using Pkg
-Pkg.activate(joinpath(@__DIR__, "../../"))
+# Pkg.activate(joinpath(@__DIR__, "../../"))
+using Revise
 using Globtim
 using Statistics, Printf, CSV, LinearAlgebra, ForwardDiff, DataFrames, DynamicPolynomials, Optim
 import DataFrames: combine, groupby
