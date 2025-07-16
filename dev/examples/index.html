@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Examples · Globtim.jl Documentation</title><meta name="title" content="Examples · Globtim.jl Documentation"/><meta property="og:title" content="Examples · Globtim.jl Documentation"/><meta property="twitter:title" content="Examples · Globtim.jl Documentation"/><meta name="description" content="Documentation for Globtim.jl Documentation."/><meta property="og:description" content="Documentation for Globtim.jl Documentation."/><meta property="twitter:description" content="Documentation for Globtim.jl Documentation."/><meta property="og:url" content="https://gescholt.github.io/Globtim.jl/stable/examples/"/><meta property="twitter:url" content="https://gescholt.github.io/Globtim.jl/stable/examples/"/><link rel="canonical" href="https://gescholt.github.io/Globtim.jl/stable/examples/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Globtim.jl Documentation</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../core_algorithm/">Core Algorithm</a></li><li><a class="tocitem" href="../critical_point_analysis/">Critical Point Analysis</a></li><li class="is-active"><a class="tocitem" href>Examples</a><ul class="internal"><li><a class="tocitem" href="#Example-1:-Basic-Usage"><span>Example 1: Basic Usage</span></a></li><li><a class="tocitem" href="#Example-2:-Custom-Function"><span>Example 2: Custom Function</span></a></li><li><a class="tocitem" href="#Example-3:-Statistical-Analysis"><span>Example 3: Statistical Analysis</span></a></li><li><a class="tocitem" href="#Example-4:-High-Dimensional-Problem"><span>Example 4: High-Dimensional Problem</span></a></li><li><a class="tocitem" href="#Example-5:-Domain-Exploration"><span>Example 5: Domain Exploration</span></a></li><li><a class="tocitem" href="#Example-6:-Visualization"><span>Example 6: Visualization</span></a></li><li><a class="tocitem" href="#Example-7:-Comparing-Polynomial-Degrees"><span>Example 7: Comparing Polynomial Degrees</span></a></li><li><a class="tocitem" href="#Example-8:-Basin-Analysis"><span>Example 8: Basin Analysis</span></a></li></ul></li><li><a class="tocitem" href="../visualization/">Visualization</a></li><li><a class="tocitem" href="../api_reference/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gescholt/Globtim.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="github.com/gescholt/Globtim.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h1><p>This page provides complete working examples demonstrating various features of Globtim.jl.</p><h2 id="Example-1:-Basic-Usage"><a class="docs-heading-anchor" href="#Example-1:-Basic-Usage">Example 1: Basic Usage</a><a id="Example-1:-Basic-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Example-1:-Basic-Usage" title="Permalink"></a></h2><p>Finding all minima of the Deuflhard function:</p><pre><code class="language-julia hljs">using Globtim, DynamicPolynomials, DataFrames
+
+# Define the problem
+f = Deuflhard
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+
+# Polynomial approximation
+pol = Constructor(TR, 8)
+println(&quot;Approximation error: &quot;, pol.nrm)
+
+# Find critical points
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+df = process_crit_pts(solutions, f, TR)
+
+# Refine and classify
+df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+
+# Display results
+println(&quot;\\nUnique minima found:&quot;)
+for i in 1:nrow(df_min)
+    x1, x2 = df_min[i, :x1], df_min[i, :x2]
+    val = df_min[i, :value]
+    println(&quot;  Minimum $i: ($x1, $x2) with f = $val&quot;)
+end</code></pre><h2 id="Example-2:-Custom-Function"><a class="docs-heading-anchor" href="#Example-2:-Custom-Function">Example 2: Custom Function</a><a id="Example-2:-Custom-Function-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2:-Custom-Function" title="Permalink"></a></h2><p>Optimizing a user-defined function:</p><pre><code class="language-julia hljs"># Define custom objective
+function my_function(x)
+    return (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1*sin(10*x[1]*x[2])
+end
+
+# Set up problem
+TR = test_input(my_function, dim=2, center=[0.0, 0.0], sample_range=2.0)
+
+# Higher degree for complex function
+pol = Constructor(TR, 10)
+
+# Standard workflow
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, 2, 10, pol.coeffs)
+df = process_crit_pts(solutions, my_function, TR)
+df_enhanced, df_min = analyze_critical_points(my_function, df, TR)
+
+# Analyze critical point types
+types = unique(df_enhanced.critical_point_type)
+for t in types
+    count = sum(df_enhanced.critical_point_type .== t)
+    println(&quot;$t: $count points&quot;)
+end</code></pre><h2 id="Example-3:-Statistical-Analysis"><a class="docs-heading-anchor" href="#Example-3:-Statistical-Analysis">Example 3: Statistical Analysis</a><a id="Example-3:-Statistical-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Example-3:-Statistical-Analysis" title="Permalink"></a></h2><p>Generating comprehensive reports:</p><pre><code class="language-julia hljs"># Run analysis with tables
+df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
+    f, df, TR,
+    enable_hessian=true,
+    show_tables=true,
+    table_types=[:minimum, :saddle, :maximum]
+)
+
+# Access statistics
+println(&quot;\\nStatistical Summary:&quot;)
+println(&quot;Average condition number: &quot;, mean(df_enhanced.hessian_condition_number))
+println(&quot;Max gradient norm: &quot;, maximum(df_enhanced.gradient_norm))
+println(&quot;Convergence rate: &quot;, sum(df_enhanced.converged) / nrow(df_enhanced))
+
+# Export results
+write_tables_to_csv(tables, &quot;deuflhard_results.csv&quot;)
+write_tables_to_markdown(tables, &quot;deuflhard_results.md&quot;)</code></pre><h2 id="Example-4:-High-Dimensional-Problem"><a class="docs-heading-anchor" href="#Example-4:-High-Dimensional-Problem">Example 4: High-Dimensional Problem</a><a id="Example-4:-High-Dimensional-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#Example-4:-High-Dimensional-Problem" title="Permalink"></a></h2><p>Handling higher dimensions:</p><pre><code class="language-julia hljs"># 3D Rastringin function
+f = Rastringin
+TR = test_input(f, dim=3, center=[0.0, 0.0, 0.0], sample_range=5.12)
+
+# Use moderate degree for 3D
+pol = Constructor(TR, 6)
+
+# Find critical points
+@polyvar x[1:3]
+solutions = solve_polynomial_system(x, 3, 6, pol.coeffs)
+df = process_crit_pts(solutions, f, TR)
+
+# Refine without Hessian for speed
+df_enhanced, df_min = analyze_critical_points(
+    f, df, TR,
+    enable_hessian=false,  # Faster for high dimensions
+    verbose=true
+)
+
+println(&quot;Found $(nrow(df_min)) local minima in 3D&quot;)</code></pre><h2 id="Example-5:-Domain-Exploration"><a class="docs-heading-anchor" href="#Example-5:-Domain-Exploration">Example 5: Domain Exploration</a><a id="Example-5:-Domain-Exploration-1"></a><a class="docs-heading-anchor-permalink" href="#Example-5:-Domain-Exploration" title="Permalink"></a></h2><p>Testing different domain sizes:</p><pre><code class="language-julia hljs">f = HolderTable  # Has 4 global minima
+
+# Try different domain sizes
+for r in [8.0, 10.0, 12.0]
+    TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)
+    pol = Constructor(TR, 8)
+    
+    @polyvar x[1:2]
+    solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+    df = process_crit_pts(solutions, f, TR)
+    df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
+    
+    println(&quot;Domain ±$r: found $(nrow(df_min)) minima&quot;)
+end</code></pre><h2 id="Example-6:-Visualization"><a class="docs-heading-anchor" href="#Example-6:-Visualization">Example 6: Visualization</a><a id="Example-6:-Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Example-6:-Visualization" title="Permalink"></a></h2><p>Creating plots (requires CairoMakie):</p><pre><code class="language-julia hljs">using CairoMakie
+
+# Run standard analysis
+f = Deuflhard
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+pol = Constructor(TR, 8)
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+df = process_crit_pts(solutions, f, TR)
+df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+
+# Create visualizations
+fig1 = plot_hessian_norms(df_enhanced)
+save(&quot;hessian_norms.png&quot;, fig1)
+
+fig2 = plot_condition_numbers(df_enhanced)
+save(&quot;condition_numbers.png&quot;, fig2)
+
+fig3 = plot_critical_eigenvalues(df_enhanced)
+save(&quot;critical_eigenvalues.png&quot;, fig3)
+
+fig4 = plot_all_eigenvalues(f, df_enhanced, sort_by=:magnitude)
+save(&quot;all_eigenvalues.png&quot;, fig4)</code></pre><h2 id="Example-7:-Comparing-Polynomial-Degrees"><a class="docs-heading-anchor" href="#Example-7:-Comparing-Polynomial-Degrees">Example 7: Comparing Polynomial Degrees</a><a id="Example-7:-Comparing-Polynomial-Degrees-1"></a><a class="docs-heading-anchor-permalink" href="#Example-7:-Comparing-Polynomial-Degrees" title="Permalink"></a></h2><p>Analyzing approximation quality:</p><pre><code class="language-julia hljs">f = Branin
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=15.0)
+
+results = DataFrame(
+    degree = Int[],
+    l2_error = Float64[],
+    n_critical = Int[],
+    n_minima = Int[]
+)
+
+for deg in [4, 6, 8, 10]
+    pol = Constructor(TR, deg)
+    @polyvar x[1:2]
+    solutions = solve_polynomial_system(x, 2, deg, pol.coeffs)
+    df = process_crit_pts(solutions, f, TR)
+    df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
+    
+    push!(results, (deg, pol.nrm, nrow(df), nrow(df_min)))
+end
+
+println(results)</code></pre><h2 id="Example-8:-Basin-Analysis"><a class="docs-heading-anchor" href="#Example-8:-Basin-Analysis">Example 8: Basin Analysis</a><a id="Example-8:-Basin-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Example-8:-Basin-Analysis" title="Permalink"></a></h2><p>Understanding convergence basins:</p><pre><code class="language-julia hljs"># Function with interesting basin structure
+f(x) = (x[1]^2 + x[2]^2 - 1)^2 + 0.1*(x[1]^2 + x[2]^2)
+
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+pol = Constructor(TR, 8)
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+df = process_crit_pts(solutions, f, TR)
+df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+
+# Analyze basins
+println(&quot;\\nBasin Analysis:&quot;)
+for i in 1:nrow(df_min)
+    basin_size = df_min[i, :basin_points]
+    avg_steps = df_min[i, :average_convergence_steps]
+    coverage = df_min[i, :region_coverage_count]
+    
+    println(&quot;Minimum $i:&quot;)
+    println(&quot;  Basin size: $basin_size points&quot;)
+    println(&quot;  Average convergence: $avg_steps steps&quot;)
+    println(&quot;  Spatial coverage: $coverage regions&quot;)
+end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../critical_point_analysis/">« Critical Point Analysis</a><a class="docs-footer-nextpage" href="../visualization/">Visualization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Wednesday 16 July 2025 21:52">Wednesday 16 July 2025</span>. Using Julia version 1.11.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
