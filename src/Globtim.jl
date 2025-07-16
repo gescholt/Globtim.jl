@@ -17,7 +17,7 @@ using Optim
 
 @enum PrecisionType Float64Precision RationalPrecision BigFloatPrecision BigIntPrecision
 
-import HomotopyContinuation: solve, real_solutions, System, solutions
+import HomotopyContinuation: solve, real_solutions, System
 
 const _TO = TimerOutputs.TimerOutput()
 

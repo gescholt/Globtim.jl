@@ -1,0 +1,1 @@
+- To push to the public version, push main branch to github
