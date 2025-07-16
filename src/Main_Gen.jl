@@ -134,6 +134,54 @@ TimerOutputs.@timeit _TO function MainGenerate(
     )
 end
 
+"""
+    Constructor(T::test_input, degree; kwargs...) -> ApproxPoly
+
+Construct a polynomial approximation of the objective function using discrete least squares.
+
+This is the main entry point for creating polynomial approximations in Globtim. The function
+samples the objective on a tensorized grid of Chebyshev or Legendre nodes and fits a 
+polynomial of the specified degree.
+
+# Arguments
+- `T::test_input`: Test input specification containing the objective function and domain
+- `degree::Int`: Maximum degree of the polynomial approximation
+
+# Keyword Arguments
+- `verbose::Int=0`: Verbosity level (0=silent, 1=basic info, 2=detailed)
+- `basis::Symbol=:chebyshev`: Basis type (`:chebyshev` or `:legendre`)
+- `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
+- `normalized::Bool=false`: Whether to normalize the polynomial
+- `power_of_two_denom::Bool=false`: Use power-of-two denominators for rationals
+
+# Returns
+- `ApproxPoly`: Polynomial approximation object containing:
+  - `coeffs`: Coefficient matrix
+  - `nrm`: L2-norm approximation error over the domain
+  - `scale_factor`: Scaling factors used for the domain
+  - Additional metadata about the approximation
+
+# Notes
+- The approximation error (`pol.nrm`) provides a measure of approximation quality
+- Higher degrees generally reduce approximation error but increase computational cost
+- Chebyshev basis is recommended for most problems due to better conditioning
+- The function automatically handles both uniform and non-uniform domain scaling
+
+# Examples
+```julia
+# Basic usage with default Chebyshev basis
+f = Deuflhard
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+pol = Constructor(TR, 8)
+println("L2-norm error: ", pol.nrm)
+
+# Using Legendre basis with higher verbosity
+pol = Constructor(TR, 10, basis=:legendre, verbose=1)
+
+# High precision approximation
+pol = Constructor(TR, 12, normalized=true)
+```
+"""
 # Update the Constructor function to pass through the vector scale_factor
 TimerOutputs.@timeit _TO function Constructor(
     T::test_input,

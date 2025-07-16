@@ -1,29 +1,55 @@
 """
-    solve_polynomial_system(
-        x,
-        n,
-        d,
-        coeffs;
-        basis = :chebyshev,
-        precision::PrecisionType = RationalPrecision,
-        normalized::Bool = true,
-        power_of_two_denom::Bool = false
-    )::Vector{Vector{Float64}}
+    solve_polynomial_system(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}} or Tuple
 
-Solve a polynomial system using HomotopyContinuation.jl.
+Find all critical points of a polynomial by solving ∇p(x) = 0 using HomotopyContinuation.jl.
+
+This function constructs the gradient system of the polynomial approximation and solves it
+to find all stationary points. It handles both Chebyshev and Legendre basis polynomials.
 
 # Arguments
-- `x`: Variables
-- `n`: Number of variables
-- `d`: Degree
-- `coeffs`: Coefficients
-- `basis`: Type of basis (:chebyshev or :legendre)
-- `precision`: Precision type for coefficients
-- `normalized`: Whether to use normalized basis polynomials
-- `power_of_two_denom`: For rational precision, ensures denominators are powers of 2
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `n::Int`: Number of variables (dimension)
+- `d::Int`: Polynomial degree
+- `coeffs`: Coefficient matrix from polynomial approximation
+
+# Keyword Arguments
+- `basis::Symbol=:chebyshev`: Basis type (`:chebyshev` or `:legendre`)
+- `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
+- `normalized::Bool=true`: Whether to use normalized basis polynomials
+- `power_of_two_denom::Bool=false`: For rational precision, ensures denominators are powers of 2
+- `return_system::Bool=false`: If true, also return the polynomial system information
 
 # Returns
-- Vector of solution vectors
+- If `return_system=false`: `Vector{Vector{Float64}}` - Real solutions within [-1,1]ⁿ
+- If `return_system=true`: `Tuple` containing:
+  - Solutions vector
+  - Tuple of (polynomial system, HC system, total solution count)
+
+# Notes
+- Only returns real solutions within the domain [-1,1]ⁿ
+- Complex solutions and solutions outside the domain are filtered out
+- The number of solutions can vary significantly based on the polynomial degree
+
+# Examples
+```julia
+using DynamicPolynomials
+
+# Basic usage
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+println("Found $(length(solutions)) critical points")
+
+# With system information for debugging
+solutions, (polysys, hc_sys, total) = solve_polynomial_system(
+    x, 2, 8, pol.coeffs, 
+    return_system=true
+)
+println("Total solutions (including complex): $total")
+println("Real solutions in domain: $(length(solutions))")
+
+# Using Legendre basis
+solutions = solve_polynomial_system(x, 2, 6, pol.coeffs, basis=:legendre)
+```
 """
 TimerOutputs.@timeit _TO function solve_polynomial_system(
     x,

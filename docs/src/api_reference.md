@@ -2,104 +2,103 @@
 
 ## Main Functions
 
-```@docs
-test_input
-Constructor
-solve_polynomial_system
-process_crit_pts
-analyze_critical_points
-analyze_critical_points_with_tables
-```
+### Problem Setup
 
-## Types and Structures
+- **`test_input`** - Create test input specification for optimization problems
+- **`Constructor`** - Build polynomial approximation of objective function
+- **`solve_polynomial_system`** - Find critical points by solving ∇p(x) = 0
+- **`process_crit_pts`** - Process and filter critical point solutions
 
-```@docs
-test_input
-BFGSConfig
-BFGSResult
-```
+### Analysis Functions
+
+- **`analyze_critical_points`** - Comprehensive critical point analysis with BFGS refinement
+- **`analyze_critical_points_with_tables`** - Enhanced analysis with statistical tables
 
 ## Polynomial Approximation
 
-```@docs
-Constructor
-chebyshev_extrema
-chebyshev_polys
-grid_sample
-sample_objective_on_grid
-```
+- **`chebyshev_extrema`** - Generate Chebyshev extrema points
+- **`chebyshev_polys`** - Evaluate Chebyshev polynomials
+- **`grid_sample`** - Create sampling grid for polynomial fitting
+- **`sample_objective_on_grid`** - Evaluate objective function on grid
 
 ## Critical Point Analysis
 
-```@docs
-analyze_critical_points
-compute_hessians
-classify_critical_points
-store_all_eigenvalues
-extract_critical_eigenvalues
-compute_hessian_norms
-compute_eigenvalue_stats
-```
+### Core Analysis
+- **`compute_hessians`** - Compute Hessian matrices at critical points
+- **`classify_critical_points`** - Classify points based on eigenvalues
+- **`store_all_eigenvalues`** - Store complete eigenvalue information
+- **`extract_critical_eigenvalues`** - Extract key eigenvalues for minima/maxima
+
+### Statistical Measures
+- **`compute_hessian_norms`** - Calculate Frobenius norms of Hessians
+- **`compute_eigenvalue_stats`** - Compute eigenvalue statistics
+- **`analyze_basins`** - Analyze basins of attraction
 
 ## BFGS Refinement
 
-```@docs
-enhanced_bfgs_refinement
-refine_with_enhanced_bfgs
-determine_convergence_reason
-```
-
-## Statistical Analysis
-
-```@docs
-analyze_critical_points_with_tables
-create_summary_statistics
-create_summary_tables
-compute_enhanced_statistics
-```
+- **`enhanced_bfgs_refinement`** - Advanced BFGS with hyperparameter tracking
+- **`refine_with_enhanced_bfgs`** - Apply BFGS refinement to DataFrame
+- **`determine_convergence_reason`** - Analyze optimization convergence
 
 ## Utility Functions
 
-```@docs
-points_in_hypercube
-points_in_range
-assign_spatial_regions
-cluster_function_values
-compute_nearest_neighbors
-compute_gradients
-analyze_basins
-```
+### Domain Handling
+- **`points_in_hypercube`** - Check if points lie within domain
+- **`points_in_range`** - Filter points by function value range
+
+### Spatial Analysis
+- **`assign_spatial_regions`** - Assign region IDs for spatial statistics
+- **`cluster_function_values`** - Cluster points by function values
+- **`compute_nearest_neighbors`** - Find nearest neighbor distances
+- **`compute_gradients`** - Compute gradient norms
 
 ## Visualization Functions
 
-The following functions are available when CairoMakie or GLMakie are loaded:
+Available when CairoMakie or GLMakie are loaded:
 
-```@docs
-plot_hessian_norms
-plot_condition_numbers
-plot_critical_eigenvalues
-plot_all_eigenvalues
-plot_raw_vs_refined_eigenvalues
-plot_eigenvalue_differences
-plot_eigenvalue_movements
-```
+### Basic Plots
+- **`plot_hessian_norms`** - Scatter plot of Hessian norms
+- **`plot_condition_numbers`** - Log-scale condition number visualization
+- **`plot_critical_eigenvalues`** - Critical eigenvalue validation plots
+
+### Advanced Visualizations
+- **`plot_all_eigenvalues`** - Complete eigenvalue spectrum visualization
+- **`plot_raw_vs_refined_eigenvalues`** - Compare eigenvalues before/after refinement
 
 ## Built-in Test Functions
 
-```@docs
-Deuflhard
-Rastringin
-HolderTable
-tref_3d
-Beale
-Rosenbrock
-Branin
-```
+### 2D Functions
+- **`Deuflhard`** - Challenging function with multiple minima
+- **`HolderTable`** - Four symmetric global minima
+- **`Ackley`** - Classic multimodal benchmark
+- **`camel`** - Six-hump camel function
+- **`shubert`** - Highly multimodal function
+
+### 3D Functions
+- **`tref_3d`** - Highly oscillatory 3D function
+
+### n-Dimensional Functions
+- **`Rastringin`** - Classic multimodal benchmark (scalable)
+- **`alpine1`**, **`alpine2`** - Alpine functions
+- **`Csendes`** - Smooth function with single minimum
 
 ## Export Functions
 
-```@docs
-write_tables_to_csv
-write_tables_to_latex
-write_tables_to_markdown
+- **`write_tables_to_csv`** - Export tables to CSV format
+- **`write_tables_to_latex`** - Export tables to LaTeX format
+- **`write_tables_to_markdown`** - Export tables to Markdown format
+
+## Types and Structures
+
+- **`test_input`** - Input specification type
+- **`BFGSConfig`** - BFGS configuration parameters
+- **`BFGSResult`** - BFGS optimization results
+- **`ApproxPoly`** - Polynomial approximation type
+
+---
+
+For detailed function documentation with examples, use the Julia help system:
+```julia
+julia> ?test_input
+julia> ?analyze_critical_points
 ```
