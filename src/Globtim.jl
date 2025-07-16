@@ -115,9 +115,12 @@ include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("msolve_system.jl") #polynomial system solving with Msolve.
 include("hom_solve.jl") #polynomial system solving with homotopy Continuation. 
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
+include("data_structures.jl") #Enhanced data structures for multi-tolerance analysis
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
 include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
+include("subdomain_management.jl") #4D subdomain decomposition management
+include("multi_tolerance_analysis.jl") #Multi-tolerance execution framework
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
@@ -132,4 +135,19 @@ export compute_hessians, classify_critical_points, store_all_eigenvalues,
 export analyze_critical_points_with_tables, display_statistical_table, export_analysis_tables,
        create_statistical_summary, quick_table_preview, compute_type_specific_statistics,
        render_table, render_console_table, render_comparative_table
+
+# Enhanced data structures
+export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
+
+# Subdomain management functions
+export generate_4d_orthant_centers, create_orthant_test_inputs, orthant_id_to_signs,
+       signs_to_orthant_id, point_to_orthant_id, filter_points_by_orthant,
+       merge_orthant_results, analyze_orthant_coverage, compute_orthant_statistics
+
+# Multi-tolerance analysis functions
+export execute_multi_tolerance_analysis, execute_single_tolerance_analysis,
+       deuflhard_4d_composite
+
+# Enhanced BFGS functions
+export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
 end
