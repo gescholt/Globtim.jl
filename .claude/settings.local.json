@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__executeCode",
+      "Bash(julia:*)",
+      "Bash(timeout 120 julia:*)",
+      "Bash(rg:*)",
+      "Bash(git add:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(rm:*)",
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(git pull:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(git rm:*)",
+      "Bash(ls:*)",
+      "Bash(git push:*)",
+      "Bash(true)",
+      "Bash(timeout:*)",
+      "Bash(tree:*)",
+      "Bash(chmod:*)",
+      "Bash(./archive_files.sh)",
+      "Bash(./migrate.sh)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "Bash(touch:*)",
+      "Bash(git branch:*)",
+      "Bash(echo:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git merge:*)",
+      "Bash(git tag:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": false
+}
