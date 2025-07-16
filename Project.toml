@@ -1,6 +1,6 @@
 name = "Globtim"
 uuid = "00da9514-6261-47e9-8848-33640cb1e528"
-license = "GNU GENERAL PUBLIC LICENSE"
+license = "GPL-3.0"
 authors = ["Georgy Scholten <scholtengeorgy@gmail.com>"]
 version = "1.1.0"
 
@@ -40,8 +40,26 @@ GlobtimGLMakieExt = "GLMakie"
 GlobtimCairoMakieExt = "CairoMakie"
 
 [compat]
-Clustering = "0.15.8"
-Makie = "0.20"
+CSV = "0.10"
+Clustering = "0.15"
+Colors = "0.12, 0.13"
+DataFrames = "1.0"
+DataStructures = "0.18"
+Distributions = "0.25"
+DynamicPolynomials = "0.5, 0.6"
+ForwardDiff = "0.10"
+GraphViz = "0.2"
+HomotopyContinuation = "2.0"
+IterTools = "1.0"
+LinearSolve = "2.0"
+Makie = "0.20, 0.21"
+Optim = "1.0"
+Parameters = "0.12"
+ProgressLogging = "0.1"
+SetRounding = "0.2"
+SpecialFunctions = "2.0"
+StaticArrays = "1.0"
+TimerOutputs = "0.5"
 julia = "1.11"
 
 [extras]
