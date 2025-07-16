@@ -121,4 +121,6 @@ using ProgressLogging
         end
     end
 end
-       
+
+# Include ForwardDiff integration tests
+include("test_forwarddiff_integration.jl")
