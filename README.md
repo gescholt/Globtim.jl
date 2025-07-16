@@ -35,7 +35,7 @@ df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
 ### Core Algorithm
 1. **Sample**: Function evaluation on tensorized Chebyshev/Legendre grids
 2. **Approximate**: Polynomial construction via discrete least squares
-3. **Solve**: Critical point finding using HomotopyContinuation.jl or Msolve
+3. **Solve**: Critical point finding using [HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/) or [Msolve](https://msolve.lip6.fr/)
 
 ### NEW: Hessian-Based Critical Point Classification
 The enhanced `analyze_critical_points` function now provides:
@@ -83,7 +83,7 @@ plot_all_eigenvalues(f, df_enhanced)               # Complete eigenvalue spectru
 ## 📊 Project Status
 
 ### ✅ Version 1.1.0 Features (Stable)
-- **Core Algorithm**: Type-stable polynomial approximation with HomotopyContinuation.jl and Msolve integration
+- **Core Algorithm**: Type-stable polynomial approximation with [HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/) and [Msolve](https://msolve.lip6.fr/) integration
 - **Hessian Analysis**: Complete eigenvalue-based classification of critical points with numerical validation
 - **Statistical Tables**: ASCII table generation with export to CSV, LaTeX, and Markdown formats
 - **Enhanced Optimization**: Adaptive BFGS refinement with convergence diagnostics
