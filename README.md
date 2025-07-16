@@ -16,7 +16,7 @@ f = Deuflhard  # Built-in test function
 TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 
 # Step 1: Polynomial approximation and critical point finding
-pol = Constructor(TR, 8)  # Degree 8 approximation
+pol = Constructor(TR, 8)  # Degree 8 approximation (pol.nrm contains L2-norm error)
 @polyvar x[1:2]
 solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
 df = process_crit_pts(solutions, f, TR)
@@ -34,7 +34,7 @@ df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
 
 ### Core Algorithm
 1. **Sample**: Function evaluation on tensorized Chebyshev/Legendre grids
-2. **Approximate**: Polynomial construction via discrete least squares
+2. **Approximate**: Polynomial construction via discrete least squares (returns L2-norm approximation error)
 3. **Solve**: Critical point finding using [HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/) or [Msolve](https://msolve.lip6.fr/)
 
 ### NEW: Hessian-Based Critical Point Classification
@@ -49,12 +49,26 @@ The enhanced `analyze_critical_points` function now provides:
 - **Enhanced Refinement**: Improved BFGS optimization with hyperparameter tracking and convergence analysis
 
 ### NEW: Statistical Analysis and Reporting
-The `analyze_critical_points_with_tables` function adds:
-- **ASCII Tables**: Formatted tables for each critical point type with key statistics
-- **Comparative Analysis**: Side-by-side comparison of minima, maxima, and saddle points
-- **Export Capabilities**: Tables can be exported to CSV, LaTeX, or Markdown formats
-- **Statistical Summaries**: Mean, std, min/max values for function values, eigenvalues, and condition numbers
-- **Basin of Attraction Analysis**: For each minimum, tracks convergence statistics and spatial coverage
+The `analyze_critical_points_with_tables` function provides detailed metrics:
+
+**Key Statistics Computed:**
+- **L2-norm of polynomial approximation**: Measures the approximation quality over the domain
+- **Distance metrics between critical points**: 
+  - `point_improvement`: ||x_refined - x_initial|| (distance from polynomial critical point to refined point)
+  - `nearest_neighbor_dist`: Minimum distance to other critical points
+  - `distance_to_expected`: Distance to known global minima (when provided)
+- **Convergence quality indicators**:
+  - `gradient_norm`: ||∇f|| at critical points (should be ≈ 0 for true critical points)
+  - `value_improvement`: |f(x_refined) - f(x_initial)| (function value refinement)
+  - `converged`: Boolean indicating successful BFGS convergence within domain
+- **Numerical stability metrics**:
+  - `hessian_condition_number`: κ(H) for assessing numerical reliability
+  - Basin statistics: How many initial points converge to each minimum
+
+**Output Formats:**
+- ASCII tables with all metrics organized by critical point type
+- Export to CSV, LaTeX, or Markdown for publication
+- Statistical summaries (mean, std, min/max) for each metric category
 
 ### Visualization (Extension-Based)
 ```julia
@@ -160,11 +174,11 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 ## 🤝 Contributors
 
 **Authors**
-- Georgy Scholten (Creator and Lead Developer)
+- Georgy Scholten 
 - Claude (Anthropic) [Hessian analysis, statistical tables, enhanced visualization features]
 
 **Contributors**
-- Alexander Demin [memory usage optimization]
+- Alexander Demin 
 
 ## 📄 License
 
