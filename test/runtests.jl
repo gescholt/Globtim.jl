@@ -124,3 +124,6 @@ end
 
 # Include ForwardDiff integration tests
 include("test_forwarddiff_integration.jl")
+
+# Include function value error analysis tests
+include("test_function_value_analysis.jl")
