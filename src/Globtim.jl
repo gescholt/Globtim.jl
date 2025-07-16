@@ -121,6 +121,7 @@ include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classifica
 include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
 include("subdomain_management.jl") #4D subdomain decomposition management
 include("multi_tolerance_analysis.jl") #Multi-tolerance execution framework
+include("function_value_analysis.jl") #Function value error analysis
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
@@ -153,4 +154,11 @@ export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergenc
 
 # Additional refine.jl functions
 export compute_gradients, analyze_basins
+
+# Function value error analysis
+export FunctionValueError, ErrorMetrics,
+       evaluate_function_values, compute_function_value_errors,
+       compute_error_metrics, analyze_errors_by_type,
+       create_error_analysis_dataframe, convergence_analysis,
+       integrate_with_bfgs_results
 end
