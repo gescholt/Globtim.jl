@@ -883,3 +883,6 @@ end
 
 # Export enhanced BFGS functions
 export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
+
+# Export functions used by other modules
+export compute_gradients, analyze_basins

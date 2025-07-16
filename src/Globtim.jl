@@ -150,4 +150,7 @@ export execute_multi_tolerance_analysis, execute_single_tolerance_analysis,
 
 # Enhanced BFGS functions
 export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
+
+# Additional refine.jl functions
+export compute_gradients, analyze_basins
 end
