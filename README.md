@@ -138,6 +138,29 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 println("Found $(nrow(df_min)) unique local minima")
 ```
 
+### Verification with ForwardDiff
+```julia
+using ForwardDiff
+
+# Verify critical points by checking gradient norms
+for row in eachrow(df_enhanced)
+    x = collect(row[:, r"x_"])  # Extract coordinates
+    grad_norm = norm(ForwardDiff.gradient(f, x))
+    println("Point $(row.unique_id): ||∇f|| = $(grad_norm)")
+    
+    # Check Hessian eigenvalues for classification
+    H = ForwardDiff.hessian(f, x)
+    eigenvals = eigvals(H)
+    if all(eigenvals .> 0)
+        println("  → Confirmed minimum (all eigenvalues positive)")
+    elseif all(eigenvals .< 0)
+        println("  → Confirmed maximum (all eigenvalues negative)")
+    else
+        println("  → Confirmed saddle point (mixed eigenvalues)")
+    end
+end
+```
+
 ### Statistical Analysis
 ```julia
 # Generate comprehensive statistical tables
@@ -170,6 +193,7 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 
 ## 📖 Documentation
 
+- **Official Documentation**: [https://gescholt.github.io/Globtim.jl/stable/](https://gescholt.github.io/Globtim.jl/stable/)
 - **Examples**: [Examples/Notebooks/](Examples/Notebooks/) - Jupyter notebook demonstrations
 - **API Documentation**: Available via `?` in Julia REPL
 - **Source Code**: [GitHub Repository](https://github.com/gescholt/globtim.jl)
