@@ -34,21 +34,22 @@ to find all stationary points. It handles both Chebyshev and Legendre basis poly
 ```julia
 using DynamicPolynomials
 
-# Basic usage
+# Basic usage (assuming pol is an ApproxPoly object)
 @polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-println("Found $(length(solutions)) critical points")
+# coeffs = ... # coefficient matrix from polynomial approximation
+# crit_pts = solve_polynomial_system(x, 2, 8, coeffs)
+# println("Found \$(length(crit_pts)) critical points")
 
 # With system information for debugging
-solutions, (polysys, hc_sys, total) = solve_polynomial_system(
-    x, 2, 8, pol.coeffs, 
-    return_system=true
-)
-println("Total solutions (including complex): $total")
-println("Real solutions in domain: $(length(solutions))")
+# crit_pts, (polysys, hc_sys, total) = solve_polynomial_system(
+#     x, 2, 8, coeffs, 
+#     return_system=true
+# )
+# println("Total solutions (including complex): \$total")
+# println("Real solutions in domain: \$(length(crit_pts))")
 
 # Using Legendre basis
-solutions = solve_polynomial_system(x, 2, 6, pol.coeffs, basis=:legendre)
+# crit_pts = solve_polynomial_system(x, 2, 6, coeffs, basis=:legendre)
 ```
 """
 TimerOutputs.@timeit _TO function solve_polynomial_system(

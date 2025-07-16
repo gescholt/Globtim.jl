@@ -66,11 +66,11 @@ function execute_single_tolerance_analysis(f::Function, tolerance::Float64,
     # Solve polynomial system
     verbose && @info "Solving polynomial system"
     @polyvar x[1:4]
-    solutions = solve_polynomial_system(x, 4, actual_degree, pol.coeffs)
+    poly_solutions = solve_polynomial_system(x, 4, actual_degree, pol.coeffs)
     
     # Process critical points
-    verbose && @info "Processing critical points" n_solutions=length(solutions)
-    df = process_crit_pts(solutions, f, TR)
+    verbose && @info "Processing critical points" n_solutions=length(poly_solutions)
+    df = process_crit_pts(poly_solutions, f, TR)
     
     # Apply outlier filtering
     outlier_count = 0
