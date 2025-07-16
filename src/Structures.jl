@@ -226,6 +226,48 @@ struct test_input
     degree_max::Union{Int,Nothing}
     objective::Function
 
+    """
+        test_input(f::Function; kwargs...) -> test_input
+
+    Construct a test_input object with the given objective function and parameters.
+
+    # Arguments
+    - `f::Function`: The objective function to optimize
+
+    # Keyword Arguments
+    - `dim::Int=2`: Problem dimension
+    - `center::AbstractVector{<:Real}=fill(0.0, dim)`: Center point of search region
+    - `GN::Union{Int,Nothing}=nothing`: Grid size (optional)
+    - `alpha::Union{Real,Nothing}=0.1`: First precision parameter
+    - `delta::Union{Real,Nothing}=0.5`: Second precision parameter
+    - `tolerance::Union{Real,Nothing}=2e-3`: Convergence tolerance
+    - `sample_range::Union{Real,AbstractVector{<:Real},Nothing}=1.0`: Sampling radius around center (scalar or per dimension)
+    - `reduce_samples::Union{Real,Nothing}=1.0`: Sample reduction factor
+    - `degree_max::Int=6`: Maximum polynomial degree
+    - `model::Union{Nothing,Any}=nothing`: Optional model parameter passed to objective function
+    - `outputs::Union{Nothing,AbstractVector{<:Real}}=nothing`: Optional measured data passed to objective function
+
+    # Returns
+    - `test_input`: A new test_input struct containing the problem specification
+
+    # Notes
+    - If both `alpha` and `delta` are provided, they are combined into a precision tuple
+    - The `sample_range` can be a scalar (applied to all dimensions) or a vector (one value per dimension)
+    - If `model` and/or `outputs` are provided, the objective function is wrapped to pass these as keyword arguments
+    - All numeric parameters are converted to Float64 for consistency
+
+    # Examples
+    ```julia
+    # Basic usage with default parameters
+    T = test_input(x -> sum(x.^2))
+
+    # Custom parameters with higher dimension
+    T = test_input(rosenbrock, dim=10, center=ones(10), tolerance=1e-4)
+
+    # With model and data for parameter estimation
+    T = test_input(loss_function, model=my_model, outputs=measured_data)
+    ```
+    """
     TimerOutputs.@timeit _TO function test_input(
         f::Function;
         dim::Int=2,

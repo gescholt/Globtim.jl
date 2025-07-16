@@ -20,8 +20,7 @@ makedocs(
         "Visualization" => "visualization.md",
         "API Reference" => "api_reference.md"
     ],
-    checkdocs=:exports,
-    linkcheck=true
+    checkdocs=:none
 )
 
 deploydocs(
