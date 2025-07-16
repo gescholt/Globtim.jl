@@ -147,13 +147,13 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 
 ## 📖 Documentation
 
-- **Complete Guide**: [CLAUDE.md](CLAUDE.md) - Comprehensive AI assistant development guide
-- **Certification Examples**: [Examples/ForwardDiff_Certification/](Examples/ForwardDiff_Certification/) - Phase 2/3 validation suite
-- **Jupyter Notebooks**: [Examples/Notebooks/](Examples/Notebooks/) - Interactive demonstrations
+- **Examples**: [Examples/Notebooks/](Examples/Notebooks/) - Jupyter notebook demonstrations
+- **API Documentation**: Available via `?` in Julia REPL
+- **Source Code**: [GitHub Repository](https://github.com/gescholt/globtim.jl)
 
 ## 🤝 Contributing
 
-This package is in active development. See [CLAUDE.md](CLAUDE.md) for detailed development guidelines and AI assistant instructions.
+Contributions are welcome! Please submit issues and pull requests on GitHub.
 
 ## 📄 License
 

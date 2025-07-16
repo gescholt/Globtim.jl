@@ -1,3 +1,0 @@
-subdomain,degree,point_type,n_theoretical,n_computed,n_matched,avg_f_theoretical,avg_f_computed,min_f_theoretical,min_f_computed,avg_relative_error,max_relative_error,median_relative_error
-1111,4,saddle,3,1,0,0.37805971499305396,NaN,0.28354478624479046,NaN,NaN,NaN,NaN
-1111,4,min,1,1,1,6.1065722673158524e-27,0.026266094904533407,6.1065722673158524e-27,0.026266094904533407,0.026266094904533407,0.026266094904533407,0.026266094904533407
