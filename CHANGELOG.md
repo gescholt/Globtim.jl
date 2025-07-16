@@ -5,13 +5,13 @@ All notable changes to Globtim.jl will be documented in this file.
 ## [1.1.0] - 2025-01-16
 
 ### Added
-- **Phase 2: Hessian-Based Critical Point Classification**
+- **Hessian-Based Critical Point Classification**
   - Automatic classification of critical points (minimum, maximum, saddle, degenerate)
   - Complete eigenvalue analysis with numerical validation
   - ForwardDiff.jl integration for robust Hessian computation
   - New visualization functions for Hessian analysis
 
-- **Phase 3: Enhanced Statistical Analysis**
+- **Enhanced Statistical Analysis for Critical Points**
   - Publication-quality ASCII tables for critical point statistics
   - Comprehensive statistical summaries by point type
   - Export capabilities for documentation and reporting

@@ -273,13 +273,13 @@ end
 """
     analyze_critical_points(f::Function, df::DataFrame, TR::test_input; kwargs...)
 
-Comprehensive critical point analysis with Phase 1 enhanced statistics and optional Phase 2 Hessian-based classification.
+Comprehensive critical point analysis with enhanced statistics and optional Hessian-based classification.
 
 This function performs detailed analysis of critical points found by polynomial approximation, including:
 - BFGS refinement of critical points
 - Clustering and proximity analysis
-- Enhanced statistical measures (Phase 1)
-- Optional Hessian-based classification and eigenvalue analysis (Phase 2)
+- Enhanced statistical measures
+- Optional Hessian-based classification and eigenvalue analysis
 
 # Arguments
 - `f::Function`: The objective function to analyze
@@ -290,7 +290,7 @@ This function performs detailed analysis of critical points found by polynomial 
 - `tol_dist=0.025`: Distance tolerance for clustering critical points
 - `verbose=true`: Enable detailed progress output
 - `max_iters_in_optim=50`: Maximum iterations for BFGS optimization
-- `enable_hessian=true`: Enable Phase 2 Hessian-based classification
+- `enable_hessian=true`: Enable Hessian-based classification
 - `hessian_tol_zero=1e-8`: Tolerance for zero eigenvalues in Hessian analysis
 - `bfgs_g_tol=1e-8`: Gradient tolerance for BFGS optimization
 - `bfgs_f_abstol=1e-8`: Absolute function tolerance for BFGS optimization
@@ -301,7 +301,7 @@ This function performs detailed analysis of critical points found by polynomial 
   - `enhanced_df`: Input DataFrame with additional analysis columns
   - `minimizers_df`: Subset containing only unique local minimizers
 
-# Phase 1 Enhanced Statistics (always included)
+# Enhanced Statistics (always included)
 The enhanced DataFrame includes these additional columns:
 - `region_id`: Cluster identifier for spatially close points
 - `function_value_cluster`: Cluster identifier for points with similar function values
@@ -312,7 +312,7 @@ The enhanced DataFrame includes these additional columns:
 - `steps`: Number of BFGS optimization steps taken
 - `converged`: Boolean indicating if BFGS optimization converged
 
-# Phase 2 Hessian Classification (when `enable_hessian=true`)
+# Hessian Classification (when `enable_hessian=true`)
 When enabled, adds comprehensive Hessian-based analysis:
 - `critical_point_type`: Classification (:minimum, :maximum, :saddle, :degenerate, :error)
 - `smallest_positive_eigenval`: Smallest positive eigenvalue (for minima validation)
@@ -324,7 +324,7 @@ When enabled, adds comprehensive Hessian-based analysis:
 - `hessian_determinant`: Determinant of Hessian matrix
 - `hessian_trace`: Trace of Hessian matrix
 
-# Classification Types (Phase 2)
+# Classification Types
 - `:minimum`: All eigenvalues > `hessian_tol_zero` (local minimum)
 - `:maximum`: All eigenvalues < -`hessian_tol_zero` (local maximum)
 - `:saddle`: Mixed positive and negative eigenvalues (saddle point)
@@ -338,7 +338,7 @@ using Pkg; using Revise
 Pkg.activate(joinpath(@__DIR__, "../"))  # Adjust path as needed
 using Globtim; using DynamicPolynomials, DataFrames
 
-# Basic usage with Phase 1 + Phase 2
+# Basic usage with full analysis
 f(x) = x[1]^2 + x[2]^2
 TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
 pol = Constructor(TR, 8)
@@ -349,17 +349,17 @@ df = process_crit_pts(solutions, f, TR)
 # Full analysis with Hessian classification
 df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
-# Phase 1 only (legacy behavior)
-df_phase1, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
+# Basic analysis without Hessian (faster for large problems)
+df_basic, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
 ```
 
 # Performance Notes
-- Phase 1 analysis: O(n × m) where n = number of points, m = dimensions
-- Phase 2 analysis: O(n × m²) for Hessian computation, O(n × m³) for eigenvalues
+- Basic analysis: O(n × m) where n = number of points, m = dimensions
+- Hessian analysis: O(n × m²) for Hessian computation, O(n × m³) for eigenvalues
 - Memory usage: Additional O(n × m²) for Hessian storage when `enable_hessian=true`
 
 # Implementation Details
-Phase 2 uses ForwardDiff.jl for automatic differentiation to compute Hessian matrices,
+Hessian analysis uses ForwardDiff.jl for automatic differentiation to compute Hessian matrices,
 then performs eigenvalue decomposition for critical point classification. All eigenvalue
 computations include robust error handling for numerical stability.
 
@@ -500,7 +500,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
     end
 
-    # === PHASE 1 ENHANCEMENTS: Enhanced Statistics Collection ===
+    # === Enhanced Statistics Collection ===
     if verbose
         println("\n=== Computing Enhanced Statistics ===")
     end
@@ -567,7 +567,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
     end
 
-    # === PHASE 2 ENHANCEMENTS: Complete Hessian Analysis ===
+    # === Complete Hessian Analysis ===
     if enable_hessian
         if verbose
             println("\n=== Computing Complete Hessian Analysis ===")
@@ -650,7 +650,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
         
         if verbose
-            println("Phase 2 Hessian analysis complete!")
+            println("Hessian analysis complete!")
             println("New df columns: critical_point_type, smallest_positive_eigenval, largest_negative_eigenval, hessian_norm, hessian_*")
             if nrow(df_min) > 0
                 println("New df_min columns: same Hessian-based columns as df")
