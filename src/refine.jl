@@ -334,23 +334,23 @@ When enabled, adds comprehensive Hessian-based analysis:
 # Example
 ```julia
 # Proper initialization
-using Pkg; using Revise 
-Pkg.activate(joinpath(@__DIR__, "../"))  # Adjust path as needed
-using Globtim; using DynamicPolynomials, DataFrames
+# using Pkg; using Revise 
+# Pkg.activate(joinpath(@__DIR__, "../"))  # Adjust path as needed
+# using Globtim; using DynamicPolynomials, DataFrames
 
 # Basic usage with full analysis
-f(x) = x[1]^2 + x[2]^2
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
-pol = Constructor(TR, 8)
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
+# f(x) = x[1]^2 + x[2]^2
+# TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+# pol = Constructor(TR, 8)
+# @polyvar x[1:2]
+# crit_pts = solve_polynomial_system(x, 2, 8, pol.coeffs)
+# df = process_crit_pts(crit_pts, f, TR)
 
 # Full analysis with Hessian classification
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+# df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
 # Basic analysis without Hessian (faster for large problems)
-df_basic, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
+# df_basic, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
 ```
 
 # Performance Notes
