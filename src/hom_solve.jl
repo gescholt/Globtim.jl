@@ -74,11 +74,11 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     # Compute the gradient and solve the system
     grad = differentiate.(pol, x)
     sys = System(grad)
-    solutions = solve(sys, start_system=:total_degree)
-    rl_sol = real_solutions(solutions; only_real=true, multiple_results=false)
+    hc_result = solve(sys, start_system=:total_degree)
+    rl_sol = real_solutions(hc_result; only_real=true, multiple_results=false)
     
     if return_system
-        return rl_sol, (pol, sys, length(solutions))
+        return rl_sol, (pol, sys, length(hc_result))
     else
         return rl_sol
     end
