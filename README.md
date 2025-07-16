@@ -50,7 +50,7 @@ The enhanced `analyze_critical_points` function now provides:
 
 ### NEW: Statistical Analysis and Reporting
 The `analyze_critical_points_with_tables` function adds:
-- **Publication-Ready ASCII Tables**: Formatted tables for each critical point type with key statistics
+- **ASCII Tables**: Formatted tables for each critical point type with key statistics
 - **Comparative Analysis**: Side-by-side comparison of minima, maxima, and saddle points
 - **Export Capabilities**: Tables can be exported to CSV, LaTeX, or Markdown formats
 - **Statistical Summaries**: Mean, std, min/max values for function values, eigenvalues, and condition numbers
