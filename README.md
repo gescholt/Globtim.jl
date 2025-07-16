@@ -1,6 +1,9 @@
-![Run Tests](https://github.com/gescholt/globtim.jl/actions/workflows/test.yml/badge.svg)
-
 # Globtim.jl
+
+[![Run Tests](https://github.com/gescholt/globtim.jl/actions/workflows/test.yml/badge.svg)](https://github.com/gescholt/globtim.jl/actions/workflows/test.yml)
+[![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![GitHub release](https://img.shields.io/github/v/release/gescholt/globtim.jl.svg)](https://github.com/gescholt/globtim.jl/releases/latest)
 
 **Global optimization of continuous functions via polynomial approximation**
 
