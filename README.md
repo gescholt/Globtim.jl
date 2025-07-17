@@ -7,7 +7,7 @@
 
 **Global optimization of continuous functions via polynomial approximation**
 
-Globtim finds **all local minima** of continuous functions over compact domains using Chebyshev/Legendre polynomial approximation and critical point analysis. Version 1.1.0 introduces comprehensive Hessian-based critical point classification and enhanced statistical analysis capabilities.
+Globtim finds **all local minima** of continuous functions over compact domains using Chebyshev/Legendre polynomial approximation and critical point analysis. Version 1.1.1 introduces comprehensive Hessian-based critical point classification and enhanced statistical analysis capabilities.
 
 ## 🚀 Quick Start
 
@@ -99,8 +99,8 @@ plot_all_eigenvalues(f, df_enhanced)               # Complete eigenvalue spectru
 
 ## 📊 Project Status
 
-### ✅ Version 1.1.0: Enhanced Critical Point Analysis
-After solving the polynomial system to find critical points, version 1.1.0 provides comprehensive tools for refinement and verification:
+### ✅ Version 1.1.1: Enhanced Critical Point Analysis
+After solving the polynomial system to find critical points, version 1.1.1 provides comprehensive tools for refinement and verification:
 
 - **Critical Point Refinement**: BFGS optimization refines the approximate critical points from polynomial solving to machine precision
 - **Hessian-Based Verification**: Eigenvalue analysis validates and classifies each critical point (minimum, maximum, saddle, or degenerate)
