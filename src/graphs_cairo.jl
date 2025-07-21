@@ -85,7 +85,7 @@ end
 """
 Plot the discrete L2-norm approximation error attained by the polynomial approximant. 
 """
-function plot_discrete_l2(results, start_degree::Int, end_degree::Int, step::Int)
+function Globtim.plot_discrete_l2(results, start_degree::Int, end_degree::Int, step::Int)
     degrees = start_degree:step:end_degree
     l2_norms = Float64[]
 
@@ -119,7 +119,7 @@ end
 We display how many critical points we found, at each degree `d` and, up to a set tolerance tol_dist, we show how many of these points are captured by the Optim routine. 
 """
 
-function capture_histogram(
+function Globtim.capture_histogram(
     results,
     start_degree::Int,
     end_degree::Int,
@@ -181,7 +181,7 @@ end
 """
 Plot summary of convergence distances for a range of degrees --> for each captured "x", compute the distance to "y", the optimized point.
 """
-function plot_convergence_analysis(
+function Globtim.plot_convergence_analysis(
     results,
     start_degree::Int,
     end_degree::Int,
@@ -240,8 +240,8 @@ end
 """
 Updated visualization function to handle per-coordinate scaling factors.
 """
-function cairo_plot_polyapprox_levelset(
-    pol::ApproxPoly,
+function Globtim.cairo_plot_polyapprox_levelset(
+    pol::ApproxPoly{T,S},
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
@@ -250,7 +250,7 @@ function cairo_plot_polyapprox_levelset(
     chebyshev_levels::Bool=false,
     num_levels::Int=30,
     show_captured::Bool=true,  # New parameter
-)
+) where {T<:Number, S<:Union{Float64,Vector{Float64}}}
     # Type-stable coordinate transformation using multiple dispatch
     coords = transform_coordinates(pol.scale_factor, pol.grid, TR.center)
 
@@ -383,7 +383,7 @@ end
 """
 Updated plot_filtered_y_distances function to handle per-coordinate scaling.
 """
-function plot_filtered_y_distances(
+function Globtim.plot_filtered_y_distances(
     df_filtered::DataFrame,
     TR::test_input,  # Added TR parameter
     results::Dict{
@@ -494,7 +494,7 @@ end
 """
 Plot the outputs of`analyze_converged_points` function. 
 """
-function plot_distance_statistics(stats::Dict{String,Any}; show_legend::Bool = true)
+function Globtim.plot_distance_statistics(stats::Dict{String,Any}; show_legend::Bool = true)
     fig = Figure(size = (600, 400))
 
     ax = Axis(fig[1, 1], xlabel = "Degree")
@@ -509,7 +509,7 @@ function plot_distance_statistics(stats::Dict{String,Any}; show_legend::Bool = t
     return fig
 end
 
-function create_legend_figure(tol_dist::Float64)
+function Globtim.create_legend_figure(tol_dist::Float64)
     fig = Figure(size = (300, 100))
 
     # Create dummy axis with invisible elements for legend
@@ -536,7 +536,7 @@ function create_legend_figure(tol_dist::Float64)
     return fig
 end
 
-function plot_convergence_captured(
+function Globtim.plot_convergence_captured(
     results,
     df_check,
     start_degree::Int,
@@ -579,7 +579,7 @@ Enhanced histogram showing BFGS convergence to theoretical minimizers.
 - Bar height: number of BFGS refined points that converged to one of the theoretical minimizers
 - Green portion: raw critical points that are close to theoretical minimizers
 """
-function histogram_enhanced(
+function Globtim.histogram_enhanced(
     results,
     df_theoretical,  # DataFrame with theoretical critical points
     start_degree::Int,
@@ -698,7 +698,7 @@ end
 Histogram showing only minimum points (both raw and BFGS refined).
 Counts each theoretical minimizer only once - avoids double counting when multiple points converge to the same minimizer.
 """
-function histogram_minimizers_only(
+function Globtim.histogram_minimizers_only(
     results,
     df_theoretical,  # DataFrame with theoretical critical points
     start_degree::Int,

@@ -132,6 +132,18 @@ export compute_hessians, classify_critical_points, store_all_eigenvalues,
        extract_all_eigenvalues_for_visualization,
        plot_hessian_norms, plot_condition_numbers, plot_critical_eigenvalues, plot_all_eigenvalues
 
+# CairoMakie extension plotting functions (available when CairoMakie is loaded)
+export plot_convergence_analysis,
+       capture_histogram,
+       create_legend_figure,
+       plot_discrete_l2,
+       plot_convergence_captured,
+       plot_filtered_y_distances,
+       cairo_plot_polyapprox_levelset,
+       plot_distance_statistics,
+       histogram_enhanced,
+       histogram_minimizers_only
+
 # Phase 3: Enhanced statistical tables and analysis
 export analyze_critical_points_with_tables, display_statistical_table, export_analysis_tables,
        create_statistical_summary, quick_table_preview, compute_type_specific_statistics,
@@ -161,4 +173,18 @@ export FunctionValueError, ErrorMetrics,
        compute_error_metrics, analyze_errors_by_type,
        create_error_analysis_dataframe, convergence_analysis,
        integrate_with_bfgs_results
+
+# Stub functions for CairoMakie extension
+# These will be properly implemented when CairoMakie is loaded
+function cairo_plot_polyapprox_levelset end
+function plot_convergence_analysis end
+function capture_histogram end
+function create_legend_figure end
+function plot_discrete_l2 end
+function plot_convergence_captured end
+function plot_filtered_y_distances end
+function plot_distance_statistics end
+function histogram_enhanced end
+function histogram_minimizers_only end
+
 end
