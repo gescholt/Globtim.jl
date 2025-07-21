@@ -144,6 +144,14 @@ export plot_convergence_analysis,
        histogram_enhanced,
        histogram_minimizers_only
 
+# GLMakie extension plotting functions (available when GLMakie is loaded)
+export plot_polyapprox_3d,
+       plot_polyapprox_rotate,
+       plot_polyapprox_levelset,
+       plot_polyapprox_flyover,
+       plot_polyapprox_animate,
+       plot_polyapprox_animate2
+
 # Phase 3: Enhanced statistical tables and analysis
 export analyze_critical_points_with_tables, display_statistical_table, export_analysis_tables,
        create_statistical_summary, quick_table_preview, compute_type_specific_statistics,
@@ -186,5 +194,14 @@ function plot_filtered_y_distances end
 function plot_distance_statistics end
 function histogram_enhanced end
 function histogram_minimizers_only end
+
+# Stub functions for GLMakie extension
+# These will be properly implemented when GLMakie is loaded
+function plot_polyapprox_3d end
+function plot_polyapprox_rotate end
+function plot_polyapprox_levelset end
+function plot_polyapprox_flyover end
+function plot_polyapprox_animate end
+function plot_polyapprox_animate2 end
 
 end
