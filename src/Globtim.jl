@@ -150,7 +150,15 @@ export plot_polyapprox_3d,
        plot_polyapprox_levelset,
        plot_polyapprox_flyover,
        plot_polyapprox_animate,
-       plot_polyapprox_animate2
+       plot_polyapprox_animate2,
+       plot_level_set,
+       create_level_set_visualization,
+       create_level_set_animation,
+       LevelSetData,
+       VisualizationParameters,
+       prepare_level_set_data,
+       to_makie_format,
+       plot_raw_vs_refined_eigenvalues
 
 # Phase 3: Enhanced statistical tables and analysis
 export analyze_critical_points_with_tables, display_statistical_table, export_analysis_tables,
@@ -203,5 +211,11 @@ function plot_polyapprox_levelset end
 function plot_polyapprox_flyover end
 function plot_polyapprox_animate end
 function plot_polyapprox_animate2 end
+function plot_level_set end
+function create_level_set_visualization end
+function create_level_set_animation end
+function prepare_level_set_data end
+function to_makie_format end
+function plot_raw_vs_refined_eigenvalues end
 
 end

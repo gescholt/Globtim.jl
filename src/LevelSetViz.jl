@@ -55,7 +55,7 @@ end
 
 Prepare level set data by identifying points near the specified level.
 """
-function prepare_level_set_data(
+function Globtim.prepare_level_set_data(
     grid::Array{SVector{3,T}},
     values::Array{T},
     level::T;
@@ -81,7 +81,7 @@ end
 
 Convert LevelSetData to a format suitable for Makie plotting.
 """
-function to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
+function Globtim.to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
     isempty(level_set.points) &&
         return (points = Matrix{T}(undef, 3, 0), values = T[], xyz = (T[], T[], T[]))
 
@@ -128,7 +128,7 @@ end
         params::VisualizationParameters=VisualizationParameters()
     ) where {T<:AbstractFloat}
 """
-function create_level_set_visualization(
+function Globtim.create_level_set_visualization(
     f,
     grid::Array{SVector{3,T},3},
     df::Union{DataFrame,Nothing},
@@ -1033,7 +1033,7 @@ function Globtim.plot_polyapprox_animate2(
 end
 
 
-function create_level_set_animation(
+function Globtim.create_level_set_animation(
     f,
     grid::Array{SVector{3,T},3},
     df::Union{DataFrame,Nothing},
