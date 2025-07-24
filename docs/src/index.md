@@ -47,9 +47,19 @@ df = process_crit_pts(solutions, f, TR)
 df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 ```
 
+## New Features
+
+### Polynomial Sparsification and Exact Arithmetic
+- Convert polynomials to exact monomial basis
+- Intelligently sparsify polynomials by removing small coefficients
+- Track L²-norm preservation during sparsification
+- Analyze tradeoffs between sparsity and approximation quality
+
+See [Polynomial Sparsification](sparsification.md) for details.
+
 ## Contents
 
 ```@contents
-Pages = ["getting_started.md", "core_algorithm.md", "critical_point_analysis.md", "api_reference.md", "examples.md", "visualization.md"]
+Pages = ["getting_started.md", "core_algorithm.md", "critical_point_analysis.md", "sparsification.md", "api_reference.md", "examples.md", "visualization.md"]
 Depth = 2
 ```

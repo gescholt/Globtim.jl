@@ -127,3 +127,11 @@ include("test_forwarddiff_integration.jl")
 
 # Include function value error analysis tests
 include("test_function_value_analysis.jl")
+
+# Include new exact arithmetic and sparsification tests
+include("test_exact_conversion.jl")
+include("test_sparsification.jl") 
+include("test_truncation.jl")
+
+# Include L2-norm scaling and type safety tests
+include("test_l2_norm_scaling.jl")

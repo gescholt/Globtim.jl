@@ -39,6 +39,7 @@ df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
 1. **Sample**: Function evaluation on tensorized Chebyshev/Legendre grids
 2. **Approximate**: Polynomial construction via discrete least squares (returns L2-norm approximation error)
 3. **Solve**: Critical point finding using [HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/) or [Msolve](https://msolve.lip6.fr/)
+4. **Sparsify**: NEW! Reduce polynomial complexity while preserving accuracy
 
 ### NEW: Hessian-Based Critical Point Classification
 The enhanced `analyze_critical_points` function now provides:
@@ -80,6 +81,39 @@ plot_hessian_norms(df_enhanced)                    # Scatter plot of ||H||_F
 plot_condition_numbers(df_enhanced)                # Log-scale condition numbers
 plot_critical_eigenvalues(df_enhanced)             # Minima/maxima eigenvalue validation
 plot_all_eigenvalues(f, df_enhanced)               # Complete eigenvalue spectrum (NEW!)
+```
+
+### NEW: Polynomial Sparsification and Exact Arithmetic
+
+Globtim now provides powerful tools for polynomial sparsification and exact coefficient conversion:
+
+**Key Capabilities:**
+- **Exact Conversion**: Transform polynomials from Chebyshev/Legendre basis to exact monomial form
+- **Intelligent Sparsification**: Remove small coefficients while tracking approximation quality
+- **L2-Norm Tracking**: Monitor the error introduced by sparsification at each step
+- **Memory Efficiency**: Reduce polynomial complexity for faster evaluation and storage
+
+**Example:**
+```julia
+using Globtim, DynamicPolynomials
+
+# Create polynomial approximation
+f = Deuflhard
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+pol = Constructor(TR, 8)  # Degree 8 approximation
+
+# Convert to exact monomial basis
+@polyvar x y
+mono_poly = to_exact_monomial_basis(pol, variables=[x, y])
+
+# Sparsify polynomial (remove coefficients < 1e-8 relative to max)
+result = sparsify_polynomial(pol, 1e-8, mode=:relative)
+
+# Results
+println("Original terms: $(count(!iszero, pol.coeffs))")
+println("Sparse terms: $(result.new_nnz)")  
+println("Achieved $(round((1-result.sparsity)*100))% sparsity")
+println("L2-norm preservation: $(round(result.l2_ratio*100, digits=1))%")
 ```
 
 ## 📦 What's Included

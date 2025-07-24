@@ -33,7 +33,8 @@
       "Bash(git rev-list:*)",
       "Bash(git merge:*)",
       "Bash(git tag:*)",
-      "Bash(git describe:*)"
+      "Bash(git describe:*)",
+      "Bash(git fetch:*)"
     ]
   },
   "enableAllProjectMcpServers": false
