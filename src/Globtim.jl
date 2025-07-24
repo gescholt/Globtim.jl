@@ -4,6 +4,7 @@ using CSV
 using StaticArrays
 using DataFrames
 using DynamicPolynomials
+using MultivariatePolynomials
 using LinearSolve
 using LinearAlgebra
 using Distributions
@@ -95,11 +96,24 @@ export symbolic_chebyshev, evaluate_chebyshev, get_chebyshev_coeffs, construct_c
 # Unified orthogonal polynomial interface
 export symbolic_orthopoly, evaluate_orthopoly, get_orthopoly_coeffs, construct_orthopoly_polynomial
 
+# Grid utility functions
+export grid_to_matrix, ensure_matrix_format, matrix_to_grid, get_grid_info
+
 # ApproxPoly accessor functions
 export get_basis, get_precision, is_normalized, has_power_of_two_denom, get_scale_factor
 
 # Scaling utilities
 export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
+
+# Exact conversion and sparsification functions
+export to_exact_monomial_basis, exact_polynomial_coefficients
+export compute_l2_norm_vandermonde, compute_l2_norm_coeffs, sparsify_polynomial
+export compute_approximation_error, analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
+export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
+export BoxDomain, AbstractDomain, compute_l2_norm, verify_truncation_quality, integrate_monomial
+
+# Quadrature-based L2 norm
+export compute_l2_norm_quadrature
 
 include("config.jl")
 include("LibFunctions.jl") #list of test functions. 
@@ -119,9 +133,14 @@ include("data_structures.jl") #Enhanced data structures for multi-tolerance anal
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
 include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
+include("grid_utils.jl") #Grid format conversion utilities
 include("subdomain_management.jl") #4D subdomain decomposition management
 include("multi_tolerance_analysis.jl") #Multi-tolerance execution framework
 include("function_value_analysis.jl") #Function value error analysis
+include("exact_conversion.jl") #Exact arithmetic polynomial conversion
+include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsification
+include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
+include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
