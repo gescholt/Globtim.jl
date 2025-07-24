@@ -40,6 +40,34 @@
 - **`refine_with_enhanced_bfgs`** - Apply BFGS refinement to DataFrame
 - **`determine_convergence_reason`** - Analyze optimization convergence
 
+## Exact Arithmetic and Sparsification
+
+### Exact Conversion
+- **`to_exact_monomial_basis`** - Convert polynomial from orthogonal to monomial basis
+- **`exact_polynomial_coefficients`** - Get exact monomial coefficients from function
+
+### L²-Norm Analysis
+- **`compute_l2_norm_vandermonde`** - Compute L²-norm using Vandermonde matrices
+- **`compute_l2_norm_coeffs`** - Compute L²-norm with modified coefficients
+- **`compute_l2_norm`** - Compute L²-norm over a domain
+- **`verify_truncation_quality`** - Verify L²-norm preservation after truncation
+- **`integrate_monomial`** - Analytically integrate monomials
+
+### Sparsification
+- **`sparsify_polynomial`** - Zero small coefficients with L²-norm tracking
+- **`analyze_sparsification_tradeoff`** - Analyze sparsity vs accuracy
+- **`compute_approximation_error`** - Compute error between function and polynomial
+- **`analyze_approximation_error_tradeoff`** - Analyze error under sparsification
+
+### Truncation
+- **`truncate_polynomial`** - Remove small terms with L²-norm monitoring
+- **`monomial_l2_contributions`** - Compute L²-norm contribution per monomial
+- **`analyze_truncation_impact`** - Analyze truncation effects
+
+### Domain Types
+- **`BoxDomain{T}`** - Box domain [-a,a]ⁿ representation
+- **`AbstractDomain`** - Abstract type for integration domains
+
 ## Utility Functions
 
 ### Domain Handling

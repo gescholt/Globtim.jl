@@ -115,6 +115,12 @@ export BoxDomain, AbstractDomain, compute_l2_norm, verify_truncation_quality, in
 # Quadrature-based L2 norm
 export compute_l2_norm_quadrature
 
+# Anisotropic grid support
+export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
+
+# L2 norm functions
+export discrete_l2_norm_riemann
+
 include("config.jl")
 include("LibFunctions.jl") #list of test functions. 
 include("Structures.jl") # list of structures used in the code.
@@ -141,6 +147,7 @@ include("exact_conversion.jl") #Exact arithmetic polynomial conversion
 include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsification
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
+include("anisotropic_grids.jl") #Anisotropic grid generation
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
