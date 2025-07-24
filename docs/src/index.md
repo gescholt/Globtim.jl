@@ -49,6 +49,20 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
 ## New Features
 
+### Anisotropic Grid Support
+- Generate grids with different numbers of points per dimension
+- Optimize point allocation for multiscale functions
+- Achieve up to 15x better accuracy for the same computational cost
+- Support for Chebyshev, Legendre, and uniform node distributions
+
+See [Anisotropic Grids Guide](anisotropic_grids_guide.md) for details.
+
+### Enhanced L²-Norm Computation
+- Quadrature-based L²-norm using orthogonal polynomials
+- Support for anisotropic grids in all norm computations
+- High-accuracy integration for smooth functions
+- Efficient tensor product quadrature
+
 ### Polynomial Sparsification and Exact Arithmetic
 - Convert polynomials to exact monomial basis
 - Intelligently sparsify polynomials by removing small coefficients
@@ -57,9 +71,16 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
 See [Polynomial Sparsification](sparsification.md) for details.
 
+## Testing
+
+Comprehensive test suite with detailed documentation:
+- [Test Documentation Overview](test_documentation.md) - Complete test suite guide
+- [Test Running Guide](test_running_guide.md) - How to run tests effectively
+- [Anisotropic Grid Tests](anisotropic_grid_tests.md) - Detailed test explanations
+
 ## Contents
 
 ```@contents
-Pages = ["getting_started.md", "core_algorithm.md", "critical_point_analysis.md", "sparsification.md", "api_reference.md", "examples.md", "visualization.md"]
+Pages = ["getting_started.md", "core_algorithm.md", "critical_point_analysis.md", "anisotropic_grids_guide.md", "sparsification.md", "test_documentation.md", "test_running_guide.md", "anisotropic_grid_tests.md", "api_reference.md", "examples.md", "visualization.md"]
 Depth = 2
 ```

@@ -110,6 +110,18 @@ Available when CairoMakie or GLMakie are loaded:
 - **`alpine1`**, **`alpine2`** - Alpine functions
 - **`Csendes`** - Smooth function with single minimum
 
+## Grid Generation and L²-Norm Computation
+
+### Grid Generation
+- **`generate_grid`** - Generate isotropic grid with same points per dimension
+- **`generate_anisotropic_grid`** - Generate grid with different points per dimension
+- **`get_grid_dimensions`** - Extract number of points in each dimension
+- **`is_anisotropic`** - Check if grid has different points per dimension
+
+### L²-Norm Computation
+- **`discrete_l2_norm_riemann`** - Compute L²-norm using Riemann sum on grid
+- **`compute_l2_norm_quadrature`** - Compute L²-norm using polynomial quadrature
+
 ## Export Functions
 
 - **`write_tables_to_csv`** - Export tables to CSV format
