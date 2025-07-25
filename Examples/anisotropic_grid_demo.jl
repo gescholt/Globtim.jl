@@ -133,3 +133,47 @@ println("- More efficient than isotropic grids for multiscale functions")
 println("- Both quadrature and Riemann methods support anisotropic grids")
 println("- Choose grid sizes based on directional variation rates")
 println("=" ^ 60)
+
+# Example 7: Integration with Polynomial Approximation
+println("\n7. Polynomial Approximation with Anisotropic Grids")
+println("-" ^ 40)
+
+# Function with different scales
+f_poly = x -> exp(-100*x[1]^2 - x[2]^2)
+TR = test_input(f_poly, dim=2, center=[0.0, 0.0], sample_range=1.0)
+
+# Traditional isotropic approximation
+println("\nIsotropic polynomial approximation:")
+pol_iso = Constructor(TR, 8, verbose=0)
+println("  Grid points: $(pol_iso.N)")
+println("  L2 norm error: $(@sprintf("%.6f", pol_iso.nrm))")
+println("  Condition number: $(@sprintf("%.2e", pol_iso.cond_vandermonde))")
+
+# Anisotropic grid approximation
+println("\nAnisotropic polynomial approximation:")
+grid_aniso = generate_anisotropic_grid([15, 6], basis=:chebyshev)
+grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
+pol_aniso = Constructor(TR, 0, grid=grid_matrix, verbose=0)
+println("  Grid points: $(pol_aniso.N)")
+println("  L2 norm error: $(@sprintf("%.6f", pol_aniso.nrm))")
+println("  Condition number: $(@sprintf("%.2e", pol_aniso.cond_vandermonde))")
+
+# Demonstrate automatic detection
+println("\nAutomatic anisotropic detection:")
+test_grid = [
+    -0.8660  -0.5000;
+     0.0000  -0.5000;
+     0.8660  -0.5000;
+    -0.8660   0.5000;
+     0.0000   0.5000;
+     0.8660   0.5000
+]
+pol_detect = MainGenerate(f_poly, 2, test_grid, 0.1, 0.99, 1.0, 1.0, verbose=1)
+
+println("\n" * "=" ^ 60)
+println("NEW: Lambda Vandermonde Integration")
+println("- Automatic detection of anisotropic grids")
+println("- Optimized dimension-wise polynomial evaluation")
+println("- Full integration with Constructor and MainGenerate")
+println("- Maintains type stability and performance")
+println("=" ^ 60)

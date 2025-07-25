@@ -5,7 +5,13 @@
 ### Problem Setup
 
 - **`test_input`** - Create test input specification for optimization problems
-- **`Constructor`** - Build polynomial approximation of objective function
+- **`Constructor`** - Build polynomial approximation with automatic grid support
+  - Accepts pre-generated grids via `grid` parameter
+  - Automatically detects and handles anisotropic grids
+- **`MainGenerate`** - Core polynomial approximation engine
+  - Supports degree-based or grid-based input
+  - Automatic anisotropic grid detection
+  - Returns `ApproxPoly` with L2-norm error
 - **`solve_polynomial_system`** - Find critical points by solving ∇p(x) = 0
 - **`process_crit_pts`** - Process and filter critical point solutions
 
@@ -16,10 +22,17 @@
 
 ## Polynomial Approximation
 
+### Core Functions
 - **`chebyshev_extrema`** - Generate Chebyshev extrema points
 - **`chebyshev_polys`** - Evaluate Chebyshev polynomials
 - **`grid_sample`** - Create sampling grid for polynomial fitting
 - **`sample_objective_on_grid`** - Evaluate objective function on grid
+
+### Vandermonde Matrix Construction
+- **`lambda_vandermonde`** - Construct Vandermonde matrix with automatic anisotropic detection
+- **`lambda_vandermonde_anisotropic`** - Enhanced Vandermonde for anisotropic grids
+- **`is_grid_anisotropic`** - Check if grid has different nodes per dimension
+- **`analyze_grid_structure`** - Extract detailed grid structure information
 
 ## Critical Point Analysis
 
