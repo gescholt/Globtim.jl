@@ -52,17 +52,18 @@ grid_matrix = reduce(vcat, map(x -> x', reshape(grid, :)))
 pol = MainGenerate(f, n_dims, grid_matrix, 0.1, 0.99, 1.0, 1.0)
 ```
 
-### Anisotropic Grid (Limited Support)
+### Anisotropic Grid (Full Support)
 ```julia
-# Generate anisotropic grid
+# Generate anisotropic grid with different points per dimension
 grid_aniso = generate_anisotropic_grid([5, 10], basis=:chebyshev)
 
 # Convert to matrix format
 grid_vec = vec(grid_aniso)  # Flatten the array
 grid_matrix = convert_to_matrix_grid(grid_vec)
 
-# Note: Currently requires tensor product structure
-# See limitations section below
+# MainGenerate automatically detects anisotropic structure
+pol = MainGenerate(f, 2, grid_matrix, 0.1, 0.99, 1.0, 1.0)
+# Output: "Detected anisotropic grid structure - using enhanced algorithm"
 ```
 
 ## Benefits
@@ -92,9 +93,9 @@ pol3 = MainGenerate(f3, 3, grid_matrix, 0.1, 0.99, 1.0, 1.0)
 
 ### Tensor Product Requirement
 
-The current implementation requires grids to maintain a tensor product structure. This means:
-- All unique x-coordinates must pair with all unique y-coordinates (and z-coordinates in 3D)
-- True anisotropic grids with different node distributions per dimension are not yet supported
+While anisotropic grids are now fully supported through the enhanced `lambda_vandermonde_anisotropic` function, best performance is achieved with tensor product grids where:
+- All unique x-coordinates pair with all unique y-coordinates (and z-coordinates in 3D)
+- Non-tensor product grids are supported but may have reduced performance
 
 ### Degree Inference
 
@@ -132,15 +133,50 @@ validate_grid(grid_matrix, n_dims, basis=:chebyshev)
 3. **Reuse**: Generate grids once and reuse for multiple functions
 4. **Size**: Balance grid size with polynomial degree for optimal results
 
+## Advanced Features
+
+### Automatic Anisotropic Detection
+
+MainGenerate now automatically detects when a grid has different nodes per dimension and routes to the appropriate Vandermonde construction:
+
+```julia
+# The system automatically detects this is anisotropic
+grid = [
+    -0.8660  -0.5000;  # 3 unique x-values
+     0.0000  -0.5000;  # 2 unique y-values
+     0.8660  -0.5000;
+    -0.8660   0.5000;
+     0.0000   0.5000;
+     0.8660   0.5000
+]
+pol = MainGenerate(f, 2, grid, 0.1, 0.99, 1.0, 1.0, verbose=1)
+# Output: "Detected anisotropic grid structure - using enhanced algorithm"
+```
+
+### Constructor Integration
+
+The Constructor function also supports pre-generated grids:
+
+```julia
+# Traditional usage
+pol_iso = Constructor(TR, 10)
+
+# With anisotropic grid
+grid_aniso = generate_anisotropic_grid([15, 6], basis=:chebyshev)
+grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
+pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid provided
+```
+
 ## Future Enhancements
 
-- Full support for anisotropic grids with different nodes per dimension
-- Automatic degree optimization based on grid structure
+- Mixed basis support (e.g., Chebyshev in x, Legendre in y)
+- Adaptive degree inference for anisotropic grids
 - Support for sparse and adaptive grids
 - Integration with external mesh generators
 
 ## See Also
 
+- [Anisotropic Lambda Vandermonde Guide](anisotropic_lambda_vandermonde.md)
 - [Anisotropic Grids Documentation](../anisotropic_grids.md)
 - [MainGenerate API Reference](../api/main_generate.md)
 - [Grid Generation Functions](../api/grid_generation.md)

@@ -159,3 +159,9 @@ include("test_statistical_tables.jl")
 
 # Include grid-based MainGenerate tests
 include("test_maingen_grid_functionality.jl")
+
+# Include anisotropic grid integration tests
+include("test_anisotropic_integration.jl")
+
+# Include lambda_vandermonde anisotropic tests
+include("test_lambda_vandermonde_anisotropic.jl")

@@ -211,18 +211,31 @@ grid_sizes = round.(Int, base_size * sqrt.(variations / minimum(variations)))
 
 ### Integration with Polynomial Approximation
 
-Anisotropic grids can be used with polynomial approximation:
+Anisotropic grids are now fully integrated with Globtim's polynomial approximation workflow through the enhanced `lambda_vandermonde` function:
 
 ```julia
-# Generate anisotropic grid for sampling
+# Method 1: Using MainGenerate with pre-generated grid
 grid = generate_anisotropic_grid([40, 20], basis=:chebyshev)
+grid_matrix = convert_to_matrix_grid(vec(grid))
 
-# Convert to matrix format for polynomial fitting
-points_matrix = grid_to_matrix(grid)
+# MainGenerate automatically detects anisotropic structure
+pol = MainGenerate(f, 2, grid_matrix, 0.1, 0.99, 1.0, 1.0)
+# Output: "Detected anisotropic grid structure - using enhanced algorithm"
 
-# Use in polynomial approximation workflow
-# ... (see main documentation for polynomial approximation)
+# Method 2: Using Constructor with test_input
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored with grid
+
+# Method 3: Direct lambda_vandermonde usage
+Lambda = SupportGen(2, (:one_d_for_all, 10))
+V = lambda_vandermonde(Lambda, grid_matrix)  # Auto-detects anisotropic
 ```
+
+The system automatically:
+- Detects when grids have different nodes per dimension
+- Routes to the optimized `lambda_vandermonde_anisotropic` implementation
+- Maintains type stability and performance
+- Supports Chebyshev and Legendre bases
 
 ## Common Pitfalls
 

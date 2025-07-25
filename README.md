@@ -120,6 +120,7 @@ println("L2-norm preservation: $(round(result.l2_ratio*100, digits=1))%")
 
 ### ✅ Core Package Features
 - **Polynomial Approximation Engine**: Chebyshev and Legendre basis functions with adaptive sampling
+- **Anisotropic Grid Support**: Automatic detection and optimized handling of grids with different nodes per dimension
 - **Critical Point Analysis**: Complete eigenvalue decomposition and classification of all stationary points
 - **Enhanced BFGS Refinement**: Adaptive tolerance selection based on function values with comprehensive convergence tracking
 - **Statistical Analysis Framework**: Generates publication-quality tables with eigenvalue statistics, condition numbers, and basin analysis

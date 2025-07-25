@@ -115,8 +115,18 @@ TimerOutputs.@timeit _TO function MainGenerate(
         end
         matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     end
-    VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
+    
+    # Check if grid is anisotropic
+    is_anisotropic = grid_provided && is_grid_anisotropic(matrix_from_grid)
+    
+    # Call lambda_vandermonde with appropriate flag
+    VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis, force_anisotropic=is_anisotropic)
     G_original = VL' * VL
+    
+    # Log if using anisotropic algorithm
+    if verbose >= 1 && is_anisotropic
+        println("Detected anisotropic grid structure - using enhanced algorithm")
+    end
 
     # Convert center to SVector
     scaled_center = SVector{n,Float64}(center)
@@ -200,6 +210,7 @@ polynomial of the specified degree.
 - `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
 - `normalized::Bool=false`: Whether to normalize the polynomial
 - `power_of_two_denom::Bool=false`: Use power-of-two denominators for rationals
+- `grid::Union{Nothing,Matrix{Float64}}=nothing`: Pre-generated grid matrix (rows are points)
 
 # Returns
 - `ApproxPoly`: Polynomial approximation object containing:
@@ -227,9 +238,14 @@ pol = Constructor(TR, 10, basis=:legendre, verbose=1)
 
 # High precision approximation
 pol = Constructor(TR, 12, normalized=true)
+
+# Using a pre-generated anisotropic grid
+grid_aniso = generate_anisotropic_grid([10, 5], basis=:chebyshev)
+grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
+pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid provided
 ```
 """
-# Update the Constructor function to pass through the vector scale_factor
+# Update the Constructor function to pass through the vector scale_factor and support grids
 TimerOutputs.@timeit _TO function Constructor(
     T::test_input,
     degree;
@@ -237,13 +253,33 @@ TimerOutputs.@timeit _TO function Constructor(
     basis::Symbol=:chebyshev,
     precision::PrecisionType=RationalPrecision,
     normalized::Bool=false,
-    power_of_two_denom::Bool=false
+    power_of_two_denom::Bool=false,
+    grid::Union{Nothing,Matrix{Float64}}=nothing
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
     end
 
-    if !isnothing(T.GN) && isa(T.GN, Int)
+    # If grid is provided, use it directly
+    if !isnothing(grid)
+        p = MainGenerate(
+            T.objective,
+            T.dim,
+            grid,  # Pass grid as degree parameter
+            T.prec[2],
+            T.prec[1],
+            T.sample_range,
+            T.reduce_samples;
+            center=T.center,
+            verbose=verbose,
+            basis=basis,
+            precision=precision,
+            normalized=normalized,
+            power_of_two_denom=power_of_two_denom
+        )
+        println("current L2-norm: ", p.nrm)
+        return p
+    elseif !isnothing(T.GN) && isa(T.GN, Int)
         p = MainGenerate(
             T.objective,
             T.dim,

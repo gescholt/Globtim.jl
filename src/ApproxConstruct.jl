@@ -109,7 +109,7 @@ function SupportGen(n::Int, d)::NamedTuple
     return (data = lambda_matrix, size = size(lambda_matrix))
 end
 
-TimerOutputs.@timeit _TO function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
+TimerOutputs.@timeit _TO function lambda_vandermonde_original(Lambda::NamedTuple, S; basis=:chebyshev)
     T = eltype(S)  # Infer type from input
     m, N = Lambda.size
     n, N = size(S)
@@ -215,6 +215,52 @@ function chebyshev_value_exact(n::Int, x::T) where T
             T_prev1 = T_curr
         end
         return T_prev1
+    end
+end
+
+"""
+    lambda_vandermonde(Lambda::NamedTuple, S; 
+                      basis::Symbol=:chebyshev, 
+                      force_anisotropic::Bool=false)
+
+Enhanced lambda_vandermonde that automatically detects and handles anisotropic grids.
+
+This is a wrapper that maintains backward compatibility while adding anisotropic support.
+It automatically detects grid type and calls the appropriate implementation.
+
+# Arguments
+- `Lambda::NamedTuple`: Multi-index set
+- `S`: Grid matrix (or vector for compatibility)
+- `basis::Symbol=:chebyshev`: Polynomial basis
+- `force_anisotropic::Bool=false`: Force use of anisotropic algorithm
+
+# Returns
+- Vandermonde matrix
+
+# Notes
+- Automatically detects anisotropic grids and uses appropriate algorithm
+- Falls back to original implementation for isotropic grids (better performance)
+- Use `force_anisotropic=true` to test anisotropic algorithm on isotropic grids
+"""
+function lambda_vandermonde(Lambda::NamedTuple, S; 
+                           basis::Symbol=:chebyshev,
+                           force_anisotropic::Bool=false)
+    # Convert to matrix if needed for analysis
+    S_matrix = isa(S, Matrix) ? S : S
+    
+    # Quick dimension check
+    if size(S_matrix, 2) == 1
+        # 1D case - always use original implementation
+        return lambda_vandermonde_original(Lambda, S, basis=basis)
+    end
+    
+    # Check if grid is anisotropic (only for matrix inputs)
+    if force_anisotropic || (isa(S, Matrix) && is_grid_anisotropic(S))
+        # Use anisotropic implementation
+        return lambda_vandermonde_anisotropic(Lambda, S, basis=basis)
+    else
+        # Use original (optimized for isotropic case)
+        return lambda_vandermonde_original(Lambda, S, basis=basis)
     end
 end
 

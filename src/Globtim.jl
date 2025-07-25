@@ -129,6 +129,7 @@ include("Samples.jl") #functions to generate samples.
 include("Main_Gen.jl") #functions to construct polynomial approximations.
 include("l2_norm.jl") #measure error of approx.
 include("ApproxConstruct.jl") #construct Vandermonde like matrix.
+include("lambda_vandermonde_anisotropic.jl") # Enhanced anisotropic grid support
 include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
