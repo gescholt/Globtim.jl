@@ -45,13 +45,13 @@ end
                 expected = sqrt((2*scale)^dim)
                 
                 # Test scalar scale_factor
-                computed = discrete_l2_norm_riemann_scaled(idx -> f_const(grid[idx]), grid, scale)
+                computed = discrete_l2_norm_riemann_scaled(x -> f_const(x), grid, scale)
                 @test computed ≈ expected rtol=1e-2
                 
                 # Test vector scale_factor (same value for all dimensions)
                 if dim > 1
                     scale_vec = fill(scale, dim)
-                    computed_vec = discrete_l2_norm_riemann_scaled(idx -> f_const(grid[idx]), grid, scale_vec)
+                    computed_vec = discrete_l2_norm_riemann_scaled(x -> f_const(x), grid, scale_vec)
                     @test computed_vec ≈ expected rtol=1e-2
                 end
             end
@@ -65,7 +65,7 @@ end
         
         for scale in [0.5, 1.0, 2.0, 3.0]
             # Function f(x) = x^2 (on scaled domain)
-            f_poly = idx -> (grid[idx][1] * scale)^2
+            f_poly = x -> (x[1] * scale)^2
             
             # Analytical L2-norm: sqrt(∫_{-a}^a x^4 dx) = sqrt(2a^5/5)
             expected = sqrt(2 * scale^5 / 5)
@@ -105,7 +105,7 @@ end
             
             # Test that our scaling wrapper correctly applies Jacobian
             # Use a nearly constant function to minimize edge effects
-            f_simple = idx -> exp(-0.01 * sum(grid[idx].^2))
+            f_simple = x -> exp(-0.01 * sum(x.^2))
             
             for scale in [0.5, 2.0, 3.0]
                 # The discrete L2 norm with scaling should include Jacobian factor
@@ -158,7 +158,7 @@ end
     @testset "Scale factor type handling" begin
         dim = 2
         grid = generate_grid(dim, 10, basis=:chebyshev)
-        f = idx -> sum(grid[idx].^2)
+        f = x -> sum(x.^2)
         
         # Test with different scale_factor types
         scale_float = 2.0
@@ -234,7 +234,7 @@ end
     @testset "Zero and negative scale factors" begin
         dim = 2
         grid = generate_grid(dim, 10, basis=:chebyshev)
-        f = idx -> sum(grid[idx].^2)
+        f = x -> sum(x.^2)
         
         # Zero scale_factor should give zero norm (collapsed domain)
         @test discrete_l2_norm_riemann_scaled(f, grid, 0.0) ≈ 0.0
@@ -267,7 +267,7 @@ end
     @testset "Dimension mismatch" begin
         dim = 3
         grid = generate_grid(dim, 10, basis=:chebyshev)
-        f = idx -> sum(grid[idx].^2)
+        f = x -> sum(x.^2)
         
         # Vector scale_factor with wrong dimension
         wrong_scale = [2.0, 3.0]  # Only 2 elements for 3D

@@ -230,7 +230,7 @@ using Globtim
         @test startswith(centered, "│")
         @test endswith(centered, "│")
         @test contains(centered, "TITLE")
-        @test length(centered) == 22  # Including prefix and suffix
+        @test length(centered) == 20  # Should match the specified width
     end
     
     @testset "Edge Cases and Error Handling" begin

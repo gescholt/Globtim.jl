@@ -4,7 +4,7 @@
     MainGenerate(
         f,
         n::Int,
-        d::Int,
+        d::Union{Tuple{Symbol,Int}, Tuple{Symbol,Vector{Int}}, Matrix{Float64}},
         delta::Float64,
         alpha::Float64,
         scale_factor::Union{Float64,Vector{Float64}},
@@ -23,7 +23,9 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 # Arguments
 - `f`: The objective function to approximate
 - `n`: Number of variables
-- `d`: Maximum degree of the polynomial
+- `d`: Either:
+  - Degree specification: `(:one_d_for_all, degree)` or `(:one_d_per_dim, [degrees...])`
+  - Pre-generated grid: `Matrix{Float64}` where each row is a point in n-dimensional space
 - `delta`: Sampling parameter
 - `alpha`: Probability parameter
 - `scale_factor`: Scaling factor(s) for the domain (scalar or vector)
@@ -42,7 +44,7 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 TimerOutputs.@timeit _TO function MainGenerate(
     f,
     n::Int,
-    d,
+    d::Union{Tuple{Symbol,Int}, Tuple{Symbol,Vector{Int}}, Matrix{Float64}},
     delta::Float64,
     alpha::Float64,
     scale_factor::Union{Float64,Vector{Float64}},
@@ -55,33 +57,64 @@ TimerOutputs.@timeit _TO function MainGenerate(
     normalized::Bool=true,
     power_of_two_denom::Bool=false
 )::ApproxPoly
-    D = if d[1] == :one_d_for_all
-        maximum(d[2])  
-    elseif d[1] == :one_d_per_dim
-        maximum(d[2])  
-    elseif d[1] == :fully_custom
-        0
+    # Check if d is a grid (Matrix format)
+    grid_provided = isa(d, Matrix)
+    
+    if grid_provided
+        # Validate grid dimensions
+        @assert size(d, 2) == n "Grid dimension mismatch: expected $n, got $(size(d, 2))"
+        @assert size(d, 1) > 0 "Empty grid provided"
+        
+        # Store grid information
+        matrix_from_grid = d
+        actual_GN = size(d, 1)
+        
+        # Infer polynomial degree from grid size
+        # For tensor product grids: n_points ≈ (degree + 1)^dim
+        n_per_dim = round(Int, actual_GN^(1/n))
+        degree_est = n_per_dim - 1
+        
+        # Generate Lambda support based on inferred degree
+        Lambda = SupportGen(n, (:one_d_for_all, degree_est))
+        
+        # Set D for compatibility
+        D = degree_est
+        K = actual_GN  # Use grid size as sample count
+        
+        # No need to generate grid - we already have it
+        grid = nothing  # Will be set later for function evaluation
     else
-        throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."))
-    end
+        # Existing degree-based logic
+        D = if d[1] == :one_d_for_all
+            maximum(d[2])  
+        elseif d[1] == :one_d_per_dim
+            maximum(d[2])  
+        elseif d[1] == :fully_custom
+            0
+        else
+            throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."))
+        end
 
-    m = binomial(n + D, D)  # Dimension of vector space
-    K = calculate_samples(m, delta, alpha)
+        m = binomial(n + D, D)  # Dimension of vector space
+        K = calculate_samples(m, delta, alpha)
 
-    # Use provided GN if given, otherwise compute it
-    actual_GN = if isnothing(GN)
-        Int(round(K^(1 / n) * scl) + 1)
-    else
-        GN
-    end
+        # Use provided GN if given, otherwise compute it
+        actual_GN = if isnothing(GN)
+            Int(round(K^(1 / n) * scl) + 1)
+        else
+            GN
+        end
 
-    Lambda = SupportGen(n, d)
-    if n <= 0
-        grid = generate_grid_small_n(n, actual_GN, basis=basis)
-    else
-        grid = generate_grid(n, actual_GN, basis=basis)
+        Lambda = SupportGen(n, d)
+        
+        # Generate grid
+        if n <= 0
+            grid = generate_grid_small_n(n, actual_GN, basis=basis)
+        else
+            grid = generate_grid(n, actual_GN, basis=basis)
+        end
+        matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     end
-    matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis)
     G_original = VL' * VL
 
@@ -90,9 +123,19 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Handle different scale_factor types for function evaluation
     TimerOutputs.@timeit _TO "evaluation" begin
+        # Handle grid format differences
+        if grid_provided
+            # Grid is already in matrix format, create SVectors for evaluation
+            grid_points = [SVector{n,Float64}(matrix_from_grid[i,:]) for i in 1:size(matrix_from_grid, 1)]
+        else
+            # Use existing grid (Vector of SVectors)
+            grid_points = reshape(grid, :)
+        end
+        
+        # Evaluate function on grid points
         if isa(scale_factor, Number)
             # Scalar scale_factor
-            F = map(x -> f(scale_factor * x + scaled_center), reshape(grid, :))
+            F = map(x -> f(scale_factor * x + scaled_center), grid_points)
         else
             # Vector scale_factor - element-wise multiplication for each coordinate
             # Create a function to apply per-coordinate scaling
@@ -100,7 +143,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
                 scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
                 return f(scaled_x + scaled_center)
             end
-            F = map(apply_scale, reshape(grid, :))
+            F = map(apply_scale, grid_points)
         end
     end
 
@@ -120,7 +163,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
     # Compute norm based on basis type
     TimerOutputs.@timeit _TO "norm_computation" nrm = if basis == :chebyshev
         # Type-stable norm computation
-        compute_norm(scale_factor, VL, sol, F, grid, n, d)
+        # Use grid_points which works for both cases
+        compute_norm(scale_factor, VL, sol, F, grid_provided ? grid_points : grid, n, d)
     else  # Legendre case
         # Use uniform weights for Legendre grid
         sqrt((2 / actual_GN)^n * sum(abs2.(VL * sol.u - F)))
@@ -128,8 +172,11 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Store the basis parameters in the ApproxPoly object
     # Use the smart constructor to get correct type parameters
+    # For grid input, store the inferred degree format
+    degree_info = grid_provided ? (:one_d_for_all, degree_est) : d
+    
     return ApproxPoly(
-        sol.u, Lambda.data, d, nrm, actual_GN, scale_factor, matrix_from_grid, F,
+        sol.u, Lambda.data, degree_info, nrm, actual_GN, scale_factor, matrix_from_grid, F,
         basis, precision, normalized, power_of_two_denom, cond_vandermonde
     )
 end

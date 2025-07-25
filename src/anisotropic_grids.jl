@@ -111,5 +111,94 @@ function is_anisotropic(grid::Array{<:SVector})
     return !all(d -> d == dims[1], dims)
 end
 
+# Grid format conversion utilities
+
+"""
+    convert_to_matrix_grid(grid::Vector{<:AbstractVector})
+
+Convert a vector of static vectors (from generate_anisotropic_grid) to a matrix format
+where each row is a point in n-dimensional space.
+
+# Arguments
+- `grid`: Vector of SVector or similar, where each element is a point
+
+# Returns
+- `Matrix{Float64}`: Matrix where row i contains the coordinates of point i
+"""
+function convert_to_matrix_grid(grid::Vector{<:AbstractVector})
+    n = length(first(grid))
+    n_points = length(grid)
+    matrix = Matrix{Float64}(undef, n_points, n)
+    
+    for (i, point) in enumerate(grid)
+        matrix[i, :] = point
+    end
+    
+    return matrix
+end
+
+"""
+    convert_to_svector_grid(matrix::Matrix{Float64})
+
+Convert a matrix grid format to a vector of SVectors.
+
+# Arguments
+- `matrix`: Matrix where each row is a point in n-dimensional space
+
+# Returns
+- `Vector{SVector}`: Vector of static vectors
+"""
+function convert_to_svector_grid(matrix::Matrix{Float64})
+    n = size(matrix, 2)
+    n_points = size(matrix, 1)
+    
+    return [SVector{n,Float64}(matrix[i,:]) for i in 1:n_points]
+end
+
+"""
+    validate_grid(grid::Matrix{Float64}, n::Int; basis::Symbol=:chebyshev)
+
+Validate that a grid is suitable for polynomial approximation.
+
+# Arguments
+- `grid`: Grid matrix to validate
+- `n`: Expected dimension
+- `basis`: Basis type (:chebyshev or :legendre)
+
+# Returns
+- `nothing`: Throws error if validation fails
+"""
+function validate_grid(grid::Matrix{Float64}, n::Int; basis::Symbol=:chebyshev)
+    # Check dimensions
+    if size(grid, 2) != n
+        throw(DimensionMismatch("Grid has $(size(grid, 2)) dimensions but expected $n"))
+    end
+    
+    # Check for empty grid
+    if size(grid, 1) == 0
+        throw(ArgumentError("Empty grid provided"))
+    end
+    
+    # Check for duplicate points
+    unique_points = unique(eachrow(grid))
+    if length(unique_points) < size(grid, 1)
+        @warn "Grid contains duplicate points"
+    end
+    
+    # Check if points are in valid range for basis
+    if basis == :chebyshev || basis == :legendre
+        for i in 1:size(grid, 1)
+            for j in 1:n
+                if abs(grid[i,j]) > 1.0 + 1e-10  # Small tolerance for numerical errors
+                    @warn "Grid point at ($i,$j) = $(grid[i,j]) is outside [-1,1] range for $basis basis"
+                end
+            end
+        end
+    end
+    
+    return nothing
+end
+
 # Export functions
 export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
+export convert_to_matrix_grid, convert_to_svector_grid, validate_grid

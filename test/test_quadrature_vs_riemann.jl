@@ -1,8 +1,15 @@
 using Test
 using Globtim
-using BenchmarkTools
 using LinearAlgebra
 using StaticArrays
+
+# Try to import BenchmarkTools - if not available, skip performance tests
+const BENCHMARKS_AVAILABLE = try
+    using BenchmarkTools
+    true
+catch
+    false
+end
 
 @testset "Quadrature vs Riemann L2 Norm Comparison" begin
     
@@ -98,8 +105,8 @@ using StaticArrays
     end
     
     @testset "Performance Comparison" begin
-        # Skip detailed benchmarking in normal test runs
-        if get(ENV, "BENCHMARK_TESTS", "false") == "true"
+        # Skip detailed benchmarking in normal test runs or if BenchmarkTools not available
+        if BENCHMARKS_AVAILABLE && get(ENV, "BENCHMARK_TESTS", "false") == "true"
             println("\nPerformance Comparison Results:")
             println("="^60)
             
