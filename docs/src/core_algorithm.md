@@ -4,7 +4,7 @@ Globtim's approach to global optimization consists of three main phases:
 
 ## 1. Polynomial Approximation
 
-The first step constructs a polynomial approximation of the objective function using discrete least squares.
+The first step constructs a polynomial approximation of the objective function using discrete least squares. For detailed coverage of approximation methods, see [Polynomial Approximation](polynomial_approximation.md).
 
 ### Sampling Strategy
 
@@ -21,6 +21,8 @@ pol = Constructor(
 
 The sampling points are chosen to minimize approximation error and avoid Runge's phenomenon.
 
+For functions with different scales in different dimensions, see [Anisotropic Grids Guide](anisotropic_grids_guide.md).
+
 ### Approximation Quality
 
 The `Constructor` returns a polynomial with an L2-norm error estimate:
@@ -32,6 +34,8 @@ println("Approximation error: ", pol.nrm)
 # Access polynomial coefficients
 coeffs = pol.coeffs  # Coefficient matrix
 ```
+
+The L2-norm can be computed using either Riemann sums or high-accuracy quadrature methods. For details on polynomial post-processing and sparsification, see [Polynomial Sparsification](sparsification.md).
 
 ### Basis Functions
 
@@ -78,6 +82,8 @@ Two solvers are available:
    - Exact symbolic solver
    - Requires external installation
    - Useful for verification
+
+For detailed solver configuration and selection guidelines, see [Polynomial System Solvers](solvers.md).
 
 ### Solution Processing
 

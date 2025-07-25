@@ -118,6 +118,12 @@ Available when CairoMakie or GLMakie are loaded:
 - **`get_grid_dimensions`** - Extract number of points in each dimension
 - **`is_anisotropic`** - Check if grid has different points per dimension
 
+### Grid Format Conversion
+- **`grid_to_matrix`** - Convert Array{SVector} grid to matrix format
+- **`ensure_matrix_format`** - Ensure grid is in matrix format for BLAS operations
+- **`matrix_to_grid`** - Convert matrix back to Array{SVector} format
+- **`get_grid_info`** - Query grid format and dimensions
+
 ### L²-Norm Computation
 - **`discrete_l2_norm_riemann`** - Compute L²-norm using Riemann sum on grid
 - **`compute_l2_norm_quadrature`** - Compute L²-norm using polynomial quadrature

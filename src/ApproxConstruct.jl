@@ -110,9 +110,10 @@ function SupportGen(n::Int, d)::NamedTuple
 end
 
 TimerOutputs.@timeit _TO function lambda_vandermonde(Lambda::NamedTuple, S; basis=:chebyshev)
+    T = eltype(S)  # Infer type from input
     m, N = Lambda.size
     n, N = size(S)
-    V = zeros(Float64, n, m)  # Using Float64 directly instead of BigFloat
+    V = zeros(T, n, m)  # Use inferred type instead of Float64
 
     # Get unique points (they're the same for each dimension)
     unique_points = unique(S[:, 1])
@@ -125,49 +126,60 @@ TimerOutputs.@timeit _TO function lambda_vandermonde(Lambda::NamedTuple, S; basi
 
     if basis == :legendre
         # Precompute Legendre polynomial evaluations for all degrees at unique points
-        eval_cache = Dict{Int,Vector{Float64}}()  # Using Float64 instead of BigFloat
+        eval_cache = Dict{Int,Vector{T}}()  # Use type T instead of Float64
 
         # Compute polynomials and evaluations
         @views for degree = 0:max_degree
-            # Use the existing symbolic_legendre function with appropriate precision
+            # For now, keep using Float64 precision for polynomial generation
+            # but convert results to type T
             poly = symbolic_legendre(degree, precision=Float64Precision, normalized=true)
-
-            # The key change: use the same evaluation approach that worked before
-            # but convert the result to Float64
-            eval_cache[degree] = map(point -> Float64(evaluate_legendre(poly, point)), unique_points)
+            
+            # Convert evaluation results to type T
+            eval_cache[degree] = map(point -> T(evaluate_legendre(poly, Float64(point))), unique_points)
         end
 
         # Compute Vandermonde matrix using cached values
         @views for i = 1:n, j = 1:m
-            P = 1.0  # Use 1.0 instead of one(BigFloat)
+            P = one(T)  # Use one(T) instead of 1.0
             for k = 1:N
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
                 point_idx = point_indices[point]
                 P *= eval_cache[degree][point_idx]
             end
-            V[i, j] = P  # Store directly in V instead of V_big
+            V[i, j] = P
         end
 
     elseif basis == :chebyshev
         # Precompute Chebyshev polynomial evaluations
-        eval_cache = Dict{Int,Vector{Float64}}()
+        eval_cache = Dict{Int,Vector{T}}()
 
-        # Precompute all values using cosine formula
-        @views for point in unique_points
-            point_idx = point_indices[point]
-            theta = acos(Float64(point))
+        # Special handling for exact types vs floating point
+        if T <: Rational || T <: Integer
+            # Use recurrence relation for exact computation
             for degree = 0:max_degree
-                if !haskey(eval_cache, degree)
-                    eval_cache[degree] = Vector{Float64}(undef, length(unique_points))
+                eval_cache[degree] = T[]
+                for point in unique_points
+                    push!(eval_cache[degree], chebyshev_value_exact(degree, T(point)))
                 end
-                eval_cache[degree][point_idx] = cos(degree * theta)
+            end
+        else
+            # Use cosine formula for floating point types
+            @views for point in unique_points
+                point_idx = point_indices[point]
+                theta = acos(clamp(T(point), T(-1), T(1)))
+                for degree = 0:max_degree
+                    if !haskey(eval_cache, degree)
+                        eval_cache[degree] = Vector{T}(undef, length(unique_points))
+                    end
+                    eval_cache[degree][point_idx] = cos(degree * theta)
+                end
             end
         end
 
         # Compute Vandermonde matrix using cached values
         @views for i = 1:n, j = 1:m
-            P = 1.0
+            P = one(T)
             for k = 1:N
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
@@ -184,7 +196,26 @@ TimerOutputs.@timeit _TO function lambda_vandermonde(Lambda::NamedTuple, S; basi
         )
     end
 
-    return V  # Already in Float64
+    return V
+end
+
+# Helper function for exact Chebyshev evaluation
+function chebyshev_value_exact(n::Int, x::T) where T
+    if n == 0
+        return one(T)
+    elseif n == 1
+        return x
+    else
+        # T_n(x) = 2x*T_{n-1}(x) - T_{n-2}(x)
+        T_prev2 = one(T)
+        T_prev1 = x
+        for k = 2:n
+            T_curr = 2 * x * T_prev1 - T_prev2
+            T_prev2 = T_prev1
+            T_prev1 = T_curr
+        end
+        return T_prev1
+    end
 end
 
 """

@@ -44,21 +44,54 @@ Type-stable norm computation that dispatches based on scale_factor type.
 function compute_norm(scale_factor::Float64, VL, sol, F, grid, n, d)
     # Scalar scale_factor version
     evals = (VL*sol.u-F)
-    # @info "" grid
-    # @info "" evals
     
-    # residual = x -> evals[findfirst(y -> y == x, reshape(grid, :))]
-    residual = idx -> evals[idx]
-    discrete_l2_norm_riemann(residual, grid)
+    # Handle different grid formats
+    if isa(grid, Vector)
+        # Grid is already a flat vector (from grid input case)
+        # For discrete_l2_norm_riemann, we need to reconstruct an Array
+        # Estimate grid dimensions assuming tensor product
+        total_points = length(grid)
+        points_per_dim = round(Int, total_points^(1/n))
+        
+        # For now, use a simpler L2 norm calculation for vector grids
+        # This is the Riemann sum approximation with uniform weights
+        cell_volume = (2.0 / points_per_dim)^n
+        return sqrt(cell_volume * sum(abs2, evals))
+    else
+        # Original behavior for Array grids
+        grid_flat = reshape(grid, :)
+        residual = x -> begin
+            idx = findfirst(y -> y == x, grid_flat)
+            idx === nothing ? error("Point not found in grid") : evals[idx]
+        end
+        discrete_l2_norm_riemann(residual, grid)
+    end
 end
 
 function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, grid, n, d)
     # Vector scale_factor version
-    function residual(idx)
-        # idx = findfirst(y -> y == x, reshape(grid, :))
-        return (VL*sol.u-F)[idx]
+    evals = (VL*sol.u-F)
+    
+    # Handle different grid formats
+    if isa(grid, Vector)
+        # Grid is already a flat vector (from grid input case)
+        # Estimate grid dimensions assuming tensor product
+        total_points = length(grid)
+        points_per_dim = round(Int, total_points^(1/n))
+        
+        # For now, use a simpler L2 norm calculation for vector grids
+        # This is the Riemann sum approximation with uniform weights
+        cell_volume = (2.0 / points_per_dim)^n
+        return sqrt(cell_volume * sum(abs2, evals))
+    else
+        # Original behavior for Array grids
+        grid_flat = reshape(grid, :)
+        function residual(x)
+            idx = findfirst(y -> y == x, grid_flat)
+            idx === nothing ? error("Point not found in grid") : evals[idx]
+        end
+        discrete_l2_norm_riemann(residual, grid)
     end
-    discrete_l2_norm_riemann(residual, grid)
 end
 
 """

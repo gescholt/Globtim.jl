@@ -15,3 +15,9 @@ When analyzing Jupyter notebooks:
 4. To execute notebook code, use the `mcp__ide__executeCode` tool if available
 5. Pay attention to both the code cells and their outputs to understand the full context
 6. Cell outputs may contain error messages, warnings, or successful execution results that are crucial for analysis
+
+# Bug Fixing and Patterns
+- When fixing bugs, document the underlying pattern or root cause in a compact, clear manner to build a repository of debugging insights
+
+# Documentation and Code Analysis
+- Always record in a central location if you come across poorly documented functions (unclear data types, dead parameters, magic hardcoded values) -- not necessary to fix immediately, but needs to be investigated later

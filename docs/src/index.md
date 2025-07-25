@@ -81,6 +81,6 @@ Comprehensive test suite with detailed documentation:
 ## Contents
 
 ```@contents
-Pages = ["getting_started.md", "core_algorithm.md", "critical_point_analysis.md", "anisotropic_grids_guide.md", "sparsification.md", "test_documentation.md", "test_running_guide.md", "anisotropic_grid_tests.md", "api_reference.md", "examples.md", "visualization.md"]
+Pages = ["getting_started.md", "core_algorithm.md", "polynomial_approximation.md", "solvers.md", "critical_point_analysis.md", "anisotropic_grids_guide.md", "sparsification.md", "grid_formats.md", "test_documentation.md", "test_running_guide.md", "anisotropic_grid_tests.md", "api_reference.md", "examples.md", "visualization.md"]
 Depth = 2
 ```
