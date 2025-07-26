@@ -22,5 +22,9 @@ Examples/**/outputs.ms
 Examples/**/*.png
 Examples/**/*.pdf
 
+# Notebooks not ready for public release
+Examples/Notebooks/AnisotropicGridComparison.ipynb
+Examples/Notebooks/Triple_Graph*.ipynb
+
 # Data outputs
 data/figures/

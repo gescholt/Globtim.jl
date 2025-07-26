@@ -21,7 +21,7 @@
 Compute the coefficients of a polynomial approximant of degree `d` in the specified basis.
 
 # Arguments
-- `f`: The objective function to approximate
+- `f`: The objective function to approximate. For 1D functions (n=1), the function should accept scalar inputs (e.g., `x -> sin(x)`). For multi-dimensional functions (n>1), the function should accept vector inputs (e.g., `x -> sin(x[1]) + cos(x[2])`).
 - `n`: Number of variables
 - `d`: Either:
   - Degree specification: `(:one_d_for_all, degree)` or `(:one_d_per_dim, [degrees...])`
@@ -40,6 +40,10 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 
 # Returns
 - `ApproxPoly`: An object containing the polynomial approximation and related data
+
+# Note on 1D Functions
+When `n=1`, the function automatically extracts scalar values from the internal vector representation, 
+allowing natural use of scalar functions like `sin`, `cos`, etc.
 """
 TimerOutputs.@timeit _TO function MainGenerate(
     f,
@@ -145,13 +149,23 @@ TimerOutputs.@timeit _TO function MainGenerate(
         # Evaluate function on grid points
         if isa(scale_factor, Number)
             # Scalar scale_factor
-            F = map(x -> f(scale_factor * x + scaled_center), grid_points)
+            if n == 1
+                # For 1D functions, extract scalar from SVector
+                F = map(x -> f((scale_factor * x + scaled_center)[1]), grid_points)
+            else
+                F = map(x -> f(scale_factor * x + scaled_center), grid_points)
+            end
         else
             # Vector scale_factor - element-wise multiplication for each coordinate
             # Create a function to apply per-coordinate scaling
             function apply_scale(x)
                 scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
-                return f(scaled_x + scaled_center)
+                if n == 1
+                    # For 1D functions, pass scalar
+                    return f((scaled_x + scaled_center)[1])
+                else
+                    return f(scaled_x + scaled_center)
+                end
             end
             F = map(apply_scale, grid_points)
         end
@@ -227,6 +241,12 @@ polynomial of the specified degree.
 
 # Examples
 ```julia
+# 1D function example with scalar input
+f1 = x -> sin(x)
+TR = test_input(f1, dim=1, center=[0.0], sample_range=10.0)
+pol = Constructor(TR, 8)
+println("L2-norm error: ", pol.nrm)
+
 # Basic usage with default Chebyshev basis
 f = Deuflhard
 TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)

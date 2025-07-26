@@ -363,7 +363,7 @@ Hessian analysis uses ForwardDiff.jl for automatic differentiation to compute He
 then performs eigenvalue decomposition for critical point classification. All eigenvalue
 computations include robust error handling for numerical stability.
 
-See also: [`compute_hessians`](@ref), [`classify_critical_points`](@ref), [`process_crit_pts`](@ref)
+See also: `compute_hessians`, `classify_critical_points`, `process_crit_pts`
 """
 TimerOutputs.@timeit _TO function analyze_critical_points(
     f::Function,
