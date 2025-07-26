@@ -34,7 +34,8 @@
       "Bash(git merge:*)",
       "Bash(git tag:*)",
       "Bash(git describe:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "WebFetch(domain:gescholt.github.io)"
     ]
   },
   "enableAllProjectMcpServers": false
