@@ -149,9 +149,8 @@ end
             # Compute Vandermonde matrix
             V = Globtim.lambda_vandermonde(Lambda, grid_matrix)
             
-            # Currently hardcoded to Float64, but should preserve type
-            # This test documents current behavior
-            @test eltype(V) == Float64
+            # Test that type is preserved from input
+            @test eltype(V) == T
         end
     end
     

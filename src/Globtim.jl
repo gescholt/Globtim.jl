@@ -118,9 +118,6 @@ export compute_l2_norm_quadrature
 # Anisotropic grid support
 export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
 
-# L2 norm functions
-export discrete_l2_norm_riemann
-
 include("config.jl")
 include("LibFunctions.jl") #list of test functions. 
 include("Structures.jl") # list of structures used in the code.
@@ -152,6 +149,9 @@ include("anisotropic_grids.jl") #Anisotropic grid generation
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
+
+# L2 norm functions (after l2_norm.jl is included)
+export discrete_l2_norm_riemann
 
 # Phase 2: Hessian analysis functions
 export compute_hessians, classify_critical_points, store_all_eigenvalues, 
