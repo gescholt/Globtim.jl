@@ -81,7 +81,8 @@ coverage:
   script:
     - julia --version
     - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
-    - julia --project=@. -e '
+    - |
+      julia --project=@. -e '
         using Coverage
         # Process coverage data from src directory
         coverage = process_folder("src")
