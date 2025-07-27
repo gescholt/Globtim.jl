@@ -165,3 +165,6 @@ include("test_anisotropic_integration.jl")
 
 # Include lambda_vandermonde anisotropic tests
 include("test_lambda_vandermonde_anisotropic.jl")
+
+# Include convenience methods tests
+include("test_convenience_methods.jl")

@@ -22,6 +22,9 @@ println("Approximation error: ", pol.nrm)
 solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
 df = process_crit_pts(solutions, f, TR)
 
+# Alternative: Use the new convenience method
+# solutions = solve_polynomial_system(x, pol)  # Automatically extracts dimension and degree
+
 # Refine and classify
 df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
@@ -194,7 +197,42 @@ end
 println(results)
 ```
 
-## Example 8: Basin Analysis
+## Example 8: 1D Functions with Scalar Input
+
+Working with 1D functions that expect scalar input (like `sin`, `cos`, etc.):
+
+```julia
+using Globtim, DynamicPolynomials, DataFrames
+
+# Define a 1D function with scalar input
+f = x -> sin(3*x) + 0.1*x^2
+
+# Set up the problem
+TR = test_input(f, dim=1, center=[0.0], sample_range=π)
+
+# Build polynomial approximation
+pol = Constructor(TR, 10)
+println("Approximation error: ", pol.nrm)
+
+# Find critical points using the new convenience method
+@polyvar x
+solutions = solve_polynomial_system(x, pol)  # No need to specify dimension or degree!
+
+# Process critical points - automatically handles scalar functions
+df = process_crit_pts(solutions, f, TR)
+
+println("\nCritical points found:")
+for i in 1:nrow(df)
+    x_val = df.x1[i]
+    f_val = df.z[i]
+    println("  x = $x_val, f(x) = $f_val")
+end
+
+# The old way still works but requires more parameters:
+# solutions = solve_polynomial_system([x], 1, 10, pol.coeffs)
+```
+
+## Example 9: Basin Analysis
 
 Understanding convergence basins:
 
