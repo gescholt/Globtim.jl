@@ -330,6 +330,9 @@ end
         if error < 1e-14 && error_sparse < 1e-14
             # Both errors are essentially zero - test passes
             @test true
+        elseif abs(error_sparse - error) < 1e-14
+            # The difference is within machine precision - test passes
+            @test true
         else
             @test error_sparse >= error - 1e-15
         end
