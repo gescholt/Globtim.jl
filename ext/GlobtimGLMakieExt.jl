@@ -1,6 +1,7 @@
 module GlobtimGLMakieExt
 
 using Globtim
+using Makie
 using GLMakie
 using DataFrames
 using StaticArrays  # Required for LevelSetViz.jl
@@ -86,11 +87,13 @@ function Globtim.plot_error_function_2D_with_critical_points(
         ylabel = ylabel,
     )
 
+    @info "" map(first, fine_grid) map(last, fine_grid) fine_values_f
+
     cf = contourf!(
         ax,
         map(first, fine_grid),
         map(last, fine_grid),
-        fine_values_f,
+        fine_values_f;
         colormap = chosen_colormap,
         levels = levels,
     )
