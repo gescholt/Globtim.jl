@@ -31,13 +31,12 @@ ic = T[0.3, 0.6]
 num_points = 20
 distance = log_L2_norm
 model, params, states, outputs = define_lotka_volterra_3D_model()
-error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points,
-    distance)
+error_func =
+    make_error_distance(model, outputs, ic, p_true, time_interval, num_points, distance)
 
-# 
+#
 
-p_test = SVector(0.2, .5, 0.8)
+p_test = SVector(0.2, 0.5, 0.8)
 error_value = error_func(p_test)
 @show "" error_value
 # _fig1 = plot_parameter_result(model, outputs, p_true, p_test, plot_title="Lotka-Volterra Model Comparison")
@@ -50,22 +49,17 @@ n = 3
 d = 11
 GN = 60
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
 
-# Chebyshev 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+# Chebyshev
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
-df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Lotka-Volterra 3D model with Chebyshev basis")
@@ -80,7 +74,18 @@ println("Distance function: ", distance)
 println("Condition number of the polynomial system: ", pol_cheb.cond_vandermonde)
 println("L2 norm (error of approximation): ", pol_cheb.nrm)
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 println(Globtim._TO)
@@ -100,28 +105,28 @@ Condition number of the polynomial system: 8.000000000000014
 L2 norm (error of approximation): 2.1458048425944027
 Critical points found:
 1×10 DataFrame
- Row │ x1        x2        x3        z          y1        y2        y3       close  steps    converged 
-     │ Float64   Float64   Float64   Float64    Float64   Float64   Float64  Bool   Float64  Bool      
+ Row │ x1        x2        x3        z          y1        y2        y3       close  steps    converged
+     │ Float64   Float64   Float64   Float64    Float64   Float64   Float64  Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ 0.538836  0.561903  0.487104  -0.588186  0.116121  0.537693  0.47558  false      8.0      false
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        x3        z          y1        y2        y3       close  steps    converged 
-     │ Float64   Float64   Float64   Float64    Float64   Float64   Float64  Bool   Float64  Bool      
+ Row │ x1        x2        x3        z          y1        y2        y3       close  steps    converged
+     │ Float64   Float64   Float64   Float64    Float64   Float64   Float64  Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ 0.538836  0.561903  0.487104  -0.588186  0.116121  0.537693  0.47558  false      8.0      false
 
 (after optimization)  Best critical points:
 1×5 DataFrame
- Row │ x3       x2        x1        value     captured 
-     │ Float64  Float64   Float64   Float64   Bool     
+ Row │ x3       x2        x1        value     captured
+     │ Float64  Float64   Float64   Float64   Bool
 ─────┼─────────────────────────────────────────────────
    1 │ 0.47558  0.537693  0.116121  -9.67196     false
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                20.0s /  98.5%           3.12GiB /  99.6%    
+           Tot / % measured:                20.0s /  98.5%           3.12GiB /  99.6%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
@@ -151,8 +156,8 @@ Condition number of the polynomial system: 8.000000000000027
 L2 norm (error of approximation): 1.3809373376312897
 Critical points found:
 20×10 DataFrame
- Row │ x1         x2        x3        z           y1          y2        y3          close  steps    converged 
-     │ Float64    Float64   Float64   Float64     Float64     Float64   Float64     Bool   Float64  Bool      
+ Row │ x1         x2        x3        z           y1          y2        y3          close  steps    converged
+     │ Float64    Float64   Float64   Float64     Float64     Float64   Float64     Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ 0.492802   0.532399  0.913368  -0.483308    0.267261   0.302216   0.868377   false      8.0      false
    2 │ 0.322687   0.284091  0.475265  -5.61708     0.0685374  0.614702   0.388989   false      9.0      false
@@ -177,15 +182,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        x3       z        y1        y2        y3        close  steps    converged 
-     │ Float64   Float64   Float64  Float64  Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        x3       z        y1        y2        y3        close  steps    converged
+     │ Float64   Float64   Float64  Float64  Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼───────────────────────────────────────────────────────────────────────────────────────────────
    6 │ 0.230233  0.357547  0.69094   -6.275  0.230026  0.353266  0.786654  false      6.0      false
 
 (after optimization)  Best critical points:
 6×5 DataFrame
- Row │ x3        x2        x1         value      captured 
-     │ Float64   Float64   Float64    Float64    Bool     
+ Row │ x3        x2        x1         value      captured
+     │ Float64   Float64   Float64    Float64    Bool
 ─────┼────────────────────────────────────────────────────
    1 │ 0.868377  0.302216  0.267261    -8.7705      false
    2 │ 0.748528  0.362917  0.22742     -9.38704     false
@@ -194,9 +199,9 @@ DataFrameRow
    5 │ 0.450595  0.56818   0.0950819  -10.3382      false
    6 │ 0.671343  0.418715  0.18797    -10.596       false
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                 100s /  99.6%           15.6GiB /  99.7%    
+           Tot / % measured:                 100s /  99.6%           15.6GiB /  99.7%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
@@ -226,8 +231,8 @@ Condition number of the polynomial system: 8.000000000000039
 L2 norm (error of approximation): 1.1440627708106073
 Critical points found:
 34×10 DataFrame
- Row │ x1         x2        x3        z          y1          y2         y3         close  steps    converged 
-     │ Float64    Float64   Float64   Float64    Float64     Float64    Float64    Bool   Float64  Bool      
+ Row │ x1         x2        x3        z          y1          y2         y3         close  steps    converged
+     │ Float64    Float64   Float64   Float64    Float64     Float64    Float64    Bool   Float64  Bool
 ─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ 0.369751   0.645613  0.868299  -0.513398   0.214658   0.377542    0.736772  false      9.0      false
    2 │ 0.453022   0.465535  0.874296  -0.998096   0.243154   0.339175    0.789751  false      8.0      false
@@ -266,15 +271,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        x3        z         y1        y2        y3        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        x3        z         y1        y2        y3        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────────────────────────
    8 │ 0.251694  0.336911  0.700815  -6.73085  0.191016  0.414807  0.669859  false      8.0      false
 
 (after optimization)  Best critical points:
 8×5 DataFrame
- Row │ x3        x2        x1        value      captured 
-     │ Float64   Float64   Float64   Float64    Bool     
+ Row │ x3        x2        x1        value      captured
+     │ Float64   Float64   Float64   Float64    Bool
 ─────┼───────────────────────────────────────────────────
    1 │ 0.736772  0.377542  0.214658  -10.8197      false
    2 │ 0.789751  0.339175  0.243154   -9.11283     false
@@ -285,9 +290,9 @@ DataFrameRow
    7 │ 0.511038  0.521418  0.124233  -11.3629      false
    8 │ 0.946325  0.231323  0.328754   -6.99576     false
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                 180s /  99.6%           24.7GiB /  99.7%    
+           Tot / % measured:                 180s /  99.6%           24.7GiB /  99.7%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
@@ -317,8 +322,8 @@ Condition number of the polynomial system: 8.000000000000025
 L2 norm (error of approximation): 1.1564777681649934
 Critical points found:
 23×10 DataFrame
- Row │ x1         x2        x3        z          y1          y2         y3          close  steps    converged 
-     │ Float64    Float64   Float64   Float64    Float64     Float64    Float64     Bool   Float64  Bool      
+ Row │ x1         x2        x3        z          y1          y2         y3          close  steps    converged
+     │ Float64    Float64   Float64   Float64    Float64     Float64    Float64     Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ 0.497608   0.645285  0.813671  -0.127292   0.392232    0.115621   1.64404    false     11.0      false
    2 │ 0.356931   0.48218   0.877773  -1.41023    0.206312    0.389938   0.720027   false     10.0      false
@@ -346,15 +351,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        x3       z         y1        y2        y3       close  steps    converged 
-     │ Float64   Float64   Float64  Float64   Float64   Float64   Float64  Bool   Float64  Bool      
+ Row │ x1        x2        x3       z         y1        y2        y3       close  steps    converged
+     │ Float64   Float64   Float64  Float64   Float64   Float64   Float64  Bool   Float64  Bool
 ─────┼───────────────────────────────────────────────────────────────────────────────────────────────
   22 │ 0.195907  0.401376  0.67557  -6.91466  0.170979  0.445544   0.6242  false      6.0      false
 
 (after optimization)  Best critical points:
 6×5 DataFrame
- Row │ x3        x2        x1        value      captured 
-     │ Float64   Float64   Float64   Float64    Bool     
+ Row │ x3        x2        x1        value      captured
+     │ Float64   Float64   Float64   Float64    Bool
 ─────┼───────────────────────────────────────────────────
    1 │ 0.720027  0.389938  0.206312  -11.9125       true
    2 │ 0.876785  0.319231  0.249886  -11.2407       true
@@ -363,9 +368,9 @@ DataFrameRow
    5 │ 0.588784  0.464313  0.160709  -11.5261      false
    6 │ 0.791567  0.367936  0.216666   -8.90338     false
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                1318s / 100.0%            203GiB / 100.0%    
+           Tot / % measured:                1318s / 100.0%            203GiB / 100.0%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
@@ -395,8 +400,8 @@ Condition number of the polynomial system: 8.00000000000003
 L2 norm (error of approximation): 1.1060328349980868
 Critical points found:
 19×10 DataFrame
- Row │ x1         x2        x3        z          y1         y2          y3        close  steps    converged 
-     │ Float64    Float64   Float64   Float64    Float64    Float64     Float64   Bool   Float64  Bool      
+ Row │ x1         x2        x3        z          y1         y2          y3        close  steps    converged
+     │ Float64    Float64   Float64   Float64    Float64    Float64     Float64   Bool   Float64  Bool
 ─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ 0.238871   0.153149  0.628267  -2.26948   0.160918    0.474541   0.54246   false      9.0      false
    2 │ 0.354245   0.645606  0.820806  -0.635584  0.0950325   0.594359   0.337513  false      7.0      false
@@ -420,15 +425,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        x3        z         y1        y2        y3        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        x3        z         y1        y2        y3        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────────────────────────
   19 │ 0.223648  0.358108  0.789447  -8.98485  0.235525  0.344362  0.807238   true      4.0      false
 
 (after optimization)  Best critical points:
 6×5 DataFrame
- Row │ x3        x2        x1        value      captured 
-     │ Float64   Float64   Float64   Float64    Bool     
+ Row │ x3        x2        x1        value      captured
+     │ Float64   Float64   Float64   Float64    Bool
 ─────┼───────────────────────────────────────────────────
    1 │ 0.54246   0.474541  0.160918   -8.61836     false
    2 │ 0.66396   0.427456  0.180475  -10.2127      false
@@ -437,9 +442,9 @@ DataFrameRow
    5 │ 0.699018  0.396865  0.202337  -10.0526      false
    6 │ 0.807238  0.344362  0.235525  -11.3714       true
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                3.33h / 100.0%           1.14TiB / 100.0%    
+           Tot / % measured:                3.33h / 100.0%           1.14TiB / 100.0%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────

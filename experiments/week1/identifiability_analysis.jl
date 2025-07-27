@@ -3,11 +3,7 @@ using StructuralIdentifiability
 
 # FitzHugh-Nagumo model
 # https://github.com/iliailmer/ParameterEstimation.jl/blob/main/benchmarks/all-global/fitzhugh-nagumo.jl
-ode = @ODEmodel(
-	V'(t) = g * (V - V^3 / 3 + R),
-    R'(t) = 1 / g * (V - a + b * R),
-	y(t) = V
-)
+ode = @ODEmodel(V'(t) = g * (V - V^3 / 3 + R), R'(t) = 1 / g * (V - a + b * R), y(t) = V)
 
 assess_identifiability(ode)
 
@@ -15,7 +11,7 @@ assess_identifiability(ode)
 [ Info: Summary of the model:
 [ Info: State variables: V, R
 [ Info: Parameters: a, b, g
-[ Info: Inputs: 
+[ Info: Inputs:
 [ Info: Outputs: y
 [ Info: Assessing local identifiability
 [ Info: Assessing global identifiability
@@ -44,10 +40,10 @@ OrderedCollections.OrderedDict{Any, Symbol} with 5 entries:
 # Treatment model
 # https://github.com/iliailmer/ParameterEstimation.jl/blob/751b26e30066665cfd75e6b1dfa40e64f4b4cace/benchmarks/all_models.jl#L386
 ode = @ODEmodel(
-	S'(t) = -b * S * In / 1. - d * b * S * Tr / 1.,
-  In'(t) = b * S * In / 1. + d * b * S * Tr / 1. - (a + g) * In,
-  Tr'(t) = g * In - 0.4 * Tr,
-  y(t) = Tr
+    S'(t) = -b * S * In / 1.0 - d * b * S * Tr / 1.0,
+    In'(t) = b * S * In / 1.0 + d * b * S * Tr / 1.0 - (a + g) * In,
+    Tr'(t) = g * In - 0.4 * Tr,
+    y(t) = Tr
 )
 
 assess_identifiability(ode)
@@ -56,11 +52,11 @@ assess_identifiability(ode)
 # https://github.com/iliailmer/ParameterEstimation.jl/blob/main/examples/unidentifiable/goodwin-osc.jl
 
 ode = @ODEmodel(
-  x1'(t) = k1 * 0.9^10 / (0.9^10 + x3^10) - k2 * x1, # x1'(t) = k1 * Ki^10 / (Ki^10 + x3^10) - k2 * x1,
-  x2'(t) = 0.3 * x1 - k4 * x2, # x2'(t) = k3 * x1 - k4 * x2,
-  x3'(t) = k5 * x2 - 0.5 * x3, # k5 * x2 - k6 * x3,
-  y1(t) = x1,
-  y2(t) = x3,
+    x1'(t) = k1 * 0.9^10 / (0.9^10 + x3^10) - k2 * x1, # x1'(t) = k1 * Ki^10 / (Ki^10 + x3^10) - k2 * x1,
+    x2'(t) = 0.3 * x1 - k4 * x2, # x2'(t) = k3 * x1 - k4 * x2,
+    x3'(t) = k5 * x2 - 0.5 * x3, # k5 * x2 - k6 * x3,
+    y1(t) = x1,
+    y2(t) = x3,
 )
 
 assess_identifiability(ode)

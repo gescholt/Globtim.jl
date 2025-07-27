@@ -12,7 +12,8 @@ using StaticArrays, DataStructures, LinearAlgebra
 using TimerOutputs, DynamicPolynomials, HomotopyContinuation, ProgressLogging
 using Distributions
 
-using Logging; global_logger(ConsoleLogger(Logging.Error))
+using Logging;
+global_logger(ConsoleLogger(Logging.Error));
 
 #######################################
 # Load the DynamicalSystems.jl module
@@ -32,300 +33,377 @@ p_true = T[0.2, 0.4]
 ic = T[0.3, 0.6]
 num_points = 20
 model, params, states, outputs = define_lotka_volterra_2D_model()
-error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, log_L2_norm)
+error_func =
+    make_error_distance(model, outputs, ic, p_true, time_interval, num_points, log_L2_norm)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("No noise")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #######################################
 # Noise stddev 1e-8
 
-bias, stddev = 0., 1e-8
+bias, stddev = 0.0, 1e-8
 
-add_noise_in_time_series = (Y_true) -> begin
-    noise = rand(Normal(bias, stddev), length(Y_true))
-    Y_true = Y_true .+ noise
-end
+add_noise_in_time_series =
+    (Y_true) -> begin
+        noise = rand(Normal(bias, stddev), length(Y_true))
+        Y_true = Y_true .+ noise
+    end
 
 error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, 
+    model,
+    outputs,
+    ic,
+    p_true,
+    time_interval,
+    num_points,
     log_L2_norm,
-    add_noise_in_time_series)
+    add_noise_in_time_series,
+)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Noise added to the time series: (stddev = $stddev)")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #######################################
 # Noise stddev 1e-6
 
-bias, stddev = 0., 1e-6
+bias, stddev = 0.0, 1e-6
 
-add_noise_in_time_series = (Y_true) -> begin
-    noise = rand(Normal(bias, stddev), length(Y_true))
-    Y_true = Y_true .+ noise
-end
+add_noise_in_time_series =
+    (Y_true) -> begin
+        noise = rand(Normal(bias, stddev), length(Y_true))
+        Y_true = Y_true .+ noise
+    end
 
 error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, 
+    model,
+    outputs,
+    ic,
+    p_true,
+    time_interval,
+    num_points,
     log_L2_norm,
-    add_noise_in_time_series)
+    add_noise_in_time_series,
+)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Noise added to the time series: (stddev = $stddev)")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #######################################
 # Noise stddev 1e-4
 
-bias, stddev = 0., 1e-4
+bias, stddev = 0.0, 1e-4
 
-add_noise_in_time_series = (Y_true) -> begin
-    noise = rand(Normal(bias, stddev), length(Y_true))
-    Y_true = Y_true .+ noise
-end
+add_noise_in_time_series =
+    (Y_true) -> begin
+        noise = rand(Normal(bias, stddev), length(Y_true))
+        Y_true = Y_true .+ noise
+    end
 
 error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, 
+    model,
+    outputs,
+    ic,
+    p_true,
+    time_interval,
+    num_points,
     log_L2_norm,
-    add_noise_in_time_series)
+    add_noise_in_time_series,
+)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Noise added to the time series: (stddev = $stddev)")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #######################################
 # Noise stddev 1e-3
 
-bias, stddev = 0., 1e-3
+bias, stddev = 0.0, 1e-3
 
-add_noise_in_time_series = (Y_true) -> begin
-    noise = rand(Normal(bias, stddev), length(Y_true))
-    Y_true = Y_true .+ noise
-end
+add_noise_in_time_series =
+    (Y_true) -> begin
+        noise = rand(Normal(bias, stddev), length(Y_true))
+        Y_true = Y_true .+ noise
+    end
 
 error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, 
+    model,
+    outputs,
+    ic,
+    p_true,
+    time_interval,
+    num_points,
     log_L2_norm,
-    add_noise_in_time_series)
+    add_noise_in_time_series,
+)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Noise added to the time series: (stddev = $stddev)")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #######################################
 # Noise stddev 1e-2
 
-bias, stddev = 0., 1e-2
+bias, stddev = 0.0, 1e-2
 
-add_noise_in_time_series = (Y_true) -> begin
-    noise = rand(Normal(bias, stddev), length(Y_true))
-    Y_true = Y_true .+ noise
-end
+add_noise_in_time_series =
+    (Y_true) -> begin
+        noise = rand(Normal(bias, stddev), length(Y_true))
+        Y_true = Y_true .+ noise
+    end
 
 error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, 
+    model,
+    outputs,
+    ic,
+    p_true,
+    time_interval,
+    num_points,
     log_L2_norm,
-    add_noise_in_time_series)
+    add_noise_in_time_series,
+)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Noise added to the time series: (stddev = $stddev)")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #######################################
 # Noise stddev 1e-1
 
-bias, stddev = 0., 1e-1
+bias, stddev = 0.0, 1e-1
 
-add_noise_in_time_series = (Y_true) -> begin
-    noise = rand(Normal(bias, stddev), length(Y_true))
-    Y_true = Y_true .+ noise
-end
+add_noise_in_time_series =
+    (Y_true) -> begin
+        noise = rand(Normal(bias, stddev), length(Y_true))
+        Y_true = Y_true .+ noise
+    end
 
 error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points, 
+    model,
+    outputs,
+    ic,
+    p_true,
+    time_interval,
+    num_points,
     log_L2_norm,
-    add_noise_in_time_series)
+    add_noise_in_time_series,
+)
 
 n = 2
 d = 9
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
- 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
+
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-df_cheb, df_min_cheb = analyze_critical_points(
-    error_func, df_cheb, TR, tol_dist=0.05);
+df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist = 0.05);
 
 println("########################################")
 println("Noise added to the time series: (stddev = $stddev)")
 println("Lotka-Volterra 2D model with Chebyshev basis")
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 #=
@@ -334,8 +412,8 @@ Noise added to the time series: (stddev = 1.0e-8)
 Lotka-Volterra 2D model with Chebyshev basis
 Critical points found:
 13×8 DataFrame
- Row │ x1         x2        z           y1        y2        close  steps    converged 
-     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool      
+ Row │ x1         x2        z           y1        y2        close  steps    converged
+     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────
    1 │ 0.534831   0.63641    0.0587346  0.191376  0.408168  false     13.0      false
    2 │ 0.537479   0.54647   -0.299342   0.202049  0.397643  false      8.0      false
@@ -353,15 +431,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        z         y1        y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1        y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────
   11 │ 0.204225  0.394668  -8.89838  0.199655  0.400332   true      5.0      false
 
 (after optimization)  Best critical points:
 1×4 DataFrame
- Row │ x2        x1        value    captured 
-     │ Float64   Float64   Float64  Bool     
+ Row │ x2        x1        value    captured
+     │ Float64   Float64   Float64  Bool
 ─────┼───────────────────────────────────────
    1 │ 0.408168  0.191376   -9.501      true
 
@@ -370,8 +448,8 @@ Noise added to the time series: (stddev = 1.0e-6)
 Lotka-Volterra 2D model with Chebyshev basis
 Critical points found:
 13×8 DataFrame
- Row │ x1         x2        z           y1        y2        close  steps    converged 
-     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool      
+ Row │ x1         x2        z           y1        y2        close  steps    converged
+     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────
    1 │ 0.534831   0.63641    0.0587345  0.198434  0.401132  false     13.0      false
    2 │ 0.433896   0.641874  -0.253909   0.200237  0.399708  false      7.0      false
@@ -389,15 +467,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        z         y1        y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1        y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────
   11 │ 0.204238  0.394656  -8.89817  0.199505  0.400504   true      4.0      false
 
 (after optimization)  Best critical points:
 1×4 DataFrame
- Row │ x2        x1        value    captured 
-     │ Float64   Float64   Float64  Bool     
+ Row │ x2        x1        value    captured
+     │ Float64   Float64   Float64  Bool
 ─────┼───────────────────────────────────────
    1 │ 0.401132  0.198434  -10.989      true
 
@@ -406,8 +484,8 @@ Noise added to the time series: (stddev = 0.0001)
 Lotka-Volterra 2D model with Chebyshev basis
 Critical points found:
 13×8 DataFrame
- Row │ x1         x2        z           y1        y2        close  steps    converged 
-     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool      
+ Row │ x1         x2        z           y1        y2        close  steps    converged
+     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────
    1 │ 0.534819   0.636414   0.0588251  0.186034  0.413119  false     12.0      false
    2 │ 0.14382    0.452903  -6.75065    0.20032   0.399839  false      5.0      false
@@ -425,15 +503,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        z         y1        y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1        y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────
   10 │ 0.206198  0.392815  -8.85689  0.200818  0.399189   true      8.0      false
 
 (after optimization)  Best critical points:
 1×4 DataFrame
- Row │ x2        x1        value     captured 
-     │ Float64   Float64   Float64   Bool     
+ Row │ x2        x1        value     captured
+     │ Float64   Float64   Float64   Bool
 ─────┼────────────────────────────────────────
    1 │ 0.413119  0.186034  -8.71699      true
 
@@ -442,8 +520,8 @@ Noise added to the time series: (stddev = 0.001)
 Lotka-Volterra 2D model with Chebyshev basis
 Critical points found:
 13×8 DataFrame
- Row │ x1         x2        z           y1        y2        close  steps    converged 
-     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool      
+ Row │ x1         x2        z           y1        y2        close  steps    converged
+     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────
    1 │ 0.534781   0.636429   0.0593596  0.198888  0.40067   false     14.0      false
    2 │ 0.433867   0.641839  -0.253289   0.198814  0.400733  false     12.0      false
@@ -461,15 +539,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        z         y1        y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1        y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────
    5 │ 0.196542  0.401416  -7.63406  0.198814  0.400733   true     12.0      false
 
 (after optimization)  Best critical points:
 1×4 DataFrame
- Row │ x2       x1        value     captured 
-     │ Float64  Float64   Float64   Bool     
+ Row │ x2       x1        value     captured
+     │ Float64  Float64   Float64   Bool
 ─────┼───────────────────────────────────────
    1 │ 0.40067  0.198888  -7.75503      true
 
@@ -478,8 +556,8 @@ Noise added to the time series: (stddev = 0.01)
 Lotka-Volterra 2D model with Chebyshev basis
 Critical points found:
 6×8 DataFrame
- Row │ x1         x2        z           y1        y2        close  steps    converged 
-     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool      
+ Row │ x1         x2        z           y1        y2        close  steps    converged
+     │ Float64    Float64   Float64     Float64   Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────────
    1 │ 0.533182   0.635518   0.0667797  0.135683  0.450472  false     13.0      false
    2 │ 0.431668   0.643795  -0.232494   0.135683  0.450472  false     15.0      false
@@ -490,15 +568,15 @@ Critical points found:
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        z         y1        y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1        y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64   Float64   Bool   Float64  Bool
 ─────┼─────────────────────────────────────────────────────────────────────────────
    4 │ 0.337552  0.261129  -4.34025  0.135683  0.450472  false     11.0      false
 
 (after optimization)  Best critical points:
 1×4 DataFrame
- Row │ x2        x1        value     captured 
-     │ Float64   Float64   Float64   Bool     
+ Row │ x2        x1        value     captured
+     │ Float64   Float64   Float64   Bool
 ─────┼────────────────────────────────────────
    1 │ 0.450472  0.135683  -4.67876     false
 
@@ -507,21 +585,21 @@ Noise added to the time series: (stddev = 0.1)
 Lotka-Volterra 2D model with Chebyshev basis
 Critical points found:
 1×8 DataFrame
- Row │ x1        x2        z         y1       y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64  Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1       y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64  Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────
    1 │ 0.208751  0.349557  -1.11346  1.71892  -1.67539  false     16.0      false
 
 (before optimization) Best critical points:
 DataFrameRow
- Row │ x1        x2        z         y1       y2        close  steps    converged 
-     │ Float64   Float64   Float64   Float64  Float64   Bool   Float64  Bool      
+ Row │ x1        x2        z         y1       y2        close  steps    converged
+     │ Float64   Float64   Float64   Float64  Float64   Bool   Float64  Bool
 ─────┼────────────────────────────────────────────────────────────────────────────
    1 │ 0.208751  0.349557  -1.11346  1.71892  -1.67539  false     16.0      false
 
 (after optimization)  Best critical points:
 0×4 DataFrame
- Row │ x2       x1       value    captured 
-     │ Float64  Float64  Float64  Bool     
+ Row │ x2       x1       value    captured
+     │ Float64  Float64  Float64  Bool
 ─────┴─────────────────────────────────────
 =#

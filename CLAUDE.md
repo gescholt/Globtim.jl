@@ -21,6 +21,7 @@ When analyzing Jupyter notebooks:
 
 ## Fixed Issues
 - **Circular import in lambda_vandermonde_anisotropic.jl**: Fixed precompilation warnings caused by attempting to import functions from `.Globtim` while being included within the Globtim module itself. The functions are already available in the module scope when the file is included.
+- **Test manifest inconsistencies**: Created automation scripts to fix Julia manifest warnings that occur when test/Manifest.toml diverges from the parent project's Manifest.toml. The scripts remove the test manifest and ensure the test environment uses the parent project's dependencies.
 
 # Documentation and Code Analysis
 - Always record in a central location if you come across poorly documented functions (unclear data types, dead parameters, magic hardcoded values) -- not necessary to fix immediately, but needs to be investigated later
