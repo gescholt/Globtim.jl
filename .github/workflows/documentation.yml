@@ -5,6 +5,7 @@ on:
     branches:
       - main # Main development branch
       - clean-version # Clean release branch
+      - github-release # GitHub public release branch
     tags: '*'
   pull_request:
 
