@@ -4,25 +4,25 @@
 using Globtim
 using Printf
 
-println("=" ^ 60)
+println("="^60)
 println("Anisotropic Grid Demonstration")
-println("=" ^ 60)
+println("="^60)
 
 # Example 1: Basic anisotropic grid generation
 println("\n1. Basic Anisotropic Grid Generation")
-println("-" ^ 40)
+println("-"^40)
 
 # Create a 2D anisotropic grid with different resolution in each dimension
-grid_2d = generate_anisotropic_grid([10, 5], basis=:chebyshev)
+grid_2d = generate_anisotropic_grid([10, 5], basis = :chebyshev)
 println("Created 2D grid with size: ", size(grid_2d))
 println("Grid has $(length(grid_2d)) total points")
 
 # Example 2: Function with different scales in each direction
 println("\n2. Multiscale Function Example")
-println("-" ^ 40)
+println("-"^40)
 
 # Function that varies rapidly in x, slowly in y
-f_multiscale = x -> exp(-50*x[1]^2 - 2*x[2]^2)
+f_multiscale = x -> exp(-50 * x[1]^2 - 2 * x[2]^2)
 println("Testing function: f(x,y) = exp(-50x² - 2y²)")
 
 # Compare isotropic vs anisotropic grids with similar total points
@@ -53,10 +53,10 @@ println("  Improvement factor: $(@sprintf("%.2f", error_iso/error_aniso))×")
 
 # Example 3: High-dimensional anisotropic grids
 println("\n3. High-Dimensional Example (4D)")
-println("-" ^ 40)
+println("-"^40)
 
 # 4D function with different decay rates
-f_4d = x -> exp(-sum(i*x[i]^2 for i in 1:4))
+f_4d = x -> exp(-sum(i * x[i]^2 for i = 1:4))
 println("Testing function: f(x) = exp(-x₁² - 2x₂² - 3x₃² - 4x₄²)")
 
 # Anisotropic grid: more points where function varies less rapidly
@@ -68,29 +68,33 @@ println("  L2 norm = $(@sprintf("%.8f", l2_4d))")
 
 # Example 4: Comparing quadrature and Riemann methods
 println("\n4. Quadrature vs Riemann Methods")
-println("-" ^ 40)
+println("-"^40)
 
 f_test = x -> exp(-(x[1]^2 + x[2]^2))
 grid_spec = [20, 15]
 
 # Generate grid for Riemann method
-grid = generate_anisotropic_grid(grid_spec, basis=:chebyshev)
+grid = generate_anisotropic_grid(grid_spec, basis = :chebyshev)
 
 # Compute using both methods
 t1 = @elapsed l2_quad = compute_l2_norm_quadrature(f_test, grid_spec, :chebyshev)
 t2 = @elapsed l2_riemann = discrete_l2_norm_riemann(f_test, grid)
 
 println("Grid: $(grid_spec[1])×$(grid_spec[2])")
-println("Quadrature L2 norm: $(@sprintf("%.8f", l2_quad)) (time: $(@sprintf("%.3f", t1*1000)) ms)")
-println("Riemann L2 norm:    $(@sprintf("%.8f", l2_riemann)) (time: $(@sprintf("%.3f", t2*1000)) ms)")
+println(
+    "Quadrature L2 norm: $(@sprintf("%.8f", l2_quad)) (time: $(@sprintf("%.3f", t1*1000)) ms)",
+)
+println(
+    "Riemann L2 norm:    $(@sprintf("%.8f", l2_riemann)) (time: $(@sprintf("%.3f", t2*1000)) ms)",
+)
 println("Relative difference: $(@sprintf("%.2e", abs(l2_quad - l2_riemann)/l2_quad))")
 
 # Example 5: Optimal grid selection
 println("\n5. Grid Optimization Strategy")
-println("-" ^ 40)
+println("-"^40)
 
 # Function with known directional derivatives
-f_opt = x -> sin(10*x[1]) * exp(-x[2]^2)
+f_opt = x -> sin(10 * x[1]) * exp(-x[2]^2)
 println("Testing function: f(x,y) = sin(10x) * exp(-y²)")
 
 # Estimate optimal grid ratio based on function characteristics
@@ -101,7 +105,7 @@ configurations = [
     ([20, 20], "Isotropic"),
     ([30, 13], "Anisotropic 30×13"),
     ([40, 10], "Anisotropic 40×10"),
-    ([50, 8],  "Anisotropic 50×8"),
+    ([50, 8], "Anisotropic 50×8"),
 ]
 
 println("\nTesting different configurations (~400 total points each):")
@@ -116,7 +120,7 @@ end
 
 # Example 6: Different polynomial bases
 println("\n6. Different Polynomial Bases")
-println("-" ^ 40)
+println("-"^40)
 
 f_smooth = x -> exp(-(x[1]^2 + x[2]^2))
 grid_spec_bases = [25, 15]
@@ -126,34 +130,34 @@ for basis in [:chebyshev, :legendre, :uniform]
     println("$basis basis: L2 norm = $(@sprintf("%.8f", l2))")
 end
 
-println("\n" * "=" ^ 60)
+println("\n" * "="^60)
 println("Key Takeaways:")
 println("- Anisotropic grids allocate points based on function behavior")
 println("- More efficient than isotropic grids for multiscale functions")
 println("- Both quadrature and Riemann methods support anisotropic grids")
 println("- Choose grid sizes based on directional variation rates")
-println("=" ^ 60)
+println("="^60)
 
 # Example 7: Integration with Polynomial Approximation
 println("\n7. Polynomial Approximation with Anisotropic Grids")
-println("-" ^ 40)
+println("-"^40)
 
 # Function with different scales
-f_poly = x -> exp(-100*x[1]^2 - x[2]^2)
-TR = test_input(f_poly, dim=2, center=[0.0, 0.0], sample_range=1.0)
+f_poly = x -> exp(-100 * x[1]^2 - x[2]^2)
+TR = test_input(f_poly, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
 
 # Traditional isotropic approximation
 println("\nIsotropic polynomial approximation:")
-pol_iso = Constructor(TR, 8, verbose=0)
+pol_iso = Constructor(TR, 8, verbose = 0)
 println("  Grid points: $(pol_iso.N)")
 println("  L2 norm error: $(@sprintf("%.6f", pol_iso.nrm))")
 println("  Condition number: $(@sprintf("%.2e", pol_iso.cond_vandermonde))")
 
 # Anisotropic grid approximation
 println("\nAnisotropic polynomial approximation:")
-grid_aniso = generate_anisotropic_grid([15, 6], basis=:chebyshev)
+grid_aniso = generate_anisotropic_grid([15, 6], basis = :chebyshev)
 grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
-pol_aniso = Constructor(TR, 0, grid=grid_matrix, verbose=0)
+pol_aniso = Constructor(TR, 0, grid = grid_matrix, verbose = 0)
 println("  Grid points: $(pol_aniso.N)")
 println("  L2 norm error: $(@sprintf("%.6f", pol_aniso.nrm))")
 println("  Condition number: $(@sprintf("%.2e", pol_aniso.cond_vandermonde))")
@@ -161,19 +165,19 @@ println("  Condition number: $(@sprintf("%.2e", pol_aniso.cond_vandermonde))")
 # Demonstrate automatic detection
 println("\nAutomatic anisotropic detection:")
 test_grid = [
-    -0.8660  -0.5000;
-     0.0000  -0.5000;
-     0.8660  -0.5000;
-    -0.8660   0.5000;
-     0.0000   0.5000;
-     0.8660   0.5000
+    -0.8660 -0.5000
+    0.0000 -0.5000
+    0.8660 -0.5000
+    -0.8660 0.5000
+    0.0000 0.5000
+    0.8660 0.5000
 ]
-pol_detect = MainGenerate(f_poly, 2, test_grid, 0.1, 0.99, 1.0, 1.0, verbose=1)
+pol_detect = MainGenerate(f_poly, 2, test_grid, 0.1, 0.99, 1.0, 1.0, verbose = 1)
 
-println("\n" * "=" ^ 60)
+println("\n" * "="^60)
 println("NEW: Lambda Vandermonde Integration")
 println("- Automatic detection of anisotropic grids")
 println("- Optimized dimension-wise polynomial evaluation")
 println("- Full integration with Constructor and MainGenerate")
 println("- Maintains type stability and performance")
-println("=" ^ 60)
+println("="^60)

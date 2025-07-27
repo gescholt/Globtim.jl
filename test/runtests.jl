@@ -6,7 +6,10 @@ println("Checking if test_input is defined: ", isdefined(Globtim, :test_input))
 println("Checking if process_crit_pts is defined: ", isdefined(Globtim, :process_crit_pts))
 
 # You're already using Constructor and test_input in your test, so they should be defined
-println("Names exported from Globtim: ", filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim)))
+println(
+    "Names exported from Globtim: ",
+    filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim)),
+)
 
 using CSV
 using DataFrames
@@ -29,20 +32,14 @@ using ProgressLogging
     println("Number of samples: ", SMPL^n)
 
     # Create test input
-    TR = test_input(
-        f,
-        dim=n,
-        center=[0.0, 0.0],
-        GN=SMPL,
-        sample_range=scale_factor
-    )
+    TR = test_input(f, dim = n, center = [0.0, 0.0], GN = SMPL, sample_range = scale_factor)
 
     # Define df_cheb at this scope level so both nested testsets can access it
     df_cheb = nothing
 
     @testset "Chebyshev basis" begin
         time_construct = @elapsed begin
-            pol_cheb = Constructor(TR, d, basis=:chebyshev, normalized=false)
+            pol_cheb = Constructor(TR, d, basis = :chebyshev, normalized = false)
         end
         println("Time to construct Chebyshev polynomial: $(time_construct) seconds")
 
@@ -50,8 +47,12 @@ using ProgressLogging
 
         time_solve = @elapsed begin
             real_pts_cheb = solve_polynomial_system(
-                x, n, d, pol_cheb.coeffs;
-                basis=:chebyshev, normalized=false
+                x,
+                n,
+                d,
+                pol_cheb.coeffs;
+                basis = :chebyshev,
+                normalized = false,
             )
         end
         println("Time to solve Chebyshev system: $(time_solve) seconds")
@@ -76,12 +77,7 @@ using ProgressLogging
         # Process critical points
         try
             # Assign to the outer variable to make it accessible in other testsets
-            df_cheb = process_crit_pts(
-                real_pts_cheb,
-                f,
-                TR;
-                skip_filtering=false
-            )
+            df_cheb = process_crit_pts(real_pts_cheb, f, TR; skip_filtering = false)
             println("Successfully created DataFrame with $(nrow(df_cheb)) rows")
             println("DataFrame columns: ", names(df_cheb))
             @test isa(df_cheb, DataFrame)
@@ -110,7 +106,8 @@ using ProgressLogging
                     x0 = [matlab_point.x, matlab_point.y]
 
                     # Check distances to Chebyshev points
-                    distances_cheb = [norm(x0 - [row.x1, row.x2]) for row in eachrow(df_cheb)]
+                    distances_cheb =
+                        [norm(x0 - [row.x1, row.x2]) for row in eachrow(df_cheb)]
                     @test minimum(distances_cheb) < tol_l2
                 end
             else
@@ -130,7 +127,7 @@ include("test_function_value_analysis.jl")
 
 # Include new exact arithmetic and sparsification tests
 include("test_exact_conversion.jl")
-include("test_sparsification.jl") 
+include("test_sparsification.jl")
 include("test_truncation.jl")
 
 # Include L2-norm scaling and type safety tests

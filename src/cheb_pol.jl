@@ -29,9 +29,9 @@ Generate the symbolic Chebyshev polynomial of degree n.
 """
 function symbolic_chebyshev(
     n::Integer;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
 )
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
@@ -204,9 +204,9 @@ end
 
 function get_chebyshev_coeffs(
     max_degree::Integer;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
 )
     # Vector to store coefficient vectors
     chebyshev_coeffs = Vector{Vector}(undef, max_degree + 1)
@@ -215,9 +215,9 @@ function get_chebyshev_coeffs(
     for deg = 0:max_degree
         T = symbolic_chebyshev(
             deg;
-            precision=precision,
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom
+            precision = precision,
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
         )
 
         # Handle constant polynomials
@@ -269,15 +269,15 @@ Generate a matrix where each row contains the coefficients of a Chebyshev polyno
 """
 function chebyshev_coeff_matrix(
     n::Integer;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
 )
     coeffs = get_chebyshev_coeffs(
         n;
-        precision=precision,
-        normalized=normalized,
-        power_of_two_denom=power_of_two_denom
+        precision = precision,
+        normalized = normalized,
+        power_of_two_denom = power_of_two_denom,
     )
 
     # Create a matrix with proper dimensions
@@ -321,9 +321,9 @@ function construct_chebyshev_approx(
     x_vars::Vector{<:Variable},
     coeffs::Vector{<:Number},
     degree;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
 )
     n = length(x_vars)  # number of variables
 
@@ -350,9 +350,9 @@ function construct_chebyshev_approx(
     # @info "" lambda max_degree
     chebyshev_coeffs = get_chebyshev_coeffs(
         max_degree;
-        precision=precision,
-        normalized=normalized,
-        power_of_two_denom=power_of_two_denom
+        precision = precision,
+        normalized = normalized,
+        power_of_two_denom = power_of_two_denom,
     )
 
     # Initialize polynomial

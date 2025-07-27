@@ -40,11 +40,20 @@ struct OrthantResult
     outlier_count::Int
     polynomial_degree::Int
     computation_time::Float64
-    
+
     # Validation constructor
-    function OrthantResult(orthant_id, center, range_per_dim, raw_point_count, 
-                          bfgs_point_count, success_rate, median_distance, 
-                          outlier_count, polynomial_degree, computation_time)
+    function OrthantResult(
+        orthant_id,
+        center,
+        range_per_dim,
+        raw_point_count,
+        bfgs_point_count,
+        success_rate,
+        median_distance,
+        outlier_count,
+        polynomial_degree,
+        computation_time,
+    )
         @assert 1 <= orthant_id <= 16 "Orthant ID must be between 1 and 16 for 4D analysis"
         @assert length(center) == 4 "Center must be 4D for orthant analysis"
         @assert length(range_per_dim) == 4 "Range must be 4D for orthant analysis"
@@ -55,9 +64,19 @@ struct OrthantResult
         @assert outlier_count >= 0 "Outlier count must be non-negative"
         @assert polynomial_degree >= 1 "Polynomial degree must be positive"
         @assert computation_time >= 0.0 "Computation time must be non-negative"
-        
-        new(orthant_id, center, range_per_dim, raw_point_count, bfgs_point_count,
-            success_rate, median_distance, outlier_count, polynomial_degree, computation_time)
+
+        new(
+            orthant_id,
+            center,
+            range_per_dim,
+            raw_point_count,
+            bfgs_point_count,
+            success_rate,
+            median_distance,
+            outlier_count,
+            polynomial_degree,
+            computation_time,
+        )
     end
 end
 
@@ -87,12 +106,20 @@ struct ToleranceResult
     polynomial_degrees::Vector{Int}
     sample_counts::Vector{Int}
     computation_time::Float64
-    success_rates::NamedTuple{(:raw, :bfgs, :combined), Tuple{Float64, Float64, Float64}}
-    
+    success_rates::NamedTuple{(:raw, :bfgs, :combined),Tuple{Float64,Float64,Float64}}
+
     # Validation constructor
-    function ToleranceResult(tolerance, raw_distances, bfgs_distances, point_types, 
-                            orthant_data, polynomial_degrees, sample_counts, 
-                            computation_time, success_rates)
+    function ToleranceResult(
+        tolerance,
+        raw_distances,
+        bfgs_distances,
+        point_types,
+        orthant_data,
+        polynomial_degrees,
+        sample_counts,
+        computation_time,
+        success_rates,
+    )
         @assert tolerance > 0 "Tolerance must be positive"
         @assert length(raw_distances) == length(bfgs_distances) == length(point_types) "Distance arrays must have equal length"
         @assert length(orthant_data) == 16 "Must have exactly 16 orthant results for 4D analysis"
@@ -100,9 +127,18 @@ struct ToleranceResult
         @assert all(<=(1), [success_rates.raw, success_rates.bfgs, success_rates.combined]) "Success rates must be ≤ 1"
         @assert length(polynomial_degrees) == length(sample_counts) "Polynomial degrees and sample counts must match"
         @assert computation_time >= 0.0 "Computation time must be non-negative"
-        
-        new(tolerance, raw_distances, bfgs_distances, point_types, orthant_data, 
-            polynomial_degrees, sample_counts, computation_time, success_rates)
+
+        new(
+            tolerance,
+            raw_distances,
+            bfgs_distances,
+            point_types,
+            orthant_data,
+            polynomial_degrees,
+            sample_counts,
+            computation_time,
+            success_rates,
+        )
     end
 end
 
@@ -122,22 +158,33 @@ Designed for publication-quality visualization and statistical analysis.
 """
 struct MultiToleranceResults
     tolerance_sequence::Vector{Float64}
-    results_by_tolerance::Dict{Float64, ToleranceResult}
+    results_by_tolerance::Dict{Float64,ToleranceResult}
     total_computation_time::Float64
     analysis_timestamp::String
     function_name::String
     domain_config::NamedTuple
-    
-    function MultiToleranceResults(tolerance_sequence, results_by_tolerance, 
-                                 total_computation_time, analysis_timestamp,
-                                 function_name, domain_config)
+
+    function MultiToleranceResults(
+        tolerance_sequence,
+        results_by_tolerance,
+        total_computation_time,
+        analysis_timestamp,
+        function_name,
+        domain_config,
+    )
         @assert length(tolerance_sequence) >= 2 "Need at least 2 tolerance levels for convergence analysis"
         @assert all(t -> haskey(results_by_tolerance, t), tolerance_sequence) "All tolerances must have corresponding results"
-        @assert issorted(tolerance_sequence, rev=true) "Tolerance sequence should be decreasing (coarser to finer)"
+        @assert issorted(tolerance_sequence, rev = true) "Tolerance sequence should be decreasing (coarser to finer)"
         @assert total_computation_time >= 0.0 "Total computation time must be non-negative"
-        
-        new(tolerance_sequence, results_by_tolerance, total_computation_time,
-            analysis_timestamp, function_name, domain_config)
+
+        new(
+            tolerance_sequence,
+            results_by_tolerance,
+            total_computation_time,
+            analysis_timestamp,
+            function_name,
+            domain_config,
+        )
     end
 end
 
@@ -165,19 +212,27 @@ mutable struct BFGSConfig
     x_tol::Float64
     show_trace::Bool
     track_hyperparameters::Bool
-    
+
     function BFGSConfig(;
-        standard_tolerance=1e-8,
-        high_precision_tolerance=1e-12,
-        precision_threshold=1e-6,
-        max_iterations=100,
-        f_abs_tol=1e-20,
-        x_tol=1e-12,
-        show_trace=false,
-        track_hyperparameters=true
+        standard_tolerance = 1e-8,
+        high_precision_tolerance = 1e-12,
+        precision_threshold = 1e-6,
+        max_iterations = 100,
+        f_abs_tol = 1e-20,
+        x_tol = 1e-12,
+        show_trace = false,
+        track_hyperparameters = true,
     )
-        new(standard_tolerance, high_precision_tolerance, precision_threshold,
-            max_iterations, f_abs_tol, x_tol, show_trace, track_hyperparameters)
+        new(
+            standard_tolerance,
+            high_precision_tolerance,
+            precision_threshold,
+            max_iterations,
+            f_abs_tol,
+            x_tol,
+            show_trace,
+            track_hyperparameters,
+        )
     end
 end
 

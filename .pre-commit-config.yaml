@@ -1,0 +1,45 @@
+repos:
+  # Check for large files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Custom hook to check for dev-only patterns
+  - repo: local
+    hooks:
+      - id: check-dev-patterns
+        name: Check for development-only patterns
+        entry: bash
+        args: ['-c', 'if grep -r -E "(PRIVATE|DEV.?ONLY|EXPERIMENTAL|TODO.?REMOVE)" --include="*.jl" --include="*.md" . 2>/dev/null; then echo "Found dev-only patterns!"; exit 1; fi']
+        language: system
+        pass_filenames: false
+
+      - id: check-notebook-outputs
+        name: Check for notebook outputs
+        entry: bash
+        args: ['-c', 'if find . -name "*.ipynb" -not -path "*/.ipynb_checkpoints/*" -exec grep -l "\"outputs\":[[:space:]]*\\[" {} \\; | head -n 1 | read f; then echo "Notebook has outputs: $f"; exit 1; fi']
+        language: system
+        types: [jupyter]
+
+      - id: check-file-patterns
+        name: Check for private file patterns
+        entry: bash
+        args: ['-c', 'files=$(find . -type f \( -name "*private*" -o -name "*scratch*" -o -name "*dev-only*" -o -name "*experimental*" \) -not -path "./.git/*" | head -n 5); if [ -n "$files" ]; then echo "Found private files:"; echo "$files"; exit 1; fi']
+        language: system
+        pass_filenames: false
+
+  # Julia specific checks
+  - repo: local
+    hooks:
+      - id: julia-format-check
+        name: Check Julia formatting
+        entry: bash
+        args: ['-c', 'if command -v julia &> /dev/null && julia -e "using Pkg; \"JuliaFormatter\" in keys(Pkg.project().dependencies)" 2>/dev/null; then julia -e "using JuliaFormatter; exit(format(\".\", verbose=true) ? 0 : 1)"; else exit 0; fi']
+        language: system
+        files: '\.jl$'

@@ -480,7 +480,7 @@ end
     #   Alpine1 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i = eachindex(xx))
+    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i in eachindex(xx))
 end
 
 @doc nothing function alpine2(
@@ -491,7 +491,7 @@ end
     #   Alpine2 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return prod(sqrt(xx[i]) * sin(xx[i]) for i = eachindex(xx))
+    return prod(sqrt(xx[i]) * sin(xx[i]) for i in eachindex(xx))
 
 end
 

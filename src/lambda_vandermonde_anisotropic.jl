@@ -51,45 +51,46 @@ info = analyze_grid_structure(S)
 # info.unique_points_per_dim[2] = [-0.5000, 0.5000]
 ```
 """
-function analyze_grid_structure(S::Matrix{T}) where T
+function analyze_grid_structure(S::Matrix{T}) where {T}
     n_points, n_dims = size(S)
-    
+
     # Extract unique points for each dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dims)
     point_indices_per_dim = Vector{Dict{T,Int}}(undef, n_dims)
-    
-    for d in 1:n_dims
+
+    for d = 1:n_dims
         unique_points = sort(unique(S[:, d]))
         unique_points_per_dim[d] = unique_points
         point_indices_per_dim[d] = Dict(pt => i for (i, pt) in enumerate(unique_points))
     end
-    
+
     # Check if grid maintains tensor product structure
     # For tensor product: total points = product of unique points per dimension
     expected_tensor_points = prod(length(pts) for pts in unique_points_per_dim)
     is_tensor_product = (expected_tensor_points == n_points)
-    
+
     # Additional check: verify all combinations exist
     if is_tensor_product
         # Create set of existing points for fast lookup
-        existing_points = Set([SVector{n_dims}(S[i,:]) for i in 1:n_points])
-        
+        existing_points = Set([SVector{n_dims}(S[i, :]) for i = 1:n_points])
+
         # Check all tensor product combinations
-        for indices in Iterators.product((1:length(pts) for pts in unique_points_per_dim)...)
-            point = SVector{n_dims}([unique_points_per_dim[d][indices[d]] for d in 1:n_dims])
+        for indices in
+            Iterators.product((1:length(pts) for pts in unique_points_per_dim)...)
+            point = SVector{n_dims}([unique_points_per_dim[d][indices[d]] for d = 1:n_dims])
             if !(point in existing_points)
                 is_tensor_product = false
                 break
             end
         end
     end
-    
+
     return AnisotropicGridInfo(
         unique_points_per_dim,
         point_indices_per_dim,
         n_dims,
         n_points,
-        is_tensor_product
+        is_tensor_product,
     )
 end
 
@@ -143,99 +144,107 @@ V = lambda_vandermonde_anisotropic(Lambda, S, basis=:chebyshev)
 - Caching strategy scales linearly with sum of unique points per dimension
 - For isotropic grids, consider using standard `lambda_vandermonde` for better performance
 """
-function lambda_vandermonde_anisotropic(Lambda::NamedTuple, S::Matrix{T}; 
-                                       basis::Symbol=:chebyshev,
-                                       grid_info::Union{Nothing,AnisotropicGridInfo}=nothing) where T
+function lambda_vandermonde_anisotropic(
+    Lambda::NamedTuple,
+    S::Matrix{T};
+    basis::Symbol = :chebyshev,
+    grid_info::Union{Nothing,AnisotropicGridInfo} = nothing,
+) where {T}
     # Analyze grid structure if not provided
     info = isnothing(grid_info) ? analyze_grid_structure(S) : grid_info
-    
+
     m, N = Lambda.size
     n_points = info.n_points
     n_dims = info.n_dims
-    
+
     @assert N == n_dims "Dimension mismatch: Lambda has $N dimensions but grid has $n_dims"
     @assert n_points == size(S, 1) "Grid info mismatch"
-    
+
     # Initialize output matrix
     V = zeros(T, n_points, m)
-    
+
     # Find maximum degree needed per dimension
     max_degrees = zeros(Int, n_dims)
-    for j in 1:m
-        for k in 1:n_dims
+    for j = 1:m
+        for k = 1:n_dims
             max_degrees[k] = max(max_degrees[k], Lambda.data[j, k])
         end
     end
-    
+
     # Pre-compute polynomial evaluations for each dimension
     eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dims)
-    
+
     if basis == :chebyshev
-        for d in 1:n_dims
+        for d = 1:n_dims
             eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = info.unique_points_per_dim[d]
-            
+
             # Special handling for exact types vs floating point
             if T <: Rational || T <: Integer
                 # Use recurrence relation for exact computation
-                for degree in 0:max_degrees[d]
-                    eval_cache_per_dim[d][degree] = T[chebyshev_value_exact(degree, T(pt)) 
-                                                     for pt in unique_points]
+                for degree = 0:max_degrees[d]
+                    eval_cache_per_dim[d][degree] =
+                        T[chebyshev_value_exact(degree, T(pt)) for pt in unique_points]
                 end
             else
                 # Use cosine formula for floating point
                 for (idx, point) in enumerate(unique_points)
                     theta = acos(clamp(T(point), T(-1), T(1)))
-                    for degree in 0:max_degrees[d]
+                    for degree = 0:max_degrees[d]
                         if !haskey(eval_cache_per_dim[d], degree)
-                            eval_cache_per_dim[d][degree] = Vector{T}(undef, length(unique_points))
+                            eval_cache_per_dim[d][degree] =
+                                Vector{T}(undef, length(unique_points))
                         end
                         eval_cache_per_dim[d][degree][idx] = cos(degree * theta)
                     end
                 end
             end
         end
-        
+
     elseif basis == :legendre
-        for d in 1:n_dims
+        for d = 1:n_dims
             eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = info.unique_points_per_dim[d]
-            
-            for degree in 0:max_degrees[d]
+
+            for degree = 0:max_degrees[d]
                 # Generate Legendre polynomial symbolically
-                poly = symbolic_legendre(degree, precision=Float64Precision, normalized=true)
-                
+                poly = symbolic_legendre(
+                    degree,
+                    precision = Float64Precision,
+                    normalized = true,
+                )
+
                 # Evaluate at unique points for this dimension
-                eval_cache_per_dim[d][degree] = T[evaluate_legendre(poly, Float64(pt)) 
-                                                 for pt in unique_points]
+                eval_cache_per_dim[d][degree] =
+                    T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]
             end
         end
-        
+
     else
         throw(ArgumentError("Unsupported basis: $basis. Use :chebyshev or :legendre"))
     end
-    
+
     # Construct Vandermonde matrix
-    for i in 1:n_points
-        for j in 1:m
+    for i = 1:n_points
+        for j = 1:m
             P = one(T)
-            
+
             # Product over dimensions
-            for k in 1:n_dims
+            for k = 1:n_dims
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
-                
+
                 # Find index of this point in the unique points for dimension k
                 point_idx = info.point_indices_per_dim[k][point]
-                
+
                 # Multiply by cached polynomial value
                 P *= eval_cache_per_dim[k][degree][point_idx]
             end
-            
+
             V[i, j] = P
         end
     end
-    
+
     return V
 end
 
@@ -273,28 +282,28 @@ S_aniso = [
 is_grid_anisotropic(S_aniso)  # true
 ```
 """
-function is_grid_anisotropic(S::Matrix{T}) where T
+function is_grid_anisotropic(S::Matrix{T}) where {T}
     n_dims = size(S, 2)
     n_dims < 2 && return false  # 1D grids are by definition isotropic
-    
+
     # Get unique points for first dimension
     unique_first = sort(unique(S[:, 1]))
     n_unique_first = length(unique_first)
-    
+
     # Check if all other dimensions have same number of unique points
-    for d in 2:n_dims
+    for d = 2:n_dims
         unique_d = unique(S[:, d])
         if length(unique_d) != n_unique_first
             return true  # Different number of unique points → anisotropic
         end
-        
+
         # Even with same count, check if the actual values differ
         # (accounting for potential reordering or scaling)
-        if !isapprox(sort(unique_d), unique_first, rtol=1e-14)
+        if !isapprox(sort(unique_d), unique_first, rtol = 1e-14)
             return true
         end
     end
-    
+
     return false
 end
 
@@ -302,4 +311,5 @@ end
 import .Globtim: chebyshev_value_exact, symbolic_legendre, evaluate_legendre
 
 # Export functions
-export lambda_vandermonde_anisotropic, analyze_grid_structure, is_grid_anisotropic, AnisotropicGridInfo
+export lambda_vandermonde_anisotropic,
+    analyze_grid_structure, is_grid_anisotropic, AnisotropicGridInfo

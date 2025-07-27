@@ -3,15 +3,15 @@ using DynamicPolynomials
 
 # Simple 1D test
 f = x -> x[1]^2
-TR = test_input(f, dim=1, center=[0.0], sample_range=1.0)
-pol = Constructor(TR, 4, basis=:chebyshev)
+TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+pol = Constructor(TR, 4, basis = :chebyshev)
 
 println("Polynomial L2-norm error: ", pol.nrm)
 println("Polynomial coefficients: ", pol.coeffs)
 
 # Convert to monomial
 @polyvar x
-mono_poly = to_exact_monomial_basis(pol, variables=[x])
+mono_poly = to_exact_monomial_basis(pol, variables = [x])
 
 println("\nMonomial polynomial: ", mono_poly)
 

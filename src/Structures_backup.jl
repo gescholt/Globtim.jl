@@ -42,11 +42,20 @@ struct ApproxPoly{T<:Number}
         N::Int,
         scale_factor::Float64,
         grid::Matrix{Float64},
-        z::Vector{Float64}
+        z::Vector{Float64},
     ) where {T<:Number}
         new(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
-            :chebyshev, RationalPrecision, true, false
+            coeffs,
+            degree,
+            nrm,
+            N,
+            scale_factor,
+            grid,
+            z,
+            :chebyshev,
+            RationalPrecision,
+            true,
+            false,
         )
     end
 
@@ -58,11 +67,20 @@ struct ApproxPoly{T<:Number}
         N::Int,
         scale_factor::Vector{Float64},
         grid::Matrix{Float64},
-        z::Vector{Float64}
+        z::Vector{Float64},
     ) where {T<:Number}
         new(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
-            :chebyshev, RationalPrecision, true, false
+            coeffs,
+            degree,
+            nrm,
+            N,
+            scale_factor,
+            grid,
+            z,
+            :chebyshev,
+            RationalPrecision,
+            true,
+            false,
         )
     end
 
@@ -78,11 +96,20 @@ struct ApproxPoly{T<:Number}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool
+        power_of_two_denom::Bool,
     ) where {T<:Number}
         new(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            coeffs,
+            degree,
+            nrm,
+            N,
+            scale_factor,
+            grid,
+            z,
+            basis,
+            precision,
+            normalized,
+            power_of_two_denom,
         )
     end
 
@@ -98,11 +125,20 @@ struct ApproxPoly{T<:Number}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool
+        power_of_two_denom::Bool,
     ) where {T<:Number}
         new(
-            coeffs, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            coeffs,
+            degree,
+            nrm,
+            N,
+            scale_factor,
+            grid,
+            z,
+            basis,
+            precision,
+            normalized,
+            power_of_two_denom,
         )
     end
 
@@ -115,14 +151,23 @@ struct ApproxPoly{T<:Number}
         scale_factor::Union{Float64,Vector{Float64}},
         grid::Matrix{Float64},
         z::Vector{Float64};
-        basis::Symbol=:chebyshev,
-        precision::PrecisionType=RationalPrecision,
-        normalized::Bool=true,
-        power_of_two_denom::Bool=false
+        basis::Symbol = :chebyshev,
+        precision::PrecisionType = RationalPrecision,
+        normalized::Bool = true,
+        power_of_two_denom::Bool = false,
     ) where {T<:Number}
         new(
-            sol.u, degree, nrm, N, scale_factor, grid, z,
-            basis, precision, normalized, power_of_two_denom
+            sol.u,
+            degree,
+            nrm,
+            N,
+            scale_factor,
+            grid,
+            z,
+            basis,
+            precision,
+            normalized,
+            power_of_two_denom,
         )
     end
 end
@@ -164,17 +209,17 @@ struct test_input
 
     function test_input(
         f::Function;
-        dim::Int=2,
-        center::AbstractVector{<:Real}=fill(0.0, dim),
-        GN::Union{Int,Nothing}=nothing,
-        alpha::Union{Real,Nothing}=0.1,
-        delta::Union{Real,Nothing}=0.5,
-        tolerance::Union{Real,Nothing}=2e-3,
-        sample_range::Union{Real,AbstractVector{<:Real},Nothing}=1.0,
-        reduce_samples::Union{Real,Nothing}=1.0,
-        degree_max::Int=6,
-        model::Union{Nothing,Any}=nothing,
-        outputs::Union{Nothing,AbstractVector{<:Real}}=nothing,
+        dim::Int = 2,
+        center::AbstractVector{<:Real} = fill(0.0, dim),
+        GN::Union{Int,Nothing} = nothing,
+        alpha::Union{Real,Nothing} = 0.1,
+        delta::Union{Real,Nothing} = 0.5,
+        tolerance::Union{Real,Nothing} = 2e-3,
+        sample_range::Union{Real,AbstractVector{<:Real},Nothing} = 1.0,
+        reduce_samples::Union{Real,Nothing} = 1.0,
+        degree_max::Int = 6,
+        model::Union{Nothing,Any} = nothing,
+        outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
     )
         # Type conversions
         center_vec = Vector{Float64}(float.(center))
@@ -214,11 +259,11 @@ struct test_input
         objective = if isnothing(model) && isnothing(outputs)
             f
         elseif !isnothing(model) && !isnothing(outputs)
-            (x) -> f(x, model=model, measured_data=outputs)
+            (x) -> f(x, model = model, measured_data = outputs)
         elseif !isnothing(model)
-            (x) -> f(x, model=model)
+            (x) -> f(x, model = model)
         else
-            (x) -> f(x, measured_data=outputs)
+            (x) -> f(x, measured_data = outputs)
         end
 
         noise = (0.0, 0.0)
@@ -258,28 +303,28 @@ Convenience constructor for test_input with default values.
 """
 function create_test_input(
     f::Function;
-    n::Int=2,
-    center::AbstractVector{Float64}=fill(0.0, n),
-    tolerance::Float64=2e-3,
-    alpha::Float64=0.1,
-    delta::Union{Real,Nothing}=nothing,
-    sample_range::Union{Float64,AbstractVector{<:Real}}=1.0,
-    reduce_samples::Union{Real,Nothing}=nothing,
-    degree_max::Int=6,
-    model::Union{Nothing,Any}=nothing,
-    outputs::Union{Nothing,AbstractVector{<:Real}}=nothing,
+    n::Int = 2,
+    center::AbstractVector{Float64} = fill(0.0, n),
+    tolerance::Float64 = 2e-3,
+    alpha::Float64 = 0.1,
+    delta::Union{Real,Nothing} = nothing,
+    sample_range::Union{Float64,AbstractVector{<:Real}} = 1.0,
+    reduce_samples::Union{Real,Nothing} = nothing,
+    degree_max::Int = 6,
+    model::Union{Nothing,Any} = nothing,
+    outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
 )::test_input
     return test_input(
         f;
-        dim=n,
-        center=center,
-        tolerance=tolerance,
-        alpha=alpha,
-        delta=delta,
-        sample_range=sample_range,
-        reduce_samples=reduce_samples,
-        degree_max=degree_max,
-        model=model,
-        outputs=outputs,
+        dim = n,
+        center = center,
+        tolerance = tolerance,
+        alpha = alpha,
+        delta = delta,
+        sample_range = sample_range,
+        reduce_samples = reduce_samples,
+        degree_max = degree_max,
+        model = model,
+        outputs = outputs,
     )
 end

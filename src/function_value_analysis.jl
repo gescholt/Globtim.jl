@@ -94,33 +94,33 @@ function compute_function_value_errors(
     f::Function;
     match_threshold::Float64 = 0.1,
     compute_gradients::Bool = true,
-    point_types::Union{Vector{Symbol}, Nothing} = nothing
+    point_types::Union{Vector{Symbol},Nothing} = nothing,
 )
     errors = FunctionValueError[]
-    
+
     # Match each theoretical point to its closest computed point
     for (i, theo_pt) in enumerate(theoretical_points)
         if isempty(computed_points)
             continue
         end
-        
+
         # Find closest computed point
         distances = [norm(theo_pt - comp_pt) for comp_pt in computed_points]
         min_idx = argmin(distances)
         min_dist = distances[min_idx]
-        
+
         # Only match if within threshold
         if min_dist <= match_threshold
             comp_pt = computed_points[min_idx]
-            
+
             # Evaluate function values
             f_theo = f(theo_pt)
             f_comp = f(comp_pt)
-            
+
             # Compute errors
             abs_err = abs(f_comp - f_theo)
             rel_err = abs(f_theo) > 1e-10 ? abs_err / abs(f_theo) : abs_err
-            
+
             # Compute gradient norms if requested
             grad_norm_theo = 0.0
             grad_norm_comp = 0.0
@@ -134,19 +134,30 @@ function compute_function_value_errors(
                     # Gradient computation failed, use default values
                 end
             end
-            
+
             # Determine point type
-            ptype = point_types !== nothing && i <= length(point_types) ? 
-                    point_types[i] : :unknown
-            
-            push!(errors, FunctionValueError(
-                theo_pt, comp_pt, f_theo, f_comp,
-                abs_err, rel_err, ptype, min_dist,
-                grad_norm_theo, grad_norm_comp
-            ))
+            ptype =
+                point_types !== nothing && i <= length(point_types) ? point_types[i] :
+                :unknown
+
+            push!(
+                errors,
+                FunctionValueError(
+                    theo_pt,
+                    comp_pt,
+                    f_theo,
+                    f_comp,
+                    abs_err,
+                    rel_err,
+                    ptype,
+                    min_dist,
+                    grad_norm_theo,
+                    grad_norm_comp,
+                ),
+            )
         end
     end
-    
+
     return errors
 end
 
@@ -165,13 +176,13 @@ function compute_error_metrics(errors::Vector{FunctionValueError})
     if isempty(errors)
         return ErrorMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0.0)
     end
-    
+
     abs_errors = [e.absolute_error for e in errors]
     rel_errors = [e.relative_error for e in errors]
-    
+
     # Filter out infinite relative errors
     finite_rel_errors = filter(isfinite, rel_errors)
-    
+
     return ErrorMetrics(
         mean(abs_errors),
         isempty(finite_rel_errors) ? Inf : mean(finite_rel_errors),
@@ -182,7 +193,7 @@ function compute_error_metrics(errors::Vector{FunctionValueError})
         std(abs_errors),
         isempty(finite_rel_errors) ? 0.0 : std(finite_rel_errors),
         length(errors),
-        1.0  # Success rate placeholder
+        1.0,  # Success rate placeholder
     )
 end
 
@@ -198,8 +209,8 @@ Analyze function value errors grouped by critical point type.
 - Dict{Symbol, ErrorMetrics}: Error metrics for each point type
 """
 function analyze_errors_by_type(errors::Vector{FunctionValueError})
-    metrics_by_type = Dict{Symbol, ErrorMetrics}()
-    
+    metrics_by_type = Dict{Symbol,ErrorMetrics}()
+
     # Group errors by point type
     for ptype in unique(e.point_type for e in errors)
         type_errors = filter(e -> e.point_type == ptype, errors)
@@ -207,7 +218,7 @@ function analyze_errors_by_type(errors::Vector{FunctionValueError})
             metrics_by_type[ptype] = compute_error_metrics(type_errors)
         end
     end
-    
+
     return metrics_by_type
 end
 
@@ -226,9 +237,9 @@ function create_error_analysis_dataframe(errors::Vector{FunctionValueError})
     if isempty(errors)
         return DataFrame()
     end
-    
+
     n_dims = length(errors[1].theoretical_point)
-    
+
     # Create base DataFrame
     df = DataFrame(
         point_type = [e.point_type for e in errors],
@@ -238,15 +249,15 @@ function create_error_analysis_dataframe(errors::Vector{FunctionValueError})
         relative_error = [e.relative_error for e in errors],
         distance_to_theoretical = [e.distance_to_theoretical for e in errors],
         grad_norm_theoretical = [e.gradient_norm_theoretical for e in errors],
-        grad_norm_computed = [e.gradient_norm_computed for e in errors]
+        grad_norm_computed = [e.gradient_norm_computed for e in errors],
     )
-    
+
     # Add coordinate columns
-    for i in 1:n_dims
+    for i = 1:n_dims
         df[!, Symbol("theo_x$i")] = [e.theoretical_point[i] for e in errors]
         df[!, Symbol("comp_x$i")] = [e.computed_point[i] for e in errors]
     end
-    
+
     return df
 end
 
@@ -261,46 +272,51 @@ Analyze convergence of function value errors across multiple tolerance levels.
 # Returns
 - DataFrame: Convergence analysis with columns for tolerance, metrics, and rates
 """
-function convergence_analysis(tolerance_results::Dict{Float64, Vector{FunctionValueError}})
+function convergence_analysis(tolerance_results::Dict{Float64,Vector{FunctionValueError}})
     analysis_data = []
-    
-    sorted_tolerances = sort(collect(keys(tolerance_results)), rev=true)
-    
+
+    sorted_tolerances = sort(collect(keys(tolerance_results)), rev = true)
+
     for (i, tol) in enumerate(sorted_tolerances)
         errors = tolerance_results[tol]
         metrics = compute_error_metrics(errors)
-        
+
         # Compute convergence rate if not first tolerance
         conv_rate_abs = NaN
         conv_rate_rel = NaN
         if i > 1
             prev_tol = sorted_tolerances[i-1]
             prev_metrics = compute_error_metrics(tolerance_results[prev_tol])
-            
+
             # Convergence rate: log(error_new/error_old) / log(tol_new/tol_old)
             if prev_metrics.mean_absolute_error > 0 && metrics.mean_absolute_error > 0
-                conv_rate_abs = log(metrics.mean_absolute_error / prev_metrics.mean_absolute_error) / 
-                               log(tol / prev_tol)
+                conv_rate_abs =
+                    log(metrics.mean_absolute_error / prev_metrics.mean_absolute_error) /
+                    log(tol / prev_tol)
             end
-            
+
             if prev_metrics.mean_relative_error > 0 && metrics.mean_relative_error > 0
-                conv_rate_rel = log(metrics.mean_relative_error / prev_metrics.mean_relative_error) / 
-                               log(tol / prev_tol)
+                conv_rate_rel =
+                    log(metrics.mean_relative_error / prev_metrics.mean_relative_error) /
+                    log(tol / prev_tol)
             end
         end
-        
-        push!(analysis_data, (
-            tolerance = tol,
-            n_matched_points = metrics.n_points,
-            mean_absolute_error = metrics.mean_absolute_error,
-            mean_relative_error = metrics.mean_relative_error,
-            max_absolute_error = metrics.max_absolute_error,
-            max_relative_error = metrics.max_relative_error,
-            convergence_rate_absolute = conv_rate_abs,
-            convergence_rate_relative = conv_rate_rel
-        ))
+
+        push!(
+            analysis_data,
+            (
+                tolerance = tol,
+                n_matched_points = metrics.n_points,
+                mean_absolute_error = metrics.mean_absolute_error,
+                mean_relative_error = metrics.mean_relative_error,
+                max_absolute_error = metrics.max_absolute_error,
+                max_relative_error = metrics.max_relative_error,
+                convergence_rate_absolute = conv_rate_abs,
+                convergence_rate_relative = conv_rate_rel,
+            ),
+        )
     end
-    
+
     return DataFrame(analysis_data)
 end
 
@@ -320,40 +336,45 @@ Integrate function value error analysis with BFGS refinement results.
 # Returns
 - DataFrame: Enhanced DataFrame with function value error columns
 """
-function integrate_with_bfgs_results(df::DataFrame, f::Function, 
-                                   theoretical_points::Vector{Vector{Float64}};
-                                   theoretical_types::Vector{Symbol} = Symbol[])
-    
+function integrate_with_bfgs_results(
+    df::DataFrame,
+    f::Function,
+    theoretical_points::Vector{Vector{Float64}};
+    theoretical_types::Vector{Symbol} = Symbol[],
+)
+
     # Extract dimension
     n_dims = count(col -> startswith(string(col), "y"), names(df))
-    
+
     # Extract refined points
     refined_points = Vector{Vector{Float64}}()
-    for i in 1:nrow(df)
+    for i = 1:nrow(df)
         if df[i, :converged]
-            point = [df[i, Symbol("y$j")] for j in 1:n_dims]
+            point = [df[i, Symbol("y$j")] for j = 1:n_dims]
             push!(refined_points, point)
         end
     end
-    
+
     # Compute function value errors
     errors = compute_function_value_errors(
-        theoretical_points, refined_points, f;
-        point_types = theoretical_types
+        theoretical_points,
+        refined_points,
+        f;
+        point_types = theoretical_types,
     )
-    
+
     # Add error metrics to DataFrame
     df[!, :has_theoretical_match] = falses(nrow(df))
     df[!, :function_value_error] = fill(NaN, nrow(df))
     df[!, :relative_function_error] = fill(NaN, nrow(df))
     df[!, :distance_to_theoretical] = fill(NaN, nrow(df))
-    
+
     # Match errors back to DataFrame rows
     for err in errors
         # Find the row with matching refined point
-        for i in 1:nrow(df)
+        for i = 1:nrow(df)
             if df[i, :converged]
-                refined_pt = [df[i, Symbol("y$j")] for j in 1:n_dims]
+                refined_pt = [df[i, Symbol("y$j")] for j = 1:n_dims]
                 if norm(refined_pt - err.computed_point) < 1e-10
                     df[i, :has_theoretical_match] = true
                     df[i, :function_value_error] = err.absolute_error
@@ -364,13 +385,17 @@ function integrate_with_bfgs_results(df::DataFrame, f::Function,
             end
         end
     end
-    
+
     return df
 end
 
 # Export all functions
-export FunctionValueError, ErrorMetrics,
-       evaluate_function_values, compute_function_value_errors,
-       compute_error_metrics, analyze_errors_by_type,
-       create_error_analysis_dataframe, convergence_analysis,
-       integrate_with_bfgs_results
+export FunctionValueError,
+    ErrorMetrics,
+    evaluate_function_values,
+    compute_function_value_errors,
+    compute_error_metrics,
+    analyze_errors_by_type,
+    create_error_analysis_dataframe,
+    convergence_analysis,
+    integrate_with_bfgs_results

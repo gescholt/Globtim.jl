@@ -48,55 +48,59 @@ allowing natural use of scalar functions like `sin`, `cos`, etc.
 TimerOutputs.@timeit _TO function MainGenerate(
     f,
     n::Int,
-    d::Union{Tuple{Symbol,Int}, Tuple{Symbol,Vector{Int}}, Matrix{Float64}},
+    d::Union{Tuple{Symbol,Int},Tuple{Symbol,Vector{Int}},Matrix{Float64}},
     delta::Float64,
     alpha::Float64,
     scale_factor::Union{Float64,Vector{Float64}},
     scl::Float64;
-    center::Vector{Float64}=fill(0.0, n),
-    verbose=1,
-    basis::Symbol=:chebyshev,
-    GN::Union{Int,Nothing}=nothing,
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    center::Vector{Float64} = fill(0.0, n),
+    verbose = 1,
+    basis::Symbol = :chebyshev,
+    GN::Union{Int,Nothing} = nothing,
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
 )::ApproxPoly
     # Check if d is a grid (Matrix format)
     grid_provided = isa(d, Matrix)
-    
+
     if grid_provided
         # Validate grid dimensions
         @assert size(d, 2) == n "Grid dimension mismatch: expected $n, got $(size(d, 2))"
         @assert size(d, 1) > 0 "Empty grid provided"
-        
+
         # Store grid information
         matrix_from_grid = d
         actual_GN = size(d, 1)
-        
+
         # Infer polynomial degree from grid size
         # For tensor product grids: n_points ≈ (degree + 1)^dim
-        n_per_dim = round(Int, actual_GN^(1/n))
+        n_per_dim = round(Int, actual_GN^(1 / n))
         degree_est = n_per_dim - 1
-        
+
         # Generate Lambda support based on inferred degree
         Lambda = SupportGen(n, (:one_d_for_all, degree_est))
-        
+
         # Set D for compatibility
         D = degree_est
         K = actual_GN  # Use grid size as sample count
-        
+
         # No need to generate grid - we already have it
         grid = nothing  # Will be set later for function evaluation
     else
         # Existing degree-based logic
         D = if d[1] == :one_d_for_all
-            maximum(d[2])  
+            maximum(d[2])
         elseif d[1] == :one_d_per_dim
-            maximum(d[2])  
+            maximum(d[2])
         elseif d[1] == :fully_custom
             0
         else
-            throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."))
+            throw(
+                ArgumentError(
+                    "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom.",
+                ),
+            )
         end
 
         m = binomial(n + D, D)  # Dimension of vector space
@@ -110,23 +114,28 @@ TimerOutputs.@timeit _TO function MainGenerate(
         end
 
         Lambda = SupportGen(n, d)
-        
+
         # Generate grid
         if n <= 0
-            grid = generate_grid_small_n(n, actual_GN, basis=basis)
+            grid = generate_grid_small_n(n, actual_GN, basis = basis)
         else
-            grid = generate_grid(n, actual_GN, basis=basis)
+            grid = generate_grid(n, actual_GN, basis = basis)
         end
         matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     end
-    
+
     # Check if grid is anisotropic
     is_anisotropic = grid_provided && is_grid_anisotropic(matrix_from_grid)
-    
+
     # Call lambda_vandermonde with appropriate flag
-    VL = lambda_vandermonde(Lambda, matrix_from_grid, basis=basis, force_anisotropic=is_anisotropic)
+    VL = lambda_vandermonde(
+        Lambda,
+        matrix_from_grid,
+        basis = basis,
+        force_anisotropic = is_anisotropic,
+    )
     G_original = VL' * VL
-    
+
     # Log if using anisotropic algorithm
     if verbose >= 1 && is_anisotropic
         println("Detected anisotropic grid structure - using enhanced algorithm")
@@ -140,18 +149,21 @@ TimerOutputs.@timeit _TO function MainGenerate(
         # Handle grid format differences
         if grid_provided
             # Grid is already in matrix format, create SVectors for evaluation
-            grid_points = [SVector{n,Float64}(matrix_from_grid[i,:]) for i in 1:size(matrix_from_grid, 1)]
+            grid_points = [
+                SVector{n,Float64}(matrix_from_grid[i, :]) for
+                i = 1:size(matrix_from_grid, 1)
+            ]
         else
             # Use existing grid (Vector of SVectors)
             grid_points = reshape(grid, :)
         end
-        
+
         # Evaluate function on grid points
         if isa(scale_factor, Number)
             # Scalar scale_factor
             if n == 1
                 # For 1D functions, extract scalar from SVector
-                F = map(x -> f((scale_factor * x + scaled_center)[1]), grid_points)
+                F = map(x -> f((scale_factor*x+scaled_center)[1]), grid_points)
             else
                 F = map(x -> f(scale_factor * x + scaled_center), grid_points)
             end
@@ -159,10 +171,10 @@ TimerOutputs.@timeit _TO function MainGenerate(
             # Vector scale_factor - element-wise multiplication for each coordinate
             # Create a function to apply per-coordinate scaling
             function apply_scale(x)
-                scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
+                scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i = 1:n])
                 if n == 1
                     # For 1D functions, pass scalar
-                    return f((scaled_x + scaled_center)[1])
+                    return f((scaled_x+scaled_center)[1])
                 else
                     return f(scaled_x + scaled_center)
                 end
@@ -177,7 +189,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         linear_prob = LinearProblem(G_original, RHS)
         if verbose == 1
             println("Condition number of G: ", cond_vandermonde)
-            sol = LinearSolve.solve(linear_prob, verbose=true)
+            sol = LinearSolve.solve(linear_prob, verbose = true)
             println("Chosen method: ", typeof(sol.alg))
         else
             sol = LinearSolve.solve(linear_prob)
@@ -198,10 +210,21 @@ TimerOutputs.@timeit _TO function MainGenerate(
     # Use the smart constructor to get correct type parameters
     # For grid input, store the inferred degree format
     degree_info = grid_provided ? (:one_d_for_all, degree_est) : d
-    
+
     return ApproxPoly(
-        sol.u, Lambda.data, degree_info, nrm, actual_GN, scale_factor, matrix_from_grid, F,
-        basis, precision, normalized, power_of_two_denom, cond_vandermonde
+        sol.u,
+        Lambda.data,
+        degree_info,
+        nrm,
+        actual_GN,
+        scale_factor,
+        matrix_from_grid,
+        F,
+        basis,
+        precision,
+        normalized,
+        power_of_two_denom,
+        cond_vandermonde,
     )
 end
 
@@ -269,12 +292,12 @@ pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid pro
 TimerOutputs.@timeit _TO function Constructor(
     T::test_input,
     degree;
-    verbose=0,
-    basis::Symbol=:chebyshev,
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=false,
-    power_of_two_denom::Bool=false,
-    grid::Union{Nothing,Matrix{Float64}}=nothing
+    verbose = 0,
+    basis::Symbol = :chebyshev,
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = false,
+    power_of_two_denom::Bool = false,
+    grid::Union{Nothing,Matrix{Float64}} = nothing,
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
@@ -290,12 +313,12 @@ TimerOutputs.@timeit _TO function Constructor(
             T.prec[1],
             T.sample_range,
             T.reduce_samples;
-            center=T.center,
-            verbose=verbose,
-            basis=basis,
-            precision=precision,
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom
+            center = T.center,
+            verbose = verbose,
+            basis = basis,
+            precision = precision,
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
         )
         println("current L2-norm: ", p.nrm)
         return p
@@ -308,13 +331,13 @@ TimerOutputs.@timeit _TO function Constructor(
             T.prec[1],
             T.sample_range,
             T.reduce_samples;
-            center=T.center,
-            verbose=verbose,
-            basis=basis,
-            GN=T.GN,
-            precision=precision,
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom
+            center = T.center,
+            verbose = verbose,
+            basis = basis,
+            GN = T.GN,
+            precision = precision,
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
         )
         println("current L2-norm: ", p.nrm)
         return p
@@ -330,13 +353,13 @@ TimerOutputs.@timeit _TO function Constructor(
             T.prec[1],
             T.sample_range,
             T.reduce_samples;
-            center=T.center,
-            verbose=verbose,
-            basis=basis,
-            GN=T.GN,
-            precision=precision,
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom
+            center = T.center,
+            verbose = verbose,
+            basis = basis,
+            GN = T.GN,
+            precision = precision,
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
         )
         if p.nrm < T.tolerance
             println("attained the desired L2-norm: ", p.nrm)
