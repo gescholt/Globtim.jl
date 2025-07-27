@@ -86,12 +86,12 @@ println(&quot;Found $(nrow(df_min)) local minima in 3D&quot;)</code></pre><h2 id
 for r in [8.0, 10.0, 12.0]
     TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)
     pol = Constructor(TR, 8)
-    
+
     @polyvar x[1:2]
     solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
     df = process_crit_pts(solutions, f, TR)
     df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
-    
+
     println(&quot;Domain ±$r: found $(nrow(df_min)) minima&quot;)
 end</code></pre><h2 id="Example-6:-Visualization"><a class="docs-heading-anchor" href="#Example-6:-Visualization">Example 6: Visualization</a><a id="Example-6:-Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Example-6:-Visualization" title="Permalink"></a></h2><p>Creating plots (requires CairoMakie):</p><pre><code class="language-julia hljs">using CairoMakie
 
@@ -131,7 +131,7 @@ for deg in [4, 6, 8, 10]
     solutions = solve_polynomial_system(x, 2, deg, pol.coeffs)
     df = process_crit_pts(solutions, f, TR)
     df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
-    
+
     push!(results, (deg, pol.nrm, nrow(df), nrow(df_min)))
 end
 
@@ -151,9 +151,9 @@ for i in 1:nrow(df_min)
     basin_size = df_min[i, :basin_points]
     avg_steps = df_min[i, :average_convergence_steps]
     coverage = df_min[i, :region_coverage_count]
-    
+
     println(&quot;Minimum $i:&quot;)
     println(&quot;  Basin size: $basin_size points&quot;)
     println(&quot;  Average convergence: $avg_steps steps&quot;)
     println(&quot;  Spatial coverage: $coverage regions&quot;)
-end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../anisotropic_grid_tests/">« Anisotropic Grid Tests</a><a class="docs-footer-nextpage" href="../visualization/">Visualization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Sunday 27 July 2025 11:22">Sunday 27 July 2025</span>. Using Julia version 1.11.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../anisotropic_grid_tests/">« Anisotropic Grid Tests</a><a class="docs-footer-nextpage" href="../visualization/">Visualization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Sunday 27 July 2025 11:56">Sunday 27 July 2025</span>. Using Julia version 1.11.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
