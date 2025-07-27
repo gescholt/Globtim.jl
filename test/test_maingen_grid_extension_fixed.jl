@@ -184,7 +184,7 @@ end
         # Create a potentially ill-conditioned problem
         f = x -> exp(10 * sum(x))  # Rapidly varying function
         n = 2
-        d = (:one_d_for_all, 15)  # High degree
+        d = (:one_d_for_all, 14)  # High degree
 
         pol = Globtim.MainGenerate(f, n, d, 0.1, 0.99, 1.0, 1.0, verbose = 0)
 

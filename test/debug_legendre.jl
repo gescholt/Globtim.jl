@@ -4,7 +4,7 @@ using DynamicPolynomials
 # Test Legendre conversion
 f = x -> sin(π * x[1] / 2)
 TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
-pol_leg = Constructor(TR, 15, basis = :legendre, normalized = false)
+pol_leg = Constructor(TR, 14, basis = :legendre, normalized = false)
 
 println("Legendre polynomial L2-norm error: ", pol_leg.nrm)
 println("pol_leg.normalized = ", pol_leg.normalized)

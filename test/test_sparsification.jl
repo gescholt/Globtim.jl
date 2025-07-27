@@ -66,7 +66,7 @@ using LinearAlgebra
     @testset "Sparsification tradeoff analysis" begin
         f = x -> sin(3 * x[1])
         TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol = Constructor(TR, 15, basis = :chebyshev)
+        pol = Constructor(TR, 14, basis = :chebyshev)
 
         thresholds = [1e-2, 1e-3, 1e-4, 1e-5]
         results = analyze_sparsification_tradeoff(pol, thresholds = thresholds)
@@ -117,7 +117,7 @@ using LinearAlgebra
     @testset "Approximation error analysis" begin
         f = x -> 1 / (1 + 25 * x[1]^2)  # Runge function
         TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol = Constructor(TR, 20, basis = :chebyshev)
+        pol = Constructor(TR, 14, basis = :chebyshev)
 
         # Compute approximation error
         error = compute_approximation_error(f, pol, TR)

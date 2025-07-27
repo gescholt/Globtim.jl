@@ -48,7 +48,11 @@
       "Bash(curl:*)",
       "Bash(./scripts/pipeline-status.sh:*)",
       "Bash(git ls-tree:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(git config:*)",
+      "Bash(gpg:*)",
+      "Bash(./scripts/fix-gpg-email.sh:*)",
+      "Bash(gh api:*)"
     ]
   },
   "enableAllProjectMcpServers": false
