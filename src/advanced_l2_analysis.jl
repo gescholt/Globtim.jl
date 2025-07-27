@@ -51,17 +51,35 @@ function compute_l2_norm(poly, domain::BoxDomain; n_points = 20)
         weight = 2.0 * domain.radius / n_points
         return sqrt(total * weight)
     else
-        # Multi-dimensional case - use tensor product grid
-        # For simplicity, use Monte Carlo approximation
-        n_samples = n_points^dim
+        # Multi-dimensional case - use deterministic tensor product grid
+        # Create grid points for each dimension
         total = 0.0
-        for _ = 1:n_samples
-            # Random point in [-radius, radius]^dim
-            x = [2 * rand() - 1 for _ = 1:dim] .* domain.radius
-            total += poly(x)^2
+        n_total = n_points^dim
+        
+        # Generate all combinations of indices
+        for idx = 0:n_total-1
+            # Convert linear index to multi-dimensional indices
+            indices = zeros(Int, dim)
+            temp = idx
+            for d = 1:dim
+                indices[d] = temp % n_points
+                temp = temp ÷ n_points
+            end
+            
+            # Create point from indices
+            x = zeros(dim)
+            for d = 1:dim
+                x[d] = nodes[indices[d]+1] * domain.radius
+            end
+            
+            # Evaluate polynomial at this point
+            val = poly(x)
+            total += val^2
         end
-        volume = (2 * domain.radius)^dim
-        return sqrt(total * volume / n_samples)
+        
+        # Compute quadrature weight
+        weight = (2.0 * domain.radius / n_points)^dim
+        return sqrt(total * weight)
     end
 end
 
