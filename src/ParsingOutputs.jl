@@ -74,7 +74,43 @@ function process_crit_pts(
     end
 
     # Evaluate function at transformed points
-    z = [f(p) for p in points_to_process]
+    # For 1D functions, we need to handle both scalar and vector function signatures
+    z = if TR.dim == 1 && !isempty(points_to_process)
+        # Check the function signature by testing with the first point
+        first_point = points_to_process[1]
+        
+        # Try to determine if function expects scalar or vector input
+        local expects_scalar = false
+        try
+            # Try vector input first
+            f(first_point)
+        catch e
+            if isa(e, MethodError) && applicable(f, first_point[1])
+                # Function doesn't accept vector but does accept scalar
+                expects_scalar = true
+            elseif !isa(e, MethodError)
+                # Some other error - rethrow
+                rethrow(e)
+            else
+                # Function doesn't accept either format
+                throw(ArgumentError(
+                    "Function doesn't accept expected input format. " *
+                    "For 1D problems, function should accept either scalar (e.g., x -> sin(x)) " *
+                    "or vector input (e.g., x -> sin(x[1]))."
+                ))
+            end
+        end
+        
+        # Now evaluate all points using the determined format
+        if expects_scalar
+            [f(p[1]) for p in points_to_process]
+        else
+            [f(p) for p in points_to_process]
+        end
+    else
+        # For multi-dimensional or empty cases, always use vector format
+        [f(p) for p in points_to_process]
+    end
 
     # Create DataFrame
     return DataFrame(

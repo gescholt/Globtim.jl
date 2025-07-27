@@ -13,7 +13,12 @@
   - Automatic anisotropic grid detection
   - Returns `ApproxPoly` with L2-norm error
 - **`solve_polynomial_system`** - Find critical points by solving ∇p(x) = 0
+  - New convenience method: accepts `ApproxPoly` object directly
+  - Automatically extracts dimension and degree information
+  - Handles both single variables and variable vectors
 - **`process_crit_pts`** - Process and filter critical point solutions
+  - Enhanced for 1D functions: automatically handles scalar functions like `sin(x)`
+  - Intelligently detects whether function expects scalar or vector input
 
 ### Analysis Functions
 

@@ -86,12 +86,69 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
 end
 
 """
+    solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
+
+Convenience method that automatically extracts dimension and degree from an ApproxPoly object.
+
+# Arguments
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `pol::ApproxPoly`: Polynomial approximation object
+- `kwargs...`: Additional keyword arguments passed to the main method
+
+# Returns
+Same as the main `solve_polynomial_system` method.
+
+# Example
+```julia
+f = x -> sin(x)
+TR = test_input(f, dim=1, center=[0.0], sample_range=10.)
+pol = Constructor(TR, 8)
+@polyvar x
+solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
+```
+"""
+function solve_polynomial_system(
+    x,
+    pol::ApproxPoly;
+    kwargs...
+)
+    # Handle both single variable and vector of variables
+    x_vec = if isa(x, AbstractVector)
+        x
+    else
+        # Single variable - wrap in vector
+        [x]
+    end
+    
+    # Extract dimension and degree from ApproxPoly
+    n = size(pol.support, 2)  # Number of variables (from support matrix)
+    
+    # Validate dimension matches
+    if length(x_vec) != n
+        error("Number of variables ($(length(x_vec))) must match polynomial dimension ($n)")
+    end
+    
+    # Extract degree from the ApproxPoly object
+    degree_info = pol.degree
+    d = if degree_info[1] == :one_d_for_all
+        degree_info[2]
+    elseif degree_info[1] == :one_d_per_dim
+        maximum(degree_info[2])
+    else
+        error("Unsupported degree format in ApproxPoly")
+    end
+    
+    return solve_polynomial_system(x_vec, n, d, pol.coeffs; kwargs...)
+end
+
+"""
     solve_polynomial_system_from_approx(
         x,
         pol_approx::ApproxPoly
     )::Vector{Vector{Float64}}
 
 Convenience function to solve a polynomial system directly from an ApproxPoly object.
+Automatically determines the correct degree from the ApproxPoly structure.
 """
 function solve_polynomial_system_from_approx(
     x,
@@ -99,9 +156,7 @@ function solve_polynomial_system_from_approx(
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
-        pol_approx.n,
-        pol_approx.d,
-        pol_approx.coeffs;
+        pol_approx;
         basis=pol_approx.basis,
         precision=pol_approx.precision,
         normalized=pol_approx.normalized,

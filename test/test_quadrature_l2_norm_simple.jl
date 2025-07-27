@@ -13,13 +13,13 @@ using LinearAlgebra
         # 1D test
         n_points = [10]
         result = compute_l2_norm_quadrature(f_const, n_points, :chebyshev)
-        expected = 2.0  # integral of 1 over [-1,1]
+        expected = sqrt(2.0)  # sqrt of integral of 1² over [-1,1]
         @test result ≈ expected rtol=1e-10
         
         # 2D test  
         n_points_2d = [10, 10]
         result_2d = compute_l2_norm_quadrature(f_const, n_points_2d, :chebyshev)
-        expected_2d = 4.0  # integral of 1 over [-1,1]^2
+        expected_2d = 2.0  # sqrt of integral of 1² over [-1,1]^2 = sqrt(4) = 2
         @test result_2d ≈ expected_2d rtol=1e-10
     end
     
