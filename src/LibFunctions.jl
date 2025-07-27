@@ -55,7 +55,7 @@ end
     #   Not Rescaled
     #   Camel three humps function
     #   Domain: [-5, 5]^2.
-    # =======================================================  
+    # =======================================================
     return 2 * x[1]^2 - 1.05 * x[1]^4 + x[1]^6 / 6 + x[1] * x[2] + x[2]^2
 end
 
@@ -136,8 +136,8 @@ separated by at least `sep` distance.
 - `sep::Float64`: Minimum separation distance between centers.
 
 # Returns
-- `GaussianParams`: A struct containing the centers, variances of 
-the Gaussian functions and a random boolean vector to make a signed sum 
+- `GaussianParams`: A struct containing the centers, variances of
+the Gaussian functions and a random boolean vector to make a signed sum
 of the distributions.
 
 # Example
@@ -206,7 +206,7 @@ end
     #   Not Rescaled
     #   Sum of N Gaussian function centered at random points in the domain with random variance.
     #   Domain: [-1, 1]^2.
-    #   params: include centers, variance and vector of random signs.  
+    #   params: include centers, variance and vector of random signs.
     # =======================================================
 
     if verbose
@@ -377,7 +377,7 @@ old_alpine1 =
 A complex 3D function combining multiple trigonometric and exponential terms
 to create a challenging optimization landscape with many local minima.
 
-f(x,y,z) = exp(sin(50x)) + sin(60exp(y))sin(60z) + sin(70sin(x))cos(10z) + 
+f(x,y,z) = exp(sin(50x)) + sin(60exp(y))sin(60z) + sin(70sin(x))cos(10z) +
            sin(sin(80y)) - sin(10(x+z)) + (x²+y²+z²)/4
 
 # Arguments
@@ -412,7 +412,7 @@ end
 # ======================================================= 4D Functions =======================================================
 
 @doc nothing function shubert_4d(xx::AbstractVector)::Float64
-    # Sum of two Shubert 2D functions by coordinates 
+    # Sum of two Shubert 2D functions by coordinates
     # Domain: [-10, 10]^4.
     return shubert(xx[1:2]) + shubert(xx[3:4])
 end
@@ -480,7 +480,7 @@ end
     #   Alpine1 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i = eachindex(xx))
+    return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i in eachindex(xx))
 end
 
 @doc nothing function alpine2(
@@ -491,7 +491,7 @@ end
     #   Alpine2 function
     #   Domain: [-10, 10]^n.
     # =======================================================
-    return prod(sqrt(xx[i]) * sin(xx[i]) for i = eachindex(xx))
+    return prod(sqrt(xx[i]) * sin(xx[i]) for i in eachindex(xx))
 
 end
 

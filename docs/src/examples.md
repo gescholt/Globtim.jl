@@ -126,12 +126,12 @@ f = HolderTable  # Has 4 global minima
 for r in [8.0, 10.0, 12.0]
     TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)
     pol = Constructor(TR, 8)
-    
+
     @polyvar x[1:2]
     solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
     df = process_crit_pts(solutions, f, TR)
     df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
-    
+
     println("Domain ±$r: found $(nrow(df_min)) minima")
 end
 ```
@@ -187,7 +187,7 @@ for deg in [4, 6, 8, 10]
     solutions = solve_polynomial_system(x, 2, deg, pol.coeffs)
     df = process_crit_pts(solutions, f, TR)
     df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
-    
+
     push!(results, (deg, pol.nrm, nrow(df), nrow(df_min)))
 end
 
@@ -215,7 +215,7 @@ for i in 1:nrow(df_min)
     basin_size = df_min[i, :basin_points]
     avg_steps = df_min[i, :average_convergence_steps]
     coverage = df_min[i, :region_coverage_count]
-    
+
     println("Minimum $i:")
     println("  Basin size: $basin_size points")
     println("  Average convergence: $avg_steps steps")

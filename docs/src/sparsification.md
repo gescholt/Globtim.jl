@@ -85,7 +85,7 @@ Track how sparsification affects approximation quality:
 
 ```julia
 # Analyze approximation error vs sparsity tradeoff
-results = analyze_approximation_error_tradeoff(f, pol, TR, 
+results = analyze_approximation_error_tradeoff(f, pol, TR,
                                               thresholds=[1e-4, 1e-6, 1e-8])
 
 for res in results
@@ -102,7 +102,7 @@ When sparsifying, you can preserve specific coefficients:
 
 ```julia
 # Preserve the first 5 coefficients (often the most important)
-result = sparsify_polynomial(pol, 1e-4, mode=:relative, 
+result = sparsify_polynomial(pol, 1e-4, mode=:relative,
                            preserve_indices=[1, 2, 3, 4, 5])
 ```
 
@@ -120,7 +120,7 @@ TR = test_input(f, dim=1, center=[0.0], sample_range=1.0)
 pol = Constructor(TR, 20, basis=:chebyshev)
 
 # 2. Analyze sparsification options
-sparsity_analysis = analyze_sparsification_tradeoff(pol, 
+sparsity_analysis = analyze_sparsification_tradeoff(pol,
                                                    thresholds=[1e-2, 1e-3, 1e-4, 1e-5])
 
 # 3. Choose threshold based on analysis
@@ -134,8 +134,8 @@ mono_sparse = to_exact_monomial_basis(sparse_pol, variables=[x])
 # 5. Verify quality
 domain = BoxDomain(1, 1.0)
 quality = verify_truncation_quality(
-    to_exact_monomial_basis(pol, variables=[x]), 
-    mono_sparse, 
+    to_exact_monomial_basis(pol, variables=[x]),
+    mono_sparse,
     domain
 )
 
@@ -146,7 +146,7 @@ println("L² norm preservation: $(round(quality.l2_ratio*100, digits=1))%")
 ## Performance Considerations
 
 1. **Vandermonde approach**: More efficient than polynomial construction for L² norms
-2. **Sparsification benefits**: 
+2. **Sparsification benefits**:
    - Significant sparsity achievable while preserving L² accuracy
    - Reduced memory usage and faster polynomial operations
 3. **Exact arithmetic**: Use `RationalPrecision` for exact coefficients, `Float64Precision` for speed

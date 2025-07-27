@@ -24,27 +24,31 @@ f = x -> exp(-(x[1]^2 + x[2]^2))
 l2_norm = compute_l2_norm_quadrature(f, [10, 10], :chebyshev)
 ```
 """
-function compute_l2_norm_quadrature(f::Function, n_points::Vector{Int}, basis::Symbol=:chebyshev)
+function compute_l2_norm_quadrature(
+    f::Function,
+    n_points::Vector{Int},
+    basis::Symbol = :chebyshev,
+)
     n_dims = length(n_points)
-    
+
     # Step 1: Get nodes and weights for each dimension
     nodes_1d, weights_1d = get_quadrature_rules(n_points, basis)
-    
+
     # Step 2: Compute tensor product quadrature
     l2_norm_squared = 0.0
-    
+
     # Iterate over all tensor product combinations
     for idx in Iterators.product([1:n for n in n_points]...)
         # Get the n-dimensional point
-        x = [nodes_1d[i][idx[i]] for i in 1:n_dims]
-        
+        x = [nodes_1d[i][idx[i]] for i = 1:n_dims]
+
         # Get the n-dimensional weight (product of 1D weights)
-        w = prod(weights_1d[i][idx[i]] for i in 1:n_dims)
-        
+        w = prod(weights_1d[i][idx[i]] for i = 1:n_dims)
+
         # Evaluate function and accumulate
         l2_norm_squared += w * abs2(f(x))
     end
-    
+
     return sqrt(l2_norm_squared)
 end
 
@@ -63,7 +67,7 @@ Create orthogonal polynomial objects for each dimension.
 function get_quadrature_rules(n_points::Vector{Int}, basis::Symbol)
     nodes_1d = Vector{Vector{Float64}}()
     weights_1d = Vector{Vector{Float64}}()
-    
+
     for n in n_points
         if basis == :chebyshev
             # For now, use Gauss-Legendre quadrature for Chebyshev basis
@@ -86,7 +90,7 @@ function get_quadrature_rules(n_points::Vector{Int}, basis::Symbol)
             error("Unknown basis: $basis. Supported: :chebyshev, :legendre, :uniform")
         end
     end
-    
+
     return nodes_1d, weights_1d
 end
 

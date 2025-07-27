@@ -42,7 +42,7 @@ using DynamicPolynomials
 
 # With system information for debugging
 # crit_pts, (polysys, hc_sys, total) = solve_polynomial_system(
-#     x, 2, 8, coeffs, 
+#     x, 2, 8, coeffs,
 #     return_system=true
 # )
 # println("Total solutions (including complex): \$total")
@@ -57,32 +57,87 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     n,
     d,
     coeffs;
-    basis=:chebyshev,
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false,
-    return_system=false
+    basis = :chebyshev,
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
+    return_system = false,
 )
     # Use the updated main_nd function with all parameters
     pol = main_nd(
-        x, n, d, coeffs;
-        basis=basis,
-        precision=precision,
-        normalized=normalized,
-        power_of_two_denom=power_of_two_denom
+        x,
+        n,
+        d,
+        coeffs;
+        basis = basis,
+        precision = precision,
+        normalized = normalized,
+        power_of_two_denom = power_of_two_denom,
     )
 
     # Compute the gradient and solve the system
     grad = differentiate.(pol, x)
     sys = System(grad)
-    hc_result = solve(sys, start_system=:total_degree)
-    rl_sol = real_solutions(hc_result; only_real=true, multiple_results=false)
-    
+    hc_result = solve(sys, start_system = :total_degree)
+    rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
+
     if return_system
         return rl_sol, (pol, sys, length(hc_result))
     else
         return rl_sol
     end
+end
+
+"""
+    solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
+
+Convenience method that automatically extracts dimension and degree from an ApproxPoly object.
+
+# Arguments
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `pol::ApproxPoly`: Polynomial approximation object
+- `kwargs...`: Additional keyword arguments passed to the main method
+
+# Returns
+Same as the main `solve_polynomial_system` method.
+
+# Example
+```julia
+f = x -> sin(x)
+TR = test_input(f, dim=1, center=[0.0], sample_range=10.)
+pol = Constructor(TR, 8)
+@polyvar x
+solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
+```
+"""
+function solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
+    # Handle both single variable and vector of variables
+    x_vec = if isa(x, AbstractVector)
+        x
+    else
+        # Single variable - wrap in vector
+        [x]
+    end
+
+    # Extract dimension and degree from ApproxPoly
+    n = size(pol.support, 2)  # Number of variables (from support matrix)
+
+    # Validate dimension matches
+    if length(x_vec) != n
+        error("Number of variables ($(length(x_vec))) must match polynomial dimension ($n)")
+    end
+
+    # Extract degree from the ApproxPoly object
+    degree_info = pol.degree
+    d = if degree_info[1] == :one_d_for_all
+        degree_info[2]
+    elseif degree_info[1] == :one_d_per_dim
+        maximum(degree_info[2])
+    else
+        error("Unsupported degree format in ApproxPoly")
+    end
+
+    return solve_polynomial_system(x_vec, n, d, pol.coeffs; kwargs...)
 end
 
 """
@@ -92,20 +147,19 @@ end
     )::Vector{Vector{Float64}}
 
 Convenience function to solve a polynomial system directly from an ApproxPoly object.
+Automatically determines the correct degree from the ApproxPoly structure.
 """
 function solve_polynomial_system_from_approx(
     x,
-    pol_approx::ApproxPoly
+    pol_approx::ApproxPoly,
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
-        pol_approx.n,
-        pol_approx.d,
-        pol_approx.coeffs;
-        basis=pol_approx.basis,
-        precision=pol_approx.precision,
-        normalized=pol_approx.normalized,
-        power_of_two_denom=pol_approx.power_of_two_denom
+        pol_approx;
+        basis = pol_approx.basis,
+        precision = pol_approx.precision,
+        normalized = pol_approx.normalized,
+        power_of_two_denom = pol_approx.power_of_two_denom,
     )
 end
 
@@ -128,15 +182,20 @@ This updated version uses construct_orthopoly_polynomial for the construction
 and ensures the result is compatible with homotopy continuation.
 """
 function main_nd(
-    x::Vector{Variable{DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},Graded{LexOrder}}},
+    x::Vector{
+        Variable{
+            DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},
+            Graded{LexOrder},
+        },
+    },
     n::Int,
     d,
     coeffs::Vector;
-    basis=:chebyshev,
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false,
-    verbose::Bool=false
+    basis = :chebyshev,
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
+    verbose::Bool = false,
 )
     # Handle backward compatibility: convert integer degree to tuple format
     degree = if isa(d, Int)
@@ -144,7 +203,7 @@ function main_nd(
     else
         d
     end
-    
+
     # For backwards compatibility
     bigint = (precision == RationalPrecision)
 
@@ -165,9 +224,9 @@ function main_nd(
             degree,
             basis,
             precision;
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom,
-            verbose=verbose
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
+            verbose = verbose,
         )
     end
 

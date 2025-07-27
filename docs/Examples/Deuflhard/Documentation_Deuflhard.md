@@ -1,4 +1,4 @@
-What we need is a small parcel to work on, with a nice contourplot with critical points and minima found after initiating local method and then a 3d plot. 
+What we need is a small parcel to work on, with a nice contourplot with critical points and minima found after initiating local method and then a 3d plot.
 
 
 ```julia
@@ -10,10 +10,10 @@ using PlotlyJS, Colors
 include("../src/lib_func.jl")
 
 # Constants and Parameters
-d = 1 # Initial Degree 
-const n, a, b = 2, 11, 10 
+d = 1 # Initial Degree
+const n, a, b = 2, 11, 10
 const scale_factor = a / b       # Scaling factor appears in `main_computation`, maybe it should be a parameter.
-const delta, alpha = .5 , 1 / 10  # Sampling parameters # Delta used to be too big 
+const delta, alpha = .5 , 1 / 10  # Sampling parameters # Delta used to be too big
 const tol_l2 = 1e-4            # Define the tolerance for the L2-norm
 const sample_scale = 1.0
 
@@ -51,14 +51,14 @@ loc = "inputs.ms"
 file_path_output = "outputs.ms";
 
 ap = main_nd(n, d, poly_approx.coeffs)
-@polyvar(x[1:n]) # Define polynomial ring 
+@polyvar(x[1:n]) # Define polynomial ring
 # Expand the polynomial approximant to the standard monomial basis in the Lexicographic order w.r.t x
 names = [x[i].name for i in 1:length(x)]
 open(loc, "w") do file
     println(file, join(names, ", "))
     println(file, 0)
 end
-# Define the polynomial approximant 
+# Define the polynomial approximant
 PolynomialApproximant = sum(ap .* MonomialVector(x, 0:d))
 for i in 1:n
     partial = differentiate(PolynomialApproximant, x[i])
@@ -73,7 +73,7 @@ for i in 1:n
 end
 ```
 
-Solve the system of partial derivatives using `Msolve`. 
+Solve the system of partial derivatives using `Msolve`.
 
 
 ```julia
@@ -104,7 +104,7 @@ end
 
 condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
 filtered_points = filter(condition, real_pts) # Filter points using the filter function
-# Colllect the critical points of the approximant 
+# Colllect the critical points of the approximant
 h_x = Float64[point[1] for point in filtered_points] # Initialize the x vector for critical points of approximant
 h_y = Float64[point[2] for point in filtered_points] # Initialize the y vector
 h_z = map(p -> f([p[1], p[2]]), zip(scale_factor * h_x, scale_factor * h_y))
@@ -136,7 +136,7 @@ if size(coords)[2] == 2
     println("Plotting 3D scatter plot")
 
     # Create the scatter3d trace
-    # Had to switch the coordinates of the critical points to match the surface plot for some reason. 
+    # Had to switch the coordinates of the critical points to match the surface plot for some reason.
     crit_pts = scatter3d(
         x=df.y,
         y=df.x,
@@ -173,7 +173,7 @@ println("Number of samples: ", poly_approx.N)
 ### Add a Random Noise
 
 We equip the evaluations of `CrossInTray` with a Gaussian noise. We set the standard deviation `stddev`to `5.0`.
-Observation so far: low sensitivity to changing `alpha`, the probability on the discrete $L^2$-norm, we observe that the number of samples generated does not change drastically w.r.t. `alpha`. 
+Observation so far: low sensitivity to changing `alpha`, the probability on the discrete $L^2$-norm, we observe that the number of samples generated does not change drastically w.r.t. `alpha`.
 In a first scenario, we only require a low probability `1 - alpha_noise` of the discrete $L^2$-norm reaching the tolerance set by `noisy_tol_l2`.
 
 
@@ -209,14 +209,14 @@ println("Number of samples: ", poly_approx_noisy.N)
 
 ap = main_nd(n, d, poly_approx_noisy.coeffs)
 
-@polyvar(x[1:n]) # Define polynomial ring 
+@polyvar(x[1:n]) # Define polynomial ring
 # Expand the polynomial approximant to the standard monomial basis in the Lexicographic order w.r.t x
 names = [x[i].name for i in 1:length(x)]
 open(loc, "w") do file
     println(file, join(names, ", "))
     println(file, 0)
 end
-# Define the polynomial approximant 
+# Define the polynomial approximant
 PolynomialApproximant = sum(ap .* MonomialVector(x, 0:d))
 for i in 1:n
     partial = differentiate(PolynomialApproximant, x[i])
@@ -247,7 +247,7 @@ end
 
 condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
 filtered_points = filter(condition, real_pts) # Filter points using the filter function
-# Colllect the critical points of the approximant 
+# Colllect the critical points of the approximant
 h_x = Float64[point[1] for point in filtered_points] # Initialize the x vector for critical points of approximant
 h_y = Float64[point[2] for point in filtered_points] # Initialize the y vector
 
@@ -273,7 +273,7 @@ if size(coords)[2] == 2
         ),
         name="Sampled Noisy Data"
     )
-    # Had to switch the coordinates of the critical points to match the surface plot for some reason. 
+    # Had to switch the coordinates of the critical points to match the surface plot for some reason.
     crit_pts_noisy = scatter3d(
         x=df_noisy.y,
         y=df_noisy.x,
@@ -331,14 +331,14 @@ println("Number of samples: ", poly_approx_noisy.N)
 
 ap = main_nd(n, d, poly_approx_noisy.coeffs)
 
-@polyvar(x[1:n]) # Define polynomial ring 
+@polyvar(x[1:n]) # Define polynomial ring
 # Expand the polynomial approximant to the standard monomial basis in the Lexicographic order w.r.t x
 names = [x[i].name for i in 1:length(x)]
 open(loc, "w") do file
     println(file, join(names, ", "))
     println(file, 0)
 end
-# Define the polynomial approximant 
+# Define the polynomial approximant
 PolynomialApproximant = sum(ap .* MonomialVector(x, 0:d))
 for i in 1:n
     partial = differentiate(PolynomialApproximant, x[i])
@@ -366,11 +366,11 @@ for pts in evaled
     push!(real_pts, Float64.(X))
 end
 
-# Repeat, could be made ito a function. 
+# Repeat, could be made ito a function.
 
 condition(point) = -1 < point[1] < 1 && -1 < point[2] < 1
 filtered_points = filter(condition, real_pts) # Filter points using the filter function
-# Colllect the critical points of the approximant 
+# Colllect the critical points of the approximant
 h_x = Float64[point[1] for point in filtered_points] # Initialize the x vector for critical points of approximant
 h_y = Float64[point[2] for point in filtered_points] # Initialize the y vector
 
@@ -396,7 +396,7 @@ if size(coords)[2] == 2
         ),
         name="Sampled Noisy Data"
     )
-    # Had to switch the coordinates of the critical points to match the surface plot for some reason. 
+    # Had to switch the coordinates of the critical points to match the surface plot for some reason.
     crit_pts_noisy = scatter3d(
         x=df_noisy.y,
         y=df_noisy.x,

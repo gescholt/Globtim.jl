@@ -4,7 +4,7 @@ using IterTools
 
 # Load the dataframe from the CSV file
 """
-Computes the 4-dimensional set of critical points from the 2D critical points of a function f 
+Computes the 4-dimensional set of critical points from the 2D critical points of a function f
 F(x_1, x_2, x_3, x_4) = f(x_1,x_2)+ f(x_3,x_4).
 
 """
@@ -22,7 +22,7 @@ function double_dataframe(df::DataFrame)
     x2 = vec([df.x[j[2]] for j in pairs])
     y2 = vec([df.y[j[2]] for j in pairs])
 
-    return DataFrame(x1=x1, x2=y1, x3=x2, x4=y2)
+    return DataFrame(x1 = x1, x2 = y1, x3 = x2, x4 = y2)
 end
 
 df_doubled = double_dataframe(df_ori)

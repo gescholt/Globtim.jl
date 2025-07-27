@@ -73,7 +73,7 @@ solutions = solve_polynomial_system(
 
 Two solvers are available:
 
-1. **HomotopyContinuation.jl** (default): 
+1. **HomotopyContinuation.jl** (default):
    - Numerical polynomial system solver
    - Finds all complex solutions
    - Filters for real solutions in domain
@@ -136,7 +136,7 @@ The refinement process tracks:
 
 Higher degrees improve approximation but increase cost:
 - Degree 4-6: Fast, suitable for smooth functions
-- Degree 8-10: Good balance for most problems  
+- Degree 8-10: Good balance for most problems
 - Degree 12+: High accuracy, computationally intensive
 
 ### Domain Scaling
@@ -146,7 +146,7 @@ The `sample_range` parameter controls the search domain:
 # Symmetric domain
 TR = test_input(f, dim=2, center=[0,0], sample_range=1.0)
 
-# Asymmetric domain  
+# Asymmetric domain
 TR = test_input(f, dim=2, center=[0,0], sample_range=[2.0, 1.0])
 ```
 

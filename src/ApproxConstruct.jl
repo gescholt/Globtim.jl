@@ -5,15 +5,15 @@ struct EllipseSupport{T}
     radius::T
 end
 
-function get_lambda_vectors(es::EllipseSupport)    
+function get_lambda_vectors(es::EllipseSupport)
     n = length(es.center)
     @assert n > 0 "n must be a positive number"
 
     lambda_vectors = Vector{Vector{Int}}()
-    
+
     exps = get_lambda_exponent_vectors((:one_d_for_all, es.radius), length(es.center))
     for exp in exps
-        if sum(exp .^ 2 .* (1 ./ es.coeffs .^2)) <= es.radius
+        if sum(exp .^ 2 .* (1 ./ es.coeffs .^ 2)) <= es.radius
             push!(lambda_vectors, exp)
         end
     end
@@ -88,13 +88,17 @@ function SupportGen(n::Int, d)::NamedTuple
     # minimum(d) ≥ 0 || throw(ArgumentError("Degree must be non-negative"))
 
     D = if d[1] == :one_d_for_all
-        maximum(d[2])  
+        maximum(d[2])
     elseif d[1] == :one_d_per_dim
-        maximum(d[2])  
+        maximum(d[2])
     elseif d[1] == :fully_custom
         Inf
     else
-        throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."))
+        throw(
+            ArgumentError(
+                "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom.",
+            ),
+        )
     end
 
     if D == 0
@@ -104,12 +108,17 @@ function SupportGen(n::Int, d)::NamedTuple
     lambda_vectors = get_lambda_exponent_vectors(d, n)
     # @info "" lambda_vectors
 
-    lambda_matrix = length(lambda_vectors) > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
+    lambda_matrix =
+        length(lambda_vectors) > 0 ? reduce(hcat, lambda_vectors)' : zeros(Int, 0, n)
 
     return (data = lambda_matrix, size = size(lambda_matrix))
 end
 
-TimerOutputs.@timeit _TO function lambda_vandermonde_original(Lambda::NamedTuple, S; basis=:chebyshev)
+TimerOutputs.@timeit _TO function lambda_vandermonde_original(
+    Lambda::NamedTuple,
+    S;
+    basis = :chebyshev,
+)
     T = eltype(S)  # Infer type from input
     m, N = Lambda.size
     n, N = size(S)
@@ -132,10 +141,12 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(Lambda::NamedTuple
         @views for degree = 0:max_degree
             # For now, keep using Float64 precision for polynomial generation
             # but convert results to type T
-            poly = symbolic_legendre(degree, precision=Float64Precision, normalized=true)
-            
+            poly =
+                symbolic_legendre(degree, precision = Float64Precision, normalized = true)
+
             # Convert evaluation results to type T
-            eval_cache[degree] = map(point -> T(evaluate_legendre(poly, Float64(point))), unique_points)
+            eval_cache[degree] =
+                map(point -> T(evaluate_legendre(poly, Float64(point))), unique_points)
         end
 
         # Compute Vandermonde matrix using cached values
@@ -200,7 +211,7 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(Lambda::NamedTuple
 end
 
 # Helper function for exact Chebyshev evaluation
-function chebyshev_value_exact(n::Int, x::T) where T
+function chebyshev_value_exact(n::Int, x::T) where {T}
     if n == 0
         return one(T)
     elseif n == 1
@@ -219,8 +230,8 @@ function chebyshev_value_exact(n::Int, x::T) where T
 end
 
 """
-    lambda_vandermonde(Lambda::NamedTuple, S; 
-                      basis::Symbol=:chebyshev, 
+    lambda_vandermonde(Lambda::NamedTuple, S;
+                      basis::Symbol=:chebyshev,
                       force_anisotropic::Bool=false)
 
 Enhanced lambda_vandermonde that automatically detects and handles anisotropic grids.
@@ -242,25 +253,28 @@ It automatically detects grid type and calls the appropriate implementation.
 - Falls back to original implementation for isotropic grids (better performance)
 - Use `force_anisotropic=true` to test anisotropic algorithm on isotropic grids
 """
-function lambda_vandermonde(Lambda::NamedTuple, S; 
-                           basis::Symbol=:chebyshev,
-                           force_anisotropic::Bool=false)
+function lambda_vandermonde(
+    Lambda::NamedTuple,
+    S;
+    basis::Symbol = :chebyshev,
+    force_anisotropic::Bool = false,
+)
     # Convert to matrix if needed for analysis
     S_matrix = isa(S, Matrix) ? S : S
-    
+
     # Quick dimension check
     if size(S_matrix, 2) == 1
         # 1D case - always use original implementation
-        return lambda_vandermonde_original(Lambda, S, basis=basis)
+        return lambda_vandermonde_original(Lambda, S, basis = basis)
     end
-    
+
     # Check if grid is anisotropic (only for matrix inputs)
     if force_anisotropic || (isa(S, Matrix) && is_grid_anisotropic(S))
         # Use anisotropic implementation
-        return lambda_vandermonde_anisotropic(Lambda, S, basis=basis)
+        return lambda_vandermonde_anisotropic(Lambda, S, basis = basis)
     else
         # Use original (optimized for isotropic case)
-        return lambda_vandermonde_original(Lambda, S, basis=basis)
+        return lambda_vandermonde_original(Lambda, S, basis = basis)
     end
 end
 
@@ -341,4 +355,3 @@ function subdivide_domain(T::test_input)::Vector{test_input}
 
     return subdivided_inputs
 end
-

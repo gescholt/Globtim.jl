@@ -25,8 +25,8 @@ function process_crit_pts(
     real_pts::Vector{<:AbstractVector},
     f::Function,
     TR::test_input;
-    skip_filtering::Bool=false,
-    kwargs...
+    skip_filtering::Bool = false,
+    kwargs...,
 )::DataFrame
     # Validate input dimensions
     if !all(p -> length(p) == TR.dim, real_pts)
@@ -67,24 +67,56 @@ function process_crit_pts(
         [TR.sample_range .* p .+ center_vec for p in filtered_points]
     else
         # Vector scaling - apply per-coordinate scaling
-        [
-            [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:TR.dim]
-            for p in filtered_points
-        ]
+        [[TR.sample_range[i] * p[i] + center_vec[i] for i = 1:TR.dim] for p in filtered_points]
     end
 
     # Evaluate function at transformed points
-    z = [f(p) for p in points_to_process]
+    # For 1D functions, we need to handle both scalar and vector function signatures
+    z = if TR.dim == 1 && !isempty(points_to_process)
+        # Check the function signature by testing with the first point
+        first_point = points_to_process[1]
+
+        # Try to determine if function expects scalar or vector input
+        local expects_scalar = false
+        try
+            # Try vector input first
+            f(first_point)
+        catch e
+            if isa(e, MethodError) && applicable(f, first_point[1])
+                # Function doesn't accept vector but does accept scalar
+                expects_scalar = true
+            elseif !isa(e, MethodError)
+                # Some other error - rethrow
+                rethrow(e)
+            else
+                # Function doesn't accept either format
+                throw(
+                    ArgumentError(
+                        "Function doesn't accept expected input format. " *
+                        "For 1D problems, function should accept either scalar (e.g., x -> sin(x)) " *
+                        "or vector input (e.g., x -> sin(x[1])).",
+                    ),
+                )
+            end
+        end
+
+        # Now evaluate all points using the determined format
+        if expects_scalar
+            [f(p[1]) for p in points_to_process]
+        else
+            [f(p) for p in points_to_process]
+        end
+    else
+        # For multi-dimensional or empty cases, always use vector format
+        [f(p) for p in points_to_process]
+    end
 
     # Create DataFrame
     return DataFrame(
         merge(
-            Dict(
-                Symbol("x$i") => [p[i] for p in points_to_process]
-                for i = 1:TR.dim
-            ),
+            Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i = 1:TR.dim),
             Dict(:z => z),
-        )
+        ),
     )
 end
 
@@ -129,7 +161,7 @@ function msolve_parser(
     file_path::String,
     f::Function,
     TR::test_input;
-    skip_filtering::Bool=false
+    skip_filtering::Bool = false,
 )::DataFrame
     total_time = @elapsed begin
         println("\n=== Starting MSolve Parser (dimension: $(TR.dim)) ===")
@@ -144,17 +176,17 @@ function msolve_parser(
                 if !isfile(file_path)
                     error("Msolve output file not found: $file_path")
                 end
-                
+
                 # Read the file content
                 content = read(file_path, String)
-                
+
                 # Parse the solutions from msolve output
                 # Msolve outputs in format: [0, [1, [[[x1, y1], [data]], [[x2, y2], [data]], ...]]]:
                 points = Vector{Vector{Float64}}()
-                
+
                 # Remove trailing colon and whitespace
                 content = strip(rstrip(content, ':'))
-                
+
                 try
                     # Find the innermost list containing the point data
                     # Look for the pattern [0, [1, [...]]]
@@ -162,21 +194,22 @@ function msolve_parser(
                     if start_idx === nothing
                         error("Unexpected msolve output format")
                     end
-                    
+
                     # Extract the content after [0, [1,
                     inner_content = content[start_idx[end]+1:end]
-                    
+
                     # Use a regex that properly captures rational numbers
                     # Match patterns like [[x, y], [data]] where x,y can be:
                     #   - Integers: 123 or -456
                     #   - Rationals: -123/2^45 (with spaces allowed around /)
                     # The pattern (-?\d+\s*/\s*2\^\d+|-?\d+) matches either form
-                    coord_pattern = r"\[\[\s*(-?\d+\s*/\s*2\^\d+|-?\d+)\s*,\s*(-?\d+\s*/\s*2\^\d+|-?\d+)\s*\],\s*\[[^\]]*\]\]"
-                    
+                    coord_pattern =
+                        r"\[\[\s*(-?\d+\s*/\s*2\^\d+|-?\d+)\s*,\s*(-?\d+\s*/\s*2\^\d+|-?\d+)\s*\],\s*\[[^\]]*\]\]"
+
                     for match in eachmatch(coord_pattern, inner_content)
                         x_str = strip(match.captures[1])
                         y_str = strip(match.captures[2])
-                        
+
                         # Parse rational numbers
                         x_val = if contains(x_str, '/')
                             parts = split(x_str, '/')
@@ -192,7 +225,7 @@ function msolve_parser(
                         else
                             parse(Float64, x_str)
                         end
-                        
+
                         y_val = if contains(y_str, '/')
                             parts = split(y_str, '/')
                             num = parse(BigFloat, strip(parts[1]))
@@ -207,7 +240,7 @@ function msolve_parser(
                         else
                             parse(Float64, y_str)
                         end
-                        
+
                         # For now, only handle 2D case
                         if TR.dim == 2
                             push!(points, [x_val, y_val])
@@ -222,7 +255,9 @@ function msolve_parser(
                     rethrow(e)
                 end
             end
-            println("Processed $(length(points)) points ($(round(process_time, digits=3))s)")
+            println(
+                "Processed $(length(points)) points ($(round(process_time, digits=3))s)",
+            )
 
             if !all(p -> length(p) == TR.dim, points)
                 invalid_points = filter(p -> length(p) != TR.dim, points)
@@ -265,8 +300,8 @@ function msolve_parser(
             else
                 # Vector sample_range - apply per-coordinate scaling
                 [
-                    [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:TR.dim]
-                    for p in filtered_points
+                    [TR.sample_range[i] * p[i] + center_vec[i] for i = 1:TR.dim] for
+                    p in filtered_points
                 ]
             end
 
@@ -275,8 +310,7 @@ function msolve_parser(
             df = DataFrame(
                 merge(
                     Dict(
-                        Symbol("x$i") => [p[i] for p in points_to_process] for
-                        i = 1:TR.dim
+                        Symbol("x$i") => [p[i] for p in points_to_process] for i = 1:TR.dim
                     ),
                     Dict(:z => z),
                 ),

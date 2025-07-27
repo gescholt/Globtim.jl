@@ -37,11 +37,13 @@ if !impl_exists
     println("Tests will be skipped until implementation is available.")
     println("\nExpected implementation location: src/quadrature_l2_norm.jl")
     println("\nThe implementation should export:")
-    println("  - compute_l2_norm_quadrature(f::Function, n_points::Vector{Int}, basis::Symbol)")
+    println(
+        "  - compute_l2_norm_quadrature(f::Function, n_points::Vector{Int}, basis::Symbol)",
+    )
 end
 
 # Track test results
-test_results = Dict{String, Bool}()
+test_results = Dict{String,Bool}()
 
 # Define test phases (will be updated with actual results)
 phase1_tests = [
@@ -51,15 +53,13 @@ phase1_tests = [
     ("1.4 Basic Convergence", false),
 ]
 
-phase2_tests = [
-    ("2.1 3D and 4D Integration", false),
-    ("2.2 Different Polynomial Bases", false),
-]
+phase2_tests =
+    [("2.1 3D and 4D Integration", false), ("2.2 Different Polynomial Bases", false)]
 
 # Run tests if implementation exists
 if impl_exists
     print_header("Running Tests")
-    
+
     # Run the tests and capture if they all pass
     global all_tests_passed = true
     try
@@ -71,7 +71,7 @@ if impl_exists
             rethrow(e)
         end
     end
-    
+
     # Update test status based on results
     if all_tests_passed
         # If all tests pass, mark all as passed
@@ -81,18 +81,16 @@ if impl_exists
             ("1.3 Single Basis Type (Chebyshev)", true),
             ("1.4 Basic Convergence", true),
         ]
-        
-        phase2_tests = [
-            ("2.1 3D and 4D Integration", true),
-            ("2.2 Different Polynomial Bases", true),
-        ]
-        
+
+        phase2_tests =
+            [("2.1 3D and 4D Integration", true), ("2.2 Different Polynomial Bases", true)]
+
         # Print updated status
         println("\n$(GREEN)All tests passed! Great job!$(RESET)")
         print_phase_status(1, "Core Functionality", phase1_tests)
         print_phase_status(2, "Extended Dimensions", phase2_tests)
     end
-    
+
 else
     # Print initial status only if implementation doesn't exist
     print_phase_status(1, "Core Functionality", phase1_tests)
@@ -110,7 +108,9 @@ if !impl_exists
 else
     println("1. Fix any failing tests in Phase 1")
     println("2. Once Phase 1 passes, move to Phase 2")
-    println("3. Run specific test sets with: julia --project test/test_quadrature_l2_phase1_2.jl")
+    println(
+        "3. Run specific test sets with: julia --project test/test_quadrature_l2_phase1_2.jl",
+    )
 end
 
 println("\n$(GREEN)Happy coding!$(RESET)\n")

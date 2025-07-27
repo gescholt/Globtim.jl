@@ -21,16 +21,16 @@ pol = Constructor(TR, 10, basis=:chebyshev)
 mono_poly = to_exact_monomial_basis(pol, variables=[x])
 ```
 """
-function to_exact_monomial_basis(pol::ApproxPoly; variables=nothing)
+function to_exact_monomial_basis(pol::ApproxPoly; variables = nothing)
     # Get dimension from the polynomial
     dim = size(pol.grid, 2)
-    
+
     # Create variables if not provided
     if variables === nothing
         @polyvar x[1:dim]
         variables = x
     end
-    
+
     # Use Globtim's function to construct the polynomial
     # This handles the basis conversion internally
     mono_poly = construct_orthopoly_polynomial(
@@ -39,10 +39,10 @@ function to_exact_monomial_basis(pol::ApproxPoly; variables=nothing)
         pol.degree,
         pol.basis,
         pol.precision;
-        normalized=pol.normalized,
-        power_of_two_denom=pol.power_of_two_denom
+        normalized = pol.normalized,
+        power_of_two_denom = pol.power_of_two_denom,
     )
-    
+
     # Scale the polynomial to account for domain transformation
     # Globtim uses [-1,1]^n as reference domain, scaled by scale_factor
     if pol.scale_factor != 1.0
@@ -50,7 +50,7 @@ function to_exact_monomial_basis(pol::ApproxPoly; variables=nothing)
         scaled_vars = [v => v * pol.scale_factor for v in variables]
         mono_poly = substitute(mono_poly, scaled_vars)
     end
-    
+
     return mono_poly
 end
 
@@ -78,19 +78,28 @@ f = x -> x[1]^2 + x[2]^2
 mono_poly = exact_polynomial_coefficients(f, 2, 4, basis=:chebyshev)
 ```
 """
-function exact_polynomial_coefficients(f::Function, dim::Int, degree::Int;
-                                     basis::Symbol = :chebyshev,
-                                     center::Vector = zeros(dim),
-                                     sample_range::Real = 1.0,
-                                     tolerance::Real = 0.5,
-                                     precision = Float64Precision)
+function exact_polynomial_coefficients(
+    f::Function,
+    dim::Int,
+    degree::Int;
+    basis::Symbol = :chebyshev,
+    center::Vector = zeros(dim),
+    sample_range::Real = 1.0,
+    tolerance::Real = 0.5,
+    precision = Float64Precision,
+)
     # Create test input
-    TR = test_input(f, dim=dim, center=center, 
-                   sample_range=sample_range, tolerance=tolerance)
-    
+    TR = test_input(
+        f,
+        dim = dim,
+        center = center,
+        sample_range = sample_range,
+        tolerance = tolerance,
+    )
+
     # Construct polynomial approximation
-    pol = Constructor(TR, degree, basis=basis, precision=precision)
-    
+    pol = Constructor(TR, degree, basis = basis, precision = precision)
+
     # Convert to monomial basis
     return to_exact_monomial_basis(pol)
 end

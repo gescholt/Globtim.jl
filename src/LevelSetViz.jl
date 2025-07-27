@@ -47,8 +47,8 @@ end
 # Core Functions
 """
     prepare_level_set_data(
-        grid::Array{SVector{3,T}}, 
-        values::Array{T}, 
+        grid::Array{SVector{3,T}},
+        values::Array{T},
         level::T;
         tolerance::T=convert(T, 1e-2)
     ) where {T<:AbstractFloat}
@@ -121,8 +121,8 @@ end
 
 """
     create_level_set_visualization(
-        f, 
-        grid::Array{SVector{3,T},3}, 
+        f,
+        grid::Array{SVector{3,T},3},
         df::DataFrame,
         z_range::Tuple{T,T},
         params::VisualizationParameters=VisualizationParameters()
@@ -143,12 +143,7 @@ function Globtim.create_level_set_visualization(
     (isnan(z_min) || isnan(z_max)) && throw(ArgumentError("Invalid z_range"))
 
     fig = Figure(size = params.fig_size)
-    ax = Axis3(
-        fig[1, 1],
-        xlabel = "x₁",
-        ylabel = "x₂",
-        zlabel = "x₃",
-    )
+    ax = Axis3(fig[1, 1], xlabel = "x₁", ylabel = "x₂", zlabel = "x₃")
 
     x_range = extrema(p[1] for p in valid_points)
     y_range = extrema(p[2] for p in valid_points)
@@ -175,7 +170,14 @@ function Globtim.create_level_set_visualization(
         values[i] = any(isnan, point) ? NaN : f(point)
     end
 
-    scatter!(ax, level_points, color = :blue, markersize = 6, alpha=0.7, label = "Level Set")
+    scatter!(
+        ax,
+        level_points,
+        color = :blue,
+        markersize = 6,
+        alpha = 0.7,
+        label = "Level Set",
+    )
 
     if !isnothing(df)
         scatter!(
@@ -271,12 +273,15 @@ function Globtim.plot_polyapprox_levelset_2D(
     fine_values_f = map(TR.objective, fine_grid)
 
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
-    poly_func = p -> DynamicPolynomials.coefficients(DynamicPolynomials.subs(wd_in_std_basis, x => p))[1]
+    poly_func =
+        p -> DynamicPolynomials.coefficients(
+            DynamicPolynomials.subs(wd_in_std_basis, x => p),
+        )[1]
     fine_values_wd = map(poly_func, fine_grid_pullback)
 
     @info "" fine_values_f fine_values_wd
 
-    # ||f - w_d||_s 
+    # ||f - w_d||_s
     fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f))
 
     z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
@@ -287,10 +292,7 @@ function Globtim.plot_polyapprox_levelset_2D(
 
     # Combine z_limits
     # Option 1
-    z_limits = (
-        min(z_limits_f[1], z_limits_wd[1]),
-        max(z_limits_f[2], z_limits_wd[2]),
-    )
+    z_limits = (min(z_limits_f[1], z_limits_wd[1]), max(z_limits_f[2], z_limits_wd[2]))
     # Option 2
     z_limits = z_limits_f
     z_limits = (
@@ -300,23 +302,24 @@ function Globtim.plot_polyapprox_levelset_2D(
     @info "" z_limits
 
     levels = range(z_limits[1], z_limits[2], length = num_levels)
-    levels_f_wd = range(
-        z_limits_f_minus_wd[1],
-        z_limits_f_minus_wd[2],
-        length = num_levels,
-    )
+    levels_f_wd = range(z_limits_f_minus_wd[1], z_limits_f_minus_wd[2], length = num_levels)
 
     fig = Figure(size = figure_size)
 
-    ax = Axis(fig[1, 1], title = "Lotka Volterra 2D, f(x) = $distance", xlabel = xlabel, ylabel = ylabel)
-    
+    ax = Axis(
+        fig[1, 1],
+        title = "Lotka Volterra 2D, f(x) = $distance",
+        xlabel = xlabel,
+        ylabel = ylabel,
+    )
+
     cf = contourf!(
-        ax, 
+        ax,
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_f,
         colormap = chosen_colormap,
-        levels = levels
+        levels = levels,
     )
     pt = scatter!(
         ax,
@@ -335,56 +338,64 @@ function Globtim.plot_polyapprox_levelset_2D(
     #     color = :green,
     #     label = "p_true",
     # )
-    cp = scatter!(
-        ax,
-        df.x1,
-        df.x2,
-        markersize = 10,
-        color = :blue,
-        marker = :diamond,
+    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
+
+    ax = Axis(
+        fig[1, 2],
+        title = "w_d(x), d = $(pol.degree)",
+        xlabel = xlabel,
+        ylabel = ylabel,
     )
 
-    ax = Axis(fig[1, 2], title = "w_d(x), d = $(pol.degree)", xlabel = xlabel, ylabel = ylabel)
-
     cf = contourf!(
-        ax, 
+        ax,
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_wd,
-        colormap = chosen_colormap, 
-        levels = levels
+        colormap = chosen_colormap,
+        levels = levels,
     )
-    cp = scatter!(
-        ax,
-        df.x1,
-        df.x2,
-        markersize = 10,
-        color = :blue,
-        marker = :diamond,
-    )
+    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
     rct = lines!(
         ax,
-        [TR.center[1] - TR.sample_range, TR.center[1] - TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] - TR.sample_range],
-        [TR.center[2] - TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] - TR.sample_range, TR.center[2] - TR.sample_range],
+        [
+            TR.center[1] - TR.sample_range,
+            TR.center[1] - TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] - TR.sample_range,
+        ],
+        [
+            TR.center[2] - TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] - TR.sample_range,
+            TR.center[2] - TR.sample_range,
+        ],
         color = :black,
         linewidth = 3,
-        linestyle = :dash
+        linestyle = :dash,
     )
 
-    Colorbar(fig[1, 3], cf, label="")
+    Colorbar(fig[1, 3], cf, label = "")
 
-    ax = Axis(fig[2, 1], title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))", xlabel = xlabel, ylabel = ylabel)
+    ax = Axis(
+        fig[2, 1],
+        title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))",
+        xlabel = xlabel,
+        ylabel = ylabel,
+    )
 
     @info "" levels_f_wd
     cf_f_minus_wd = contourf!(
-        ax, 
+        ax,
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_f_minus_wd,
-        # colormap = chosen_colormap, 
-        levels = levels_f_wd
+        # colormap = chosen_colormap,
+        levels = levels_f_wd,
     )
-    
+
     sp = scatter!(
         ax,
         map(first, pushforward.(eachrow(pol.grid))),
@@ -392,32 +403,63 @@ function Globtim.plot_polyapprox_levelset_2D(
         markersize = 2,
         color = :black,
         marker = :circle,
-        alpha = 0.2
+        alpha = 0.2,
     )
 
     rct = lines!(
         ax,
-        [TR.center[1] - TR.sample_range, TR.center[1] - TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] - TR.sample_range],
-        [TR.center[2] - TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] - TR.sample_range, TR.center[2] - TR.sample_range],
+        [
+            TR.center[1] - TR.sample_range,
+            TR.center[1] - TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] - TR.sample_range,
+        ],
+        [
+            TR.center[2] - TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] - TR.sample_range,
+            TR.center[2] - TR.sample_range,
+        ],
         color = :black,
         linewidth = 3,
-        linestyle = :dash
+        linestyle = :dash,
     )
 
-    Colorbar(fig[2, 3], cf_f_minus_wd,
-            ticks = (levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length=9))], string.("2^" .* string.(round.(Int,levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length=9))])))))
+    Colorbar(
+        fig[2, 3],
+        cf_f_minus_wd,
+        ticks = (
+            levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length = 9))],
+            string.(
+                "2^" .*
+                string.(
+                    round.(
+                        Int,
+                        levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length = 9))],
+                    )
+                )
+            ),
+        ),
+    )
 
     # (fine grained: $(round(sqrt(sum((fine_values_f .- fine_values_wd).^2)), digits=3)))
-    ax = Axis(fig[2, 2], title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))", xlabel = xlabel, ylabel = ylabel)
+    ax = Axis(
+        fig[2, 2],
+        title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))",
+        xlabel = xlabel,
+        ylabel = ylabel,
+    )
 
-    rare_levels = levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length=9))]
+    rare_levels = levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length = 9))]
     cf_f_minus_wd = contourf!(
-        ax, 
+        ax,
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_f_minus_wd,
-        # colormap = chosen_colormap, 
-        levels = rare_levels
+        # colormap = chosen_colormap,
+        levels = rare_levels,
     )
 
     Legend(
@@ -427,7 +469,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         orientation = :horizontal,  # Make legend horizontal for better space usage
         tellwidth = false,         # Don't have legend width affect layout
         tellheight = true,
-        patchsize = (30, 20)
+        patchsize = (30, 20),
     )
 
     fig
@@ -480,7 +522,7 @@ function Globtim.plot_polyapprox_levelset(
         end
 
         # Create contour plot
-        # chosen_colormap = :viridis  
+        # chosen_colormap = :viridis
         chosen_colormap = :inferno
         contourf!(ax, x_unique, y_unique, Z, colormap = chosen_colormap, levels = levels)
 

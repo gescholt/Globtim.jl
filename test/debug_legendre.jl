@@ -2,9 +2,9 @@ using Globtim
 using DynamicPolynomials
 
 # Test Legendre conversion
-f = x -> sin(π*x[1]/2)
-TR = test_input(f, dim=1, center=[0.0], sample_range=1.0)
-pol_leg = Constructor(TR, 15, basis=:legendre, normalized=false)
+f = x -> sin(π * x[1] / 2)
+TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+pol_leg = Constructor(TR, 15, basis = :legendre, normalized = false)
 
 println("Legendre polynomial L2-norm error: ", pol_leg.nrm)
 println("pol_leg.normalized = ", pol_leg.normalized)
@@ -23,7 +23,7 @@ end
 
 # Convert to monomial
 @polyvar x
-mono_poly_leg = to_exact_monomial_basis(pol_leg, variables=[x])
+mono_poly_leg = to_exact_monomial_basis(pol_leg, variables = [x])
 
 println("\nAfter conversion:")
 for pt in test_pts

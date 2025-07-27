@@ -78,7 +78,7 @@ Compare eigenvalues before and after BFGS refinement:
 fig = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced)
 
 # Order by function value difference
-fig = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, 
+fig = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced,
                                      sort_by=:function_value_diff)
 
 # Order by eigenvalue norm difference
@@ -93,7 +93,7 @@ fig = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced,
 All plots support custom color schemes:
 
 ```julia
-fig = plot_hessian_norms(df_enhanced, 
+fig = plot_hessian_norms(df_enhanced,
     colors=Dict(
         :minimum => :blue,
         :maximum => :red,

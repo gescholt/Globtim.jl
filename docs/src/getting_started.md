@@ -12,7 +12,7 @@ The typical Globtim workflow consists of three main steps:
 using Globtim, DynamicPolynomials, DataFrames
 
 # Use a built-in test function
-f = Deuflhard  
+f = Deuflhard
 
 # Or define your own
 f(x) = x[1]^2 + sin(5*x[1]) + x[2]^2 + sin(5*x[2])
@@ -38,9 +38,13 @@ println("L2-norm approximation error: ", pol.nrm)
 
 # Solve polynomial system for critical points
 solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+# Alternative: Use the new convenience method
+# solutions = solve_polynomial_system(x, pol)  # Automatically extracts dimension and degree
 
 # Process solutions
 df = process_crit_pts(solutions, f, TR)
+# Note: For 1D functions with scalar input (like sin, cos), process_crit_pts
+# automatically handles the conversion between scalar and vector formats
 println("Found $(nrow(df)) critical points")
 ```
 

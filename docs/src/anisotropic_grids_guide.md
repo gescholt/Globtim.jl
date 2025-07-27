@@ -34,7 +34,7 @@ grid_5d = generate_anisotropic_grid([10, 8, 6, 4, 2], basis=:uniform)
 ### Available Basis Types
 
 - **`:chebyshev`** - Chebyshev nodes (default), cluster at boundaries
-- **`:legendre`** - Uniform spacing (Legendre-Gauss-Lobatto nodes)  
+- **`:legendre`** - Uniform spacing (Legendre-Gauss-Lobatto nodes)
 - **`:uniform`** - True uniform spacing including endpoints
 
 ### Computing L² Norms
@@ -156,7 +156,7 @@ grid_aniso = generate_anisotropic_grid([20, 20], basis=:chebyshev)
    ```julia
    # Conservative start
    grid_sizes = [30, 15]  # 2:1 ratio
-   
+
    # More aggressive if function supports it
    grid_sizes = [50, 10]  # 5:1 ratio
    ```
@@ -185,7 +185,7 @@ For automatic grid size selection based on function behavior:
 ```julia
 function estimate_directional_variation(f, n_dims; n_samples=100)
     variations = zeros(n_dims)
-    
+
     for d in 1:n_dims
         # Sample along dimension d
         for _ in 1:n_samples
@@ -193,13 +193,13 @@ function estimate_directional_variation(f, n_dims; n_samples=100)
             h = 0.01
             x_plus = copy(x); x_plus[d] += h
             x_minus = copy(x); x_minus[d] -= h
-            
+
             # Finite difference approximation
             deriv = (f(x_plus) - f(x_minus)) / (2h)
             variations[d] += abs(deriv)
         end
     end
-    
+
     return variations / n_samples
 end
 
@@ -243,7 +243,7 @@ The system automatically:
    ```julia
    # Bad: might miss y-direction features
    grid_sizes = [100, 5]  # 20:1 ratio
-   
+
    # Better: more balanced
    grid_sizes = [50, 10]  # 5:1 ratio
    ```
@@ -275,11 +275,11 @@ The system automatically:
    ```julia
    functions = [f1, f2, f3, f4]
    grid_spec = [40, 20]
-   l2_norms = [compute_l2_norm_quadrature(f, grid_spec, :chebyshev) 
+   l2_norms = [compute_l2_norm_quadrature(f, grid_spec, :chebyshev)
                for f in functions]
    ```
 
-3. **Choose appropriate basis**: 
+3. **Choose appropriate basis**:
    - Chebyshev: Best for smooth functions
    - Uniform: Simple, predictable
    - Legendre: Good general choice

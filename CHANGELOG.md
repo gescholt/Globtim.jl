@@ -12,7 +12,7 @@ All notable changes to Globtim.jl will be documented in this file.
   - Track approximation quality during sparsification
   - Analyze sparsity vs accuracy tradeoffs
   - New `BoxDomain` type for integration domains
-  
+
 - **New Functions**
   - `to_exact_monomial_basis` - Convert to monomial basis with exact coefficients
   - `sparsify_polynomial` - Remove small coefficients with L²-norm tracking
@@ -20,7 +20,7 @@ All notable changes to Globtim.jl will be documented in this file.
   - `compute_l2_norm_vandermonde` - Efficient L²-norm computation
   - `analyze_sparsification_tradeoff` - Systematic sparsity analysis
   - `verify_truncation_quality` - Verify L²-norm preservation
-  
+
 - **Dependencies**
   - Added MultivariatePolynomials.jl for polynomial manipulation
 

@@ -69,7 +69,7 @@ f_sep = x -> x[1]^2
 l2_aniso = compute_l2_norm_quadrature(f_sep, [10, 3], :chebyshev)
 @test isapprox(l2_aniso, 2/sqrt(5), rtol=1e-12)
 ```
-- **Mathematical Background**: 
+- **Mathematical Background**:
   - Function: f(x,y) = x²
   - L2 norm: √(∫∫ x⁴ dxdy) over [-1,1]²
   - Analytical value: 2/√5

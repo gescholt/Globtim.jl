@@ -15,17 +15,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Configure Git
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          
+
       - name: Sync to github-release branch
         run: |
           # Fetch all branches
           git fetch origin
-          
+
           # Check if github-release branch exists
           if git show-ref --verify --quiet refs/remotes/origin/github-release; then
             git checkout github-release
@@ -34,6 +34,6 @@ jobs:
             # Create github-release branch if it doesn't exist
             git checkout -b github-release
           fi
-          
+
           # Push to github-release branch
           git push origin github-release

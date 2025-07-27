@@ -16,7 +16,7 @@ Globtim uses two different grid formats for different purposes:
 This is the natural output from `generate_grid`:
 
 ```julia
-grid = generate_grid(2, 10, basis=:chebyshev)  
+grid = generate_grid(2, 10, basis=:chebyshev)
 # Returns: 11×11 Array{SVector{2,Float64},2}
 ```
 

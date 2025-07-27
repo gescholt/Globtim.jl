@@ -82,7 +82,7 @@ Pkg.test("Globtim")
 
 **Purpose**: Tests the generation and usage of anisotropic grids with different number of points per dimension.
 
-**When to run**: 
+**When to run**:
 - After modifying `anisotropic_grids.jl`
 - After changes to `generate_grid` functions
 - After modifications to L2 norm computation methods

@@ -46,7 +46,7 @@ For minima and maxima validation:
 # For minima: smallest positive eigenvalue
 df_enhanced.smallest_positive_eigenval
 
-# For maxima: largest negative eigenvalue  
+# For maxima: largest negative eigenvalue
 df_enhanced.largest_negative_eigenval
 ```
 

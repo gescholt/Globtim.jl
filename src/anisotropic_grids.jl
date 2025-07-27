@@ -25,12 +25,12 @@ grid = generate_anisotropic_grid([4, 9], basis=:chebyshev)
 grid = generate_anisotropic_grid([10, 5, 3], basis=:legendre)
 ```
 """
-function generate_anisotropic_grid(grid_sizes::Vector{Int}; basis::Symbol=:chebyshev)
+function generate_anisotropic_grid(grid_sizes::Vector{Int}; basis::Symbol = :chebyshev)
     n_dims = length(grid_sizes)
-    
+
     # Generate nodes for each dimension
     nodes_per_dim = Vector{Vector{Float64}}()
-    
+
     for GN in grid_sizes
         nodes = if basis == :chebyshev
             [cos((2i + 1) * π / (2 * GN + 2)) for i = 0:GN]
@@ -38,22 +38,22 @@ function generate_anisotropic_grid(grid_sizes::Vector{Int}; basis::Symbol=:cheby
             [-1 + 2 * i / GN for i = 0:GN]
         elseif basis == :uniform
             # True uniform spacing including endpoints
-            range(-1, 1, length=GN+1) |> collect
+            range(-1, 1, length = GN + 1) |> collect
         else
             error("Unsupported basis: $basis. Use :chebyshev, :legendre, or :uniform")
         end
         push!(nodes_per_dim, nodes)
     end
-    
+
     # Create the grid using tensor product
     grid_shape = tuple((GN + 1 for GN in grid_sizes)...)
-    
+
     # Use array comprehension with direct SVector construction
     grid = [
         SVector{n_dims,Float64}(ntuple(d -> nodes_per_dim[d][idx[d]], n_dims)) for
         idx in Iterators.product((1:length(nodes) for nodes in nodes_per_dim)...)
     ]
-    
+
     # Reshape to match the grid structure
     reshape(grid, grid_shape)
 end
@@ -79,8 +79,8 @@ grid = generate_grid(9, 3)
 grid = generate_grid([9, 5, 3])
 ```
 """
-function generate_grid(grid_spec::Vector{Int}; basis::Symbol=:chebyshev)
-    generate_anisotropic_grid(grid_spec; basis=basis)
+function generate_grid(grid_spec::Vector{Int}; basis::Symbol = :chebyshev)
+    generate_anisotropic_grid(grid_spec; basis = basis)
 end
 
 # Extension of generate_grid for anisotropic case
@@ -129,11 +129,11 @@ function convert_to_matrix_grid(grid::Vector{<:AbstractVector})
     n = length(first(grid))
     n_points = length(grid)
     matrix = Matrix{Float64}(undef, n_points, n)
-    
+
     for (i, point) in enumerate(grid)
         matrix[i, :] = point
     end
-    
+
     return matrix
 end
 
@@ -151,8 +151,8 @@ Convert a matrix grid format to a vector of SVectors.
 function convert_to_svector_grid(matrix::Matrix{Float64})
     n = size(matrix, 2)
     n_points = size(matrix, 1)
-    
-    return [SVector{n,Float64}(matrix[i,:]) for i in 1:n_points]
+
+    return [SVector{n,Float64}(matrix[i, :]) for i = 1:n_points]
 end
 
 """
@@ -168,34 +168,34 @@ Validate that a grid is suitable for polynomial approximation.
 # Returns
 - `nothing`: Throws error if validation fails
 """
-function validate_grid(grid::Matrix{Float64}, n::Int; basis::Symbol=:chebyshev)
+function validate_grid(grid::Matrix{Float64}, n::Int; basis::Symbol = :chebyshev)
     # Check dimensions
     if size(grid, 2) != n
         throw(DimensionMismatch("Grid has $(size(grid, 2)) dimensions but expected $n"))
     end
-    
+
     # Check for empty grid
     if size(grid, 1) == 0
         throw(ArgumentError("Empty grid provided"))
     end
-    
+
     # Check for duplicate points
     unique_points = unique(eachrow(grid))
     if length(unique_points) < size(grid, 1)
         @warn "Grid contains duplicate points"
     end
-    
+
     # Check if points are in valid range for basis
     if basis == :chebyshev || basis == :legendre
-        for i in 1:size(grid, 1)
-            for j in 1:n
-                if abs(grid[i,j]) > 1.0 + 1e-10  # Small tolerance for numerical errors
+        for i = 1:size(grid, 1)
+            for j = 1:n
+                if abs(grid[i, j]) > 1.0 + 1e-10  # Small tolerance for numerical errors
                     @warn "Grid point at ($i,$j) = $(grid[i,j]) is outside [-1,1] range for $basis basis"
                 end
             end
         end
     end
-    
+
     return nothing
 end
 

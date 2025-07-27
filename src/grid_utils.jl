@@ -70,18 +70,20 @@ matrix = rand(121, 2)  # 121 points in 2D
 grid = matrix_to_grid(matrix, 2)  # 11×11 Array{SVector{2,Float64},2}
 ```
 """
-function matrix_to_grid(matrix::Matrix{T}, dim::Int) where T
+function matrix_to_grid(matrix::Matrix{T}, dim::Int) where {T}
     n_points = size(matrix, 1)
-    points_per_dim = round(Int, n_points^(1/dim))
-    
+    points_per_dim = round(Int, n_points^(1 / dim))
+
     # Verify we have the right number of points for a regular grid
     if points_per_dim^dim != n_points
-        error("Matrix has $n_points points, which is not a perfect power for dimension $dim")
+        error(
+            "Matrix has $n_points points, which is not a perfect power for dimension $dim",
+        )
     end
-    
+
     # Convert each row to an SVector
-    svectors = [SVector{dim,T}(matrix[i,:]) for i in 1:n_points]
-    
+    svectors = [SVector{dim,T}(matrix[i, :]) for i = 1:n_points]
+
     # Reshape into the appropriate dimensional array
     return reshape(svectors, ntuple(_ -> points_per_dim, dim))
 end
@@ -104,7 +106,7 @@ function get_grid_info(grid)
             format = :matrix,
             n_points = size(grid, 1),
             dim = size(grid, 2),
-            is_regular = true  # Assume regular for matrix format
+            is_regular = true,  # Assume regular for matrix format
         )
     elseif isa(grid, Array{<:SVector})
         N = ndims(grid)
@@ -112,7 +114,7 @@ function get_grid_info(grid)
             format = :svector_array,
             n_points = length(grid),
             dim = N,
-            is_regular = all(size(grid, i) == size(grid, 1) for i in 1:N)
+            is_regular = all(size(grid, i) == size(grid, 1) for i = 1:N),
         )
     else
         error("Unknown grid format: $(typeof(grid))")

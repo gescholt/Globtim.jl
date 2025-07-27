@@ -383,11 +383,11 @@ using Globtim
     @testset "Basic functionality" begin
         # Test basic usage
     end
-    
+
     @testset "Edge cases" begin
         # Test boundary conditions
     end
-    
+
     @testset "Error handling" begin
         # Test error conditions
     end

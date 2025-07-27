@@ -44,7 +44,7 @@ df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
 ### NEW: Hessian-Based Critical Point Classification
 The enhanced `analyze_critical_points` function now provides:
 - **Automatic Classification**: Categorizes each critical point as :minimum, :maximum, :saddle, or :degenerate based on Hessian eigenvalues
-- **Comprehensive Eigenvalue Analysis**: 
+- **Comprehensive Eigenvalue Analysis**:
   - Complete eigenvalue spectrum for each critical point
   - Condition number κ(H) = |λ_max|/|λ_min| for numerical stability assessment
   - Determinant and trace of Hessian matrix
@@ -57,7 +57,7 @@ The `analyze_critical_points_with_tables` function provides detailed metrics:
 
 **Key Statistics Computed:**
 - **L2-norm of polynomial approximation**: Measures the approximation quality over the domain
-- **Distance metrics between critical points**: 
+- **Distance metrics between critical points**:
   - `point_improvement`: ||x_refined - x_initial|| (distance from polynomial critical point to refined point)
   - `nearest_neighbor_dist`: Minimum distance to other critical points
   - `distance_to_expected`: Distance to known global minima (when provided)
@@ -111,7 +111,7 @@ result = sparsify_polynomial(pol, 1e-8, mode=:relative)
 
 # Results
 println("Original terms: $(count(!iszero, pol.coeffs))")
-println("Sparse terms: $(result.new_nnz)")  
+println("Sparse terms: $(result.new_nnz)")
 println("Achieved $(round((1-result.sparsity)*100))% sparsity")
 println("L2-norm preservation: $(round(result.l2_ratio*100, digits=1))%")
 ```
@@ -141,7 +141,7 @@ After solving the polynomial system to find critical points, version 1.1.1 provi
 - **Hessian-Based Verification**: Eigenvalue analysis validates and classifies each critical point (minimum, maximum, saddle, or degenerate)
 - **Statistical Quality Assessment**: Generates detailed reports on the numerical quality of critical points, including condition numbers and convergence metrics
 - **Robustness Analysis**: Tracks which critical points successfully converge to local minima and identifies numerical issues
-- **Comprehensive Testing**: Full test suite validates the refinement and classification pipeline 
+- **Comprehensive Testing**: Full test suite validates the refinement and classification pipeline
 
 ## 🔧 Installation
 
@@ -182,7 +182,7 @@ for row in eachrow(df_enhanced)
     x = collect(row[:, r"x_"])  # Extract coordinates
     grad_norm = norm(ForwardDiff.gradient(f, x))
     println("Point $(row.unique_id): ||∇f|| = $(grad_norm)")
-    
+
     # Check Hessian eigenvalues for classification
     H = ForwardDiff.hessian(f, x)
     eigenvals = eigvals(H)
@@ -235,11 +235,11 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 ## 🤝 Contributors
 
 **Authors**
-- Georgy Scholten 
+- Georgy Scholten
 - Claude (Anthropic) [Hessian analysis, statistical tables, enhanced visualization features]
 
 **Contributors**
-- Alexander Demin 
+- Alexander Demin
 
 ## 📄 License
 
