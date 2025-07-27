@@ -46,12 +46,15 @@ function Globtim.plot_error_function_2D_with_critical_points(
     fine_values_f = map(TR.objective, fine_grid)
 
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
-    poly_func = p -> DynamicPolynomials.coefficients(DynamicPolynomials.subs(wd_in_std_basis, x => p))[1]
+    poly_func =
+        p -> DynamicPolynomials.coefficients(
+            DynamicPolynomials.subs(wd_in_std_basis, x => p),
+        )[1]
     fine_values_wd = map(poly_func, fine_grid_pullback)
 
     @info "" fine_values_f fine_values_wd
 
-    # ||f - w_d||_s 
+    # ||f - w_d||_s
     fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f))
 
     z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
@@ -62,10 +65,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
 
     # Combine z_limits
     # Option 1
-    z_limits = (
-        min(z_limits_f[1], z_limits_wd[1]),
-        max(z_limits_f[2], z_limits_wd[2]),
-    )
+    z_limits = (min(z_limits_f[1], z_limits_wd[1]), max(z_limits_f[2], z_limits_wd[2]))
     # Option 2
     z_limits = z_limits_f
     z_limits = (
@@ -75,23 +75,24 @@ function Globtim.plot_error_function_2D_with_critical_points(
     @info "" z_limits
 
     levels = range(z_limits[1], z_limits[2], length = num_levels)
-    levels_f_wd = range(
-        z_limits_f_minus_wd[1],
-        z_limits_f_minus_wd[2],
-        length = num_levels,
-    )
+    levels_f_wd = range(z_limits_f_minus_wd[1], z_limits_f_minus_wd[2], length = num_levels)
 
     fig = Figure(size = figure_size)
 
-    ax = Axis(fig[1, 1], title = "$model_func, f(x) = $distance", xlabel = xlabel, ylabel = ylabel)
-    
+    ax = Axis(
+        fig[1, 1],
+        title = "$model_func, f(x) = $distance",
+        xlabel = xlabel,
+        ylabel = ylabel,
+    )
+
     cf = contourf!(
-        ax, 
+        ax,
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_f,
         colormap = chosen_colormap,
-        levels = levels
+        levels = levels,
     )
     pt = scatter!(
         ax,
@@ -110,43 +111,46 @@ function Globtim.plot_error_function_2D_with_critical_points(
     #     color = :green,
     #     label = "p_true",
     # )
-    cp = scatter!(
-        ax,
-        df.x1,
-        df.x2,
-        markersize = 10,
-        color = :blue,
-        marker = :diamond,
+    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
+
+    ax = Axis(
+        fig[1, 2],
+        title = "w_d(x), d = $(pol.degree)",
+        xlabel = xlabel,
+        ylabel = ylabel,
     )
 
-    ax = Axis(fig[1, 2], title = "w_d(x), d = $(pol.degree)", xlabel = xlabel, ylabel = ylabel)
-
     cf = contourf!(
-        ax, 
+        ax,
         map(first, fine_grid),
         map(last, fine_grid),
         fine_values_wd,
-        colormap = chosen_colormap, 
-        levels = levels
+        colormap = chosen_colormap,
+        levels = levels,
     )
-    cp = scatter!(
-        ax,
-        df.x1,
-        df.x2,
-        markersize = 10,
-        color = :blue,
-        marker = :diamond,
-    )
+    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
     rct = lines!(
         ax,
-        [TR.center[1] - TR.sample_range, TR.center[1] - TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] - TR.sample_range],
-        [TR.center[2] - TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] - TR.sample_range, TR.center[2] - TR.sample_range],
+        [
+            TR.center[1] - TR.sample_range,
+            TR.center[1] - TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] - TR.sample_range,
+        ],
+        [
+            TR.center[2] - TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] - TR.sample_range,
+            TR.center[2] - TR.sample_range,
+        ],
         color = :black,
         linewidth = 3,
-        linestyle = :dash
+        linestyle = :dash,
     )
 
-    Colorbar(fig[1, 3], cf, label="")
+    Colorbar(fig[1, 3], cf, label = "")
 
     fig
 end

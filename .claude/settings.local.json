@@ -45,7 +45,8 @@
       "Bash(./scripts/create-sprint-milestone.sh:*)",
       "Bash(./scripts/test-milestone.sh:*)",
       "Bash(./scripts/create-sprint-issues.sh:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(./scripts/pipeline-status.sh:*)"
     ]
   },
   "enableAllProjectMcpServers": false
