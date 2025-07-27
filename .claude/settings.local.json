@@ -46,7 +46,9 @@
       "Bash(./scripts/test-milestone.sh:*)",
       "Bash(./scripts/create-sprint-issues.sh:*)",
       "Bash(curl:*)",
-      "Bash(./scripts/pipeline-status.sh:*)"
+      "Bash(./scripts/pipeline-status.sh:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git check-ignore:*)"
     ]
   },
   "enableAllProjectMcpServers": false
