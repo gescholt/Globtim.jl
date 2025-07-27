@@ -19,5 +19,8 @@ When analyzing Jupyter notebooks:
 # Bug Fixing and Patterns
 - When fixing bugs, document the underlying pattern or root cause in a compact, clear manner to build a repository of debugging insights
 
+## Fixed Issues
+- **Circular import in lambda_vandermonde_anisotropic.jl**: Fixed precompilation warnings caused by attempting to import functions from `.Globtim` while being included within the Globtim module itself. The functions are already available in the module scope when the file is included.
+
 # Documentation and Code Analysis
 - Always record in a central location if you come across poorly documented functions (unclear data types, dead parameters, magic hardcoded values) -- not necessary to fix immediately, but needs to be investigated later
