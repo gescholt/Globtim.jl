@@ -28,3 +28,6 @@ Examples/Notebooks/Triple_Graph*.ipynb
 
 # Data outputs
 data/figures/
+
+# Environment files with secrets
+.env.gitlab

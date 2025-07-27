@@ -23,14 +23,14 @@ function Globtim.plot_polyapprox_3d(
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int}=(1000, 800),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}}=nothing,
-    show_captured::Bool=true,
-    alpha_surface::Float64=0.7,
-    rotate::Bool=false,
-    filename::String="function_3d_rotation.mp4",
-    fade::Bool=false,
-    z_cut=0.25
+    figure_size::Tuple{Int,Int} = (1000, 800),
+    z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    show_captured::Bool = true,
+    alpha_surface::Float64 = 0.7,
+    rotate::Bool = false,
+    filename::String = "function_3d_rotation.mp4",
+    fade::Bool = false,
+    z_cut = 0.25,
 )
     # Type-stable coordinate transformation using multiple dispatch
     coords = transform_coordinates(pol.scale_factor, pol.grid, TR.center)
@@ -39,12 +39,14 @@ function Globtim.plot_polyapprox_3d(
 
     if size(coords)[2] == 2
         # Create figure
-        fig = Figure(size=figure_size)
-        ax = Axis3(fig[1, 1],
+        fig = Figure(size = figure_size)
+        ax = Axis3(
+            fig[1, 1],
             # title = "",
-            xlabel="x₁",
-            ylabel="x₂",
-            zlabel="")
+            xlabel = "x₁",
+            ylabel = "x₂",
+            zlabel = "",
+        )
 
         # Calculate z_limits if not provided
         if isnothing(z_limits)
@@ -86,8 +88,8 @@ function Globtim.plot_polyapprox_3d(
             Z_upper = copy(Z)
 
             # Mask the matrices to separate lower and upper parts
-            for i in 1:size(Z, 1)
-                for j in 1:size(Z, 2)
+            for i = 1:size(Z, 1)
+                for j = 1:size(Z, 2)
                     if !isnan(Z[i, j])
                         if Z[i, j] >= z_threshold
                             Z_lower[i, j] = NaN
@@ -99,14 +101,19 @@ function Globtim.plot_polyapprox_3d(
             end
 
             # Plot the lower (non-faded) surface with normal alpha
-            surf_lower = surface!(ax, x_unique, y_unique, Z_lower,
-                colormap=:viridis,
-                transparency=true,
-                alpha=alpha_surface,
-                colorrange=z_limits)
+            surf_lower = surface!(
+                ax,
+                x_unique,
+                y_unique,
+                Z_lower,
+                colormap = :viridis,
+                transparency = true,
+                alpha = alpha_surface,
+                colorrange = z_limits,
+            )
 
             # Plot the upper (faded) part with gradually decreasing alpha
-            for fade_level in 1:10
+            for fade_level = 1:10
                 # Calculate alpha for this level
                 fade_alpha = alpha_surface * (1.0 - (fade_level - 1) / 10 * 0.9)
 
@@ -116,8 +123,8 @@ function Globtim.plot_polyapprox_3d(
 
                 # Create a Z matrix for this level
                 Z_level = copy(Z)
-                for i in 1:size(Z, 1)
-                    for j in 1:size(Z, 2)
+                for i = 1:size(Z, 1)
+                    for j = 1:size(Z, 2)
                         if isnan(Z[i, j]) || Z[i, j] < z_min || Z[i, j] >= z_max
                             Z_level[i, j] = NaN
                         end
@@ -125,19 +132,29 @@ function Globtim.plot_polyapprox_3d(
                 end
 
                 # Plot this level
-                surf_level = surface!(ax, x_unique, y_unique, Z_level,
-                    colormap=:viridis,
-                    transparency=true,
-                    alpha=fade_alpha,
-                    colorrange=z_limits)
+                surf_level = surface!(
+                    ax,
+                    x_unique,
+                    y_unique,
+                    Z_level,
+                    colormap = :viridis,
+                    transparency = true,
+                    alpha = fade_alpha,
+                    colorrange = z_limits,
+                )
             end
         else
             # Plot the entire surface with uniform alpha
-            surf = surface!(ax, x_unique, y_unique, Z,
-                colormap=:viridis,
-                transparency=true,
-                alpha=alpha_surface,
-                colorrange=z_limits)
+            surf = surface!(
+                ax,
+                x_unique,
+                y_unique,
+                Z,
+                colormap = :viridis,
+                transparency = true,
+                alpha = alpha_surface,
+                colorrange = z_limits,
+            )
         end
 
         # Set initial camera position
@@ -149,39 +166,45 @@ function Globtim.plot_polyapprox_3d(
             # Points close to critical levels
             close_idx = df.close
             if any(close_idx)
-                scatter!(ax,
+                scatter!(
+                    ax,
                     df.x1[close_idx],
                     df.x2[close_idx],
                     df.z[close_idx],
-                    markersize=10,
-                    color=:green,
-                    strokecolor=:black,
-                    strokewidth=1,
-                    label="Near")
+                    markersize = 10,
+                    color = :green,
+                    strokecolor = :black,
+                    strokewidth = 1,
+                    label = "Near",
+                )
             end
 
             # Points not close to critical levels
             not_close_idx = .!df.close
             if any(not_close_idx)
-                scatter!(ax,
+                scatter!(
+                    ax,
                     df.x1[not_close_idx],
                     df.x2[not_close_idx],
                     df.z[not_close_idx],
-                    markersize=8,
-                    color=:white,
-                    strokecolor=:black,
-                    strokewidth=1,
-                    label="Far")
+                    markersize = 8,
+                    color = :white,
+                    strokecolor = :black,
+                    strokewidth = 1,
+                    label = "Far",
+                )
             end
         else
             # All points if there's no close/far distinction
-            scatter!(ax,
+            scatter!(
+                ax,
                 df.x1,
                 df.x2,
                 df.z,
-                markersize=20,
-                color=:orange,
-                label="All Points")
+                markersize = 20,
+                color = :orange,
+                label = "All Points",
+            )
         end
 
         # Plot minima points from df_min
@@ -189,28 +212,32 @@ function Globtim.plot_polyapprox_3d(
             # Plot uncaptured critical points
             uncaptured_idx = .!df_min.captured
             if any(uncaptured_idx)
-                scatter!(ax,
+                scatter!(
+                    ax,
                     df_min.x1[uncaptured_idx],
                     df_min.x2[uncaptured_idx],
                     df_min.value[uncaptured_idx],
-                    markersize=40,
-                    marker=:diamond,
-                    color=:red,
-                    label="Uncaptured")
+                    markersize = 40,
+                    marker = :diamond,
+                    color = :red,
+                    label = "Uncaptured",
+                )
             end
 
             # Plot captured critical points if show_captured is true
             if show_captured
                 captured_idx = df_min.captured
                 if any(captured_idx)
-                    scatter!(ax,
+                    scatter!(
+                        ax,
                         df_min.x1[captured_idx],
                         df_min.x2[captured_idx],
                         df_min.value[captured_idx],
-                        markersize=40,
-                        marker=:diamond,
-                        color=:blue,
-                        label="Captured")
+                        markersize = 40,
+                        marker = :diamond,
+                        color = :blue,
+                        label = "Captured",
+                    )
                 end
             end
         end
@@ -218,7 +245,7 @@ function Globtim.plot_polyapprox_3d(
         # Optional: Create animation if requested
         if rotate
             @info "Recording animation to $(filename)..."
-            record(fig, filename, 1:240; framerate=30) do frame
+            record(fig, filename, 1:240; framerate = 30) do frame
                 ax.azimuth[] = 3π / 4 + 2π * frame / 240
                 ax.elevation[] = π / 6 + π / 12 * sin(2π * frame / 240)
             end

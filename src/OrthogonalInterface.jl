@@ -22,7 +22,11 @@ function symbolic_orthopoly(type::Symbol, n::Integer; kwargs...)
     elseif type == :chebyshev
         return symbolic_chebyshev(n; kwargs...)
     else
-        throw(ArgumentError("Unsupported polynomial type: $type. Use :legendre or :chebyshev"))
+        throw(
+            ArgumentError(
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
+            ),
+        )
     end
 end
 
@@ -42,7 +46,11 @@ function evaluate_orthopoly(type::Symbol, P, x_val::Number)
     elseif type == :chebyshev
         return evaluate_chebyshev(P, x_val)
     else
-        throw(ArgumentError("Unsupported polynomial type: $type. Use :legendre or :chebyshev"))
+        throw(
+            ArgumentError(
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
+            ),
+        )
     end
 end
 
@@ -62,7 +70,11 @@ function get_orthopoly_coeffs(type::Symbol, max_degree::Integer; kwargs...)
     elseif type == :chebyshev
         return get_chebyshev_coeffs(max_degree; kwargs...)
     else
-        throw(ArgumentError("Unsupported polynomial type: $type. Use :legendre or :chebyshev"))
+        throw(
+            ArgumentError(
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
+            ),
+        )
     end
 end
 
@@ -100,11 +112,11 @@ function construct_orthopoly_polynomial(
     x::Vector{<:Variable},
     coeffs::Vector{<:Number},
     degree,
-    basis::Symbol=:chebyshev,
-    precision::PrecisionType=RationalPrecision;
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false,
-    verbose::Bool=false
+    basis::Symbol = :chebyshev,
+    precision::PrecisionType = RationalPrecision;
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
+    verbose::Bool = false,
 )
     # Handle backward compatibility: convert integer degree to tuple format
     degree_tuple = if isa(degree, Int)
@@ -112,7 +124,7 @@ function construct_orthopoly_polynomial(
     else
         degree
     end
-    
+
     n = length(x)
     lambda = SupportGen(n, degree_tuple)
     m = lambda.size[1]
@@ -126,7 +138,9 @@ function construct_orthopoly_polynomial(
 
     if length(coeffs) != m
         if verbose
-            println("The length of coeffs ($(length(coeffs))) does not match the dimension of the space we project onto ($m)")
+            println(
+                "The length of coeffs ($(length(coeffs))) does not match the dimension of the space we project onto ($m)",
+            )
         end
         error("The length of coeffs must match the dimension of the space we project onto")
     end
@@ -136,30 +150,51 @@ function construct_orthopoly_polynomial(
 
     if verbose
         println("Converted coefficient types: ", typeof(coeffs_converted))
-        println("First few converted coefficients: ", coeffs_converted[1:min(3, length(coeffs_converted))])
+        println(
+            "First few converted coefficients: ",
+            coeffs_converted[1:min(3, length(coeffs_converted))],
+        )
     end
 
     # Debug the _convert_value function itself
     if verbose && !isempty(coeffs)
         println("Testing _convert_value directly:")
         println("Input: ", coeffs[1], " (", typeof(coeffs[1]), ")")
-        println("Output: ", _convert_value(coeffs[1], precision), " (", typeof(_convert_value(coeffs[1], precision)), ")")
+        println(
+            "Output: ",
+            _convert_value(coeffs[1], precision),
+            " (",
+            typeof(_convert_value(coeffs[1], precision)),
+            ")",
+        )
     end
 
     # Create the polynomial
     local result
     if basis == :legendre
-        result = construct_legendre_approx(x, coeffs_converted, degree;
-            precision=precision,
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom)
+        result = construct_legendre_approx(
+            x,
+            coeffs_converted,
+            degree;
+            precision = precision,
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
+        )
     elseif basis == :chebyshev
-        result = construct_chebyshev_approx(x, coeffs_converted, degree;
-            precision=precision,
-            normalized=normalized,
-            power_of_two_denom=power_of_two_denom)
+        result = construct_chebyshev_approx(
+            x,
+            coeffs_converted,
+            degree;
+            precision = precision,
+            normalized = normalized,
+            power_of_two_denom = power_of_two_denom,
+        )
     else
-        throw(ArgumentError("Unsupported polynomial basis: $basis. Use :legendre or :chebyshev"))
+        throw(
+            ArgumentError(
+                "Unsupported polynomial basis: $basis. Use :legendre or :chebyshev",
+            ),
+        )
     end
 
     # Debug the resulting polynomial

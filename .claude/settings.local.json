@@ -35,7 +35,17 @@
       "Bash(git tag:*)",
       "Bash(git describe:*)",
       "Bash(git fetch:*)",
-      "WebFetch(domain:gescholt.github.io)"
+      "WebFetch(domain:gescholt.github.io)",
+      "Bash(export GITLAB_PROJECT_ID=\"2545\")",
+      "Bash(./scripts/setup-gitlab-labels.sh:*)",
+      "Bash(source:*)",
+      "Bash(./scripts/setup-gitlab-env.sh:*)",
+      "Bash(./scripts/get-gitlab-project-id.sh:*)",
+      "Bash(./scripts/gitlab-explore.sh:*)",
+      "Bash(./scripts/create-sprint-milestone.sh:*)",
+      "Bash(./scripts/test-milestone.sh:*)",
+      "Bash(./scripts/create-sprint-issues.sh:*)",
+      "Bash(curl:*)"
     ]
   },
   "enableAllProjectMcpServers": false

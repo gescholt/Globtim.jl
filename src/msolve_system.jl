@@ -24,10 +24,10 @@ Solve a polynomial system using msolve.
 function msolve_polynomial_system(
     pol::ApproxPoly,
     x;
-    n=2,
-    basis=:chebyshev,
-    threads::Int=10,
-    verbose::Bool=false
+    n = 2,
+    basis = :chebyshev,
+    threads::Int = 10,
+    verbose::Bool = false,
 )
     if verbose
         println("Entering msolve_polynomial_system with ApproxPoly")
@@ -74,11 +74,11 @@ function msolve_polynomial_system(
             pol.degree,
             basis,
             RationalPrecision;  # Note the semicolon after this positional argument
-            normalized=true,
-            power_of_two_denom=false,
-            verbose=verbose
+            normalized = true,
+            power_of_two_denom = false,
+            verbose = verbose,
         )
-        
+
         # Compute gradient
         grad = differentiate.(p, x)
 
@@ -121,7 +121,9 @@ function msolve_polynomial_system(
             if isfile(output_file)
                 println("Output file exists with size $(filesize(output_file)) bytes")
                 if filesize(output_file) > 0
-                    println("First 200 chars of output file: $(first(read(output_file, String), 200))")
+                    println(
+                        "First 200 chars of output file: $(first(read(output_file, String), 200))",
+                    )
                 end
             else
                 println("WARNING - Output file does not exist!")
@@ -183,11 +185,11 @@ function solve_and_parse(
     x,
     f::Function,
     TR::test_input;
-    basis=:chebyshev,
-    threads::Int=10,
-    verbose::Bool=false,
-    skip_filtering::Bool=false,
-    kwargs...
+    basis = :chebyshev,
+    threads::Int = 10,
+    verbose::Bool = false,
+    skip_filtering::Bool = false,
+    kwargs...,
 )
     if verbose
         println("Starting solve_and_parse with ApproxPoly of degree $(pol.degree)")
@@ -198,10 +200,10 @@ function solve_and_parse(
     output_file = msolve_polynomial_system(
         pol,
         x;
-        n=TR.dim,
-        basis=basis,
-        threads=threads,
-        verbose=verbose
+        n = TR.dim,
+        basis = basis,
+        threads = threads,
+        verbose = verbose,
     )
 
     if verbose
@@ -209,7 +211,7 @@ function solve_and_parse(
     end
 
     # Then parse the results and get the DataFrame
-    df = msolve_parser(output_file, f, TR; skip_filtering=skip_filtering)
+    df = msolve_parser(output_file, f, TR; skip_filtering = skip_filtering)
 
     if verbose
         println("Parsing complete, DataFrame contains $(nrow(df)) rows")

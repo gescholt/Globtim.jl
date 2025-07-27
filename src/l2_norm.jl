@@ -56,9 +56,8 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N
     for d = 1:N
         n_points = length(coords[d])
         if n_points > 1
-            bounds = vcat(-1.0, 
-                         [(coords[d][i] + coords[d][i+1]) / 2 for i = 1:n_points-1], 
-                         1.0)
+            bounds =
+                vcat(-1.0, [(coords[d][i] + coords[d][i+1]) / 2 for i = 1:n_points-1], 1.0)
         else
             bounds = [-1.0, 1.0]
         end

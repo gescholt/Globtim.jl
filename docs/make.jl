@@ -2,16 +2,16 @@ push!(LOAD_PATH, "../src/")
 using Documenter, Globtim
 
 makedocs(
-    sitename="Globtim.jl Documentation",
-    modules=[Globtim],
-    repo="github.com/gescholt/Globtim.jl",
-    format=Documenter.HTML(
-        repolink="https://github.com/gescholt/Globtim.jl",
-        canonical="https://gescholt.github.io/Globtim.jl/stable/",
-        edit_link="main",
-        assets=String[],
+    sitename = "Globtim.jl Documentation",
+    modules = [Globtim],
+    repo = "github.com/gescholt/Globtim.jl",
+    format = Documenter.HTML(
+        repolink = "https://github.com/gescholt/Globtim.jl",
+        canonical = "https://gescholt.github.io/Globtim.jl/stable/",
+        edit_link = "main",
+        assets = String[],
     ),
-    pages=[
+    pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
         "Core Algorithm" => "core_algorithm.md",
@@ -24,15 +24,13 @@ makedocs(
         "Testing" => [
             "Test Documentation" => "test_documentation.md",
             "Test Running Guide" => "test_running_guide.md",
-            "Anisotropic Grid Tests" => "anisotropic_grid_tests.md"
+            "Anisotropic Grid Tests" => "anisotropic_grid_tests.md",
         ],
         "Examples" => "examples.md",
         "Visualization" => "visualization.md",
-        "API Reference" => "api_reference.md"
+        "API Reference" => "api_reference.md",
     ],
-    checkdocs=:none
+    checkdocs = :none,
 )
 
-deploydocs(
-    repo="github.com/gescholt/Globtim.jl.git",
-)
+deploydocs(repo = "github.com/gescholt/Globtim.jl.git")

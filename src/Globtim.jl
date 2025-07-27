@@ -88,16 +88,19 @@ export test_input,
     plot_error_function_2D_with_critical_points
 
 # Precision type export
-export PrecisionType, Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision
+export PrecisionType,
+    Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision
 
 # Legendre polynomial functions
 export symbolic_legendre, evaluate_legendre, get_legendre_coeffs, construct_legendre_approx
 
 # Chebyshev polynomial functions
-export symbolic_chebyshev, evaluate_chebyshev, get_chebyshev_coeffs, construct_chebyshev_approx
+export symbolic_chebyshev,
+    evaluate_chebyshev, get_chebyshev_coeffs, construct_chebyshev_approx
 
 # Unified orthogonal polynomial interface
-export symbolic_orthopoly, evaluate_orthopoly, get_orthopoly_coeffs, construct_orthopoly_polynomial
+export symbolic_orthopoly,
+    evaluate_orthopoly, get_orthopoly_coeffs, construct_orthopoly_polynomial
 
 # Grid utility functions
 export grid_to_matrix, ensure_matrix_format, matrix_to_grid, get_grid_info
@@ -111,9 +114,11 @@ export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
 # Exact conversion and sparsification functions
 export to_exact_monomial_basis, exact_polynomial_coefficients
 export compute_l2_norm_vandermonde, compute_l2_norm_coeffs, sparsify_polynomial
-export compute_approximation_error, analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
+export compute_approximation_error,
+    analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
 export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
-export BoxDomain, AbstractDomain, compute_l2_norm, verify_truncation_quality, integrate_monomial
+export BoxDomain,
+    AbstractDomain, compute_l2_norm, verify_truncation_quality, integrate_monomial
 
 # Quadrature-based L2 norm
 export compute_l2_norm_quadrature
@@ -157,55 +162,74 @@ export points_in_hypercube, points_in_range
 export discrete_l2_norm_riemann
 
 # Phase 2: Hessian analysis functions
-export compute_hessians, classify_critical_points, store_all_eigenvalues, 
-       extract_critical_eigenvalues, compute_hessian_norms, compute_eigenvalue_stats,
-       extract_all_eigenvalues_for_visualization,
-       plot_hessian_norms, plot_condition_numbers, plot_critical_eigenvalues, plot_all_eigenvalues
+export compute_hessians,
+    classify_critical_points,
+    store_all_eigenvalues,
+    extract_critical_eigenvalues,
+    compute_hessian_norms,
+    compute_eigenvalue_stats,
+    extract_all_eigenvalues_for_visualization,
+    plot_hessian_norms,
+    plot_condition_numbers,
+    plot_critical_eigenvalues,
+    plot_all_eigenvalues
 
 # CairoMakie extension plotting functions (available when CairoMakie is loaded)
 export plot_convergence_analysis,
-       capture_histogram,
-       create_legend_figure,
-       plot_discrete_l2,
-       plot_convergence_captured,
-       plot_filtered_y_distances,
-       cairo_plot_polyapprox_levelset,
-       plot_distance_statistics,
-       histogram_enhanced,
-       histogram_minimizers_only
+    capture_histogram,
+    create_legend_figure,
+    plot_discrete_l2,
+    plot_convergence_captured,
+    plot_filtered_y_distances,
+    cairo_plot_polyapprox_levelset,
+    plot_distance_statistics,
+    histogram_enhanced,
+    histogram_minimizers_only
 
 # GLMakie extension plotting functions (available when GLMakie is loaded)
 export plot_polyapprox_3d,
-       plot_polyapprox_rotate,
-       plot_polyapprox_levelset,
-       plot_polyapprox_flyover,
-       plot_polyapprox_animate,
-       plot_polyapprox_animate2,
-       plot_level_set,
-       create_level_set_visualization,
-       create_level_set_animation,
-       LevelSetData,
-       VisualizationParameters,
-       prepare_level_set_data,
-       to_makie_format,
-       plot_raw_vs_refined_eigenvalues
+    plot_polyapprox_rotate,
+    plot_polyapprox_levelset,
+    plot_polyapprox_flyover,
+    plot_polyapprox_animate,
+    plot_polyapprox_animate2,
+    plot_level_set,
+    create_level_set_visualization,
+    create_level_set_animation,
+    LevelSetData,
+    VisualizationParameters,
+    prepare_level_set_data,
+    to_makie_format,
+    plot_raw_vs_refined_eigenvalues
 
 # Phase 3: Enhanced statistical tables and analysis
-export analyze_critical_points_with_tables, display_statistical_table, export_analysis_tables,
-       create_statistical_summary, quick_table_preview, compute_type_specific_statistics,
-       render_table, render_console_table, render_comparative_table
+export analyze_critical_points_with_tables,
+    display_statistical_table,
+    export_analysis_tables,
+    create_statistical_summary,
+    quick_table_preview,
+    compute_type_specific_statistics,
+    render_table,
+    render_console_table,
+    render_comparative_table
 
 # Enhanced data structures
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
 
 # Subdomain management functions
-export generate_4d_orthant_centers, create_orthant_test_inputs, orthant_id_to_signs,
-       signs_to_orthant_id, point_to_orthant_id, filter_points_by_orthant,
-       merge_orthant_results, analyze_orthant_coverage, compute_orthant_statistics
+export generate_4d_orthant_centers,
+    create_orthant_test_inputs,
+    orthant_id_to_signs,
+    signs_to_orthant_id,
+    point_to_orthant_id,
+    filter_points_by_orthant,
+    merge_orthant_results,
+    analyze_orthant_coverage,
+    compute_orthant_statistics
 
 # Multi-tolerance analysis functions
-export execute_multi_tolerance_analysis, execute_single_tolerance_analysis,
-       deuflhard_4d_composite
+export execute_multi_tolerance_analysis,
+    execute_single_tolerance_analysis, deuflhard_4d_composite
 
 # Enhanced BFGS functions
 export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
@@ -214,11 +238,15 @@ export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergenc
 export compute_gradients, analyze_basins
 
 # Function value error analysis
-export FunctionValueError, ErrorMetrics,
-       evaluate_function_values, compute_function_value_errors,
-       compute_error_metrics, analyze_errors_by_type,
-       create_error_analysis_dataframe, convergence_analysis,
-       integrate_with_bfgs_results
+export FunctionValueError,
+    ErrorMetrics,
+    evaluate_function_values,
+    compute_function_value_errors,
+    compute_error_metrics,
+    analyze_errors_by_type,
+    create_error_analysis_dataframe,
+    convergence_analysis,
+    integrate_with_bfgs_results
 
 # Stub functions for CairoMakie extension
 # These will be properly implemented when CairoMakie is loaded

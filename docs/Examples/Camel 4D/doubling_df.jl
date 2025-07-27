@@ -22,7 +22,7 @@ function double_dataframe(df::DataFrame)
     x2 = vec([df.x[j[2]] for j in pairs])
     y2 = vec([df.y[j[2]] for j in pairs])
 
-    return DataFrame(x1=x1, x2=y1, x3=x2, x4=y2)
+    return DataFrame(x1 = x1, x2 = y1, x3 = x2, x4 = y2)
 end
 
 df_doubled = double_dataframe(df_ori)

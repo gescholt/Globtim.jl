@@ -27,8 +27,8 @@ Generate the symbolic Legendre polynomial of degree n.
 """
 function symbolic_legendre(
     n::Integer;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
 )
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
@@ -162,15 +162,15 @@ Generate coefficient vectors for Legendre polynomials from degree 0 to max_degre
 """
 function get_legendre_coeffs(
     max_degree::Integer;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
 )
     # Vector to store coefficient vectors
     legendre_coeffs = Vector{Vector}(undef, max_degree + 1)
 
     # For each degree, generate polynomial and extract coefficients
     for deg = 0:max_degree
-        P = symbolic_legendre(deg; precision=precision, normalized=normalized)
+        P = symbolic_legendre(deg; precision = precision, normalized = normalized)
 
         # Handle constant polynomials
         if P isa Number
@@ -219,10 +219,10 @@ Generate a matrix where each row contains the coefficients of a Legendre polynom
 """
 function legendre_coeff_matrix(
     n::Integer;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
 )
-    coeffs = get_legendre_coeffs(n; precision=precision, normalized=normalized)
+    coeffs = get_legendre_coeffs(n; precision = precision, normalized = normalized)
 
     # Create a matrix with proper dimensions
     T = eltype(coeffs[end])
@@ -262,9 +262,9 @@ function construct_legendre_approx(
     x_vars::Vector{<:Variable},
     coeffs::Vector{<:Number},
     degree;
-    precision::PrecisionType=RationalPrecision,
-    normalized::Bool=true,
-    power_of_two_denom::Bool=false
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
 )
     n = length(x_vars)  # number of variables
 
@@ -288,7 +288,8 @@ function construct_legendre_approx(
 
     # Cache Legendre polynomial coefficients up to max degree
     max_degree = maximum(lambda)
-    legendre_coeffs = get_legendre_coeffs(max_degree; precision=precision, normalized=normalized)
+    legendre_coeffs =
+        get_legendre_coeffs(max_degree; precision = precision, normalized = normalized)
 
     # Initialize polynomial
     S = zero(x_vars[1])

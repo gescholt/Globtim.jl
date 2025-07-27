@@ -1,0 +1,7 @@
+# GitLab API header patterns (these are not actual secrets)
+PRIVATE-TOKEN: \$GITLAB_TOKEN
+PRIVATE-TOKEN: \$GITLAB_PRIVATE_TOKEN
+export GITLAB_PRIVATE_TOKEN="your-personal-access-token"
+# Allow in scripts that use the API
+scripts/.*\.sh:.*PRIVATE-TOKEN.*
+scripts/.*\.sh:.*GITLAB_PRIVATE_TOKEN.*
