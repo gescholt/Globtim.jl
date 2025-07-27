@@ -53,7 +53,9 @@
       "Bash(gpg:*)",
       "Bash(./scripts/fix-gpg-email.sh:*)",
       "Bash(gh api:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "WebFetch(domain:git.mpi-cbg.de)",
+      "Bash(test:*)"
     ]
   },
   "enableAllProjectMcpServers": false
