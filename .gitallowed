@@ -5,3 +5,6 @@ export GITLAB_PRIVATE_TOKEN="your-personal-access-token"
 # Allow in scripts that use the API
 scripts/.*\.sh:.*PRIVATE-TOKEN.*
 scripts/.*\.sh:.*GITLAB_PRIVATE_TOKEN.*
+# Allow in documentation files that explain GitLab setup
+SETUP_GITLAB_PM.md:export GITLAB_PRIVATE_TOKEN="your-personal-access-token"
+GITLAB_CI_GUIDE.md:curl -s -H "PRIVATE-TOKEN: \$GITLAB_TOKEN"
