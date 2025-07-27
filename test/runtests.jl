@@ -32,7 +32,7 @@ using ProgressLogging
     println("Number of samples: ", SMPL^n)
 
     # Create test input
-    TR = test_input(f, dim = n, center = [0.0, 0.0], GN = SMPL, sample_range = scale_factor)
+    TR = test_input(f, dim = n, center = [0.0, 0.0], GN = SMPL, sample_range = scale_factor, tolerance = nothing)
 
     # Define df_cheb at this scope level so both nested testsets can access it
     df_cheb = nothing
