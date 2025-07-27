@@ -121,4 +121,50 @@ using ProgressLogging
         end
     end
 end
-       
+
+# Include ForwardDiff integration tests
+include("test_forwarddiff_integration.jl")
+
+# Include function value error analysis tests
+include("test_function_value_analysis.jl")
+
+# Include new exact arithmetic and sparsification tests
+include("test_exact_conversion.jl")
+include("test_sparsification.jl") 
+include("test_truncation.jl")
+
+# Include L2-norm scaling and type safety tests
+include("test_l2_norm_scaling.jl")
+
+# Include anisotropic grid functionality tests
+include("test_anisotropic_grids.jl")
+
+# Include quadrature-based L2 norm tests
+include("test_quadrature_l2_norm_simple.jl")  # Using simplified version
+
+# Include Phase 1/2 quadrature integration tests
+include("test_quadrature_l2_phase1_2.jl")
+
+# Include quadrature vs Riemann comparison tests
+include("test_quadrature_vs_riemann.jl")
+
+# Include Phase 2 Hessian analysis tests
+include("test_hessian_analysis.jl")
+
+# Include Phase 3 enhanced analysis integration tests
+include("test_enhanced_analysis_integration.jl")
+
+# Include Phase 3 statistical tables tests
+include("test_statistical_tables.jl")
+
+# Include grid-based MainGenerate tests
+include("test_maingen_grid_functionality.jl")
+
+# Include anisotropic grid integration tests
+include("test_anisotropic_integration.jl")
+
+# Include lambda_vandermonde anisotropic tests
+include("test_lambda_vandermonde_anisotropic.jl")
+
+# Include convenience methods tests
+include("test_convenience_methods.jl")

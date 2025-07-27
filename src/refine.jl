@@ -1,5 +1,8 @@
 # Sasha: This files seems not Revise-able.
 
+# Import ForwardDiff for enhanced BFGS functionality
+using ForwardDiff
+
 """
     assign_spatial_regions(df::DataFrame, TR::test_input, n_regions_per_dim::Int=5)::Vector{Int}
 
@@ -270,13 +273,13 @@ end
 """
     analyze_critical_points(f::Function, df::DataFrame, TR::test_input; kwargs...)
 
-Comprehensive critical point analysis with Phase 1 enhanced statistics and optional Phase 2 Hessian-based classification.
+Comprehensive critical point analysis with enhanced statistics and optional Hessian-based classification.
 
 This function performs detailed analysis of critical points found by polynomial approximation, including:
 - BFGS refinement of critical points
 - Clustering and proximity analysis
-- Enhanced statistical measures (Phase 1)
-- Optional Hessian-based classification and eigenvalue analysis (Phase 2)
+- Enhanced statistical measures
+- Optional Hessian-based classification and eigenvalue analysis
 
 # Arguments
 - `f::Function`: The objective function to analyze
@@ -287,7 +290,7 @@ This function performs detailed analysis of critical points found by polynomial 
 - `tol_dist=0.025`: Distance tolerance for clustering critical points
 - `verbose=true`: Enable detailed progress output
 - `max_iters_in_optim=50`: Maximum iterations for BFGS optimization
-- `enable_hessian=true`: Enable Phase 2 Hessian-based classification
+- `enable_hessian=true`: Enable Hessian-based classification
 - `hessian_tol_zero=1e-8`: Tolerance for zero eigenvalues in Hessian analysis
 - `bfgs_g_tol=1e-8`: Gradient tolerance for BFGS optimization
 - `bfgs_f_abstol=1e-8`: Absolute function tolerance for BFGS optimization
@@ -298,7 +301,7 @@ This function performs detailed analysis of critical points found by polynomial 
   - `enhanced_df`: Input DataFrame with additional analysis columns
   - `minimizers_df`: Subset containing only unique local minimizers
 
-# Phase 1 Enhanced Statistics (always included)
+# Enhanced Statistics (always included)
 The enhanced DataFrame includes these additional columns:
 - `region_id`: Cluster identifier for spatially close points
 - `function_value_cluster`: Cluster identifier for points with similar function values
@@ -309,7 +312,7 @@ The enhanced DataFrame includes these additional columns:
 - `steps`: Number of BFGS optimization steps taken
 - `converged`: Boolean indicating if BFGS optimization converged
 
-# Phase 2 Hessian Classification (when `enable_hessian=true`)
+# Hessian Classification (when `enable_hessian=true`)
 When enabled, adds comprehensive Hessian-based analysis:
 - `critical_point_type`: Classification (:minimum, :maximum, :saddle, :degenerate, :error)
 - `smallest_positive_eigenval`: Smallest positive eigenvalue (for minima validation)
@@ -321,7 +324,7 @@ When enabled, adds comprehensive Hessian-based analysis:
 - `hessian_determinant`: Determinant of Hessian matrix
 - `hessian_trace`: Trace of Hessian matrix
 
-# Classification Types (Phase 2)
+# Classification Types
 - `:minimum`: All eigenvalues > `hessian_tol_zero` (local minimum)
 - `:maximum`: All eigenvalues < -`hessian_tol_zero` (local maximum)
 - `:saddle`: Mixed positive and negative eigenvalues (saddle point)
@@ -331,36 +334,36 @@ When enabled, adds comprehensive Hessian-based analysis:
 # Example
 ```julia
 # Proper initialization
-using Pkg; using Revise 
-Pkg.activate(joinpath(@__DIR__, "../"))  # Adjust path as needed
-using Globtim; using DynamicPolynomials, DataFrames
+# using Pkg; using Revise 
+# Pkg.activate(joinpath(@__DIR__, "../"))  # Adjust path as needed
+# using Globtim; using DynamicPolynomials, DataFrames
 
-# Basic usage with Phase 1 + Phase 2
-f(x) = x[1]^2 + x[2]^2
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
-pol = Constructor(TR, 8)
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
+# Basic usage with full analysis
+# f(x) = x[1]^2 + x[2]^2
+# TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+# pol = Constructor(TR, 8)
+# @polyvar x[1:2]
+# crit_pts = solve_polynomial_system(x, 2, 8, pol.coeffs)
+# df = process_crit_pts(crit_pts, f, TR)
 
 # Full analysis with Hessian classification
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+# df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
-# Phase 1 only (legacy behavior)
-df_phase1, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
+# Basic analysis without Hessian (faster for large problems)
+# df_basic, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
 ```
 
 # Performance Notes
-- Phase 1 analysis: O(n × m) where n = number of points, m = dimensions
-- Phase 2 analysis: O(n × m²) for Hessian computation, O(n × m³) for eigenvalues
+- Basic analysis: O(n × m) where n = number of points, m = dimensions
+- Hessian analysis: O(n × m²) for Hessian computation, O(n × m³) for eigenvalues
 - Memory usage: Additional O(n × m²) for Hessian storage when `enable_hessian=true`
 
 # Implementation Details
-Phase 2 uses ForwardDiff.jl for automatic differentiation to compute Hessian matrices,
+Hessian analysis uses ForwardDiff.jl for automatic differentiation to compute Hessian matrices,
 then performs eigenvalue decomposition for critical point classification. All eigenvalue
 computations include robust error handling for numerical stability.
 
-See also: [`compute_hessians`](@ref), [`classify_critical_points`](@ref), [`process_crit_pts`](@ref)
+See also: `compute_hessians`, `classify_critical_points`, `process_crit_pts`
 """
 TimerOutputs.@timeit _TO function analyze_critical_points(
     f::Function,
@@ -497,7 +500,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
     end
 
-    # === PHASE 1 ENHANCEMENTS: Enhanced Statistics Collection ===
+    # === Enhanced Statistics Collection ===
     if verbose
         println("\n=== Computing Enhanced Statistics ===")
     end
@@ -564,7 +567,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
     end
 
-    # === PHASE 2 ENHANCEMENTS: Complete Hessian Analysis ===
+    # === Complete Hessian Analysis ===
     if enable_hessian
         if verbose
             println("\n=== Computing Complete Hessian Analysis ===")
@@ -647,7 +650,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
         
         if verbose
-            println("Phase 2 Hessian analysis complete!")
+            println("Hessian analysis complete!")
             println("New df columns: critical_point_type, smallest_positive_eigenval, largest_negative_eigenval, hessian_norm, hessian_*")
             if nrow(df_min) > 0
                 println("New df_min columns: same Hessian-based columns as df")
@@ -657,3 +660,229 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
 
     return df, df_min
 end
+
+# ================================================================================
+# ENHANCED BFGS REFINEMENT FUNCTIONS
+# ================================================================================
+
+"""
+    determine_convergence_reason(result::Optim.OptimizationResults, tolerance_used::Float64, config::BFGSConfig)
+
+Analyze Optim result to determine why optimization stopped.
+
+# Arguments
+- `result`: Optimization result from Optim.jl
+- `tolerance_used`: The tolerance that was used
+- `config`: BFGSConfig structure
+
+# Returns
+- `Symbol`: Convergence reason (:gradient, :f_tol, :x_tol, :iterations, etc.)
+"""
+function determine_convergence_reason(result::Optim.OptimizationResults, tolerance_used::Float64, config::BFGSConfig)
+    if Optim.converged(result)
+        # Check which convergence criterion was met
+        if Optim.g_converged(result)
+            return :gradient
+        elseif Optim.f_converged(result) 
+            return :f_tol
+        elseif Optim.x_converged(result)
+            return :x_tol
+        else
+            return :unknown_convergence
+        end
+    else
+        return :iterations
+    end
+end
+
+"""
+    enhanced_bfgs_refinement(initial_points::Vector{Vector{Float64}},
+                           initial_values::Vector{Float64},
+                           orthant_labels::Vector{String},
+                           objective_function::Function,
+                           config::BFGSConfig = BFGSConfig();
+                           expected_minimum::Union{Vector{Float64}, Nothing} = nothing)
+
+Perform enhanced BFGS refinement with comprehensive hyperparameter tracking.
+
+# Arguments
+- `initial_points`: Vector of starting points for refinement
+- `initial_values`: Function values at initial points
+- `orthant_labels`: Labels identifying orthants/regions
+- `objective_function`: The objective function to minimize
+- `config`: BFGSConfig with hyperparameters
+- `expected_minimum`: Expected global minimum for distance tracking (optional)
+
+# Returns
+- `Vector{BFGSResult}`: Detailed results for each refinement
+"""
+function enhanced_bfgs_refinement(
+    initial_points::Vector{Vector{Float64}},
+    initial_values::Vector{Float64},
+    orthant_labels::Vector{String},
+    objective_function::Function,
+    config::BFGSConfig = BFGSConfig();
+    expected_minimum::Union{Vector{Float64}, Nothing} = nothing
+)
+    
+    results = BFGSResult[]
+    
+    for (i, (point, value, label)) in enumerate(zip(initial_points, initial_values, orthant_labels))
+        # Tolerance selection logic
+        tolerance_used = abs(value) < config.precision_threshold ? 
+                        config.high_precision_tolerance : 
+                        config.standard_tolerance
+                        
+        tolerance_reason = abs(value) < config.precision_threshold ? 
+                          "high_precision: |f| < $(config.precision_threshold)" :
+                          "standard: |f| ≥ $(config.precision_threshold)"
+        
+        # Time the optimization
+        start_time = time()
+        
+        # Run BFGS with selected parameters
+        result = Optim.optimize(
+            objective_function, 
+            point, 
+            Optim.BFGS(),
+            Optim.Options(
+                iterations = config.max_iterations,
+                g_tol = tolerance_used,
+                f_abstol = config.f_abs_tol,
+                x_abstol = config.x_tol,
+                show_trace = config.show_trace,
+                store_trace = true,
+                extended_trace = true
+            )
+        )
+        
+        optimization_time = time() - start_time
+        
+        # Calculate metrics
+        refined_point = Optim.minimizer(result)
+        refined_value = Optim.minimum(result)
+        grad = ForwardDiff.gradient(objective_function, refined_point)
+        
+        # Determine convergence reason
+        convergence_reason = determine_convergence_reason(result, tolerance_used, config)
+        
+        # Extract call counts
+        f_calls = Optim.f_calls(result)
+        g_calls = Optim.g_calls(result)
+        
+        # Calculate distance to expected minimum if provided
+        distance_to_expected = expected_minimum === nothing ? NaN : norm(refined_point - expected_minimum)
+        
+        # Create enhanced result
+        bfgs_result = BFGSResult(
+            point, refined_point, value, refined_value,
+            Optim.converged(result), Optim.iterations(result),
+            f_calls, g_calls,
+            convergence_reason,
+            config, tolerance_used, tolerance_reason,
+            norm(grad), norm(refined_point - point), abs(refined_value - value),
+            label, distance_to_expected, optimization_time
+        )
+        
+        push!(results, bfgs_result)
+        
+        # Display progress if verbose
+        if config.track_hyperparameters
+            println("\nPoint $i/$(length(initial_points)) - Orthant: $label")
+            println("  Tolerance used: $tolerance_used ($tolerance_reason)")
+            println("  Converged: $(Optim.converged(result)) (reason: $convergence_reason)")
+            println("  Iterations: $(bfgs_result.iterations_used), f_calls: $f_calls, g_calls: $g_calls")
+            println("  Value improvement: $(round(bfgs_result.value_improvement, sigdigits=3))")
+            println("  Final gradient norm: $(round(bfgs_result.final_grad_norm, sigdigits=3))")
+            println("  Time: $(round(optimization_time, digits=3))s")
+        end
+    end
+    
+    return results
+end
+
+"""
+    refine_with_enhanced_bfgs(df::DataFrame, objective_function::Function,
+                             config::BFGSConfig = BFGSConfig();
+                             expected_minima::Union{Vector{Vector{Float64}}, Nothing} = nothing)
+
+Apply enhanced BFGS refinement to critical points in a DataFrame.
+
+# Arguments
+- `df`: DataFrame with critical points (columns x1, x2, ..., z)
+- `objective_function`: The objective function
+- `config`: BFGSConfig with hyperparameters
+- `expected_minima`: Known global minima for comparison (optional)
+
+# Returns
+- `DataFrame`: Enhanced DataFrame with BFGS refinement results
+"""
+function refine_with_enhanced_bfgs(df::DataFrame, objective_function::Function,
+                                  config::BFGSConfig = BFGSConfig();
+                                  expected_minima::Union{Vector{Vector{Float64}}, Nothing} = nothing)
+    
+    # Extract dimension
+    n_dims = count(col -> startswith(string(col), "x"), names(df))
+    
+    # Prepare data for refinement
+    initial_points = Vector{Vector{Float64}}()
+    initial_values = Float64[]
+    orthant_labels = String[]
+    
+    for i in 1:nrow(df)
+        point = [df[i, Symbol("x$j")] for j in 1:n_dims]
+        push!(initial_points, point)
+        push!(initial_values, df[i, :z])
+        
+        # Create orthant label based on signs
+        label = join([p >= 0 ? "+" : "-" for p in point])
+        push!(orthant_labels, label)
+    end
+    
+    # Find closest expected minimum for each point if provided
+    expected_minimum = nothing
+    if expected_minima !== nothing && !isempty(expected_minima)
+        # For simplicity, use the first expected minimum
+        # In practice, you might want to find the closest one
+        expected_minimum = expected_minima[1]
+    end
+    
+    # Run enhanced refinement
+    results = enhanced_bfgs_refinement(
+        initial_points, initial_values, orthant_labels,
+        objective_function, config;
+        expected_minimum = expected_minimum
+    )
+    
+    # Add results to DataFrame
+    df[!, :tolerance_used] = [r.tolerance_used for r in results]
+    df[!, :tolerance_reason] = [r.tolerance_selection_reason for r in results]
+    df[!, :convergence_reason] = [r.convergence_reason for r in results]
+    df[!, :iterations_used] = [r.iterations_used for r in results]
+    df[!, :f_calls] = [r.f_calls for r in results]
+    df[!, :g_calls] = [r.g_calls for r in results]
+    df[!, :final_grad_norm] = [r.final_grad_norm for r in results]
+    df[!, :point_improvement] = [r.point_improvement for r in results]
+    df[!, :value_improvement] = [r.value_improvement for r in results]
+    df[!, :optimization_time] = [r.optimization_time for r in results]
+    
+    if expected_minimum !== nothing
+        df[!, :distance_to_expected] = [r.distance_to_expected for r in results]
+    end
+    
+    # Add refined coordinates
+    for i in 1:nrow(df)
+        for j in 1:n_dims
+            df[i, Symbol("y$j")] = results[i].refined_point[j]
+        end
+        df[i, :refined_value] = results[i].refined_value
+    end
+    
+    return df
+end
+
+# Export enhanced BFGS functions
+export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
+
+# Export functions used by other modules
+export compute_gradients, analyze_basins

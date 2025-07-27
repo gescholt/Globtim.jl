@@ -44,31 +44,42 @@ For large sample grids, the function may be slow due to the nested product loop 
 """
 
 function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N}
-    GN = size(grid, 1) - 1  # Number of intervals
+    # Get the actual grid dimensions (can be anisotropic)
+    grid_dims = size(grid)
 
     # Create vectors of the unique coordinates in each dimension
     coords = [sort(unique([p[i] for p in vec(grid)])) for i = 1:N]
 
     # Compute cell boundaries as midpoints between adjacent points
     # Add domain boundaries [-1,1] as endpoints
-    cell_bounds =
-        [vcat(-1.0, [(coords[d][i] + coords[d][i+1]) / 2 for i = 1:GN], 1.0) for d = 1:N]
+    cell_bounds = Vector{Vector{Float64}}()
+    for d = 1:N
+        n_points = length(coords[d])
+        if n_points > 1
+            bounds = vcat(-1.0, 
+                         [(coords[d][i] + coords[d][i+1]) / 2 for i = 1:n_points-1], 
+                         1.0)
+        else
+            bounds = [-1.0, 1.0]
+        end
+        push!(cell_bounds, bounds)
+    end
 
     # Compute cell volumes
     cell_volumes = [
         SVector{N,Float64}(
             ntuple(d -> cell_bounds[d][idx[d]+1] - cell_bounds[d][idx[d]], N),
-        ) for idx in Iterators.product(fill(1:GN+1, N)...)
+        ) for idx in Iterators.product((1:d for d in grid_dims)...)
     ]
 
     # Compute cell volumes as products of side lengths
     volumes = [prod(vol) for vol in cell_volumes]
 
     # Reshape to match grid structure
-    volumes = reshape(volumes, fill(GN + 1, N)...)
+    volumes = reshape(volumes, grid_dims...)
 
     # Compute Riemann sum
-    sum_squares = sum(abs2(f(i)) * v for (i, v) in zip(eachindex(grid), volumes))
+    sum_squares = sum(abs2(f(grid[i])) * volumes[i] for i in eachindex(grid))
 
     return sqrt(sum_squares)
 end

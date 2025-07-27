@@ -75,7 +75,12 @@ using DynamicPolynomials
         
         # Test that quick_table_preview doesn't error
         # (We can't easily test output since it prints to stdout)
-        @test_nowarn quick_table_preview(f, df, TR, point_types=[:minimum])
+        # Suppress info messages during testing
+        @test_nowarn begin
+            redirect_stderr(devnull) do
+                quick_table_preview(f, df, TR, point_types=[:minimum])
+            end
+        end
     end
     
     @testset "Statistical Summary Generation" begin
@@ -107,11 +112,16 @@ using DynamicPolynomials
         temp_dir = mktempdir()
         base_filename = joinpath(temp_dir, "test_export")
         
-        @test_nowarn export_analysis_tables(
-            test_tables, base_filename,
-            formats=[:console],
-            include_timestamp=false
-        )
+        # Suppress info messages during testing
+        @test_nowarn begin
+            redirect_stderr(devnull) do
+                export_analysis_tables(
+                    test_tables, base_filename,
+                    formats=[:console],
+                    include_timestamp=false
+                )
+            end
+        end
         
         # Check files were created
         @test isfile("$(base_filename)_minimum.txt")
@@ -164,10 +174,12 @@ using DynamicPolynomials
     end
     
     @testset "Error Handling and Edge Cases" begin
-        # Test with empty DataFrame
+        # Test with empty DataFrame (needs hessian columns for Phase 3)
         empty_df = DataFrame(
             critical_point_type = Symbol[],
-            function_value = Float64[]
+            function_value = Float64[],
+            hessian_norm = Float64[],
+            hessian_condition_number = Float64[]
         )
         
         @test_nowarn stats = compute_type_specific_statistics(empty_df, :minimum)

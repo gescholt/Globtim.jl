@@ -1,29 +1,56 @@
 """
-    solve_polynomial_system(
-        x,
-        n,
-        d,
-        coeffs;
-        basis = :chebyshev,
-        precision::PrecisionType = RationalPrecision,
-        normalized::Bool = true,
-        power_of_two_denom::Bool = false
-    )::Vector{Vector{Float64}}
+    solve_polynomial_system(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}} or Tuple
 
-Solve a polynomial system using HomotopyContinuation.jl.
+Find all critical points of a polynomial by solving ∇p(x) = 0 using HomotopyContinuation.jl.
+
+This function constructs the gradient system of the polynomial approximation and solves it
+to find all stationary points. It handles both Chebyshev and Legendre basis polynomials.
 
 # Arguments
-- `x`: Variables
-- `n`: Number of variables
-- `d`: Degree
-- `coeffs`: Coefficients
-- `basis`: Type of basis (:chebyshev or :legendre)
-- `precision`: Precision type for coefficients
-- `normalized`: Whether to use normalized basis polynomials
-- `power_of_two_denom`: For rational precision, ensures denominators are powers of 2
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `n::Int`: Number of variables (dimension)
+- `d::Int`: Polynomial degree
+- `coeffs`: Coefficient matrix from polynomial approximation
+
+# Keyword Arguments
+- `basis::Symbol=:chebyshev`: Basis type (`:chebyshev` or `:legendre`)
+- `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
+- `normalized::Bool=true`: Whether to use normalized basis polynomials
+- `power_of_two_denom::Bool=false`: For rational precision, ensures denominators are powers of 2
+- `return_system::Bool=false`: If true, also return the polynomial system information
 
 # Returns
-- Vector of solution vectors
+- If `return_system=false`: `Vector{Vector{Float64}}` - Real solutions within [-1,1]ⁿ
+- If `return_system=true`: `Tuple` containing:
+  - Solutions vector
+  - Tuple of (polynomial system, HC system, total solution count)
+
+# Notes
+- Only returns real solutions within the domain [-1,1]ⁿ
+- Complex solutions and solutions outside the domain are filtered out
+- The number of solutions can vary significantly based on the polynomial degree
+
+# Examples
+```julia
+using DynamicPolynomials
+
+# Basic usage (assuming pol is an ApproxPoly object)
+@polyvar x[1:2]
+# coeffs = ... # coefficient matrix from polynomial approximation
+# crit_pts = solve_polynomial_system(x, 2, 8, coeffs)
+# println("Found \$(length(crit_pts)) critical points")
+
+# With system information for debugging
+# crit_pts, (polysys, hc_sys, total) = solve_polynomial_system(
+#     x, 2, 8, coeffs, 
+#     return_system=true
+# )
+# println("Total solutions (including complex): \$total")
+# println("Real solutions in domain: \$(length(crit_pts))")
+
+# Using Legendre basis
+# crit_pts = solve_polynomial_system(x, 2, 6, coeffs, basis=:legendre)
+```
 """
 TimerOutputs.@timeit _TO function solve_polynomial_system(
     x,
@@ -48,14 +75,70 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     # Compute the gradient and solve the system
     grad = differentiate.(pol, x)
     sys = System(grad)
-    solutions = solve(sys, start_system=:total_degree)
-    rl_sol = real_solutions(solutions; only_real=true, multiple_results=false)
+    hc_result = solve(sys, start_system=:total_degree)
+    rl_sol = real_solutions(hc_result; only_real=true, multiple_results=false)
     
     if return_system
-        return rl_sol, (pol, sys, length(solutions))
+        return rl_sol, (pol, sys, length(hc_result))
     else
         return rl_sol
     end
+end
+
+"""
+    solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
+
+Convenience method that automatically extracts dimension and degree from an ApproxPoly object.
+
+# Arguments
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `pol::ApproxPoly`: Polynomial approximation object
+- `kwargs...`: Additional keyword arguments passed to the main method
+
+# Returns
+Same as the main `solve_polynomial_system` method.
+
+# Example
+```julia
+f = x -> sin(x)
+TR = test_input(f, dim=1, center=[0.0], sample_range=10.)
+pol = Constructor(TR, 8)
+@polyvar x
+solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
+```
+"""
+function solve_polynomial_system(
+    x,
+    pol::ApproxPoly;
+    kwargs...
+)
+    # Handle both single variable and vector of variables
+    x_vec = if isa(x, AbstractVector)
+        x
+    else
+        # Single variable - wrap in vector
+        [x]
+    end
+    
+    # Extract dimension and degree from ApproxPoly
+    n = size(pol.support, 2)  # Number of variables (from support matrix)
+    
+    # Validate dimension matches
+    if length(x_vec) != n
+        error("Number of variables ($(length(x_vec))) must match polynomial dimension ($n)")
+    end
+    
+    # Extract degree from the ApproxPoly object
+    degree_info = pol.degree
+    d = if degree_info[1] == :one_d_for_all
+        degree_info[2]
+    elseif degree_info[1] == :one_d_per_dim
+        maximum(degree_info[2])
+    else
+        error("Unsupported degree format in ApproxPoly")
+    end
+    
+    return solve_polynomial_system(x_vec, n, d, pol.coeffs; kwargs...)
 end
 
 """
@@ -65,6 +148,7 @@ end
     )::Vector{Vector{Float64}}
 
 Convenience function to solve a polynomial system directly from an ApproxPoly object.
+Automatically determines the correct degree from the ApproxPoly structure.
 """
 function solve_polynomial_system_from_approx(
     x,
@@ -72,9 +156,7 @@ function solve_polynomial_system_from_approx(
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
-        pol_approx.n,
-        pol_approx.d,
-        pol_approx.coeffs;
+        pol_approx;
         basis=pol_approx.basis,
         precision=pol_approx.precision,
         normalized=pol_approx.normalized,
