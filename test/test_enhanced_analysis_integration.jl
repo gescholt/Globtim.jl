@@ -27,14 +27,14 @@ using DynamicPolynomials
             enable_hessian = true,
             show_tables = false,  # Don't print during tests
             table_format = :console,
-            table_types = [:minimum, :maximum, :saddle],
+            table_types = [:minimum, :maximum, :saddle]
         )
 
         # Verify basic structure
         @test isa(df_enhanced, DataFrame)
         @test isa(df_min, DataFrame)
-        @test isa(tables, Dict{Symbol,String})
-        @test isa(stats_objects, Dict{Symbol,Globtim.ComprehensiveStatsTable})
+        @test isa(tables, Dict{Symbol, String})
+        @test isa(stats_objects, Dict{Symbol, Globtim.ComprehensiveStatsTable})
 
         # Check that Phase 2 columns are present
         @test hasproperty(df_enhanced, :critical_point_type)
@@ -94,9 +94,9 @@ using DynamicPolynomials
                 :maximum,
                 :saddle,
                 :saddle,
-                :degenerate,
+                :degenerate
             ],
-            function_value = [1.0, 1.1, 5.0, 3.0, 3.2, 2.5],
+            function_value = [1.0, 1.1, 5.0, 3.0, 3.2, 2.5]
         )
 
         summary = create_statistical_summary(test_df)
@@ -112,9 +112,9 @@ using DynamicPolynomials
 
     @testset "Export Functionality" begin
         # Create minimal test data
-        test_tables = Dict{Symbol,String}(
+        test_tables = Dict{Symbol, String}(
             :minimum => "Test minimum table content",
-            :maximum => "Test maximum table content",
+            :maximum => "Test maximum table content"
         )
 
         # Test export without timestamp (easier to test)
@@ -128,7 +128,7 @@ using DynamicPolynomials
                     test_tables,
                     base_filename,
                     formats = [:console],
-                    include_timestamp = false,
+                    include_timestamp = false
                 )
             end
         end
@@ -164,7 +164,7 @@ using DynamicPolynomials
                 0.5,
                 0,
                 0.0,
-                1.0,
+                1.0
             ),
             Globtim.ConditionNumberAnalysis(3, 3, 0, 0, 0, 0, 100.0, "EXCELLENT", String[]),
             Globtim.ValidationResults(
@@ -174,10 +174,10 @@ using DynamicPolynomials
                 missing,
                 true,
                 missing,
-                Dict{String,Any}(),
+                Dict{String, Any}()
             ),
             missing,
-            :console,
+            :console
         )
 
         # Test display function doesn't error and returns a string
@@ -205,7 +205,7 @@ using DynamicPolynomials
                 TR_complex,
                 enable_hessian = true,
                 show_tables = false,
-                table_types = [:minimum, :maximum, :saddle],
+                table_types = [:minimum, :maximum, :saddle]
             )
     end
 
@@ -215,26 +215,26 @@ using DynamicPolynomials
             critical_point_type = Symbol[],
             function_value = Float64[],
             hessian_norm = Float64[],
-            hessian_condition_number = Float64[],
+            hessian_condition_number = Float64[]
         )
 
-        @test_nowarn stats = compute_type_specific_statistics(empty_df, :minimum)
+        stats = @test_nowarn compute_type_specific_statistics(empty_df, :minimum)
         @test stats.hessian_stats.count == 0
 
         # Test with DataFrame missing required columns
         incomplete_df = DataFrame(some_other_column = [1, 2, 3])
 
-        @test_nowarn stats = compute_type_specific_statistics(incomplete_df, :minimum)
+        stats = @test_nowarn compute_type_specific_statistics(incomplete_df, :minimum)
         @test stats.hessian_stats.count == 0
 
         # Test with all NaN values
         nan_df = DataFrame(
             critical_point_type = [:minimum, :minimum],
             hessian_norm = [NaN, NaN],
-            hessian_condition_number = [NaN, NaN],
+            hessian_condition_number = [NaN, NaN]
         )
 
-        @test_nowarn stats = compute_type_specific_statistics(nan_df, :minimum)
+        stats = @test_nowarn compute_type_specific_statistics(nan_df, :minimum)
         @test stats.hessian_stats.count == 0  # Should handle NaN values
     end
 
@@ -248,7 +248,7 @@ using DynamicPolynomials
             largest_negative_eigenval = -abs.(randn(150) .+ 0.1),
             hessian_eigenvalue_min = randn(150),
             hessian_eigenvalue_max = abs.(randn(150)),
-            hessian_determinant = randn(150),
+            hessian_determinant = randn(150)
         )
 
         # Time the computation (should be reasonably fast)

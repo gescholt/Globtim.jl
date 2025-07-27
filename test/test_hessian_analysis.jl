@@ -1,8 +1,6 @@
 # Test Phase 2: Hessian Analysis Unit Tests
 
 using Test
-using Pkg
-Pkg.activate(joinpath(@__DIR__, "../"))
 using Globtim
 using DynamicPolynomials
 using LinearAlgebra
@@ -62,7 +60,7 @@ using DataFrames
             [2.0, 3.0],      # minimum
             [-2.0, -1.0],    # maximum
             [-1.0, 2.0],     # saddle
-            [0.0, 2.0],       # degenerate
+            [0.0, 2.0]       # degenerate
         ]
 
         smallest_pos, largest_neg =
@@ -121,7 +119,7 @@ using DataFrames
             df1,
             TR1,
             enable_hessian = true,
-            verbose = false,
+            verbose = false
         )
 
         @test "critical_point_type" in names(df_enhanced)
@@ -149,7 +147,7 @@ using DataFrames
             df2,
             TR2,
             enable_hessian = false,
-            verbose = false,
+            verbose = false
         )
 
         @test !("critical_point_type" in names(df_phase1))
@@ -179,7 +177,7 @@ using DataFrames
         @test length(classifications) == 2
         @test all(
             c -> c in [:minimum, :maximum, :saddle, :degenerate, :error],
-            classifications,
+            classifications
         )
     end
 

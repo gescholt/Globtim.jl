@@ -14,13 +14,13 @@ using StaticArrays
         n = 2
 
         # Create a truly anisotropic grid (different Chebyshev nodes per dimension)
-        nodes_x = [cos((2i + 1) * π / (2 * 4)) for i = 0:3]  # 4 points
-        nodes_y = [cos((2i + 1) * π / (2 * 6)) for i = 0:5]  # 6 points
+        nodes_x = [cos((2i + 1) * π / (2 * 4)) for i in 0:3]  # 4 points
+        nodes_y = [cos((2i + 1) * π / (2 * 6)) for i in 0:5]  # 6 points
 
         # This grid has 4×6=24 points but violates tensor product assumption
         grid_aniso = Matrix{Float64}(undef, 24, 2)
         idx = 1
-        for i = 1:4, j = 1:6
+        for i in 1:4, j in 1:6
             grid_aniso[idx, 1] = nodes_x[i]
             grid_aniso[idx, 2] = nodes_y[j]
             idx += 1
@@ -38,7 +38,7 @@ using StaticArrays
         # Currently it assumes same nodes in each dimension
         Lambda = Globtim.SupportGen(n, pol.degree)
         VL = Globtim.lambda_vandermonde(Lambda, grid_aniso, basis = :chebyshev)
-        @test size(VL) == (24, size(Lambda.data, 2))
+        @test size(VL) == (24, 15)  # 15 basis functions for degree 4 in 2D
     end
 
     @testset "Grid Conversion Edge Cases" begin
@@ -49,7 +49,7 @@ using StaticArrays
         @test mat[1, :] == [0.5, -0.3]
 
         # Test 2: High-dimensional grid
-        grid_7d = [SVector{7}(randn(7)) for _ = 1:10]
+        grid_7d = [SVector{7}(randn(7)) for _ in 1:10]
         mat_7d = convert_to_matrix_grid(grid_7d)
         @test size(mat_7d) == (10, 7)
 
@@ -69,7 +69,7 @@ using StaticArrays
         configs = [
             ([15, 15], "Isotropic"),
             ([30, 8], "Anisotropic (tensor)"),
-            ([25, 10], "Anisotropic (tensor)"),
+            ([25, 10], "Anisotropic (tensor)")
         ]
 
         times = Float64[]
@@ -99,7 +99,7 @@ using StaticArrays
                 0.99,
                 1.0,
                 1.0,
-                verbose = 0,
+                verbose = 0
             )
             push!(times, t)
 
@@ -139,11 +139,11 @@ using StaticArrays
                 0.99,
                 [s, 1.0],
                 1.0,
-                verbose = 0,
+                verbose = 0
             )
-            push!(condition_numbers, pol.G_cond)
+            push!(condition_numbers, pol.cond_vandermonde)
 
-            println("Stretch factor $s: condition number = $(pol.G_cond)")
+            println("Stretch factor $s: condition number = $(pol.cond_vandermonde)")
         end
 
         # Condition number should increase with stretching
@@ -209,10 +209,10 @@ using StaticArrays
             0.99,
             1.0,
             1.0,
-            precision = Globtim.FloatPrecision,
-            verbose = 0,
+            precision = Globtim.Float64Precision,
+            verbose = 0
         )
-        @test pol_float.precision == Globtim.FloatPrecision
+        @test pol_float.precision == Globtim.Float64Precision
 
         pol_rat = Globtim.MainGenerate(
             f,
@@ -223,7 +223,7 @@ using StaticArrays
             1.0,
             1.0,
             precision = Globtim.RationalPrecision,
-            verbose = 0,
+            verbose = 0
         )
         @test pol_rat.precision == Globtim.RationalPrecision
 
@@ -237,7 +237,7 @@ using StaticArrays
             1.0,
             1.0,
             normalized = true,
-            verbose = 0,
+            verbose = 0
         )
         @test pol_norm.normalized == true
     end
