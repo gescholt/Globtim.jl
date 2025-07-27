@@ -6,17 +6,7 @@ stages:
 
 variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
-  JULIA_NUM_THREADS: 4
-
-# Cache Julia packages between runs
-.julia_cache:
-  cache:
-    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .julia/artifacts
-      - .julia/compiled
-      - .julia/packages
-      - .julia/registries
+  JULIA_NUM_THREADS: "4"
 
 # Test job for Julia 1.11
 test:julia-1.11:
@@ -24,7 +14,10 @@ test:julia-1.11:
   image: julia:1.11
   tags:
     - docker
-  extends: .julia_cache
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
   script:
     - julia --version
     - julia --project=@. -e 'using Pkg; Pkg.instantiate(); Pkg.resolve()'
@@ -34,8 +27,6 @@ test:julia-1.11:
     when: always
     paths:
       - .julia/logs
-    reports:
-      junit: .julia/logs/junit.xml
     expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -48,7 +39,10 @@ test:julia-1.10:
   image: julia:1.10
   tags:
     - docker
-  extends: .julia_cache
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
   script:
     - julia --version
     - julia --project=@. -e 'using Pkg; Pkg.instantiate(); Pkg.resolve()'
@@ -58,50 +52,7 @@ test:julia-1.10:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main"'
 
-# Coverage analysis
-coverage:
-  stage: coverage
-  image: julia:1.11
-  tags:
-    - docker
-  extends: .julia_cache
-  dependencies:
-    - test:julia-1.11
-  script:
-    - julia --version
-    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
-    - julia --project=@. -e '
-        using Pkg;
-        Pkg.test(coverage=true);
-        using Coverage;
-
-        # Process coverage
-        coverage = process_folder();
-        coverage_summary = get_summary(coverage);
-
-        # Print coverage summary
-        covered = coverage_summary.covered;
-        total = coverage_summary.total;
-        percentage = round(100 * covered / total, digits=2);
-        println("Test coverage: ", percentage, "%");
-
-        # Generate detailed coverage report
-        LCOV.writefile("coverage.info", coverage);
-      '
-  coverage: '/Test coverage: (\d+\.\d+)%/'
-  artifacts:
-    paths:
-      - coverage.info
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
-    expire_in: 1 week
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-# Quick syntax check (runs on all branches)
+# Quick syntax check
 syntax-check:
   stage: test
   image: julia:1.11
