@@ -22,6 +22,8 @@ variables:
 test:julia-1.11:
   stage: test
   image: julia:1.11
+  tags:
+    - docker
   extends: .julia_cache
   script:
     - julia --version
@@ -44,6 +46,8 @@ test:julia-1.11:
 test:julia-1.10:
   stage: test
   image: julia:1.10
+  tags:
+    - docker
   extends: .julia_cache
   script:
     - julia --version
@@ -58,6 +62,8 @@ test:julia-1.10:
 coverage:
   stage: coverage
   image: julia:1.11
+  tags:
+    - docker
   extends: .julia_cache
   dependencies:
     - test:julia-1.11
@@ -99,6 +105,8 @@ coverage:
 syntax-check:
   stage: test
   image: julia:1.11
+  tags:
+    - docker
   script:
     - julia --version
     - find src -name "*.jl" -exec julia --syntax-check {} \;
