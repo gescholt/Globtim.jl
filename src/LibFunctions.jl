@@ -254,7 +254,39 @@ end
     return total_sum
 end
 
-@doc nothing function HolderTable(xx::AbstractVector)::Float64
+"""
+    HolderTable(x::AbstractVector) -> Float64
+
+Holder Table function - a 2D function with four symmetric global minima.
+
+The function creates a table-like surface with four holes (global minima) arranged
+symmetrically around the origin.
+
+f(x,y) = -|sin(x)cos(y)exp(|1 - √(x² + y²)/π|)|
+
+# Arguments
+- `x::AbstractVector`: 2D point [x, y]
+
+# Domain
+- Standard: [-10, 10]²
+- Four global minima at: (±8.05502, ±9.66459) with f = -19.2085
+
+# Properties
+- Four identical global minima
+- Symmetric with respect to both axes
+- Smooth except at the origin
+- Good test for algorithms' ability to find multiple global optima
+
+# Examples
+```julia
+# Evaluate at a point
+f_val = HolderTable([8.0, 9.0])
+
+# Find all four global minima
+TR = test_input(HolderTable, dim=2, center=[0.0, 0.0], sample_range=10.0)
+```
+"""
+function HolderTable(xx::AbstractVector)::Float64
     # =======================================================
     #   Not Rescaled
     #   Holder Table function
@@ -284,6 +316,36 @@ end
 #     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
 #     return term1 + term2
 # end
+"""
+    Deuflhard(x::AbstractVector) -> Float64
+
+Deuflhard test function - a challenging 2D optimization problem with multiple local minima.
+
+The function combines exponential and trigonometric terms to create a complex landscape:
+f(x,y) = (exp(x² + y²) - 3)² + (x + y - sin(3(x + y)))²
+
+# Arguments
+- `x::AbstractVector`: 2D point [x, y]
+
+# Domain
+- Recommended: [-1.2, 1.2]²
+- Can be extended for exploring additional minima
+
+# Properties
+- Multiple local minima with similar function values
+- Smooth, differentiable everywhere
+- Challenging for local optimization methods
+- Good test case for verifying global optimization algorithms
+
+# Examples
+```julia
+# Evaluate at origin
+f_val = Deuflhard([0.0, 0.0])
+
+# Use in optimization
+TR = test_input(Deuflhard, dim=2, center=[0.0, 0.0], sample_range=1.2)
+```
+"""
 function Deuflhard(xx::AbstractVector)
     term1 = (exp(xx[1]^2 + xx[2]^2) - 3)^2
     term2 = (xx[1] + xx[2] - sin(3 * (xx[1] + xx[2])))^2
@@ -307,6 +369,39 @@ old_alpine1 =
         abs(x[2] * sin(x[2]) + 0.1 * x[2]) +
         abs(x[3] * sin(x[3]) + 0.1 * x[3])
 
+"""
+    tref_3d(x::AbstractVector) -> Float64
+
+3D test reference function with highly oscillatory behavior.
+
+A complex 3D function combining multiple trigonometric and exponential terms
+to create a challenging optimization landscape with many local minima.
+
+f(x,y,z) = exp(sin(50x)) + sin(60exp(y))sin(60z) + sin(70sin(x))cos(10z) + 
+           sin(sin(80y)) - sin(10(x+z)) + (x²+y²+z²)/4
+
+# Arguments
+- `x::AbstractVector`: 3D point [x, y, z]
+
+# Domain
+- Recommended: [-1, 1]³
+- Can be extended but oscillations become more extreme
+
+# Properties
+- Highly multimodal with numerous local minima
+- Contains rapid oscillations due to high-frequency terms
+- Mixed scales: both local oscillations and global structure
+- Excellent test for polynomial approximation methods
+
+# Examples
+```julia
+# Evaluate at origin
+f_val = tref_3d([0.0, 0.0, 0.0])
+
+# 3D optimization
+TR = test_input(tref_3d, dim=3, center=[0.0, 0.0, 0.0], sample_range=1.0)
+```
+"""
 function tref_3d(x::AbstractVector)
     return exp(sin(50x[1])) +
            sin(60exp(x[2])) * sin(60x[3]) +
@@ -400,7 +495,39 @@ end
 
 end
 
-@doc nothing function Rastringin(x::AbstractVector)
+"""
+    Rastringin(x::AbstractVector) -> Float64
+
+Rastrigin function - a highly multimodal n-dimensional test function.
+
+The Rastrigin function is characterized by a large number of local minima arranged
+in a regular grid pattern, with a unique global minimum at the origin.
+
+f(x) = ∑_{i=1}^n [x_i² - 10cos(2πx_i)]
+
+# Arguments
+- `x::AbstractVector`: n-dimensional point
+
+# Domain
+- Standard: [-5.12, 5.12]^n
+- Global minimum: f(0, 0, ..., 0) = 0
+
+# Properties
+- Highly multimodal with ~10n local minima
+- Regular structure of local minima
+- Separable (can be optimized dimension by dimension)
+- Classic benchmark for global optimization algorithms
+
+# Examples
+```julia
+# 2D Rastrigin
+f_val = Rastringin([1.0, 1.0])
+
+# 10D optimization problem
+TR = test_input(Rastringin, dim=10, center=zeros(10), sample_range=5.12)
+```
+"""
+function Rastringin(x::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Rastringin function

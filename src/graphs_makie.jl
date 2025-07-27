@@ -18,7 +18,7 @@ Similar in usage to cairo_plot_polyapprox_levelset but renders a 3D surface.
 # Returns
 - `fig`: The GLMakie figure object
 """
-function plot_polyapprox_3d(
+function Globtim.plot_polyapprox_3d(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,

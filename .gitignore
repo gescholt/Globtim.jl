@@ -1,29 +1,30 @@
+# Build and documentation
 docs/build/
-docs/Examples/inputs.ms
-docs/Examples/outputs.ms 
-Examples/Deuflhard/inputs.ms
-Examples/Deuflhard/outputs.ms
-data/figures/
 Manifest.toml
+
+# OS files
 .DS_Store
 **/.DS_Store
 
-# Development and personal files
-.claude/
+# Editor files
 .vscode/
-CLAUDE_REFACTORED.md
-TYPE_INSTABILITY_ANALYSIS.md
-SCALE_FACTOR_REFACTORING_PLAN.md
-benchmark_scale_factor.jl
-test_scale_factor_*.jl
-src/*_backup.jl
-Examples/test_compat.jl
+.idea/
 
-# Phase 3 development/testing files
-Examples/ForwardDiff_Certification/debug_*.jl
-Examples/ForwardDiff_Certification/phase3_implementation_demo.jl
-Examples/ForwardDiff_Certification/phase3_table_demo.jl
+# Temporary files
+*.tmp
+*.temp
+tmp_output_*.ms
+*_output/
 
-# Output directories
-Examples/ForwardDiff_Certification/by_degree/outputs/
-Examples/ForwardDiff_Certification/outputs/
+# Example outputs
+Examples/**/inputs.ms
+Examples/**/outputs.ms
+Examples/**/*.png
+Examples/**/*.pdf
+
+# Notebooks not ready for public release
+Examples/Notebooks/AnisotropicGridComparison.ipynb
+Examples/Notebooks/Triple_Graph*.ipynb
+
+# Data outputs
+data/figures/

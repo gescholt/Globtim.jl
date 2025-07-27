@@ -1,178 +1,23 @@
-# CLAUDE.md - Globtim Development Guide
+- To push to the public version, push main branch to github
 
-Structured guidance for AI assistants working with the Globtim Julia package for global optimization via polynomial approximation.
+# Branch Structure
+- **Private development**: GitLab - `main` branch (local development)
+- **Public release**: GitHub - `github-release` branch (should be set as default branch on GitHub)
+- The `main` branch is for private development on GitLab
+- The `github-release` branch contains the public version that should be registered with Julia
 
-## 🎯 Project Overview
+# Working with Jupyter Notebooks (.ipynb files)
 
-**Globtim.jl** finds all local minima of continuous functions over compact domains using:
-- Chebyshev/Legendre polynomial approximation 
-- Critical point analysis via HomotopyContinuation.jl or Msolve
-- Phase 2: Hessian-based classification with ForwardDiff.jl
-- Phase 3: Statistical analysis with publication-quality tables
+When analyzing Jupyter notebooks:
+1. Use the `NotebookRead` tool to read notebook contents
+2. When you see "Outputs are too large to include", use `NotebookRead` with the `cell_id` parameter to read specific cell outputs
+3. For editing notebooks, use the `NotebookEdit` tool instead of regular `Edit`
+4. To execute notebook code, use the `mcp__ide__executeCode` tool if available
+5. Pay attention to both the code cells and their outputs to understand the full context
+6. Cell outputs may contain error messages, warnings, or successful execution results that are crucial for analysis
 
-## 📚 Julia Programming Patterns & Lessons Learned
+# Bug Fixing and Patterns
+- When fixing bugs, document the underlying pattern or root cause in a compact, clear manner to build a repository of debugging insights
 
-### 1. **Type Stability & Performance**
-```julia
-# LEARNED: pol.degree can be Tuple or Int - handle both cases
-actual_degree = pol.degree isa Tuple ? pol.degree[2] : pol.degree
-
-# PATTERN: Use concrete types in critical paths
-function process_points(points::Vector{Vector{Float64}}, values::Vector{Float64})
-    # Not Vector{Vector{T}} where T for performance
-end
-```
-
-### 2. **Module Activation & Paths**
-```julia
-# PATTERN: Proper package activation for examples
-using Pkg; using Revise
-Pkg.activate(joinpath(@__DIR__, "../"))  # Go up from Examples/
-using Globtim
-
-# AVOID: Hardcoded paths or assuming working directory
-```
-
-### 3. **Tolerance Control & Automatic Adaptation**
-```julia
-# PATTERN: Let polynomial degree adapt to meet tolerance
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2, tolerance=0.001)
-pol = Constructor(TR, 4)  # Starting degree, will auto-increase
-
-# AVOID: Fixed GN parameter that prevents adaptation
-```
-
-### 4. **Extension Loading & Visualization**
-```julia
-# PATTERN: Visualization requires explicit backend loading
-using CairoMakie  # or GLMakie - MUST load before plot functions
-plot_hessian_norms(df)  # Now available
-
-# PATTERN: Enhanced plotting with window display (default) vs file saving
-generate_enhanced_plots(raw_distances, bfgs_distances, point_types, 
-                       theoretical_points, theoretical_values)  # Display in windows
-                       
-generate_enhanced_plots(..., save_plots=true)  # Also save to files
-
-# The package uses weak dependencies for optional features
-```
-
-### 5. **Deprecation Handling (Optim.jl)**
-```julia
-# LEARNED: Optim.jl API changes
-# OLD: f_tol, x_tol, Optim.iteration_limit
-# NEW: f_abstol, x_abstol, simplified convergence checking
-Optim.Options(
-    g_tol = 1e-8,
-    f_abstol = 1e-20,  # was f_tol
-    x_abstol = 1e-12,  # was x_tol
-)
-```
-
-### 6. **Makie Plotting Attributes**
-```julia
-# LEARNED: Makie.jl density plot attribute changes
-# OLD: linewidth parameter for density plots (causes InvalidAttributeError)
-density!(ax, data, color=(:blue, 0.5), linewidth=3, label="Data")
-
-# NEW: strokewidth parameter for density plots
-density!(ax, data, color=(:blue, 0.5), strokewidth=3, label="Data")
-
-# PATTERN: Always check for null before basename() calls
-if plots_directory !== nothing
-    println("Output: $(basename(plots_directory))")
-end
-```
-
-### 7. **Critical Point Processing from Globtim**
-```julia
-# LEARNED: process_crit_pts returns DataFrame with :z column, not :function_value
-df_crit = process_crit_pts(solve_polynomial_system(...), f, TR)
-for row in eachrow(df_crit)
-    pt = [row[Symbol("x$i")] for i in 1:dim]  # Already in actual coordinates
-    fval = row.z  # NOT row.function_value
-end
-
-# PATTERN: Points are automatically transformed from [-1,1]^n to actual domain
-# actual_pt = TR.sample_range * normalized_pt + TR.center
-```
-
-### 8. **Function Development Best Practices**
-- always document input/output structures of functions you write 
-
-### 9. **Polynomial Approximation**
-- the degrees are always integers
-
-### 10. **Plotting Guidelines**
-- the plots we generate are destined to go into a paper, so do not add title directly on the figure 
-
-## 🚀 Essential Commands
-
-```julia
-# Development setup
-]dev .
-using Revise, Pkg; Pkg.activate("."); using Globtim
-
-# Run tests (AI should run small tests, user runs comprehensive)
-]test Globtim
-
-# Basic workflow
-using Globtim, DynamicPolynomials, DataFrames
-f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2, tolerance=0.001)
-pol = Constructor(TR, 4)
-@polyvar x[1:2] 
-crit_pts = solve_polynomial_system(x, 2, pol.degree, pol.coeffs)
-df = process_crit_pts(crit_pts, f, TR)
-```
-
-## 📁 Key Documentation Pointers
-
-### Core Documentation
-- **README.md**: Package overview, features, examples
-- **CLAUDE.md**: This file - development patterns and AI guidance
-
-### Implementation Details
-- **src/hessian_analysis.jl**: Phase 2 implementation with eigenvalue analysis
-- **src/Globtim.jl**: Main module with core algorithms
-- **ext/**: Extension modules for Makie visualization
-
-### Examples & Tests
-- **Examples/ForwardDiff_Certification/**: 
-  - `phase2_certification_suite.jl`: Comprehensive Phase 2 validation
-  - `step1-5_*.jl`: Enhanced 4D Deuflhard implementations
-  - `documentation/`: Detailed implementation summaries
-- **Examples/Notebooks/**: Interactive Jupyter demonstrations
-- **test/**: Automated test suite
-
-## 🔧 Development Workflow
-
-### For AI Assistants
-1. **Small Examples**: Run directly to verify behavior
-2. **Large Computations**: Suggest code for user execution
-3. **Testing**: Use `]test` for verification, but let user run comprehensive suites
-4. **Documentation**: Update CLAUDE.md with new patterns learned
-
-### Key Parameters for High-Accuracy Work
-```julia
-# 4D Deuflhard with tight tolerance
-TR = test_input(deuflhard_4d_composite, dim=4,
-               center=[0.0, 0.0, 0.0, 0.0], sample_range=0.5,
-               tolerance=0.0007)  # L²-norm constraint
-pol = Constructor(TR, 4, basis=:chebyshev, verbose=false)
-
-# BFGS refinement for ultra-precision
-config = BFGSConfig(
-    standard_tolerance=1e-8,
-    high_precision_tolerance=1e-12,
-    precision_threshold=1e-6
-)
-```
-
-## 🐛 Common Issues & Solutions
-
-1. **Scope Warnings in Loops**: Use `local` for loop variables in global scope
-2. **Type Instability**: Check with `@code_warntype`, use concrete types
-3. **Module Loading**: Always activate correct environment first
-4. **Extension Functions**: Load backend (CairoMakie/GLMakie) before use
-5. **Polynomial Degree**: Handle both `Int` and `Tuple` types from Constructor 
+# Documentation and Code Analysis
+- Always record in a central location if you come across poorly documented functions (unclear data types, dead parameters, magic hardcoded values) -- not necessary to fix immediately, but needs to be investigated later

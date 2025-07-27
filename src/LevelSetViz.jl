@@ -55,7 +55,7 @@ end
 
 Prepare level set data by identifying points near the specified level.
 """
-function prepare_level_set_data(
+function Globtim.prepare_level_set_data(
     grid::Array{SVector{3,T}},
     values::Array{T},
     level::T;
@@ -81,7 +81,7 @@ end
 
 Convert LevelSetData to a format suitable for Makie plotting.
 """
-function to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
+function Globtim.to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
     isempty(level_set.points) &&
         return (points = Matrix{T}(undef, 3, 0), values = T[], xyz = (T[], T[], T[]))
 
@@ -103,7 +103,7 @@ end
 
 Create a 3D scatter plot of level set points.
 """
-function plot_level_set(
+function Globtim.plot_level_set(
     formatted_data;
     fig_size = (800, 600),
     marker_size = 4,
@@ -128,7 +128,7 @@ end
         params::VisualizationParameters=VisualizationParameters()
     ) where {T<:AbstractFloat}
 """
-function create_level_set_visualization(
+function Globtim.create_level_set_visualization(
     f,
     grid::Array{SVector{3,T},3},
     df::Union{DataFrame,Nothing},
@@ -237,7 +237,7 @@ function create_level_set_visualization(
     return fig
 end
 
-function plot_polyapprox_levelset_2D(
+function Globtim.plot_polyapprox_levelset_2D(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
@@ -433,7 +433,7 @@ function plot_polyapprox_levelset_2D(
     fig
 end
 
-function plot_polyapprox_levelset(
+function Globtim.plot_polyapprox_levelset(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
@@ -561,7 +561,7 @@ function plot_polyapprox_levelset(
     end
 end
 
-function plot_polyapprox_rotate(
+function Globtim.plot_polyapprox_rotate(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
@@ -680,7 +680,7 @@ function plot_polyapprox_rotate(
     end
 end
 
-function plot_polyapprox_animate(
+function Globtim.plot_polyapprox_animate(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
@@ -768,7 +768,7 @@ function plot_polyapprox_animate(
 end
 
 
-function plot_polyapprox_flyover(
+function Globtim.plot_polyapprox_flyover(
     pol::ApproxPoly,
     TR::test_input,
     df_lege::DataFrame,  # renamed to df_lege to be explicit
@@ -911,7 +911,7 @@ function plot_polyapprox_flyover(
 end
 
 
-function plot_polyapprox_animate2(
+function Globtim.plot_polyapprox_animate2(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
@@ -1033,7 +1033,7 @@ function plot_polyapprox_animate2(
 end
 
 
-function create_level_set_animation(
+function Globtim.create_level_set_animation(
     f,
     grid::Array{SVector{3,T},3},
     df::Union{DataFrame,Nothing},
