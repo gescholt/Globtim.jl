@@ -11,6 +11,15 @@ catch
     false
 end
 
+# Define benchmark macro stub if BenchmarkTools not available
+if !BENCHMARKS_AVAILABLE
+    macro benchmark(expr)
+        quote
+            error("BenchmarkTools not available")
+        end
+    end
+end
+
 @testset "Quadrature vs Riemann L2 Norm Comparison" begin
 
     @testset "Accuracy Comparison" begin
