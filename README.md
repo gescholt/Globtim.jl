@@ -1,7 +1,7 @@
 # Globtim.jl
 
 [![Run Tests](https://github.com/gescholt/Globtim.jl/actions/workflows/test.yml/badge.svg)](https://github.com/gescholt/Globtim.jl/actions/workflows/test.yml)
-[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://gescholt.github.io/Globtim.jl/stable/)
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://gescholt.github.io/Globtim.jl/)
 [![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub release](https://img.shields.io/github/v/release/gescholt/Globtim.jl.svg)](https://github.com/gescholt/Globtim.jl/releases/latest)
@@ -229,7 +229,7 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 
 ## 📖 Documentation
 
-- **Official Documentation**: [https://gescholt.github.io/Globtim.jl/stable/](https://gescholt.github.io/Globtim.jl/stable/)
+- **Official Documentation**: [https://gescholt.github.io/Globtim.jl/](https://gescholt.github.io/Globtim.jl/)
 - **Examples**: [Examples/Notebooks/](Examples/Notebooks/) - Jupyter notebook demonstrations
 - **API Documentation**: Available via `?` in Julia REPL
 - **Source Code**: [GitHub Repository](https://github.com/gescholt/Globtim.jl)
