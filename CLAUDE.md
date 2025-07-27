@@ -27,3 +27,42 @@ When analyzing Jupyter notebooks:
 
 # Documentation and Code Analysis
 - Always record in a central location if you come across poorly documented functions (unclear data types, dead parameters, magic hardcoded values) -- not necessary to fix immediately, but needs to be investigated later
+
+# GitLab CI/CD Pipeline Usage
+
+## Pipeline Overview
+The GitLab CI/CD pipeline automatically runs tests on every push to `main` branch and on merge requests. It tests the code on Julia 1.10 and 1.11, and generates coverage reports.
+
+## Checking Pipeline Status via API
+We have GitLab API scripts to check pipeline status without accessing the web interface:
+
+```bash
+# Check recent pipeline statuses
+source .env.gitlab && curl -s -H "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" "$GITLAB_API_URL/projects/$GITLAB_PROJECT_ID/pipelines?per_page=10" | jq '.[] | {id: .id, status: .status, ref: .ref, created_at: .created_at}'
+
+# Get details of a specific pipeline's jobs
+source .env.gitlab && curl -s -H "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" "$GITLAB_API_URL/projects/$GITLAB_PROJECT_ID/pipelines/PIPELINE_ID/jobs" | jq '.[] | {name: .name, status: .status, stage: .stage}'
+
+# Get error logs from a failed job
+source .env.gitlab && job_id=$(curl -s -H "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" "$GITLAB_API_URL/projects/$GITLAB_PROJECT_ID/pipelines/PIPELINE_ID/jobs" | jq '.[] | select(.name=="JOB_NAME") | .id') && curl -s -H "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" "$GITLAB_API_URL/projects/$GITLAB_PROJECT_ID/jobs/$job_id/trace" | tail -50
+```
+
+## Pipeline Configuration
+The pipeline is configured in `.gitlab-ci.yml` with the following stages:
+- **test**: Runs Julia tests on versions 1.10 and 1.11, plus a syntax check
+- **coverage**: Generates coverage reports after successful tests
+
+### Important Configuration Details
+- All jobs must specify `tags: [Ubuntu-docker]` to use Docker runners (otherwise they fail with "julia: command not found")
+- The pipeline uses Julia Docker images (e.g., `image: julia:1.11`)
+- Coverage reports are generated using the Coverage.jl package
+- Test artifacts and coverage reports are kept for 1 week
+
+## Available Scripts
+- `scripts/gitlab-explore.sh`: Comprehensive GitLab project information including pipelines, issues, MRs
+- `scripts/setup-gitlab-env.sh`: Sets up GitLab environment variables
+- `scripts/get-gitlab-project-id.sh`: Gets the GitLab project ID
+
+## Troubleshooting
+- If pipelines fail with "julia: command not found", ensure the job has `tags: [Ubuntu-docker]`
+- The `.env.gitlab` file must exist with proper API credentials for the scripts to work
