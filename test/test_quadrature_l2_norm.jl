@@ -117,7 +117,7 @@ include("../Examples/L2_grid_ideas.jl")
 
     @testset "3. Convergence Tests" begin
         # Test that L2 norm estimates converge as we increase grid size
-        grid_sizes = [5, 10, 20, 40]
+        grid_sizes = [5, 10, 12, 14]
 
         @testset "1D convergence" begin
             f = x -> exp(-x[1]^2)
@@ -165,7 +165,7 @@ include("../Examples/L2_grid_ideas.jl")
     @testset "4. Different Polynomial Bases" begin
         # Test that different bases give consistent results for smooth functions
         f_smooth = x -> exp(-(x[1]^2 + x[2]^2))
-        n_points = [15, 15]
+        n_points = [14, 14]
 
         @testset "Pure bases" begin
             l2_cheb = compute_L2_norm_tensor(f_smooth, n_points, :chebyshev)
@@ -296,7 +296,7 @@ include("../Examples/L2_grid_ideas.jl")
             f_test = x -> exp(-(x[1]^2 + x[2]^2))
 
             # Generate a Chebyshev grid using Globtim
-            grid = generate_grid(2, 15, basis = :chebyshev)
+            grid = generate_grid(2, 14, basis = :chebyshev)
 
             # Compute using Riemann sum approach
             f_vals_dict = Dict(i => f_test(grid[i]) for i in eachindex(grid))

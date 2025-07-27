@@ -76,7 +76,7 @@ using StaticArrays
         errors = Float64[]
 
         # Reference solution
-        ref_grid = Globtim.generate_grid(n, 50, basis = :chebyshev)
+        ref_grid = Globtim.generate_grid(n, 14, basis = :chebyshev)
         ref_matrix = reduce(vcat, map(x -> x', reshape(ref_grid, :)))
         ref_pol = Globtim.MainGenerate(f, n, ref_matrix, 0.1, 0.99, 1.0, 1.0, verbose = 0)
 

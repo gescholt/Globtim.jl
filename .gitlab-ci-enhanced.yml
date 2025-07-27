@@ -1,0 +1,305 @@
+# Enhanced GitLab CI/CD with Project Management Integration
+
+stages:
+  - prepare
+  - validate
+  - test
+  - analyze
+  - deploy
+  - notify
+
+variables:
+  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
+  JULIA_NUM_THREADS: "4"
+  # Performance thresholds
+  TEST_COVERAGE_THRESHOLD: "80"
+  PERFORMANCE_REGRESSION_THRESHOLD: "10"
+
+# Prepare environment and check dependencies
+prepare:environment:
+  stage: prepare
+  image: julia:1.11
+  tags:
+    - docker
+  script:
+    - julia --version
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate(); Pkg.resolve()'
+    # Check for outdated dependencies
+    - julia --project=@. -e 'using Pkg; outdated = Pkg.outdated(); length(outdated) > 0 && println("⚠️ Outdated packages found: ", outdated)'
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
+  artifacts:
+    reports:
+      dotenv: build.env
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Validate code quality
+validate:format:
+  stage: validate
+  image: julia:1.11
+  tags:
+    - docker
+  script:
+    - julia --project=@. -e 'using JuliaFormatter; format(".", verbose=true)'
+    - |
+      if [ -n "$(git status --porcelain)" ]; then
+        echo "❌ Code formatting issues found!"
+        git diff
+        exit 1
+      else
+        echo "✅ Code formatting check passed"
+      fi
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+validate:aqua:
+  stage: validate
+  image: julia:1.11
+  tags:
+    - docker
+  dependencies:
+    - prepare:environment
+  script:
+    - |
+      julia --project=@. -e '
+        using Pkg
+        Pkg.test("Globtim"; test_args=["aqua"])
+      '
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Run tests with different configurations
+test:julia-1.11:
+  stage: test
+  image: julia:1.11
+  tags:
+    - docker
+  dependencies:
+    - prepare:environment
+  script:
+    - julia --project=@. -e 'using Pkg; Pkg.test(coverage=true)'
+    # Save performance metrics
+    - |
+      julia --project=@. -e '
+        using TimerOutputs, JSON
+        # Run performance benchmarks
+        # Save results to artifacts
+      '
+  coverage: '/Test coverage (\d+\.\d+)%/'
+  artifacts:
+    when: always
+    paths:
+      - "**/*.cov"
+      - performance_results.json
+    reports:
+      junit: test_results.xml
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+test:integration:
+  stage: test
+  image: julia:1.11
+  tags:
+    - docker
+  script:
+    - |
+      # Run integration tests
+      julia --project=@. test/integration/run_integration_tests.jl
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Analyze code and generate reports
+analyze:coverage:
+  stage: analyze
+  image: julia:1.11
+  tags:
+    - docker
+  dependencies:
+    - test:julia-1.11
+  script:
+    - julia --project=@. -e 'using Pkg; Pkg.add("Coverage")'
+    - |
+      julia --project=@. -e '
+        using Coverage
+        coverage = process_folder("src")
+        covered_lines, total_lines = get_summary(coverage)
+        percentage = round(100 * covered_lines / total_lines; digits=2)
+        println("Test coverage $(percentage)%")
+        
+        # Check against threshold
+        threshold = parse(Float64, ENV["TEST_COVERAGE_THRESHOLD"])
+        if percentage < threshold
+          println("❌ Coverage below threshold: $percentage% < $threshold%")
+          exit(1)
+        else
+          println("✅ Coverage meets threshold: $percentage% >= $threshold%")
+        end
+        
+        # Generate reports
+        LCOV.writefile("coverage.lcov", coverage)
+        Codecov.submit(coverage)
+      '
+  coverage: '/Test coverage (\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.lcov
+    paths:
+      - coverage.lcov
+      - coverage_report.html
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+analyze:performance:
+  stage: analyze
+  image: julia:1.11
+  tags:
+    - docker
+  dependencies:
+    - test:julia-1.11
+  script:
+    - |
+      # Compare performance with baseline
+      julia --project=@. scripts/analyze_performance.jl
+  artifacts:
+    reports:
+      performance: performance_report.json
+    paths:
+      - performance_comparison.html
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Deploy documentation
+pages:
+  stage: deploy
+  image: julia:1.11
+  tags:
+    - docker
+  script:
+    - julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+    - julia --project=docs docs/make.jl
+    - mv docs/build public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+
+# Create release
+release:create:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  tags:
+    - docker
+  script:
+    - echo "Creating release ${CI_COMMIT_TAG}"
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    description: 'Release $CI_COMMIT_TAG'
+    assets:
+      links:
+        - name: 'Documentation'
+          url: 'https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME}/'
+  only:
+    - tags
+
+# Notifications and integrations
+notify:slack:
+  stage: notify
+  image: appropriate/curl:latest
+  tags:
+    - docker
+  script:
+    - |
+      if [ "$CI_PIPELINE_STATUS" = "success" ]; then
+        STATUS_EMOJI="✅"
+        COLOR="good"
+      else
+        STATUS_EMOJI="❌"
+        COLOR="danger"
+      fi
+      
+      # Send notification to Slack (if webhook is configured)
+      if [ -n "$SLACK_WEBHOOK" ]; then
+        curl -X POST "$SLACK_WEBHOOK" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"attachments\": [{
+              \"color\": \"$COLOR\",
+              \"title\": \"$STATUS_EMOJI Pipeline $CI_PIPELINE_STATUS\",
+              \"text\": \"Project: $CI_PROJECT_NAME\\nBranch: $CI_COMMIT_REF_NAME\\nCommit: $CI_COMMIT_SHORT_SHA\",
+              \"fields\": [
+                {\"title\": \"Pipeline\", \"value\": \"$CI_PIPELINE_URL\", \"short\": true},
+                {\"title\": \"Triggered by\", \"value\": \"$GITLAB_USER_NAME\", \"short\": true}
+              ]
+            }]
+          }"
+      fi
+  when: always
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Update issue status based on MR
+update:issue-status:
+  stage: notify
+  image: appropriate/curl:latest
+  tags:
+    - docker
+  script:
+    - |
+      # Extract issue number from MR description
+      ISSUE_ID=$(echo "$CI_MERGE_REQUEST_DESCRIPTION" | grep -oP 'Closes #\K\d+' || true)
+      
+      if [ -n "$ISSUE_ID" ]; then
+        # Update issue labels when MR is merged
+        if [ "$CI_MERGE_REQUEST_STATE" = "merged" ]; then
+          curl --request PUT "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/issues/${ISSUE_ID}" \
+            --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
+            --form "state_event=close" \
+            --form "labels=status::done"
+        fi
+      fi
+  only:
+    - merge_requests
+  when: on_success
+
+# Performance regression check
+check:performance-regression:
+  stage: analyze
+  image: julia:1.11
+  tags:
+    - docker
+  dependencies:
+    - test:julia-1.11
+  script:
+    - |
+      # Check for performance regressions
+      julia --project=@. -e '
+        # Load performance results
+        # Compare with baseline
+        # Create MR comment if regression detected
+      '
+  artifacts:
+    reports:
+      performance: performance_regression.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'

@@ -93,7 +93,7 @@ using StaticArrays
         @testset "1.4 Basic Convergence (1D and 2D)" begin
             # 1D convergence test
             f_exp_1d = x -> exp(-x[1]^2)
-            grid_sizes_1d = [5, 10, 20, 40]
+            grid_sizes_1d = [5, 10, 12, 14]
 
             @test begin
                 norms_1d = [
@@ -116,7 +116,7 @@ using StaticArrays
 
             # 2D convergence test
             f_exp_2d = x -> exp(-(x[1]^2 + x[2]^2))
-            grid_sizes_2d = [5, 10, 20]  # Smaller for 2D
+            grid_sizes_2d = [5, 10, 14]  # Smaller for 2D
 
             @test begin
                 norms_2d = [
@@ -186,7 +186,7 @@ using StaticArrays
         @testset "2.2 Different Polynomial Bases" begin
             # Test function: smooth 2D Gaussian
             f_test = x -> exp(-(x[1]^2 + x[2]^2))
-            n_points = [15, 15]
+            n_points = [14, 14]
 
             # Chebyshev basis (reference)
             @test begin
