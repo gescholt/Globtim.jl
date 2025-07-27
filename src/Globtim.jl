@@ -21,6 +21,8 @@ import HomotopyContinuation: solve, real_solutions, System
 
 const _TO = TimerOutputs.TimerOutput()
 
+function plot_error_function_2D_with_critical_points end
+
 # Exported functions and variables
 export test_input,
     ApproxPoly,
@@ -81,7 +83,8 @@ export test_input,
     create_level_set_animation,
     create_level_set_visualization,
     process_crit_pts, # Function previously giving trouble in test,
-    EllipseSupport
+    EllipseSupport,
+    plot_error_function_2D_with_critical_points
 
 # Precision type export
 export PrecisionType, Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision
