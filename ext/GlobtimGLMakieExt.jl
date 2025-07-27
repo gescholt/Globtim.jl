@@ -5,10 +5,151 @@ using GLMakie
 using DataFrames
 using StaticArrays  # Required for LevelSetViz.jl
 using Parameters    # Required for LevelSetViz.jl
+using DynamicPolynomials
 
 # Include GLMakie-specific plotting functionality
 include("../src/graphs_makie.jl")
 include("../src/LevelSetViz.jl")
+
+function Globtim.plot_error_function_2D_with_critical_points(
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    x,
+    wd_in_std_basis,
+    p_true,
+    plot_range,
+    distance;
+    xlabel = "Parameter 1",
+    ylabel = "Parameter 2",
+    model_func = "Unknown Model",
+    colorbar = true,
+    figure_size = (1200, 1000),
+    chosen_colormap = :inferno,
+    colorbar_label = "Loss Value",
+    num_levels = 30,
+)
+    @assert size(pol.grid, 2) == 2 "Grid must be 2D for this function"
+
+    # Grid on [a, b] ± [c, d]
+    fine_grid = Iterators.product(plot_range...) |> collect
+    fine_grid = map(i -> TR.center + collect(i), fine_grid)
+
+    # Grid on [-1, 1] x [-1, 1] ± eps
+    pullback(x) = (1 / pol.scale_factor) * (x .- TR.center)
+    pushforward(x) = pol.scale_factor * x .+ TR.center
+    fine_grid_pullback = map(pullback, fine_grid)
+
+    @info "" fine_grid fine_grid_pullback
+
+    # f(x) on [a, b] ± [c, d]
+    fine_values_f = map(TR.objective, fine_grid)
+
+    # w_d(x) on [-1, 1] x [-1, 1] ± eps
+    poly_func = p -> DynamicPolynomials.coefficients(DynamicPolynomials.subs(wd_in_std_basis, x => p))[1]
+    fine_values_wd = map(poly_func, fine_grid_pullback)
+
+    @info "" fine_values_f fine_values_wd
+
+    # ||f - w_d||_s 
+    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f))
+
+    z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
+    z_limits_wd = (minimum(fine_values_wd), maximum(fine_values_wd))
+    z_limits_f_minus_wd = (minimum(fine_values_f_minus_wd), maximum(fine_values_f_minus_wd))
+
+    @info "" z_limits_f z_limits_wd z_limits_f_minus_wd
+
+    # Combine z_limits
+    # Option 1
+    z_limits = (
+        min(z_limits_f[1], z_limits_wd[1]),
+        max(z_limits_f[2], z_limits_wd[2]),
+    )
+    # Option 2
+    z_limits = z_limits_f
+    z_limits = (
+        z_limits[1] - 0.1 * abs(z_limits[2] - z_limits[1]),
+        z_limits[2] + 0.1 * abs(z_limits[2] - z_limits[1]),
+    )
+    @info "" z_limits
+
+    levels = range(z_limits[1], z_limits[2], length = num_levels)
+    levels_f_wd = range(
+        z_limits_f_minus_wd[1],
+        z_limits_f_minus_wd[2],
+        length = num_levels,
+    )
+
+    fig = Figure(size = figure_size)
+
+    ax = Axis(fig[1, 1], title = "$model_func, f(x) = $distance", xlabel = xlabel, ylabel = ylabel)
+    
+    cf = contourf!(
+        ax, 
+        map(first, fine_grid),
+        map(last, fine_grid),
+        fine_values_f,
+        colormap = chosen_colormap,
+        levels = levels
+    )
+    pt = scatter!(
+        ax,
+        p_true[1],
+        p_true[2],
+        markersize = 10,
+        color = :green,
+        marker = :diamond,
+    )
+    # pt = arc!(
+    #     ax,
+    #     p_true,
+    #     (maximum(plot_range[1]) - minimum(plot_range[1])) / 20,
+    #     0,
+    #     2π,
+    #     color = :green,
+    #     label = "p_true",
+    # )
+    cp = scatter!(
+        ax,
+        df.x1,
+        df.x2,
+        markersize = 10,
+        color = :blue,
+        marker = :diamond,
+    )
+
+    ax = Axis(fig[1, 2], title = "w_d(x), d = $(pol.degree)", xlabel = xlabel, ylabel = ylabel)
+
+    cf = contourf!(
+        ax, 
+        map(first, fine_grid),
+        map(last, fine_grid),
+        fine_values_wd,
+        colormap = chosen_colormap, 
+        levels = levels
+    )
+    cp = scatter!(
+        ax,
+        df.x1,
+        df.x2,
+        markersize = 10,
+        color = :blue,
+        marker = :diamond,
+    )
+    rct = lines!(
+        ax,
+        [TR.center[1] - TR.sample_range, TR.center[1] - TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] + TR.sample_range, TR.center[1] - TR.sample_range],
+        [TR.center[2] - TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] + TR.sample_range, TR.center[2] - TR.sample_range, TR.center[2] - TR.sample_range],
+        color = :black,
+        linewidth = 3,
+        linestyle = :dash
+    )
+
+    Colorbar(fig[1, 3], cf, label="")
+
+    fig
+end
 
 # Include Phase 2 Hessian visualization functions with proper GLMakie scope
 function Globtim.plot_hessian_norms(df::DataFrames.DataFrame)

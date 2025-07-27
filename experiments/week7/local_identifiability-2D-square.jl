@@ -33,15 +33,20 @@ config = (
     p_true = T[0.3, 0.1],
     ic = T[0.3],
     num_points = 20,
-    sample_range = 0.5,
+    sample_range = 0.2,
     distance = L2_norm,
     model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
     precision = RationalPrecision,
+    my_eps = 0.02,
+    fine_step = 0.002,
 )
 config = merge(
     config, 
-    (; p_center = [0.35, 0.35])
+    (;
+        plot_range = [-(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps), -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps)],
+        p_center   = [config.p_true[1]+0.05, config.p_true[2]+0.05]
+    )
 )
 
 model, params, states, outputs = config.model_func()
@@ -91,15 +96,22 @@ end
 println(Globtim._TO)
 
 if true
-plot_range = -0.5:0.002:0.5
-fig = plot_error_function_2D(
-    error_func,
-    model, outputs, config.ic, 
-    config.p_true,
-    plot_range,
-    config.time_interval, config.num_points; 
-    ground_truth=length(params),
-    plot_title="Locally Identifiable model Error Function $(config.p_true) ± $plot_range",
+# plot_range = -0.5:0.002:0.5
+# fig = plot_error_function_2D_with_critical_points(
+#     error_func,
+#     model, outputs, config.ic, 
+#     config.p_true,
+#     plot_range,
+#     config.time_interval, config.num_points; 
+#     ground_truth=length(params),
+#     plot_title="Locally Identifiable model Error Function $(config.p_true) ± $plot_range",
+# )
+fig = Globtim.plot_error_function_2D_with_critical_points(
+    pol_cheb, TR, df_cheb, x, wd_in_std_basis, config.p_true, config.plot_range, config.distance;
+    xlabel = "Parameter 1", ylabel = "Parameter 2",
+    colorbar = true, colorbar_label = "Loss Value",
+    num_levels=200,
+    model_func = config.model_func,
 )
 
 display(fig)
