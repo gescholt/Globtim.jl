@@ -95,7 +95,7 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
 end
 
 """
-    lambda_vandermonde_anisotropic(Lambda::NamedTuple, S::Matrix{T}; 
+    lambda_vandermonde_anisotropic(Lambda::NamedTuple, S::Matrix{T};
                                   basis::Symbol=:chebyshev,
                                   grid_info::Union{Nothing,AnisotropicGridInfo}=nothing) -> Matrix{T}
 
@@ -307,8 +307,7 @@ function is_grid_anisotropic(S::Matrix{T}) where {T}
     return false
 end
 
-# Import functions needed from ApproxConstruct.jl
-import .Globtim: chebyshev_value_exact, symbolic_legendre, evaluate_legendre
+# No need to import these functions - they're available in the module scope
 
 # Export functions
 export lambda_vandermonde_anisotropic,
