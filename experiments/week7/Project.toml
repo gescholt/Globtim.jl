@@ -1,0 +1,10 @@
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Globtim = "00da9514-6261-47e9-8848-33640cb1e528"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"

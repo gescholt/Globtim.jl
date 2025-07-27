@@ -1,4 +1,5 @@
-using Pkg
+using Pkg; Pkg.activate(@__DIR__)
+
 using Revise
 using Globtim
 using DynamicPolynomials, DataFrames
@@ -33,7 +34,7 @@ config = (
     p_true = T[0.3, 0.1],
     ic = T[0.3],
     num_points = 20,
-    sample_range = 0.2,
+    sample_range = 0.3,
     distance = L2_norm,
     model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
@@ -45,10 +46,10 @@ config = merge(
     config,
     (;
         plot_range = [
-            -(config.sample_range + config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
-            -(config.sample_range + config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
+            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
+            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
         ],
-        p_center = [config.p_true[1] + 0.05, config.p_true[2] + 0.05],
+        p_center = [config.p_true[1] + 0.05, config.p_true[2] - 0.05],
     ),
 )
 
@@ -129,6 +130,7 @@ if true
     #     ground_truth=length(params),
     #     plot_title="Locally Identifiable model Error Function $(config.p_true) ± $plot_range",
     # )
+
     fig = Globtim.plot_error_function_2D_with_critical_points(
         pol_cheb,
         TR,
