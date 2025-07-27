@@ -27,6 +27,7 @@ test:julia-1.11:
     when: always
     paths:
       - .julia/logs
+      - "**/*.cov"  # Coverage data files
     expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -64,3 +65,43 @@ syntax-check:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
   allow_failure: true
+
+# Coverage analysis job
+coverage:
+  stage: coverage
+  image: julia:1.11
+  tags:
+    - docker
+  dependencies:
+    - test:julia-1.11
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
+  script:
+    - julia --version
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+    - julia --project=@. -e '
+        using Coverage
+        # Process coverage data from src directory
+        coverage = process_folder("src")
+        # Generate coverage summary
+        covered_lines, total_lines = get_summary(coverage)
+        percentage = round(100 * covered_lines / total_lines; digits=2)
+        println("Test coverage $(percentage)%")
+        # Generate LCOV report for GitLab
+        LCOV.writefile("coverage.lcov", coverage)
+      '
+  coverage: '/Test coverage (\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.lcov
+    paths:
+      - coverage.lcov
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "clean-version"'
