@@ -52,7 +52,7 @@ using LinearAlgebra
         # Test with Legendre basis
         f = x -> sin(π * x[1] / 2)
         TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol_leg = Constructor(TR, 15, basis = :legendre)  # Higher degree for better approximation
+        pol_leg = Constructor(TR, 14, basis = :legendre)  # Higher degree for better approximation
 
         @polyvar x
         mono_poly_leg = to_exact_monomial_basis(pol_leg, variables = [x])
