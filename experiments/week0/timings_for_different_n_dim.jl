@@ -6,7 +6,7 @@ using ProgressLogging
 using StaticArrays
 using Optim  # required for an extension
 
-for n in [2,3,4]
+for n in [2, 3, 4]
     # Choose f from: Rastringin, alpine1, Ackley
     f = Ackley
 
@@ -15,28 +15,27 @@ for n in [2,3,4]
     # Constants and Parameters
     a, b = 1, 1
     scale_factor = a / b
-    rand_center = zeros(Float64, n);
-    d = 9 # initial degree 
+    rand_center = zeros(Float64, n)
+    d = 9 # initial degree
     SMPL = 20 # Number of samples
-    TR = test_input(f, 
-                    dim = n,
-                    center=rand_center,
-                    GN=SMPL, 
-                    sample_range=scale_factor 
-                    )
+    TR =
+        test_input(f, dim = n, center = rand_center, GN = SMPL, sample_range = scale_factor)
 
-    pol_cheb = Constructor(TR, d, basis=:chebyshev, precision=RationalPrecision)
-    @polyvar(x[1:n]) # Define polynomial ring 
+    pol_cheb = Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision)
+    @polyvar(x[1:n]) # Define polynomial ring
     real_pts_cheb = solve_polynomial_system(
-        x, n, d, pol_cheb.coeffs;
-        basis=pol_cheb.basis,
-        precision=pol_cheb.precision,
-        normalized=pol_cheb.normalized,
+        x,
+        n,
+        d,
+        pol_cheb.coeffs;
+        basis = pol_cheb.basis,
+        precision = pol_cheb.precision,
+        normalized = pol_cheb.normalized,
     )
-    
+
     df_cheb = process_crit_pts(real_pts_cheb, f, TR)
 
-    df_cheb, df_min_cheb = Globtim.analyze_critical_points(f, df_cheb, TR, tol_dist=0.5);
+    df_cheb, df_min_cheb = Globtim.analyze_critical_points(f, df_cheb, TR, tol_dist = 0.5)
 
     println("===============================================")
     println("Function: $f")
@@ -66,9 +65,9 @@ L2-norm (cheb): 0.3037290761559208
 Vandermode condition number: 4.0000000000000115
 
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                5.62s /  89.3%            261MiB /  92.4%    
+           Tot / % measured:                5.62s /  89.3%            261MiB /  92.4%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
@@ -95,9 +94,9 @@ L2-norm (cheb): 0.2814527419894433
 Vandermode condition number: 8.00000000000002
 
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                55.0s / 100.0%           2.59GiB / 100.0%    
+           Tot / % measured:                55.0s / 100.0%           2.59GiB / 100.0%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────
@@ -124,9 +123,9 @@ SMPL = 20
 L2-norm (cheb): 0.2940375130229731
 
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                4.69h / 100.0%            573GiB / 100.0%    
+           Tot / % measured:                4.69h / 100.0%            573GiB / 100.0%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────

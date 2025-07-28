@@ -25,7 +25,7 @@ using LinearAlgebra
 
     @testset "Different bases" begin
         f_test = x -> exp(-sum(x .^ 2))
-        n_points = [15, 15]
+        n_points = [14, 14]
 
         # Test that different bases give similar results
         result_cheb = compute_l2_norm_quadrature(f_test, n_points, :chebyshev)

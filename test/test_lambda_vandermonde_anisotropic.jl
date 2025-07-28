@@ -146,7 +146,7 @@ using StaticArrays
     @testset "Constructor Integration" begin
         # Create test input
         f = x -> sin(π * x[1]) * cos(π * x[2])
-        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
 
         # Test 1: Traditional usage (should work as before)
         pol_trad = Constructor(TR, 5, verbose = 0)
@@ -198,7 +198,7 @@ function demonstrate_anisotropic_lambda_vandermonde()
 
     # Function with different scales
     f = x -> exp(-100 * x[1]^2 - x[2]^2)
-    TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+    TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
 
     println("\n1. Traditional Constructor (isotropic grid):")
     pol_iso = Constructor(TR, 8, GN = 10, verbose = 0)
@@ -207,7 +207,7 @@ function demonstrate_anisotropic_lambda_vandermonde()
 
     println("\n2. Anisotropic grid Constructor:")
     # More points in x where function varies rapidly
-    grid_aniso = generate_anisotropic_grid([15, 6], basis = :chebyshev)
+    grid_aniso = generate_anisotropic_grid([14, 6], basis = :chebyshev)
     grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
     pol_aniso = Constructor(TR, 0, grid = grid_matrix, verbose = 0)
     println("   Grid points: $(pol_aniso.N)")

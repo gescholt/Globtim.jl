@@ -32,9 +32,9 @@ num_points = 20
 model, params, states, outputs = define_lotka_volterra_2D_model()
 error_func = make_error_distance(model, outputs, ic, p_true, time_interval, num_points)
 
-# 
+#
 
-p_test = SVector(0.2, .5)
+p_test = SVector(0.2, 0.5)
 error_value = error_func(p_test)
 @show "" error_value
 # _fig1 = plot_parameter_result(model, outputs, p_true, p_test, plot_title="Lotka-Volterra Model Comparison")
@@ -47,20 +47,15 @@ n = 2
 d = 2 # [2,2]
 GN = 40
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
 
-# Chebyshev 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+# Chebyshev
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
 # println(df_cheb)
@@ -75,9 +70,9 @@ Globtim._TO
 #=
 Example output:
 ─────────────────────────────────────────────────────────────────────────────────────────
-                                                Time                    Allocations      
+                                                Time                    Allocations
                                        ───────────────────────   ────────────────────────
-           Tot / % measured:                14.7s /  99.7%           2.80GiB /  99.8%    
+           Tot / % measured:                14.7s /  99.7%           2.80GiB /  99.8%
 
 Section                        ncalls     time    %tot     avg     alloc    %tot      avg
 ─────────────────────────────────────────────────────────────────────────────────────────

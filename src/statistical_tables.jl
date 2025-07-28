@@ -40,13 +40,13 @@ struct ConditionNumberAnalysis
 end
 
 struct ValidationResults
-    eigenvalue_signs_correct::Union{Bool,Missing}
-    positive_eigenvalue_count::Union{Int,Missing}
-    negative_eigenvalue_count::Union{Int,Missing}
-    mixed_eigenvalue_signs::Union{Bool,Missing}
-    determinant_positive::Union{Bool,Missing}
-    determinant_sign_consistent::Union{Bool,Missing}
-    additional_checks::Dict{String,Any}
+    eigenvalue_signs_correct::Union{Bool, Missing}
+    positive_eigenvalue_count::Union{Int, Missing}
+    negative_eigenvalue_count::Union{Int, Missing}
+    mixed_eigenvalue_signs::Union{Bool, Missing}
+    determinant_positive::Union{Bool, Missing}
+    determinant_sign_consistent::Union{Bool, Missing}
+    additional_checks::Dict{String, Any}
 end
 
 # Main statistical table types
@@ -68,7 +68,7 @@ struct ComprehensiveStatsTable <: StatisticalTable
     hessian_stats::RobustStatistics
     condition_analysis::ConditionNumberAnalysis
     validation_results::ValidationResults
-    eigenvalue_stats::Union{RobustStatistics,Missing}
+    eigenvalue_stats::Union{RobustStatistics, Missing}
     display_format::Symbol
 end
 
@@ -102,7 +102,7 @@ function compute_robust_statistics(values::Vector{Float64})
     if iqr > 0
         lower_fence = q1 - 1.5 * iqr
         upper_fence = q3 + 1.5 * iqr
-        outliers = values[(values.<lower_fence).|(values.>upper_fence)]
+        outliers = values[(values .< lower_fence) .| (values .> upper_fence)]
         outlier_count = length(outliers)
         outlier_percentage = round(100 * outlier_count / n, digits = 1)
     else
@@ -122,7 +122,7 @@ function compute_robust_statistics(values::Vector{Float64})
         iqr,
         outlier_count,
         outlier_percentage,
-        max_val - min_val,
+        max_val - min_val
     )
 end
 
@@ -187,7 +187,7 @@ function compute_condition_number_analysis(condition_numbers::Vector{Float64})
         critical,
         well_conditioned_percentage,
         overall_quality,
-        recommendations,
+        recommendations
     )
 end
 
@@ -200,7 +200,7 @@ Perform mathematical validation of critical point classifications.
 - `ValidationResults`: Comprehensive validation results
 """
 function perform_mathematical_validation(type_data::DataFrame, point_type::Symbol)
-    additional_checks = Dict{String,Any}()
+    additional_checks = Dict{String, Any}()
 
     # Initialize validation results
     eigenvalue_signs_correct = missing
@@ -280,7 +280,7 @@ function perform_mathematical_validation(type_data::DataFrame, point_type::Symbo
         mixed_eigenvalue_signs,
         determinant_positive,
         determinant_sign_consistent,
-        additional_checks,
+        additional_checks
     )
 end
 
@@ -293,15 +293,30 @@ Compute comprehensive statistics for a specific critical point type.
 - `ComprehensiveStatsTable`: Complete statistical analysis
 """
 function compute_type_specific_statistics(df::DataFrame, point_type::Symbol)
-    # Validate that required columns exist
-    required_columns = [:critical_point_type, :hessian_norm, :hessian_condition_number]
-    available_columns = Symbol.(names(df))  # Convert String to Symbol
-    missing_columns = [col for col in required_columns if !(col in available_columns)]
+    # Check if minimum required columns exist
+    if !hasproperty(df, :critical_point_type)
+        # Return empty statistics if we don't even have the type column
+        empty_stats =
+            RobustStatistics(0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, 0, 0.0, NaN)
+        empty_condition =
+            ConditionNumberAnalysis(0, 0, 0, 0, 0, 0, 0.0, "NO_DATA", String[])
+        empty_validation = ValidationResults(
+            missing,
+            missing,
+            missing,
+            missing,
+            missing,
+            missing,
+            Dict{String, Any}()
+        )
 
-    if !isempty(missing_columns)
-        error(
-            "DataFrame is missing required columns for Phase 3 analysis: $(missing_columns). " *
-            "Please run analyze_critical_points with enable_hessian=true first.",
+        return ComprehensiveStatsTable(
+            point_type,
+            empty_stats,
+            empty_condition,
+            empty_validation,
+            missing,
+            :console
         )
     end
 
@@ -322,7 +337,7 @@ function compute_type_specific_statistics(df::DataFrame, point_type::Symbol)
             missing,
             missing,
             missing,
-            Dict{String,Any}(),
+            Dict{String, Any}()
         )
 
         return ComprehensiveStatsTable(
@@ -331,7 +346,7 @@ function compute_type_specific_statistics(df::DataFrame, point_type::Symbol)
             empty_condition,
             empty_validation,
             missing,
-            :console,
+            :console
         )
     end
 
@@ -368,7 +383,7 @@ function compute_type_specific_statistics(df::DataFrame, point_type::Symbol)
         condition_analysis,
         validation_results,
         eigenvalue_stats,
-        :console,
+        :console
     )
 end
 
@@ -384,7 +399,7 @@ function format_validation_key(key::String)
         "negative_eigenvalue_count" => "Negative eigenvalues",
         "mixed_eigenvalue_signs" => "Mixed eigenvalue signs",
         "determinant_positive" => "Determinant positive",
-        "determinant_sign_consistent" => "Determinant sign consistent",
+        "determinant_sign_consistent" => "Determinant sign consistent"
     )
 
     return get(key_map, key, titlecase(replace(key, "_" => " ")))

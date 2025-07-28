@@ -31,9 +31,8 @@ ic = T[0.3, 0.6]
 num_points = 20
 distance = log_L2_norm
 model, params, states, outputs = define_lotka_volterra_3D_model()
-error_func = make_error_distance(
-    model, outputs, ic, p_true, time_interval, num_points,
-    distance)
+error_func =
+    make_error_distance(model, outputs, ic, p_true, time_interval, num_points, distance)
 
 #
 
@@ -41,24 +40,19 @@ using DynamicPolynomials
 using HomotopyContinuation, ProgressLogging
 n = 3
 d = (:one_d_for_all, 10)
-d = (:one_d_per_dim, [10,2,13])
+d = (:one_d_per_dim, [10, 2, 13])
 d = (:fully_custom, EllipseSupport([0, 0, 0], [1, 1, 1], 300))
 GN = 150
 sample_range = 0.25
-@polyvar(x[1:n]); # Define polynomial ring 
+@polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0, 0.0]
-TR = test_input(error_func,
-    dim=n,
-    center=p_center,
-    GN=GN,
-    sample_range=sample_range);
+TR =
+    test_input(error_func, dim = n, center = p_center, GN = GN, sample_range = sample_range);
 
-# Chebyshev 
-pol_cheb = Constructor(
-    TR, d, basis=:chebyshev, precision=RationalPrecision, verbose=true)
-real_pts_cheb = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
-    basis=pol_cheb.basis)
+# Chebyshev
+pol_cheb =
+    Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision, verbose = true)
+real_pts_cheb = solve_polynomial_system(x, n, d, pol_cheb.coeffs; basis = pol_cheb.basis)
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 # df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist=0.05);
 
@@ -75,7 +69,18 @@ println("Distance function: ", distance)
 println("Condition number of the polynomial system: ", pol_cheb.cond_vandermonde)
 println("L2 norm (error of approximation): ", pol_cheb.nrm)
 println("Critical points found:\n", df_cheb)
-println("\n(before optimization) Best critical points:\n", df_cheb[findmin(map(p -> abs(sum((p .- p_true).^2)), zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)))[2], :])
+println(
+    "\n(before optimization) Best critical points:\n",
+    df_cheb[
+        findmin(
+            map(
+                p -> abs(sum((p .- p_true) .^ 2)),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
+            ),
+        )[2],
+        :,
+    ],
+)
 # println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
 println(Globtim._TO)

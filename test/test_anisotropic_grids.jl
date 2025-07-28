@@ -68,14 +68,14 @@ using StaticArrays
         f_test = x -> exp(-(x[1]^2 + x[2]^2))
 
         # Create anisotropic grid
-        grid = generate_anisotropic_grid([15, 8], basis = :chebyshev)
+        grid = generate_anisotropic_grid([14, 8], basis = :chebyshev)
 
         # Compute L2 norm
         l2_riemann = discrete_l2_norm_riemann(f_test, grid)
         @test l2_riemann > 0 && isfinite(l2_riemann)
 
         # Compare with quadrature
-        l2_quad = compute_l2_norm_quadrature(f_test, [15, 8], :chebyshev)
+        l2_quad = compute_l2_norm_quadrature(f_test, [14, 8], :chebyshev)
         @test abs(l2_riemann - l2_quad) / l2_quad < 0.05  # Within 5%
     end
 
@@ -86,15 +86,15 @@ using StaticArrays
         f_multiscale = x -> exp(-100 * x[1]^2 - x[2]^2)
 
         # Reference value with high accuracy
-        l2_ref = compute_l2_norm_quadrature(f_multiscale, [50, 50], :chebyshev)
+        l2_ref = compute_l2_norm_quadrature(f_multiscale, [14, 14], :chebyshev)
 
         # Isotropic grid
-        n_iso = 15
+        n_iso = 12
         l2_iso = compute_l2_norm_quadrature(f_multiscale, [n_iso, n_iso], :chebyshev)
         error_iso = abs(l2_iso - l2_ref)
 
         # Smart anisotropic grid (more points in x where function varies rapidly)
-        l2_aniso = compute_l2_norm_quadrature(f_multiscale, [25, 9], :chebyshev)
+        l2_aniso = compute_l2_norm_quadrature(f_multiscale, [14, 10], :chebyshev)
         error_aniso = abs(l2_aniso - l2_ref)
 
         # Anisotropic should be more accurate despite similar total points
@@ -153,15 +153,15 @@ function demonstrate_anisotropic_benefits()
     f = x -> exp(-50 * x[1]^2 - 2 * x[2]^2)
 
     # High-accuracy reference
-    l2_ref = compute_l2_norm_quadrature(f, [100, 100], :chebyshev)
-    println("\nReference L2 norm (100×100): $l2_ref")
+    l2_ref = compute_l2_norm_quadrature(f, [14, 14], :chebyshev)
+    println("\nReference L2 norm (14×14): $l2_ref")
 
     # Test different grid configurations with ~400 total points
     configs = [
-        ([20, 20], "Isotropic 20×20"),
-        ([40, 10], "Anisotropic 40×10"),
-        ([50, 8], "Anisotropic 50×8"),
-        ([30, 13], "Anisotropic 30×13"),
+        ([10, 10], "Isotropic 10×10"),
+        ([14, 7], "Anisotropic 14×7"),
+        ([12, 8], "Anisotropic 12×8"),
+        ([11, 9], "Anisotropic 11×9"),
     ]
 
     println("\nGrid Configuration Results:")

@@ -1,10 +1,15 @@
 ## Bug Description
-<!-- Clear description of the bug -->
+<!-- Provide a clear and concise description of the bug -->
+
+## Environment
+- **Julia Version**: 
+- **Globtim Version**: 
+- **Operating System**: 
 
 ## Steps to Reproduce
-1.
-2.
-3.
+1. 
+2. 
+3. 
 
 ## Expected Behavior
 <!-- What should happen? -->
@@ -12,14 +17,15 @@
 ## Actual Behavior
 <!-- What actually happens? -->
 
-## Environment
-- Julia version:
-- OS:
-- Package versions:
+## Error Messages
+```julia
+# Paste any error messages here
+```
 
-## Possible Fix
-<!-- Optional: suggestions for fixing -->
+## Additional Context
+<!-- Add any other context about the problem here -->
 
-## Labels
-/label ~"status::backlog" ~"type::bug" ~"priority::high"
-/assign @
+## Possible Solution
+<!-- If you have suggestions on how to fix the bug -->
+
+/label ~"type::bug" ~"status::backlog"

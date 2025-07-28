@@ -81,7 +81,7 @@ using LinearAlgebra
     @testset "Integration with Globtim polynomial" begin
         # Create polynomial using Globtim
         f = x -> x[1]^2 + 0.1 * sin(5 * x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0, tolerance = nothing)
         pol = Constructor(TR, 10, basis = :chebyshev)
 
         # Convert to monomial basis
