@@ -7,6 +7,7 @@ using DataFrames
 using StaticArrays  # Required for LevelSetViz.jl
 using Parameters    # Required for LevelSetViz.jl
 using DynamicPolynomials
+using LinearAlgebra
 
 # Include GLMakie-specific plotting functionality
 include("../src/graphs_makie.jl")
@@ -179,6 +180,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
     p_true,
     plot_range,
     distance;
+    arrow_norm_factor = 0.1,
     xlabel = "Parameter 1",
     ylabel = "Parameter 2",
     model_func = "Unknown Model",
@@ -205,11 +207,11 @@ function Globtim.plot_error_function_2D_with_critical_points(
     fine_values_f = map(TR.objective, fine_grid)
 
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
-    poly_func =
+    poly_func(poly) =
         p -> DynamicPolynomials.coefficients(
-            DynamicPolynomials.subs(wd_in_std_basis, x => p)
+            DynamicPolynomials.subs(poly, x => p)
         )[1]
-    fine_values_wd = map(poly_func, fine_grid_pullback)
+    fine_values_wd = map(poly_func(wd_in_std_basis), fine_grid_pullback)
 
     # @info "" fine_values_f fine_values_wd
 
@@ -322,16 +324,45 @@ function Globtim.plot_error_function_2D_with_critical_points(
         linestyle = :dash
     )
 
+    pts_along_valley = df[df.z .< 1e-2, :]
+
+    grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
+    grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
+    grad_at_cp = map(pt -> grad_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    hess = DynamicPolynomials.differentiate(grad, x)
+    hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
+    hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    norm_factor = arrow_norm_factor * TR.sample_range
+    ar = arrows2d!(
+        ax, 
+        repeat([pts_along_valley.x1[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
+        repeat([pts_along_valley.x2[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
+        vcat(
+            [eigvecs(hess_at_cp[i])[1, 1] * norm_factor for i in 1:length(eachrow(pts_along_valley))], 
+            [eigvecs(hess_at_cp[i])[2, 1] * norm_factor for i in 1:length(eachrow(pts_along_valley))]
+        ), 
+        vcat(
+            [eigvecs(hess_at_cp[i])[1, 2] * norm_factor for i in 1:length(eachrow(pts_along_valley))], 
+            [eigvecs(hess_at_cp[i])[2, 2] * norm_factor for i in 1:length(eachrow(pts_along_valley))]
+        ),
+        color = :red,
+        alpha = 0.6,
+        shaftwidth=2.0,
+        # label="My Arrow"
+    )
+
     Colorbar(fig[1, 3], cf, label = "")
 
     Legend(
         fig[2, 1],
-        [cp, pt, rct],
-        ["Critical Points of w_d", "True Parameter", "Sample Range"],
+        [cp, pt, rct, ar],
+        ["Critical Points of w_d", "True Parameter", "Sample Range", "Eigenvectors of Hessian"],
         orientation = :horizontal,  # Make legend horizontal for better space usage
         tellwidth = false,         # Don't have legend width affect layout
         tellheight = true,
-        patchsize = (30, 20),
+        # patchsize = (30, 20),
     )
 
     fig

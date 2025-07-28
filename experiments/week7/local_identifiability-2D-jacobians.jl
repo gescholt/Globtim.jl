@@ -131,30 +131,6 @@ if true
         model_func = config.model_func,
     )
 
-    pullback(x) = (1 / pol_cheb.scale_factor) * (x .- TR.center)
-    poly_func(poly) =
-        p -> DynamicPolynomials.coefficients(
-            DynamicPolynomials.subs(poly, x => p),
-        )[1]
-
-    # pts_along_valley = df_cheb[df_cheb.z .< -5, :]
-    pts_along_valley = df_cheb[df_cheb.z .< 1e-2, :]
-    grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
-    grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
-    grad_at_cp = map(pt -> grad_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
-
-    hess = DynamicPolynomials.differentiate(grad, x)
-    hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
-    hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
-
-    # for pt in eachrow(pts_along_valley)
-    #     jac = ForwardDiff.gradient(
-    #         error_func,
-    #         [0.2, 0.2],
-    #     )
-    #     @info "" jac
-    # end
-
     display(fig)
 
     Makie.save(
