@@ -29,7 +29,7 @@ using HomotopyContinuation, ProgressLogging
 
 config = (
     n = 1,
-    d = (:one_d_for_all, 12),
+    d = (:one_d_for_all, 20),
     GN = 300,
     time_interval = T[0.0, 1.0],
     p_true = [T[0.1], T[-0.1]],
@@ -119,6 +119,24 @@ open(joinpath(@__DIR__, "images", "$filename.txt"), "w") do io
 end
 
 println(Globtim._TO)
+
+problem = ODEProblem(
+    ModelingToolkit.complete(model),
+    ModelingToolkit.unknowns(model) .=> config.ic,
+    config.time_interval,
+    Dict(ModelingToolkit.parameters(model) .=> config.p_true[1]),
+)
+data_sample_true = sample_data(
+    problem,
+    model,
+    outputs,
+    config.time_interval,
+    config.p_true[1],
+    config.ic,
+    config.num_points,
+)
+Y_true = data_sample_true[first(keys(data_sample_true))]
+println("Sampled data (true): ", Y_true)
 
 if true
     fig = Globtim.plot_error_function_1D_with_critical_points(
