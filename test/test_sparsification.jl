@@ -7,7 +7,7 @@ using LinearAlgebra
     @testset "Basic sparsification" begin
         # Create a polynomial with some small coefficients
         f = x -> 1.0 + 0.1 * x[1] + 0.001 * x[1]^2 + 0.0001 * x[1]^3
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0, tolerance = nothing)
         pol = Constructor(TR, 10, basis = :chebyshev)
 
         # Test relative threshold sparsification
@@ -29,7 +29,7 @@ using LinearAlgebra
 
     @testset "Absolute threshold sparsification" begin
         f = x -> exp(x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 0.5)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 0.5, tolerance = nothing)
         pol = Constructor(TR, 8, basis = :chebyshev)
 
         # Use absolute threshold
@@ -47,7 +47,7 @@ using LinearAlgebra
 
     @testset "Preserve indices functionality" begin
         f = x -> x[1]^2 + x[2]^2
-        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
         pol = Constructor(TR, 6, basis = :chebyshev)
 
         # Preserve first few coefficients
@@ -65,8 +65,8 @@ using LinearAlgebra
 
     @testset "Sparsification tradeoff analysis" begin
         f = x -> sin(3 * x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol = Constructor(TR, 15, basis = :chebyshev)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0, tolerance = nothing)
+        pol = Constructor(TR, 14, basis = :chebyshev)
 
         thresholds = [1e-2, 1e-3, 1e-4, 1e-5]
         results = analyze_sparsification_tradeoff(pol, thresholds = thresholds)
@@ -85,7 +85,7 @@ using LinearAlgebra
 
     @testset "Vandermonde L2 norm computation" begin
         f = x -> x[1]^2 - x[1] + 1
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0, tolerance = nothing)
         pol = Constructor(TR, 4, basis = :chebyshev)
 
         # Compute L2 norm using Vandermonde approach
@@ -100,7 +100,7 @@ using LinearAlgebra
 
     @testset "L2 norm with modified coefficients" begin
         f = x -> cos(π * x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0, tolerance = nothing)
         pol = Constructor(TR, 8, basis = :legendre)
 
         # Test with zeroed coefficients
@@ -116,8 +116,8 @@ using LinearAlgebra
 
     @testset "Approximation error analysis" begin
         f = x -> 1 / (1 + 25 * x[1]^2)  # Runge function
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol = Constructor(TR, 20, basis = :chebyshev)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0, tolerance = nothing)
+        pol = Constructor(TR, 14, basis = :chebyshev)
 
         # Compute approximation error
         error = compute_approximation_error(f, pol, TR)
@@ -136,7 +136,7 @@ using LinearAlgebra
 
     @testset "Approximation error tradeoff" begin
         f = x -> exp(-x[1]^2)  # Gaussian
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 2.0)
+        TR = test_input(f, dim = 1, center = [0.0], sample_range = 2.0, tolerance = nothing)
         pol = Constructor(TR, 12, basis = :chebyshev)
 
         results = analyze_approximation_error_tradeoff(

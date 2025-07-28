@@ -361,9 +361,12 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
         )
-        if p.nrm < T.tolerance
+        if !isnothing(T.tolerance) && p.nrm < T.tolerance
             println("attained the desired L2-norm: ", p.nrm)
             println("Degree :$degree ")
+            break
+        elseif isnothing(T.tolerance)
+            # No tolerance specified, use the given degree without auto-increase
             break
         else
             degree += 1
