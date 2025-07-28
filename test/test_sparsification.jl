@@ -47,7 +47,13 @@ using LinearAlgebra
 
     @testset "Preserve indices functionality" begin
         f = x -> x[1]^2 + x[2]^2
-        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
+        TR = test_input(
+            f,
+            dim = 2,
+            center = [0.0, 0.0],
+            sample_range = 1.0,
+            tolerance = nothing
+        )
         pol = Constructor(TR, 6, basis = :chebyshev)
 
         # Preserve first few coefficients
@@ -74,9 +80,9 @@ using LinearAlgebra
         @test length(results) == length(thresholds)
 
         # Check monotonicity: smaller threshold -> more coefficients kept
-        for i = 2:length(results)
-            @test results[i].new_nnz >= results[i-1].new_nnz
-            @test results[i].l2_ratio >= results[i-1].l2_ratio
+        for i in 2:length(results)
+            @test results[i].new_nnz >= results[i - 1].new_nnz
+            @test results[i].l2_ratio >= results[i - 1].l2_ratio
         end
 
         # First result (largest threshold) should have most sparsity
@@ -143,7 +149,7 @@ using LinearAlgebra
             f,
             pol,
             TR,
-            thresholds = [1e-2, 1e-3, 1e-4],
+            thresholds = [1e-2, 1e-3, 1e-4]
         )
 
         @test length(results) == 3

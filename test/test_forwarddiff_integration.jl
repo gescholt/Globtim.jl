@@ -18,7 +18,7 @@ using DataFrames
             0.01,
             2,
             6,
-            1.5,
+            1.5
         )
         @test orthant.orthant_id == 1
         @test orthant.success_rate == 0.8
@@ -36,11 +36,11 @@ using DataFrames
             Float64[],
             Float64[],
             String[],
-            [orthant for _ = 1:16],
+            [orthant for _ in 1:16],
             [6],
             [100],
             10.0,
-            (raw = 0.7, bfgs = 0.8, combined = 0.75),
+            (raw = 0.7, bfgs = 0.8, combined = 0.75)
         )
         @test tolerance_result.tolerance == 0.001
         @test length(tolerance_result.orthant_data) == 16
@@ -60,7 +60,7 @@ using DataFrames
         config = BFGSConfig(
             max_iterations = 50,
             show_trace = false,
-            track_hyperparameters = false,
+            track_hyperparameters = false
         )
 
         # Run enhanced refinement
@@ -69,7 +69,7 @@ using DataFrames
             initial_values,
             orthant_labels,
             f,
-            config,
+            config
         )
 
         @test length(results) == 3
@@ -118,7 +118,7 @@ using DataFrames
         df = DataFrame(
             x1 = [0.01, 0.5, -0.5],
             x2 = [0.01, 0.5, 0.5],
-            z = [f([0.01, 0.01]), f([0.5, 0.5]), f([-0.5, 0.5])],
+            z = [f([0.01, 0.01]), f([0.5, 0.5]), f([-0.5, 0.5])]
         )
 
         TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
@@ -135,7 +135,7 @@ using DataFrames
         # Test classification
         @test all(
             t -> t in [:minimum, :maximum, :saddle, :degenerate, :error],
-            df_enhanced.critical_point_type,
+            df_enhanced.critical_point_type
         )
     end
 end

@@ -88,7 +88,7 @@ end
         test_cases = [
             ([2.0, 3.0], sqrt(4 * 2.0 * 3.0)),
             ([1.0, 5.0], sqrt(4 * 1.0 * 5.0)),
-            ([0.5, 0.5], sqrt(4 * 0.5 * 0.5)),
+            ([0.5, 0.5], sqrt(4 * 0.5 * 0.5))
         ]
 
         for (scale_factor, expected) in test_cases
@@ -138,9 +138,9 @@ end
 
             # Fill grid matrix
             idx = 1
-            for i = 0:n_points, j = 0:n_points
-                grid_matrix[idx, 1] = grid_1d[i+1]
-                grid_matrix[idx, 2] = grid_1d[j+1]
+            for i in 0:n_points, j in 0:n_points
+                grid_matrix[idx, 1] = grid_1d[i + 1]
+                grid_matrix[idx, 2] = grid_1d[j + 1]
                 idx += 1
             end
 

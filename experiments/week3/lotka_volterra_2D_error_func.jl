@@ -40,16 +40,16 @@ config = (
     basis = :chebyshev,
     precision = RationalPrecision,
     my_eps = 0.02,
-    fine_step = 0.002,
+    fine_step = 0.002
 )
 config = merge(
     config,
     Dict(
         :plot_range => [
-            -(config.sample_range + config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
-            -(config.sample_range + config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
-        ],
-    ),
+            (-(config.sample_range + config.my_eps)):config.fine_step:(config.sample_range + config.my_eps),
+            (-(config.sample_range + config.my_eps)):config.fine_step:(config.sample_range + config.my_eps)
+        ]
+    )
 )
 
 model, params, states, outputs = config.model_func()
@@ -61,7 +61,7 @@ error_func = make_error_distance(
     config.p_true,
     config.time_interval,
     config.num_points,
-    config.distance,
+    config.distance
 )
 
 @polyvar(x[1:config.n]); # Define polynomial ring
@@ -70,7 +70,7 @@ TR = test_input(
     dim = config.n,
     center = config.p_center,
     GN = config.GN,
-    sample_range = config.sample_range,
+    sample_range = config.sample_range
 );
 
 pol_cheb = Constructor(
@@ -78,7 +78,7 @@ pol_cheb = Constructor(
     config.d,
     basis = config.basis,
     precision = config.precision,
-    verbose = true,
+    verbose = true
 )
 real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     x,
@@ -86,7 +86,7 @@ real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     config.d,
     pol_cheb.coeffs;
     basis = pol_cheb.basis,
-    return_system = true,
+    return_system = true
 )
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
@@ -103,7 +103,7 @@ fig = Globtim.plot_polyapprox_levelset_2D(
     ylabel = "Parameter 2",
     colorbar = true,
     colorbar_label = "Loss Value",
-    num_levels = 200,
+    num_levels = 200
 )
 
 @info "" df_cheb
@@ -115,7 +115,7 @@ id = "id11"
 Makie.save(
     joinpath(@__DIR__, "images", "$(id)_lotka_volterra_2D_error_func1.png"),
     fig;
-    px_per_unit = 1.5,
+    px_per_unit = 1.5
 )
 
 open(joinpath(@__DIR__, "images", "$(id)_lotka_volterra_2D_error_func1.txt"), "w") do io
@@ -129,7 +129,7 @@ open(joinpath(@__DIR__, "images", "$(id)_lotka_volterra_2D_error_func1.txt"), "w
         "   Bezout bound: ",
         map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys),
         " which is ",
-        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys)),
+        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys))
     )
     println(io, "Critical points found:\n", df_cheb)
     println(
@@ -139,11 +139,11 @@ open(joinpath(@__DIR__, "images", "$(id)_lotka_volterra_2D_error_func1.txt"), "w
             findmin(
                 map(
                     p -> abs(sum((p .- config.p_true) .^ 2)),
-                    zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:config.n]...),
-                ),
+                    zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:config.n]...)
+                )
             )[2],
-            :,
-        ],
+            :
+        ]
     )
     println(io, Globtim._TO)
 end

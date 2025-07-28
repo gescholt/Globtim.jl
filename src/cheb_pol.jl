@@ -31,7 +31,7 @@ function symbolic_chebyshev(
     n::Integer;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false,
+    power_of_two_denom::Bool = false
 )
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
@@ -69,7 +69,7 @@ function _build_chebyshev_polynomial(n::Integer, precision::PrecisionType)
     t_prev = _convert_value(1, precision)  # T₀(x)
     t_curr = x                            # T₁(x)
 
-    for k = 2:n
+    for k in 2:n
         # Recurrence relation: T_n(x) = 2x·T_{n-1}(x) - T_{n-2}(x)
         two = _convert_value(2, precision)
         t_next = two * x * t_curr - t_prev
@@ -206,25 +206,25 @@ function get_chebyshev_coeffs(
     max_degree::Integer;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false,
+    power_of_two_denom::Bool = false
 )
     # Vector to store coefficient vectors
     chebyshev_coeffs = Vector{Vector}(undef, max_degree + 1)
 
     # For each degree, generate polynomial and extract coefficients
-    for deg = 0:max_degree
+    for deg in 0:max_degree
         T = symbolic_chebyshev(
             deg;
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom,
+            power_of_two_denom = power_of_two_denom
         )
 
         # Handle constant polynomials
         if T isa Number
             coeff_type = precision == RationalPrecision ? Rational{BigInt} : Float64
             # Convert to the correct type
-            chebyshev_coeffs[deg+1] = [convert(coeff_type, T)]
+            chebyshev_coeffs[deg + 1] = [convert(coeff_type, T)]
         else
             # Extract coefficients from terms
             terms_array = terms(T)
@@ -238,10 +238,10 @@ function get_chebyshev_coeffs(
             full_coeffs = zeros(coeff_type, deg + 1)
             for (d, c) in zip(degrees, coeffs)
                 # Convert each coefficient to the desired type
-                full_coeffs[d+1] = convert(coeff_type, c)
+                full_coeffs[d + 1] = convert(coeff_type, c)
             end
 
-            chebyshev_coeffs[deg+1] = full_coeffs
+            chebyshev_coeffs[deg + 1] = full_coeffs
         end
     end
 
@@ -271,13 +271,13 @@ function chebyshev_coeff_matrix(
     n::Integer;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false,
+    power_of_two_denom::Bool = false
 )
     coeffs = get_chebyshev_coeffs(
         n;
         precision = precision,
         normalized = normalized,
-        power_of_two_denom = power_of_two_denom,
+        power_of_two_denom = power_of_two_denom
     )
 
     # Create a matrix with proper dimensions
@@ -285,9 +285,9 @@ function chebyshev_coeff_matrix(
     result = zeros(T, n + 1, n + 1)
 
     # Fill in the coefficient matrix
-    for i = 0:n
-        row = coeffs[i+1]
-        result[i+1, 1:length(row)] = row
+    for i in 0:n
+        row = coeffs[i + 1]
+        result[i + 1, 1:length(row)] = row
     end
 
     return result
@@ -323,7 +323,7 @@ function construct_chebyshev_approx(
     degree;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false,
+    power_of_two_denom::Bool = false
 )
     n = length(x_vars)  # number of variables
 
@@ -352,18 +352,18 @@ function construct_chebyshev_approx(
         max_degree;
         precision = precision,
         normalized = normalized,
-        power_of_two_denom = power_of_two_denom,
+        power_of_two_denom = power_of_two_denom
     )
 
     # Initialize polynomial
     S = zero(x_vars[1])
 
     # Construct polynomial using Chebyshev basis
-    for j = 1:m
+    for j in 1:m
         term = one(x_vars[1])
-        for k = 1:n
+        for k in 1:n
             deg = lambda[j, k]
-            coeff_vec = chebyshev_coeffs[deg+1]
+            coeff_vec = chebyshev_coeffs[deg + 1]
 
             # Create monomial vector for this variable
             monom_vec = MonomialVector([x_vars[k]], 0:deg)

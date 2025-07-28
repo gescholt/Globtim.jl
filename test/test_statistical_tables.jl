@@ -71,7 +71,7 @@ using Globtim
         minima_data = DataFrame(
             critical_point_type = [:minimum, :minimum, :minimum],
             smallest_positive_eigenval = [0.1, 0.5, 0.01],
-            hessian_determinant = [0.05, 0.25, 0.001],
+            hessian_determinant = [0.05, 0.25, 0.001]
         )
 
         validation = Globtim.perform_mathematical_validation(minima_data, :minimum)
@@ -84,7 +84,7 @@ using Globtim
         maxima_data = DataFrame(
             critical_point_type = [:maximum, :maximum],
             largest_negative_eigenval = [-0.1, -0.5],
-            hessian_determinant = [0.05, 0.25],
+            hessian_determinant = [0.05, 0.25]
         )
 
         max_validation = Globtim.perform_mathematical_validation(maxima_data, :maximum)
@@ -95,7 +95,7 @@ using Globtim
         saddle_data = DataFrame(
             critical_point_type = [:saddle, :saddle],
             hessian_eigenvalue_min = [-0.1, -0.3],
-            hessian_eigenvalue_max = [0.2, 0.4],
+            hessian_eigenvalue_max = [0.2, 0.4]
         )
 
         saddle_validation = Globtim.perform_mathematical_validation(saddle_data, :saddle)
@@ -112,7 +112,7 @@ using Globtim
             largest_negative_eigenval = [NaN, NaN, -0.3, NaN, NaN],
             hessian_eigenvalue_min = [-0.1, 0.05, -0.8, -0.2, -0.4],
             hessian_eigenvalue_max = [0.5, 0.8, -0.1, 0.3, 0.6],
-            hessian_determinant = [0.05, 0.04, -0.08, -0.06, -0.24],
+            hessian_determinant = [0.05, 0.04, -0.08, -0.06, -0.24]
         )
 
         # Test statistics computation for minima
@@ -151,7 +151,7 @@ using Globtim
             2.0,
             1,
             20.0,
-            3.0,
+            3.0
         )
         test_condition = Globtim.ConditionNumberAnalysis(
             5,
@@ -162,7 +162,7 @@ using Globtim
             0,
             100.0,
             "EXCELLENT",
-            ["All conditions excellent"],
+            ["All conditions excellent"]
         )
         test_validation = Globtim.ValidationResults(
             true,
@@ -171,7 +171,7 @@ using Globtim
             missing,
             true,
             missing,
-            Dict{String,Any}(),
+            Dict{String, Any}()
         )
 
         comprehensive_table = Globtim.ComprehensiveStatsTable(
@@ -180,7 +180,7 @@ using Globtim
             test_condition,
             test_validation,
             missing,
-            :console,
+            :console
         )
 
         # Test table rendering
@@ -218,7 +218,7 @@ using Globtim
                 0.5,
                 0,
                 0.0,
-                1.0,
+                1.0
             ),
             Globtim.ConditionNumberAnalysis(3, 3, 0, 0, 0, 0, 100.0, "EXCELLENT", String[]),
             Globtim.ValidationResults(
@@ -228,10 +228,10 @@ using Globtim
                 missing,
                 true,
                 missing,
-                Dict{String,Any}(),
+                Dict{String, Any}()
             ),
             missing,
-            :console,
+            :console
         )
 
         stats2 = Globtim.ComprehensiveStatsTable(
@@ -248,7 +248,7 @@ using Globtim
                 1.0,
                 0,
                 0.0,
-                2.0,
+                2.0
             ),
             Globtim.ConditionNumberAnalysis(2, 1, 1, 0, 0, 0, 100.0, "EXCELLENT", String[]),
             Globtim.ValidationResults(
@@ -258,10 +258,10 @@ using Globtim
                 missing,
                 missing,
                 true,
-                Dict{String,Any}(),
+                Dict{String, Any}()
             ),
             missing,
-            :console,
+            :console
         )
 
         stats_list = [stats1, stats2]
@@ -324,7 +324,7 @@ using Globtim
                 0.0,
                 0,
                 0.0,
-                0.0,
+                0.0
             ),
             Globtim.ConditionNumberAnalysis(1, 1, 0, 0, 0, 0, 100.0, "EXCELLENT", String[]),
             Globtim.ValidationResults(
@@ -334,10 +334,10 @@ using Globtim
                 missing,
                 missing,
                 missing,
-                Dict{String,Any}(),
+                Dict{String, Any}()
             ),
             missing,
-            :console,
+            :console
         )
 
         wide_table = Globtim.render_console_table(wide_stats, width = 200)
@@ -364,7 +364,7 @@ using Globtim
                 0.0,
                 0,
                 0.0,
-                0.0,
+                0.0
             ),
             Globtim.ConditionNumberAnalysis(0, 0, 0, 0, 0, 0, 0.0, "NO_DATA", String[]),
             Globtim.ValidationResults(
@@ -374,10 +374,10 @@ using Globtim
                 missing,
                 missing,
                 missing,
-                Dict{String,Any}(),
+                Dict{String, Any}()
             ),
             missing,
-            :console,
+            :console
         )
 
         no_val_table = Globtim.render_console_table(no_validation_stats, width = 80)

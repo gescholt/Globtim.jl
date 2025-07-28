@@ -71,5 +71,5 @@ println("   - Sparse polynomial: $(sparse_result.new_nnz) non-zero coefficients"
 println("   - Sparsity achieved: $(round((1-sparse_result.sparsity)*100))%")
 println("   - L2-norm preserved: $(round(sparse_result.l2_ratio*100, digits=1))%")
 println(
-    "   - Memory reduction: $(round((1-sparse_result.new_nnz/length(pol.coeffs))*100))%",
+    "   - Memory reduction: $(round((1-sparse_result.new_nnz/length(pol.coeffs))*100))%"
 )

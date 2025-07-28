@@ -24,7 +24,7 @@ reset_timer!(Globtim._TO)
 
 const T = Float64
 time_interval = T[0.0, 1.0]
-p_true = T[2, 2/10, 2/10]
+p_true = T[2, 2 / 10, 2 / 10]
 ic = T[1.0, -1.0]
 num_points = 50
 distance = log_L2_norm
@@ -78,11 +78,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 

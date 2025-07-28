@@ -27,7 +27,7 @@ function msolve_polynomial_system(
     n = 2,
     basis = :chebyshev,
     threads::Int = 10,
-    verbose::Bool = false,
+    verbose::Bool = false
 )
     if verbose
         println("Entering msolve_polynomial_system with ApproxPoly")
@@ -49,7 +49,7 @@ function msolve_polynomial_system(
 
     try
         # Process polynomial system
-        names = [x[i].name for i = 1:length(x)]
+        names = [x[i].name for i in 1:length(x)]
         if verbose
             println("Variable names: $(join(names, ", "))")
         end
@@ -76,7 +76,7 @@ function msolve_polynomial_system(
             RationalPrecision;  # Note the semicolon after this positional argument
             normalized = true,
             power_of_two_denom = false,
-            verbose = verbose,
+            verbose = verbose
         )
 
         # Compute gradient
@@ -89,7 +89,7 @@ function msolve_polynomial_system(
 
         # Write gradient to file, replacing // with / for msolve compatibility
         open(input_file, "a") do file
-            for i = 1:n
+            for i in 1:n
                 poly_str = replace(string(grad[i]), "//" => "/")
 
                 if i < n
@@ -122,7 +122,7 @@ function msolve_polynomial_system(
                 println("Output file exists with size $(filesize(output_file)) bytes")
                 if filesize(output_file) > 0
                     println(
-                        "First 200 chars of output file: $(first(read(output_file, String), 200))",
+                        "First 200 chars of output file: $(first(read(output_file, String), 200))"
                     )
                 end
             else
@@ -189,7 +189,7 @@ function solve_and_parse(
     threads::Int = 10,
     verbose::Bool = false,
     skip_filtering::Bool = false,
-    kwargs...,
+    kwargs...
 )
     if verbose
         println("Starting solve_and_parse with ApproxPoly of degree $(pol.degree)")
@@ -203,7 +203,7 @@ function solve_and_parse(
         n = TR.dim,
         basis = basis,
         threads = threads,
-        verbose = verbose,
+        verbose = verbose
     )
 
     if verbose

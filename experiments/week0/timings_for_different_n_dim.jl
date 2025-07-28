@@ -30,7 +30,7 @@ for n in [2, 3, 4]
         pol_cheb.coeffs;
         basis = pol_cheb.basis,
         precision = pol_cheb.precision,
-        normalized = pol_cheb.normalized,
+        normalized = pol_cheb.normalized
     )
 
     df_cheb = process_crit_pts(real_pts_cheb, f, TR)

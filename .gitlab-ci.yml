@@ -2,12 +2,38 @@
 
 stages:
   - check
+  - format
   - test
   - coverage
 
 variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
   JULIA_NUM_THREADS: "4"
+
+# Format check job - runs early to catch style issues
+format-check:
+  stage: format
+  before_script:
+    - echo "Installing Julia via juliaup..."
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - juliaup default 1.11
+  cache:
+    key: "format-check-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
+      - $HOME/.juliaup/
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --version
+    - echo "Running Julia formatter check..."
+    - ./scripts/format-julia.sh --check
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "clean-version"'
+  allow_failure: true  # Start with allow_failure, can be made strict later
 
 # Check runner environment and capabilities
 check-environment:
@@ -22,6 +48,9 @@ check-environment:
     - which apt-get && echo "apt-get available" || echo "apt-get not found"
     - which yum && echo "yum available" || echo "yum not found"
     - which snap && echo "snap available" || echo "snap not found"
+    - echo "=== Check for Node.js and npm ==="
+    - which node && node --version || echo "Node.js not found"
+    - which npm && npm --version || echo "npm not found"
     - echo "=== Check for Julia ==="
     - which julia && julia --version || echo "Julia not found"
     - echo "=== Attempting to install Julia via juliaup ==="
@@ -175,3 +204,31 @@ coverage-shell:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "clean-version"'
+
+# Aqua.jl code quality check
+aqua-quality-check:
+  stage: test
+  before_script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - juliaup default 1.11
+  cache:
+    key: "aqua-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .julia/
+      - $HOME/.juliaup/
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --version
+    - julia --project=test -e 'using Pkg; Pkg.instantiate()'
+    - julia scripts/run-aqua-tests.jl --ci --verbose
+  artifacts:
+    when: on_failure
+    paths:
+      - aqua_report.txt
+    expire_in: 1 week
+  allow_failure: true  # Start with allow_failure, make strict later
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'

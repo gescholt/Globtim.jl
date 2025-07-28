@@ -1,4 +1,4 @@
-# Test suite for anisotropic lambda_vandermonde implementation
+# Test suite for anisotropic Globtim.lambda_vandermonde implementation
 
 using Test
 using Globtim
@@ -58,21 +58,23 @@ using StaticArrays
         y_nodes = [-0.5, 0.5]
         S = Matrix{Float64}(undef, 6, 2)
         idx = 1
-        for j = 1:2, i = 1:3
+        for j in 1:2, i in 1:3
             S[idx, 1] = x_nodes[i]
             S[idx, 2] = y_nodes[j]
             idx += 1
         end
 
         # Test Chebyshev basis
-        V_cheb = lambda_vandermonde_anisotropic(Lambda, S, basis = :chebyshev)
+        V_cheb = Globtim.lambda_vandermonde_anisotropic(Lambda, S, basis = :chebyshev)
         @test size(V_cheb) == (6, 4)
         @test V_cheb[:, 1] ≈ ones(6)  # T_0(x) * T_0(y) = 1
 
         # Test Legendre basis
-        V_leg = lambda_vandermonde_anisotropic(Lambda, S, basis = :legendre)
+        V_leg = Globtim.lambda_vandermonde_anisotropic(Lambda, S, basis = :legendre)
         @test size(V_leg) == (6, 4)
-        @test V_leg[:, 1] ≈ ones(6)  # P_0(x) * P_0(y) = 1
+        # For normalized Legendre polynomials, P_0(x) = 1/√2
+        # So P_0(x) * P_0(y) = 1/2
+        @test V_leg[:, 1] ≈ fill(0.5, 6)
     end
 
     @testset "Wrapper Function Integration" begin
@@ -85,7 +87,7 @@ using StaticArrays
             -0.5 0.5
             0.5 0.5
         ]
-        V_iso = lambda_vandermonde(Lambda, S_iso)
+        V_iso = Globtim.lambda_vandermonde(Lambda, S_iso)
         @test size(V_iso) == (4, 3)
 
         # Test 2: Anisotropic grid uses new implementation
@@ -97,11 +99,11 @@ using StaticArrays
             0.0 0.5
             0.8 0.5
         ]
-        V_aniso = lambda_vandermonde(Lambda, S_aniso)
+        V_aniso = Globtim.lambda_vandermonde(Lambda, S_aniso)
         @test size(V_aniso) == (6, 3)
 
         # Test 3: Force anisotropic on isotropic grid
-        V_forced = lambda_vandermonde(Lambda, S_iso, force_anisotropic = true)
+        V_forced = Globtim.lambda_vandermonde(Lambda, S_iso, force_anisotropic = true)
         @test size(V_forced) == (4, 3)
         @test V_forced ≈ V_iso  # Should give same result
     end
@@ -111,17 +113,17 @@ using StaticArrays
 
         # Test Float64
         S_f64 = Float64[0.0 0.0; 0.5 0.5]
-        V_f64 = lambda_vandermonde_anisotropic(Lambda, S_f64)
+        V_f64 = Globtim.lambda_vandermonde_anisotropic(Lambda, S_f64)
         @test eltype(V_f64) == Float64
 
         # Test Float32
         S_f32 = Float32[0.0 0.0; 0.5 0.5]
-        V_f32 = lambda_vandermonde_anisotropic(Lambda, S_f32)
+        V_f32 = Globtim.lambda_vandermonde_anisotropic(Lambda, S_f32)
         @test eltype(V_f32) == Float32
 
         # Test Rational
         S_rat = Rational{Int}[0//1 0//1; 1//2 1//2]
-        V_rat = lambda_vandermonde_anisotropic(Lambda, S_rat)
+        V_rat = Globtim.lambda_vandermonde_anisotropic(Lambda, S_rat)
         @test eltype(V_rat) == Rational{Int}
     end
 
@@ -146,7 +148,13 @@ using StaticArrays
     @testset "Constructor Integration" begin
         # Create test input
         f = x -> sin(π * x[1]) * cos(π * x[2])
-        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
+        TR = test_input(
+            f,
+            dim = 2,
+            center = [0.0, 0.0],
+            sample_range = 1.0,
+            tolerance = nothing
+        )
 
         # Test 1: Traditional usage (should work as before)
         pol_trad = Constructor(TR, 5, verbose = 0)
@@ -165,8 +173,8 @@ using StaticArrays
         f = x -> exp(-50 * x[1]^2 - 2 * x[2]^2)  # Highly anisotropic
         n = 2
         Lambda = (
-            data = [i + j for i = 0:5, j = 0:5] |> vec |> x -> hcat(x .÷ 6, x .% 6),
-            size = (36, 2),
+            data = [i + j for i in 0:5, j in 0:5] |> vec |> x -> hcat(x .÷ 6, x .% 6),
+            size = (36, 2)
         )
 
         # Isotropic grid (6x6)
@@ -178,8 +186,8 @@ using StaticArrays
         S_aniso = convert_to_matrix_grid(vec(grid_aniso))
 
         # Both should work
-        V_iso = lambda_vandermonde(Lambda, S_iso)
-        V_aniso = lambda_vandermonde(Lambda, S_aniso)
+        V_iso = Globtim.lambda_vandermonde(Lambda, S_iso)
+        V_aniso = Globtim.lambda_vandermonde(Lambda, S_aniso)
 
         @test size(V_iso) == (49, 36)
         @test size(V_aniso) == (50, 36)  # 10x5 = 50 points
@@ -198,7 +206,8 @@ function demonstrate_anisotropic_lambda_vandermonde()
 
     # Function with different scales
     f = x -> exp(-100 * x[1]^2 - x[2]^2)
-    TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
+    TR =
+        test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
 
     println("\n1. Traditional Constructor (isotropic grid):")
     pol_iso = Constructor(TR, 8, GN = 10, verbose = 0)
