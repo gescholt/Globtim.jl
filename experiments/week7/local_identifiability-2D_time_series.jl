@@ -1,4 +1,3 @@
-
 using Pkg; Pkg.activate(@__DIR__)
 
 using Revise
@@ -28,16 +27,16 @@ using DynamicPolynomials
 using HomotopyContinuation, ProgressLogging
 
 config = (
-    n = 1,
-    d = (:one_d_for_all, 12),
+    n = 2,
+    d = (:one_d_for_all, 14),
     GN = 300,
     time_interval = T[0.0, 1.0],
-    p_true = [T[0.1], T[-0.1]],
+    p_true = [T[0.3, 0.1], T[0.3, -0.1]],
     ic = T[0.3],
     num_points = 20,
-    sample_range = 0.4,
-    distance = L2_norm,
-    model_func = define_simple_1D_model_locally_identifiable,
+    sample_range = 0.3,
+    distance = log_L2_norm,
+    model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
     precision = RationalPrecision,
     my_eps = 0.02,
@@ -48,8 +47,9 @@ config = merge(
     (;
         plot_range = [
             -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
+            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
         ],
-        p_center = [config.p_true[1][1] + 0.05],
+        p_center = [config.p_true[1][1] + 0.05, config.p_true[1][2] - 0.05],
     ),
 )
 
@@ -93,10 +93,10 @@ df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
 @info "" df_cheb
 
-id = "id_1D"
+id = "id_2D_time_series"
 filename = "$(id)_$(config.model_func)_$(config.distance)"
 
-open(joinpath(@__DIR__, "images", "$filename.txt"), "w") do io
+open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     println(io, "config = ", config, "\n\n")
     println(io, "Condition number of the Vandermonde system: ", pol_cheb.cond_vandermonde)
     println(io, "L2 norm (error of approximation): ", pol_cheb.nrm)
@@ -121,24 +121,58 @@ end
 println(Globtim._TO)
 
 if true
-    fig = Globtim.plot_error_function_1D_with_critical_points(
-        pol_cheb,
-        TR,
-        df_cheb,
-        x,
-        wd_in_std_basis,
-        config.p_true,
-        config.plot_range,
-        config.distance;
-        xlabel = "Parameter 1",
-        model_func = config.model_func,
+    params_to_plot = [
+        config.p_true[1],
+        config.p_true[2],
+        [0.249981,  -0.169133],
+        [0.248937,   0.167269]
+    ]
+    fig = plot_model_outputs(
+        model, outputs, config.ic, 
+        params_to_plot,
+        config.time_interval, config.num_points; 
+        ground_truth=1,
+        yaxis=identity,
+        plot_title="$(config.model_func)", 
+        param_alpha=0.8
     )
+
+    for params_to_plot_i in params_to_plot
+        @info "Error($params_to_plot_i) = $(error_func(params_to_plot_i))"
+    end
+    for delta in [1e-2, 1e-4, 1e-6, 1e-8, -1e-10]
+        @info "Error(p_true ± $delta) = $(error_func(config.p_true[1] .+ rand(2).*delta))"
+    end
 
     display(fig)
 
     Makie.save(
-        joinpath(@__DIR__, "images", "$filename.png"),
+        joinpath(@__DIR__, "images", "$(filename).png"),
         fig,
         px_per_unit = 1.5,
     )
 end
+
+#=
+### log L2 norm ###
+[ Info: Error([0.3, 0.1]) = -52.0
+[ Info: Error([0.3, -0.1]) = -52.0
+[ Info: Error([0.249981, -0.169133]) = -7.721011396657498
+[ Info: Error([0.248937, 0.167269]) = -8.787352906655608
+[ Info: Error(p_true ± 0.01) = -6.265174250552587
+[ Info: Error(p_true ± 0.0001) = -13.050909032442767
+[ Info: Error(p_true ± 1.0e-6) = -20.167865644175965
+[ Info: Error(p_true ± 1.0e-8) = -27.470041301226143
+[ Info: Error(p_true ± -1.0e-10) = -33.27346932407395
+
+### L2 norm ###
+[ Info: Error([0.3, 0.1]) = 0.0
+[ Info: Error([0.3, -0.1]) = 0.0
+[ Info: Error([0.249981, -0.169133]) = 0.0047396249036172474
+[ Info: Error([0.248937, 0.167269]) = 0.0022633055720136333
+[ Info: Error(p_true ± 0.01) = 0.008578687008827838
+[ Info: Error(p_true ± 0.0001) = 5.551985414331886e-5
+[ Info: Error(p_true ± 1.0e-6) = 5.282405837968955e-7
+[ Info: Error(p_true ± 1.0e-8) = 6.654566471458377e-9
+[ Info: Error(p_true ± -1.0e-10) = 4.420918408418936e-11
+=#

@@ -23,7 +23,8 @@ export define_lotka_volterra_model,
     L2_norm,
     EllipseSupport,
     define_simple_2D_model_locally_identifiable,
-    define_simple_2D_model_locally_identifiable_square
+    define_simple_2D_model_locally_identifiable_square,
+    define_simple_1D_model_locally_identifiable
 
 function define_fitzhugh_nagumo_3D_model()
     @independent_variables t
@@ -136,22 +137,34 @@ function define_simple_2D_model_locally_identifiable_square()
     return model, params, states, outputs
 end
 
+function define_simple_1D_model_locally_identifiable()
+    @independent_variables t
+    @variables x1(t) y1(t)
+    @parameters a
+    D = Differential(t)
+    params = [a]
+    states = [x1]
+    @named model = ODESystem([D(x1) ~ x1 + a^2], t, states, params)
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
 function sample_data(
     model::ModelingToolkit.ODESystem,
     measured_data::Vector{ModelingToolkit.Equation},
-    time_interval::Vector{T},
-    p_true::Vector{T},
-    u0::Vector{T},
+    time_interval,
+    p_true,
+    u0,
     num_points::Int;
     kwargs...,
-) where {T<:Number}
+)
 
     N = length(p_true)
     return sample_data(
         model,
         measured_data,
         time_interval,
-        SVector{N,T}(p_true),
+        SVector{N,eltype(p_true)}(p_true),
         u0,
         num_points;
         kwargs...,
@@ -195,8 +208,8 @@ function sample_data(
     model,
     measured_data::Vector{ModelingToolkit.Equation},
     time_interval::Vector{T},
-    p_true::AbstractVector{T},
-    u0::Vector{T},
+    p_true,
+    u0,
     num_points::Int;
     uneven_sampling = false,
     uneven_sampling_times = Vector{T}(),
@@ -307,11 +320,11 @@ function make_error_distance(
     end
 
     function Error_distance(
-        p_test::Union{SVector{N,T},Vector{T}};
+        p_test::Union{SVector{N,T2},Vector{T2}};
         measured_data = outputs,
         time_interval = time_interval,
         datasize = numpoints,
-    ) where {N}
+    ) where {T2,N}
 
         # problem = remake(problem, p = Dict(ModelingToolkit.parameters(model) .=> p_test))
         try
@@ -363,7 +376,8 @@ function make_error_distance(
     return Error_distance
 end
 
-using CairoMakie
+# using CairoMakie
+using GLMakie
 using StaticArrays
 using ModelingToolkit
 
@@ -378,6 +392,7 @@ function plot_model_outputs(
     yaxis = identity,
     plot_title = "Model Outputs",
     figure_size = (800, 500),
+    param_alpha = 0.1
 ) where {T<:Number,A}
 
     @assert length(parameter_values) > 0 "At least one parameter set must be provided"
@@ -425,7 +440,7 @@ function plot_model_outputs(
                 style = :solid
             else
                 color = :blue
-                alpha = 0.1
+                alpha = param_alpha
                 linewidth = 1
                 label = nothing # "Set $(idx) - $(key) - $(p)"
                 style = :solid

@@ -28,14 +28,14 @@ using HomotopyContinuation, ProgressLogging
 
 config = (
     n = 2,
-    d = (:one_d_for_all, 12),
+    d = (:one_d_for_all, 14),
     GN = 300,
     time_interval = T[0.0, 1.0],
-    p_true = T[0.3, 0.1],
+    p_true = [T[0.3, 0.1], T[0.3, -0.1]],
     ic = T[0.3],
     num_points = 20,
     sample_range = 0.3,
-    distance = L2_norm,
+    distance = log_L2_norm,
     model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
     precision = RationalPrecision,
@@ -49,7 +49,7 @@ config = merge(
             -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
             -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
         ],
-        p_center = [config.p_true[1] + 0.05, config.p_true[2] - 0.05],
+        p_center = [config.p_true[1][1] + 0.05, config.p_true[1][2] - 0.05],
     ),
 )
 
@@ -59,7 +59,7 @@ error_func = make_error_distance(
     model,
     outputs,
     config.ic,
-    config.p_true,
+    config.p_true[1],
     config.time_interval,
     config.num_points,
     config.distance,
@@ -93,9 +93,10 @@ df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
 @info "" df_cheb
 
-id = "id33"
+id = "id_2D"
+filename = "$(id)_$(config.model_func)_$(config.distance)"
 
-open(joinpath(@__DIR__, "images", "$(id)_lotka_volterra_2D_error_func1.txt"), "w") do io
+open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     println(io, "config = ", config, "\n\n")
     println(io, "Condition number of the Vandermonde system: ", pol_cheb.cond_vandermonde)
     println(io, "L2 norm (error of approximation): ", pol_cheb.nrm)
@@ -120,17 +121,6 @@ end
 println(Globtim._TO)
 
 if true
-    # plot_range = -0.5:0.002:0.5
-    # fig = plot_error_function_2D_with_critical_points(
-    #     error_func,
-    #     model, outputs, config.ic,
-    #     config.p_true,
-    #     plot_range,
-    #     config.time_interval, config.num_points;
-    #     ground_truth=length(params),
-    #     plot_title="Locally Identifiable model Error Function $(config.p_true) ± $plot_range",
-    # )
-
     fig = Globtim.plot_error_function_2D_with_critical_points(
         pol_cheb,
         TR,
@@ -151,7 +141,7 @@ if true
     display(fig)
 
     Makie.save(
-        joinpath(@__DIR__, "images", "$(id)_locally_ident_2D_error_func.png"),
+        joinpath(@__DIR__, "images", "$(filename).png"),
         fig,
         px_per_unit = 1.5,
     )
