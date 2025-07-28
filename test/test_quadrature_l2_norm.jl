@@ -102,7 +102,7 @@ include("../Examples/L2_grid_ideas.jl")
 
         @testset "4D functions" begin
             # 4D Gaussian
-            f_gauss_4d = x -> exp(-sum(x[i]^2 for i = 1:4))
+            f_gauss_4d = x -> exp(-sum(x[i]^2 for i in 1:4))
             l2_norm = compute_L2_norm_tensor(f_gauss_4d, [5, 5, 5, 5], :chebyshev)
             @test l2_norm > 0
             @test isfinite(l2_norm)
@@ -128,9 +128,9 @@ include("../Examples/L2_grid_ideas.jl")
             end
 
             # Check that differences decrease
-            diffs = [abs(norms[i+1] - norms[i]) for i = 1:length(norms)-1]
-            for i = 1:length(diffs)-1
-                @test diffs[i+1] < diffs[i] || diffs[i+1] < 1e-10
+            diffs = [abs(norms[i + 1] - norms[i]) for i in 1:(length(norms) - 1)]
+            for i in 1:(length(diffs) - 1)
+                @test diffs[i + 1] < diffs[i] || diffs[i + 1] < 1e-10
             end
         end
 
@@ -143,13 +143,13 @@ include("../Examples/L2_grid_ideas.jl")
             end
 
             # Check convergence
-            diffs = [abs(norms[i+1] - norms[i]) for i = 1:length(norms)-1]
+            diffs = [abs(norms[i + 1] - norms[i]) for i in 1:(length(norms) - 1)]
             @test all(d -> d ≥ 0, diffs)  # All norms should be positive
             @test diffs[end] < diffs[1] || diffs[end] < 1e-8  # Should converge
         end
 
         @testset "3D convergence" begin
-            f = x -> exp(-sum(x[i]^2 for i = 1:3))
+            f = x -> exp(-sum(x[i]^2 for i in 1:3))
             norms = Float64[]
 
             for n in [5, 10, 15]  # Smaller grids for 3D
@@ -268,13 +268,13 @@ include("../Examples/L2_grid_ideas.jl")
 
         @testset "Higher dimensions (up to 8)" begin
             # Test 6D
-            f_6d = x -> exp(-sum(x[i]^2 for i = 1:6))
+            f_6d = x -> exp(-sum(x[i]^2 for i in 1:6))
             l2_norm_6d = compute_L2_norm_tensor(f_6d, [3, 3, 3, 3, 3, 3], :chebyshev)
             @test l2_norm_6d > 0
             @test isfinite(l2_norm_6d)
 
             # Test 8D with very few points
-            f_8d = x -> exp(-sum(x[i]^2 for i = 1:8))
+            f_8d = x -> exp(-sum(x[i]^2 for i in 1:8))
             l2_norm_8d = compute_L2_norm_tensor(f_8d, [2, 2, 2, 2, 2, 2, 2, 2], :chebyshev)
             @test l2_norm_8d > 0
             @test isfinite(l2_norm_8d)

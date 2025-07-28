@@ -1,0 +1,44 @@
+{
+  "name": "globtim-docs",
+  "version": "1.0.0",
+  "description": "Documentation build tools for Globtim.jl",
+  "private": true,
+  "scripts": {
+    "build": "npm run optimize",
+    "optimize": "npm run optimize:js && npm run optimize:css",
+    "optimize:js": "terser docs/build/assets/documenter.js -o docs/build/assets/documenter.min.js",
+    "optimize:css": "cleancss -o docs/build/assets/documenter.min.css docs/build/assets/documenter.css",
+    "lint": "eslint docs/build/assets/*.js",
+    "format:md": "prettier --write 'docs/src/**/*.md'",
+    "visualize": "node scripts/generate-interactive-plots.js",
+    "postbuild": "npm run optimize",
+    "serve": "http-server docs/build -p 8080"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.2",
+    "eslint": "^8.57.0",
+    "http-server": "^14.1.1",
+    "prettier": "^3.2.5",
+    "terser": "^5.29.1"
+  },
+  "dependencies": {
+    "d3": "^7.8.5",
+    "plotly.js-dist": "^2.29.1",
+    "mathjax": "^3.2.2"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2021": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "proseWrap": "always"
+  }
+}

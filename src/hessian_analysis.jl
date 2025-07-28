@@ -21,7 +21,7 @@ function compute_hessians(f::Function, points::Matrix{Float64})::Vector{Matrix{F
     n_points, n_dims = size(points)
     hessians = Vector{Matrix{Float64}}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         try
             point = points[i, :]
             @debug "Computing Hessian for point $i: $point"
@@ -57,12 +57,12 @@ function classify_critical_points(
     hessians::Vector{Matrix{Float64}};
     tol_zero = 1e-8,
     tol_pos = 1e-8,
-    tol_neg = 1e-8,
+    tol_neg = 1e-8
 )::Vector{Symbol}
     n_points = length(hessians)
     classifications = Vector{Symbol}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         H = hessians[i]
 
         # Check for NaN matrices (computation failed)
@@ -118,7 +118,7 @@ function store_all_eigenvalues(hessians::Vector{Matrix{Float64}})::Vector{Vector
     n_points = length(hessians)
     all_eigenvalues = Vector{Vector{Float64}}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         H = hessians[i]
 
         if any(isnan, H)
@@ -153,13 +153,13 @@ Tuple{Vector{Float64}, Vector{Float64}}:
 """
 function extract_critical_eigenvalues(
     classifications::Vector{Symbol},
-    all_eigenvalues::Vector{Vector{Float64}},
+    all_eigenvalues::Vector{Vector{Float64}}
 )
     n_points = length(classifications)
     smallest_positive_eigenvals = Vector{Float64}(undef, n_points)
     largest_negative_eigenvals = Vector{Float64}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         eigenvals = all_eigenvalues[i]
         classification = classifications[i]
 
@@ -203,7 +203,7 @@ function compute_hessian_norms(hessians::Vector{Matrix{Float64}})::Vector{Float6
     n_points = length(hessians)
     hessian_norms = Vector{Float64}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         H = hessians[i]
 
         if any(isnan, H)
@@ -243,7 +243,7 @@ function compute_eigenvalue_stats(hessians::Vector{Matrix{Float64}})::DataFrame
     determinant = Vector{Float64}(undef, n_points)
     trace = Vector{Float64}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         H = hessians[i]
 
         if any(isnan, H)
@@ -281,7 +281,7 @@ function compute_eigenvalue_stats(hessians::Vector{Matrix{Float64}})::DataFrame
         eigenvalue_max = eigenvalue_max,
         condition_number = condition_number,
         determinant = determinant,
-        trace = trace,
+        trace = trace
     )
 end
 
@@ -300,7 +300,7 @@ Vector{Vector{Float64}}: All eigenvalues for each critical point, sorted by magn
 """
 function extract_all_eigenvalues_for_visualization(
     f::Function,
-    df::DataFrame,
+    df::DataFrame
 )::Vector{Vector{Float64}}
     n_points = nrow(df)
 
@@ -310,8 +310,8 @@ function extract_all_eigenvalues_for_visualization(
 
     # Extract point coordinates
     points = Matrix{Float64}(undef, n_points, n_dims)
-    for i = 1:n_points
-        for j = 1:n_dims
+    for i in 1:n_points
+        for j in 1:n_dims
             points[i, j] = df[i, Symbol("x$j")]
         end
     end
@@ -340,8 +340,8 @@ Vector{Tuple{Int,Int,Float64}}: (raw_index, refined_index, distance) pairs sorte
 """
 function match_raw_to_refined_points(
     df_raw::DataFrame,
-    df_refined::DataFrame,
-)::Vector{Tuple{Int,Int,Float64}}
+    df_refined::DataFrame
+)::Vector{Tuple{Int, Int, Float64}}
     # Determine dimensionality
     x_cols = [col for col in names(df_raw) if startswith(string(col), "x")]
     n_dims = length(x_cols)
@@ -353,27 +353,27 @@ function match_raw_to_refined_points(
     raw_coords = Matrix{Float64}(undef, n_raw, n_dims)
     refined_coords = Matrix{Float64}(undef, n_refined, n_dims)
 
-    for i = 1:n_raw
-        for j = 1:n_dims
+    for i in 1:n_raw
+        for j in 1:n_dims
             raw_coords[i, j] = df_raw[i, Symbol("x$j")]
         end
     end
 
-    for i = 1:n_refined
-        for j = 1:n_dims
+    for i in 1:n_refined
+        for j in 1:n_dims
             refined_coords[i, j] = df_refined[i, Symbol("x$j")]
         end
     end
 
     # Find best matches using Hungarian-style greedy matching
-    matches = Tuple{Int,Int,Float64}[]
+    matches = Tuple{Int, Int, Float64}[]
     used_refined = Set{Int}()
 
-    for i = 1:n_raw
+    for i in 1:n_raw
         best_distance = Inf
         best_refined_idx = 0
 
-        for j = 1:n_refined
+        for j in 1:n_refined
             if j in used_refined
                 continue
             end

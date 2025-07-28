@@ -71,6 +71,14 @@ See [Anisotropic Grids Guide](anisotropic_grids_guide.md) for details.
 
 See [Polynomial Sparsification](sparsification.md) for details.
 
+### Exact Polynomial Conversion
+- Convert from orthogonal bases to monomial form
+- Support for exact rational arithmetic
+- Symbolic manipulation capabilities
+- Integration with computer algebra systems
+
+See [Exact Polynomial Conversion](exact_conversion.md) for details.
+
 ## Testing
 
 Comprehensive test suite with detailed documentation:
@@ -81,6 +89,6 @@ Comprehensive test suite with detailed documentation:
 ## Contents
 
 ```@contents
-Pages = ["getting_started.md", "core_algorithm.md", "polynomial_approximation.md", "solvers.md", "critical_point_analysis.md", "anisotropic_grids_guide.md", "sparsification.md", "grid_formats.md", "test_documentation.md", "test_running_guide.md", "anisotropic_grid_tests.md", "api_reference.md", "examples.md", "visualization.md"]
+Pages = ["getting_started.md", "core_algorithm.md", "polynomial_approximation.md", "solvers.md", "critical_point_analysis.md", "anisotropic_grids_guide.md", "sparsification.md", "exact_conversion.md", "grid_formats.md", "test_documentation.md", "test_running_guide.md", "anisotropic_grid_tests.md", "api_reference.md", "examples.md", "visualization.md"]
 Depth = 2
 ```

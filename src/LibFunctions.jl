@@ -3,14 +3,14 @@
 @doc nothing struct GaussianParams
     centers::Matrix{Float64}
     variances::Vector{Float64}
-    alt_signs::Union{Vector{Float64},Nothing}
+    alt_signs::Union{Vector{Float64}, Nothing}
 
     GaussianParams(centers::Matrix{Float64}, variances::Vector{Float64}) =
         new(centers, variances, nothing)
     GaussianParams(
         centers::Matrix{Float64},
         variances::Vector{Float64},
-        alt_signs::Vector{Float64},
+        alt_signs::Vector{Float64}
     ) = new(centers, variances, alt_signs)
 end
 # ======================================================= Random noise =======================================================
@@ -76,8 +76,8 @@ end
     #   Shubert function
     #   Domain: [-10, 10]^2.
     # =======================================================
-    sum1 = sum(ii * cos((xx[1] + 1) * xx[1] + ii) for ii = 1:5)
-    sum2 = sum(ii * cos((ii + 1) * xx[2] + ii) for ii = 1:5)
+    sum1 = sum(ii * cos((xx[1] + 1) * xx[1] + ii) for ii in 1:5)
+    sum2 = sum(ii * cos((ii + 1) * xx[2] + ii) for ii in 1:5)
 
     return sum1 * sum2
 end
@@ -92,14 +92,14 @@ end
     a = [-32, -16, 0, 16, 32]
     A = zeros(2, 25)
 
-    for i = 1:5
-        for j = 1:5
-            A[1, (i-1)*5+j] = a[j]
-            A[2, (i-1)*5+j] = a[i]
+    for i in 1:5
+        for j in 1:5
+            A[1, (i - 1) * 5 + j] = a[j]
+            A[2, (i - 1) * 5 + j] = a[i]
         end
     end
 
-    for ii = 1:25
+    for ii in 1:25
         a1i = A[1, ii]
         a2i = A[2, ii]
         term1 = ii
@@ -149,16 +149,16 @@ println(params.variances)  # Prints the variances of the Gaussian functions
 function init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64)::GaussianParams
     centers = zeros(N, n)
     variances = scale .* rand(N)
-    alt_signs = [rand(Bool) ? 1.0 : -1.0 for _ = 1:N]
+    alt_signs = [rand(Bool) ? 1.0 : -1.0 for _ in 1:N]
 
     # Generate first center
     centers[1, :] = 0.8 .* rand(n)
-    for i = 1:n
+    for i in 1:n
         centers[1, i] *= rand(Bool) ? 1.0 : -1.0
     end
 
     # Generate remaining centers with separation constraint
-    for i = 2:N
+    for i in 2:N
         max_attempts = 1000
         attempts = 0
         valid_point = false
@@ -166,13 +166,13 @@ function init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64)::Gau
         while !valid_point && attempts < max_attempts
             # Generate candidate point
             candidate = 0.8 .* rand(n)
-            for j = 1:n
+            for j in 1:n
                 candidate[j] *= rand(Bool) ? 1.0 : -1.0
             end
 
             # Check separation from all previously generated points
             valid_point = true
-            for j = 1:(i-1)
+            for j in 1:(i - 1)
                 if norm(candidate - centers[j, :]) < sep
                     valid_point = false
                     break
@@ -189,7 +189,7 @@ function init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64)::Gau
         # If we couldn't find a valid point after max attempts, error out
         if !valid_point
             error(
-                "Could not generate centers with minimum separation $sep after $max_attempts attempts. Try reducing N or sep.",
+                "Could not generate centers with minimum separation $sep after $max_attempts attempts. Try reducing N or sep."
             )
         end
     end
@@ -200,7 +200,7 @@ end
 @doc nothing function rand_gaussian(
     xx::AbstractVector,
     params::GaussianParams;
-    verbose::Bool = false,
+    verbose::Bool = false
 )::Float64
     # =======================================================
     #   Not Rescaled
@@ -355,7 +355,7 @@ end
 @doc nothing function noisy_Deuflhard(
     xx::AbstractVector;
     mean::Float64 = 0.0,
-    stddev::Float64 = 5.0,
+    stddev::Float64 = 5.0
 )::Float64
     noise = rand(Distributions.Normal(mean, stddev))
     return Deuflhard(xx) + noise
@@ -441,7 +441,7 @@ end
     #   Mixture of cosine functions
     #   Domain: [-1, 1]^4.
     # =======================================================
-    return -0.1 * sum(5 * pi * cos(x[i]) for i = 1:4) - sum(x[i]^2 for i = 1:4)
+    return -0.1 * sum(5 * pi * cos(x[i]) for i in 1:4) - sum(x[i]^2 for i in 1:4)
 end
 
 @doc nothing function Deuflhard_4d(xx::AbstractVector)::Float64
@@ -469,11 +469,11 @@ end
     #   Csendes function
     #   Domain: [-1, 1]^n.
     # =======================================================
-    return sum(x[i]^6 * (2 + sin(1 / x[i])) for i = 1:dims)
+    return sum(x[i]^6 * (2 + sin(1 / x[i])) for i in 1:dims)
 end
 
 @doc nothing function alpine1(
-    xx::Union{Vector{Float64},StaticArraysCore.SVector{N,Float64}} where {N},
+    xx::Union{Vector{Float64}, StaticArraysCore.SVector{N, Float64}} where {N}
 )::Float64
     # =======================================================
     #   Not Rescaled
@@ -484,7 +484,7 @@ end
 end
 
 @doc nothing function alpine2(
-    xx::Union{Vector{Float64},StaticArraysCore.SVector{N,Float64}} where {N},
+    xx::Union{Vector{Float64}, StaticArraysCore.SVector{N, Float64}} where {N}
 )::Float64
     # =======================================================
     #   Not Rescaled
@@ -534,5 +534,5 @@ function Rastringin(x::AbstractVector)
     #   Domain: [-5.12, 5.12]^ndim.
     # =======================================================
     ndim = length(x)
-    return sum(x[i]^2 - 10 * cos(2 * pi * x[i]) for i = 1:ndim)
+    return sum(x[i]^2 - 10 * cos(2 * pi * x[i]) for i in 1:ndim)
 end

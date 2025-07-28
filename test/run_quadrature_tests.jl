@@ -38,19 +38,19 @@ if !impl_exists
     println("\nExpected implementation location: src/quadrature_l2_norm.jl")
     println("\nThe implementation should export:")
     println(
-        "  - compute_l2_norm_quadrature(f::Function, n_points::Vector{Int}, basis::Symbol)",
+        "  - compute_l2_norm_quadrature(f::Function, n_points::Vector{Int}, basis::Symbol)"
     )
 end
 
 # Track test results
-test_results = Dict{String,Bool}()
+test_results = Dict{String, Bool}()
 
 # Define test phases (will be updated with actual results)
 phase1_tests = [
     ("1.1 Polynomial Exactness (1D)", false),
     ("1.2 Basic Multi-dimensional (2D)", false),
     ("1.3 Single Basis Type (Chebyshev)", false),
-    ("1.4 Basic Convergence", false),
+    ("1.4 Basic Convergence", false)
 ]
 
 phase2_tests =
@@ -79,7 +79,7 @@ if impl_exists
             ("1.1 Polynomial Exactness (1D)", true),
             ("1.2 Basic Multi-dimensional (2D)", true),
             ("1.3 Single Basis Type (Chebyshev)", true),
-            ("1.4 Basic Convergence", true),
+            ("1.4 Basic Convergence", true)
         ]
 
         phase2_tests =
@@ -109,7 +109,7 @@ else
     println("1. Fix any failing tests in Phase 1")
     println("2. Once Phase 1 passes, move to Phase 2")
     println(
-        "3. Run specific test sets with: julia --project test/test_quadrature_l2_phase1_2.jl",
+        "3. Run specific test sets with: julia --project test/test_quadrature_l2_phase1_2.jl"
     )
 end
 

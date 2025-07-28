@@ -62,11 +62,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
@@ -89,7 +89,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     log_L2_norm,
-    add_noise_in_time_series,
+    add_noise_in_time_series
 )
 
 n = 2
@@ -118,11 +118,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
@@ -145,7 +145,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     log_L2_norm,
-    add_noise_in_time_series,
+    add_noise_in_time_series
 )
 
 n = 2
@@ -174,11 +174,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
@@ -201,7 +201,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     log_L2_norm,
-    add_noise_in_time_series,
+    add_noise_in_time_series
 )
 
 n = 2
@@ -230,11 +230,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
@@ -257,7 +257,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     log_L2_norm,
-    add_noise_in_time_series,
+    add_noise_in_time_series
 )
 
 n = 2
@@ -286,11 +286,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
@@ -313,7 +313,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     log_L2_norm,
-    add_noise_in_time_series,
+    add_noise_in_time_series
 )
 
 n = 2
@@ -342,11 +342,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 
@@ -369,7 +369,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     log_L2_norm,
-    add_noise_in_time_series,
+    add_noise_in_time_series
 )
 
 n = 2
@@ -398,11 +398,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 

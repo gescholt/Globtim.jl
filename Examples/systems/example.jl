@@ -30,7 +30,7 @@ plot_parameter_result(
     outputs,
     p_true,
     p_test,
-    plot_title = "Lotka-Volterra Model Comparison",
+    plot_title = "Lotka-Volterra Model Comparison"
 )
 
 

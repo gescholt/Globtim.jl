@@ -41,7 +41,7 @@ using LinearAlgebra
     @testset "L2 tolerance checking" begin
         @polyvar x
         # Create polynomial where high-order terms have more L2 contribution
-        poly = sum((i + 1) * 0.1^i * x^i for i = 0:5)
+        poly = sum((i + 1) * 0.1^i * x^i for i in 0:5)
         domain = BoxDomain(1, 1.0)
 
         # Set threshold high enough to remove terms with significant L2 contribution
@@ -51,7 +51,7 @@ using LinearAlgebra
                 0.8,
                 mode = :relative,
                 domain = domain,
-                l2_tolerance = 0.01,
+                l2_tolerance = 0.01
             )
         end
 
@@ -74,7 +74,7 @@ using LinearAlgebra
 
         # Check sorting (descending by contribution)
         for i in eachindex(contributions)[2:end]
-            @test contributions[i-1].l2_contribution >= contributions[i].l2_contribution
+            @test contributions[i - 1].l2_contribution >= contributions[i].l2_contribution
         end
     end
 
@@ -98,7 +98,7 @@ using LinearAlgebra
 
     @testset "Truncation impact analysis" begin
         @polyvar x
-        poly = sum((0.5)^i * x^i for i = 0:8)
+        poly = sum((0.5)^i * x^i for i in 0:8)
         domain = BoxDomain(1, 1.0)
 
         thresholds = [1e-1, 1e-2, 1e-3]
@@ -108,8 +108,8 @@ using LinearAlgebra
 
         # Check monotonicity
         for i in eachindex(results)[2:end]
-            @test results[i].remaining_terms >= results[i-1].remaining_terms
-            @test results[i].l2_ratio >= results[i-1].l2_ratio
+            @test results[i].remaining_terms >= results[i - 1].remaining_terms
+            @test results[i].l2_ratio >= results[i - 1].l2_ratio
         end
     end
 

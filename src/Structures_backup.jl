@@ -21,12 +21,12 @@ A structure to represent the polynomial approximation and related data.
 # Description
 The `ApproxPoly` struct is used to store the results of a polynomial approximation, including the coefficients of the polynomial, the norm of the approximation, the number of grid points, the scaling factor, the grid of points, and the values of the function at the grid points. It also stores information about the basis used for the polynomial approximation.
 """
-struct ApproxPoly{T<:Number}
+struct ApproxPoly{T <: Number}
     coeffs::Vector{T}
     degree::Int
     nrm::Float64
     N::Int
-    scale_factor::Union{Float64,Vector{Float64}}
+    scale_factor::Union{Float64, Vector{Float64}}
     grid::Matrix{Float64}
     z::Vector{Float64}
     basis::Symbol
@@ -42,8 +42,8 @@ struct ApproxPoly{T<:Number}
         N::Int,
         scale_factor::Float64,
         grid::Matrix{Float64},
-        z::Vector{Float64},
-    ) where {T<:Number}
+        z::Vector{Float64}
+    ) where {T <: Number}
         new(
             coeffs,
             degree,
@@ -55,7 +55,7 @@ struct ApproxPoly{T<:Number}
             :chebyshev,
             RationalPrecision,
             true,
-            false,
+            false
         )
     end
 
@@ -67,8 +67,8 @@ struct ApproxPoly{T<:Number}
         N::Int,
         scale_factor::Vector{Float64},
         grid::Matrix{Float64},
-        z::Vector{Float64},
-    ) where {T<:Number}
+        z::Vector{Float64}
+    ) where {T <: Number}
         new(
             coeffs,
             degree,
@@ -80,7 +80,7 @@ struct ApproxPoly{T<:Number}
             :chebyshev,
             RationalPrecision,
             true,
-            false,
+            false
         )
     end
 
@@ -96,8 +96,8 @@ struct ApproxPoly{T<:Number}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool,
-    ) where {T<:Number}
+        power_of_two_denom::Bool
+    ) where {T <: Number}
         new(
             coeffs,
             degree,
@@ -109,7 +109,7 @@ struct ApproxPoly{T<:Number}
             basis,
             precision,
             normalized,
-            power_of_two_denom,
+            power_of_two_denom
         )
     end
 
@@ -125,8 +125,8 @@ struct ApproxPoly{T<:Number}
         basis::Symbol,
         precision::PrecisionType,
         normalized::Bool,
-        power_of_two_denom::Bool,
-    ) where {T<:Number}
+        power_of_two_denom::Bool
+    ) where {T <: Number}
         new(
             coeffs,
             degree,
@@ -138,7 +138,7 @@ struct ApproxPoly{T<:Number}
             basis,
             precision,
             normalized,
-            power_of_two_denom,
+            power_of_two_denom
         )
     end
 
@@ -148,14 +148,14 @@ struct ApproxPoly{T<:Number}
         degree::Int,
         nrm::Float64,
         N::Int,
-        scale_factor::Union{Float64,Vector{Float64}},
+        scale_factor::Union{Float64, Vector{Float64}},
         grid::Matrix{Float64},
         z::Vector{Float64};
         basis::Symbol = :chebyshev,
         precision::PrecisionType = RationalPrecision,
         normalized::Bool = true,
-        power_of_two_denom::Bool = false,
-    ) where {T<:Number}
+        power_of_two_denom::Bool = false
+    ) where {T <: Number}
         new(
             sol.u,
             degree,
@@ -167,7 +167,7 @@ struct ApproxPoly{T<:Number}
             basis,
             precision,
             normalized,
-            power_of_two_denom,
+            power_of_two_denom
         )
     end
 end
@@ -198,28 +198,28 @@ Fields:
 struct test_input
     dim::Int
     center::Vector{Float64}
-    GN::Union{Int,Nothing}
-    prec::Union{Tuple{Float64,Float64},Nothing}
-    tolerance::Union{Float64,Nothing}
-    noise::Union{Tuple{Float64,Float64},Nothing}
-    sample_range::Union{Float64,Vector{Float64},Nothing}
-    reduce_samples::Union{Float64,Nothing}
-    degree_max::Union{Int,Nothing}
+    GN::Union{Int, Nothing}
+    prec::Union{Tuple{Float64, Float64}, Nothing}
+    tolerance::Union{Float64, Nothing}
+    noise::Union{Tuple{Float64, Float64}, Nothing}
+    sample_range::Union{Float64, Vector{Float64}, Nothing}
+    reduce_samples::Union{Float64, Nothing}
+    degree_max::Union{Int, Nothing}
     objective::Function
 
     function test_input(
         f::Function;
         dim::Int = 2,
         center::AbstractVector{<:Real} = fill(0.0, dim),
-        GN::Union{Int,Nothing} = nothing,
-        alpha::Union{Real,Nothing} = 0.1,
-        delta::Union{Real,Nothing} = 0.5,
-        tolerance::Union{Real,Nothing} = 2e-3,
-        sample_range::Union{Real,AbstractVector{<:Real},Nothing} = 1.0,
-        reduce_samples::Union{Real,Nothing} = 1.0,
+        GN::Union{Int, Nothing} = nothing,
+        alpha::Union{Real, Nothing} = 0.1,
+        delta::Union{Real, Nothing} = 0.5,
+        tolerance::Union{Real, Nothing} = 2e-3,
+        sample_range::Union{Real, AbstractVector{<:Real}, Nothing} = 1.0,
+        reduce_samples::Union{Real, Nothing} = 1.0,
         degree_max::Int = 6,
-        model::Union{Nothing,Any} = nothing,
-        outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
+        model::Union{Nothing, Any} = nothing,
+        outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
     )
         # Type conversions
         center_vec = Vector{Float64}(float.(center))
@@ -278,7 +278,7 @@ struct test_input
             sample_range_converted,
             reduce_samples_float,
             degree_max,
-            objective,
+            objective
         )
     end
 end
@@ -307,12 +307,12 @@ function create_test_input(
     center::AbstractVector{Float64} = fill(0.0, n),
     tolerance::Float64 = 2e-3,
     alpha::Float64 = 0.1,
-    delta::Union{Real,Nothing} = nothing,
-    sample_range::Union{Float64,AbstractVector{<:Real}} = 1.0,
-    reduce_samples::Union{Real,Nothing} = nothing,
+    delta::Union{Real, Nothing} = nothing,
+    sample_range::Union{Float64, AbstractVector{<:Real}} = 1.0,
+    reduce_samples::Union{Real, Nothing} = nothing,
     degree_max::Int = 6,
-    model::Union{Nothing,Any} = nothing,
-    outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
+    model::Union{Nothing, Any} = nothing,
+    outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
 )::test_input
     return test_input(
         f;
@@ -325,6 +325,6 @@ function create_test_input(
         reduce_samples = reduce_samples,
         degree_max = degree_max,
         model = model,
-        outputs = outputs,
+        outputs = outputs
     )
 end

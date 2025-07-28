@@ -43,21 +43,25 @@ No normalization of volumes is performed, so the sum of volumes might slightly d
 For large sample grids, the function may be slow due to the nested product loop over grid points. 
 """
 
-function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N}
+function discrete_l2_norm_riemann(f, grid::Array{SVector{N, Float64}, N}) where {N}
     # Get the actual grid dimensions (can be anisotropic)
     grid_dims = size(grid)
 
     # Create vectors of the unique coordinates in each dimension
-    coords = [sort(unique([p[i] for p in vec(grid)])) for i = 1:N]
+    coords = [sort(unique([p[i] for p in vec(grid)])) for i in 1:N]
 
     # Compute cell boundaries as midpoints between adjacent points
     # Add domain boundaries [-1,1] as endpoints
     cell_bounds = Vector{Vector{Float64}}()
-    for d = 1:N
+    for d in 1:N
         n_points = length(coords[d])
         if n_points > 1
             bounds =
-                vcat(-1.0, [(coords[d][i] + coords[d][i+1]) / 2 for i = 1:n_points-1], 1.0)
+                vcat(
+                    -1.0,
+                    [(coords[d][i] + coords[d][i + 1]) / 2 for i in 1:(n_points - 1)],
+                    1.0
+                )
         else
             bounds = [-1.0, 1.0]
         end
@@ -66,8 +70,8 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N
 
     # Compute cell volumes
     cell_volumes = [
-        SVector{N,Float64}(
-            ntuple(d -> cell_bounds[d][idx[d]+1] - cell_bounds[d][idx[d]], N),
+        SVector{N, Float64}(
+            ntuple(d -> cell_bounds[d][idx[d] + 1] - cell_bounds[d][idx[d]], N)
         ) for idx in Iterators.product((1:d for d in grid_dims)...)
     ]
 
@@ -100,9 +104,9 @@ function simple_lambda_vandermonde(Lambda::NamedTuple, points::Matrix{Float64})
     V = zeros(n_points, n_terms)
 
     # Compute Chebyshev polynomial evaluations
-    for i = 1:n_points, j = 1:n_terms
+    for i in 1:n_points, j in 1:n_terms
         term_value = 1.0
-        for k = 1:n_vars
+        for k in 1:n_vars
             x = points[i, k]
             abs(x) <= 1 || error("Point $i coordinate $k = $x outside [-1,1]")
 

@@ -1,48 +1,9 @@
-using Parameters
 using GLMakie
+using StaticArrays
 # using Colors
 
-# Data Structures
-"""
-    LevelSetData{T<:AbstractFloat}
-
-Structure to hold level set computation results.
-
-# Fields
-- `points::Vector{SVector{3,T}}`: Points near the level set
-- `values::Vector{T}`: Function values at the points
-- `level::T`: The target level value
-"""
-struct LevelSetData{T<:AbstractFloat}
-    points::Vector{SVector{3,T}}
-    values::Vector{T}
-    level::T
-
-    # Inner constructor for validation
-    function LevelSetData{T}(
-        points::Vector{SVector{3,T}},
-        values::Vector{T},
-        level::T,
-    ) where {T<:AbstractFloat}
-        length(points) == length(values) ||
-            throw(ArgumentError("Points and values must have same length"))
-        new{T}(points, values, level)
-    end
-end
-
-# Outer constructor for type inference
-LevelSetData(
-    points::Vector{SVector{3,T}},
-    values::Vector{T},
-    level::T,
-) where {T<:AbstractFloat} = LevelSetData{T}(points, values, level)
-
-# Parameters
-@with_kw struct VisualizationParameters{T<:AbstractFloat}
-    point_tolerance::T = 1e-1
-    point_window::T = 2e-1
-    fig_size::Tuple{Int,Int} = (1000, 800)
-end
+# Note: LevelSetData and VisualizationParameters are now defined in the main Globtim module
+# This file contains only the function implementations
 
 # Core Functions
 """
@@ -56,11 +17,11 @@ end
 Prepare level set data by identifying points near the specified level.
 """
 function Globtim.prepare_level_set_data(
-    grid::Array{SVector{3,T}},
+    grid::Array{SVector{3, T}},
     values::Array{T},
     level::T;
-    tolerance::T = convert(T, 1e-2),
-) where {T<:AbstractFloat}
+    tolerance::T = convert(T, 1e-2)
+) where {T <: AbstractFloat}
     size(grid) == size(values) ||
         throw(DimensionMismatch("Grid and values must have same dimensions"))
     tolerance > zero(T) || throw(ArgumentError("Tolerance must be positive"))
@@ -81,7 +42,7 @@ end
 
 Convert LevelSetData to a format suitable for Makie plotting.
 """
-function Globtim.to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractFloat}
+function Globtim.to_makie_format(level_set::LevelSetData{T}) where {T <: AbstractFloat}
     isempty(level_set.points) &&
         return (points = Matrix{T}(undef, 3, 0), values = T[], xyz = (T[], T[], T[]))
 
@@ -89,7 +50,7 @@ function Globtim.to_makie_format(level_set::LevelSetData{T}) where {T<:AbstractF
     return (
         points = points,
         values = level_set.values,
-        xyz = (view(points, 1, :), view(points, 2, :), view(points, 3, :)),
+        xyz = (view(points, 1, :), view(points, 2, :), view(points, 3, :))
     )
 end
 
@@ -107,7 +68,7 @@ function Globtim.plot_level_set(
     formatted_data;
     fig_size = (800, 600),
     marker_size = 4,
-    title = "Level Set Visualization",
+    title = "Level Set Visualization"
 )
 
     fig = Figure(size = fig_size)
@@ -130,11 +91,11 @@ end
 """
 function Globtim.create_level_set_visualization(
     f,
-    grid::Array{SVector{3,T},3},
-    df::Union{DataFrame,Nothing},
-    z_range::Tuple{T,T},
-    params::VisualizationParameters{T} = VisualizationParameters{T}(),
-) where {T<:AbstractFloat}
+    grid::Array{SVector{3, T}, 3},
+    df::Union{DataFrame, Nothing},
+    z_range::Tuple{T, T},
+    params::VisualizationParameters{T} = VisualizationParameters{T}()
+) where {T <: AbstractFloat}
     grid_points = vec(grid)
     valid_points = filter(p -> !any(isnan, p), grid_points)
     isempty(valid_points) && throw(ArgumentError("Grid contains no valid points"))
@@ -157,7 +118,7 @@ function Globtim.create_level_set_visualization(
     level_label = Label(
         fig[3, 1],
         @lift(string("Level: ", round($(level_slider.value), digits = 3))),
-        tellwidth = false,
+        tellwidth = false
     )
 
     level_points = Observable(Point3f[])
@@ -176,7 +137,7 @@ function Globtim.create_level_set_visualization(
         color = :blue,
         markersize = 6,
         alpha = 0.7,
-        label = "Level Set",
+        label = "Level Set"
     )
 
     if !isnothing(df)
@@ -186,18 +147,18 @@ function Globtim.create_level_set_visualization(
             color = :darkorange,
             marker = :diamond,
             markersize = 30,
-            label = "Data Points",
+            label = "Data Points"
         )
     end
 
-    function update_visualization(level::T) where {T<:AbstractFloat}
+    function update_visualization(level::T) where {T <: AbstractFloat}
         try
             # Update level set points
             level_data = prepare_level_set_data(
                 grid,
                 values,
                 level,
-                tolerance = params.point_tolerance,
+                tolerance = params.point_tolerance
             )
 
             formatted_data = to_makie_format(level_data)
@@ -254,7 +215,7 @@ function Globtim.plot_polyapprox_levelset_2D(
     figure_size = (1200, 1000),
     chosen_colormap = :inferno,
     colorbar_label = "Loss Value",
-    num_levels = 30,
+    num_levels = 30
 )
     @assert size(pol.grid, 2) == 2 "Grid must be 2D for this function"
 
@@ -275,7 +236,7 @@ function Globtim.plot_polyapprox_levelset_2D(
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
     poly_func =
         p -> DynamicPolynomials.coefficients(
-            DynamicPolynomials.subs(wd_in_std_basis, x => p),
+            DynamicPolynomials.subs(wd_in_std_basis, x => p)
         )[1]
     fine_values_wd = map(poly_func, fine_grid_pullback)
 
@@ -297,7 +258,7 @@ function Globtim.plot_polyapprox_levelset_2D(
     z_limits = z_limits_f
     z_limits = (
         z_limits[1] - 0.1 * abs(z_limits[2] - z_limits[1]),
-        z_limits[2] + 0.1 * abs(z_limits[2] - z_limits[1]),
+        z_limits[2] + 0.1 * abs(z_limits[2] - z_limits[1])
     )
     @info "" z_limits
 
@@ -310,7 +271,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         fig[1, 1],
         title = "Lotka Volterra 2D, f(x) = $distance",
         xlabel = xlabel,
-        ylabel = ylabel,
+        ylabel = ylabel
     )
 
     cf = contourf!(
@@ -319,7 +280,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         map(last, fine_grid),
         fine_values_f,
         colormap = chosen_colormap,
-        levels = levels,
+        levels = levels
     )
     pt = scatter!(
         ax,
@@ -327,7 +288,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         p_true[2],
         markersize = 10,
         color = :green,
-        marker = :diamond,
+        marker = :diamond
     )
     # pt = arc!(
     #     ax,
@@ -344,7 +305,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         fig[1, 2],
         title = "w_d(x), d = $(pol.degree)",
         xlabel = xlabel,
-        ylabel = ylabel,
+        ylabel = ylabel
     )
 
     cf = contourf!(
@@ -353,7 +314,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         map(last, fine_grid),
         fine_values_wd,
         colormap = chosen_colormap,
-        levels = levels,
+        levels = levels
     )
     cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
     rct = lines!(
@@ -363,18 +324,18 @@ function Globtim.plot_polyapprox_levelset_2D(
             TR.center[1] - TR.sample_range,
             TR.center[1] + TR.sample_range,
             TR.center[1] + TR.sample_range,
-            TR.center[1] - TR.sample_range,
+            TR.center[1] - TR.sample_range
         ],
         [
             TR.center[2] - TR.sample_range,
             TR.center[2] + TR.sample_range,
             TR.center[2] + TR.sample_range,
             TR.center[2] - TR.sample_range,
-            TR.center[2] - TR.sample_range,
+            TR.center[2] - TR.sample_range
         ],
         color = :black,
         linewidth = 3,
-        linestyle = :dash,
+        linestyle = :dash
     )
 
     Colorbar(fig[1, 3], cf, label = "")
@@ -383,7 +344,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         fig[2, 1],
         title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))",
         xlabel = xlabel,
-        ylabel = ylabel,
+        ylabel = ylabel
     )
 
     @info "" levels_f_wd
@@ -393,7 +354,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         map(last, fine_grid),
         fine_values_f_minus_wd,
         # colormap = chosen_colormap, 
-        levels = levels_f_wd,
+        levels = levels_f_wd
     )
 
     sp = scatter!(
@@ -403,7 +364,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         markersize = 2,
         color = :black,
         marker = :circle,
-        alpha = 0.2,
+        alpha = 0.2
     )
 
     rct = lines!(
@@ -413,18 +374,18 @@ function Globtim.plot_polyapprox_levelset_2D(
             TR.center[1] - TR.sample_range,
             TR.center[1] + TR.sample_range,
             TR.center[1] + TR.sample_range,
-            TR.center[1] - TR.sample_range,
+            TR.center[1] - TR.sample_range
         ],
         [
             TR.center[2] - TR.sample_range,
             TR.center[2] + TR.sample_range,
             TR.center[2] + TR.sample_range,
             TR.center[2] - TR.sample_range,
-            TR.center[2] - TR.sample_range,
+            TR.center[2] - TR.sample_range
         ],
         color = :black,
         linewidth = 3,
-        linestyle = :dash,
+        linestyle = :dash
     )
 
     Colorbar(
@@ -437,11 +398,11 @@ function Globtim.plot_polyapprox_levelset_2D(
                 string.(
                     round.(
                         Int,
-                        levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length = 9))],
+                        levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length = 9))]
                     )
                 )
-            ),
-        ),
+            )
+        )
     )
 
     # (fine grained: $(round(sqrt(sum((fine_values_f .- fine_values_wd).^2)), digits=3)))
@@ -449,7 +410,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         fig[2, 2],
         title = "|f(x) - w_d(x)|, L2 norm = $(round(pol.nrm, digits=3))",
         xlabel = xlabel,
-        ylabel = ylabel,
+        ylabel = ylabel
     )
 
     rare_levels = levels_f_wd[floor.(Int, range(1, length(levels_f_wd), length = 9))]
@@ -459,7 +420,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         map(last, fine_grid),
         fine_values_f_minus_wd,
         # colormap = chosen_colormap, 
-        levels = rare_levels,
+        levels = rare_levels
     )
 
     Legend(
@@ -469,7 +430,7 @@ function Globtim.plot_polyapprox_levelset_2D(
         orientation = :horizontal,  # Make legend horizontal for better space usage
         tellwidth = false,         # Don't have legend width affect layout
         tellheight = true,
-        patchsize = (30, 20),
+        patchsize = (30, 20)
     )
 
     fig
@@ -479,10 +440,10 @@ function Globtim.plot_polyapprox_levelset(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
-    figure_size::Tuple{Int,Int} = (1000, 600),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    figure_size::Tuple{Int, Int} = (1000, 600),
+    z_limits::Union{Nothing, Tuple{Float64, Float64}} = nothing,
     chebyshev_levels::Bool = false,
-    num_levels::Int = 30,
+    num_levels::Int = 30
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -500,7 +461,7 @@ function Globtim.plot_polyapprox_levelset(
 
         # Calculate levels
         levels = if chebyshev_levels
-            k = collect(0:num_levels-1)
+            k = collect(0:(num_levels - 1))
             cheb_nodes = -cos.((2k .+ 1) .* π ./ (2 * num_levels))
             z_min, z_max = z_limits
             (z_max - z_min) ./ 2 .* cheb_nodes .+ (z_max + z_min) ./ 2
@@ -542,7 +503,7 @@ function Globtim.plot_polyapprox_levelset(
                     color = :white,
                     strokecolor = :black,
                     strokewidth = 1,
-                    label = "Far",
+                    label = "Far"
                 )
                 push!(legend_entries, "Far")
             end
@@ -558,7 +519,7 @@ function Globtim.plot_polyapprox_levelset(
                     color = :green,
                     strokecolor = :black,
                     strokewidth = 1,
-                    label = "Near",
+                    label = "Near"
                 )
                 push!(legend_entries, "Near")
             end
@@ -570,7 +531,7 @@ function Globtim.plot_polyapprox_levelset(
                 df.x2,
                 markersize = 2,
                 color = :orange,
-                label = "All points",
+                label = "All points"
             )
             push!(legend_entries, "All points")
         end
@@ -584,7 +545,7 @@ function Globtim.plot_polyapprox_levelset(
                 markersize = 15,
                 marker = :diamond,
                 color = :blue,
-                label = "All found critical points",
+                label = "All found critical points"
             )
         end
 
@@ -607,7 +568,7 @@ function Globtim.plot_polyapprox_rotate(
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
-    df_min::DataFrame,
+    df_min::DataFrame
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -619,7 +580,7 @@ function Globtim.plot_polyapprox_rotate(
             title = "",
             xlabel = "X-axis",
             ylabel = "Y-axis",
-            zlabel = "Z-axis",
+            zlabel = "Z-axis"
         )
 
         # Create a regular grid for surface plotting
@@ -644,7 +605,7 @@ function Globtim.plot_polyapprox_rotate(
             # colormap=:viridis,
             colormap = :inferno,
             transparency = true,
-            alpha = 0.8,
+            alpha = 0.8
         )
 
         if :close in propertynames(df)
@@ -657,7 +618,7 @@ function Globtim.plot_polyapprox_rotate(
                     df.z[not_close_idx],
                     markersize = 5,
                     color = :orange,
-                    label = "Far",
+                    label = "Far"
                 )
             end
 
@@ -670,7 +631,7 @@ function Globtim.plot_polyapprox_rotate(
                     df.z[close_idx],
                     markersize = 10,
                     color = :green,
-                    label = "Near",
+                    label = "Near"
                 )
             end
         else
@@ -681,7 +642,7 @@ function Globtim.plot_polyapprox_rotate(
                 df.z,
                 markersize = 2,
                 color = :orange,
-                label = "All points",
+                label = "All points"
             )
         end
 
@@ -696,7 +657,7 @@ function Globtim.plot_polyapprox_rotate(
                 markersize = 10,
                 marker = :diamond,
                 color = :red,
-                label = "Uncaptured minima",
+                label = "Uncaptured minima"
             )
         end
 
@@ -709,7 +670,7 @@ function Globtim.plot_polyapprox_rotate(
             "Critical Points",
             orientation = :horizontal,  # Make legend horizontal for better space usage
             tellwidth = false,         # Don't have legend width affect layout
-            tellheight = true,
+            tellheight = true
         )
 
         # record(fig, "trefethern_rotation_d30.mp4", 1:240; framerate=30) do frame
@@ -727,7 +688,7 @@ function Globtim.plot_polyapprox_animate(
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int} = (1000, 600),
+    figure_size::Tuple{Int, Int} = (1000, 600)
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -739,7 +700,7 @@ function Globtim.plot_polyapprox_animate(
             title = "",
             xlabel = "X-axis",
             ylabel = "Y-axis",
-            zlabel = "Z-axis",
+            zlabel = "Z-axis"
         )
 
         # Surface plotting (like in plot_polyapprox_rotate)
@@ -762,7 +723,7 @@ function Globtim.plot_polyapprox_animate(
             Z,
             colormap = :viridis,
             transparency = true,
-            alpha = 0.8,
+            alpha = 0.8
         )
 
         # Point plotting (like in your other functions)
@@ -776,7 +737,7 @@ function Globtim.plot_polyapprox_animate(
                     df.z[not_close_idx],
                     markersize = 5,
                     color = :orange,
-                    label = "Far",
+                    label = "Far"
                 )
             end
 
@@ -789,7 +750,7 @@ function Globtim.plot_polyapprox_animate(
                     df.z[close_idx],
                     markersize = 10,
                     color = :green,
-                    label = "Near",
+                    label = "Near"
                 )
             end
         end
@@ -815,7 +776,7 @@ function Globtim.plot_polyapprox_flyover(
     TR::test_input,
     df_lege::DataFrame,  # renamed to df_lege to be explicit
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int} = (1000, 600),
+    figure_size::Tuple{Int, Int} = (1000, 600),
     surface_alpha::Float64 = 0.8,
     frames_per_point::Int = 60,
     camera_radius::Float64 = 2.0,
@@ -823,7 +784,7 @@ function Globtim.plot_polyapprox_flyover(
     surface_point_size::Int = 2,
     close_point_size::Int = 10,
     far_point_size::Int = 5,
-    min_point_size::Int = 10,
+    min_point_size::Int = 10
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -837,7 +798,7 @@ function Globtim.plot_polyapprox_flyover(
             ylabel = "Y-axis",
             zlabel = "Z-axis",
             aspect = (1, 1, 1),
-            viewmode = :fit,
+            viewmode = :fit
         )
 
         # Surface plotting
@@ -860,7 +821,7 @@ function Globtim.plot_polyapprox_flyover(
             Z,
             colormap = :viridis,
             transparency = true,
-            alpha = surface_alpha,
+            alpha = surface_alpha
         )
 
         # Points plotting
@@ -876,7 +837,7 @@ function Globtim.plot_polyapprox_flyover(
                 df_lege.z[far_idx],
                 markersize = far_point_size,
                 color = :orange,
-                label = "Far",
+                label = "Far"
             )
         end
 
@@ -895,7 +856,7 @@ function Globtim.plot_polyapprox_flyover(
                 df_lege.z[close_idx],
                 markersize = close_point_size,
                 color = :green,
-                label = "Near",
+                label = "Near"
             )
         end
 
@@ -910,7 +871,7 @@ function Globtim.plot_polyapprox_flyover(
                 markersize = min_point_size,
                 marker = :diamond,
                 color = :red,
-                label = "Uncaptured minima",
+                label = "Uncaptured minima"
             )
         end
 
@@ -919,7 +880,7 @@ function Globtim.plot_polyapprox_flyover(
 
         # Create animation flying over points where close == 1
         if !isempty(green_points)
-            frames = 1:frames_per_point*length(green_points)
+            frames = 1:(frames_per_point * length(green_points))
 
             record(fig, "trefethen_flyover.mp4", frames; framerate = 30) do frame
                 point_idx = (frame ÷ frames_per_point) + 1
@@ -936,12 +897,12 @@ function Globtim.plot_polyapprox_flyover(
                 xlims!(
                     ax,
                     current_point[1] - camera_radius,
-                    current_point[1] + camera_radius,
+                    current_point[1] + camera_radius
                 )
                 ylims!(
                     ax,
                     current_point[2] - camera_radius,
-                    current_point[2] + camera_radius,
+                    current_point[2] + camera_radius
                 )
                 zlims!(ax, current_point[3], current_point[3] + camera_height)
             end
@@ -958,10 +919,10 @@ function Globtim.plot_polyapprox_animate2(
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int} = (1000, 600),
+    figure_size::Tuple{Int, Int} = (1000, 600),
     filename::String = "crit_pts_animation.mp4",
     nframes::Int = 240,
-    framerate::Int = 30,
+    framerate::Int = 30
 )
     coords = pol.scale_factor * pol.grid .+ TR.center'
     z_coords = pol.z
@@ -973,7 +934,7 @@ function Globtim.plot_polyapprox_animate2(
             title = "",
             xlabel = "X-axis",
             ylabel = "Y-axis",
-            zlabel = "Z-axis",
+            zlabel = "Z-axis"
         )
 
         # Collect ALL z-values for limits
@@ -1016,7 +977,7 @@ function Globtim.plot_polyapprox_animate2(
             Z,
             colormap = :viridis,
             transparency = true,
-            alpha = 0.8,
+            alpha = 0.8
         )
 
         if :close in propertynames(df)
@@ -1029,7 +990,7 @@ function Globtim.plot_polyapprox_animate2(
                     df.z[not_close_idx],
                     markersize = 5,
                     color = :orange,
-                    label = "Far",
+                    label = "Far"
                 )
             end
 
@@ -1042,7 +1003,7 @@ function Globtim.plot_polyapprox_animate2(
                     df.z[close_idx],
                     markersize = 10,
                     color = :green,
-                    label = "Near",
+                    label = "Near"
                 )
             end
         end
@@ -1058,7 +1019,7 @@ function Globtim.plot_polyapprox_animate2(
                 markersize = 10,
                 marker = :diamond,
                 color = :red,
-                label = "Uncaptured minima",
+                label = "Uncaptured minima"
             )
         end
 
@@ -1077,13 +1038,13 @@ end
 
 function Globtim.create_level_set_animation(
     f,
-    grid::Array{SVector{3,T},3},
-    df::Union{DataFrame,Nothing},
-    z_range::Tuple{T,T},
+    grid::Array{SVector{3, T}, 3},
+    df::Union{DataFrame, Nothing},
+    z_range::Tuple{T, T},
     params::VisualizationParameters{T} = VisualizationParameters{T}(),
     fps::Int = 30,
-    duration::Int = 20,  # seconds
-) where {T<:AbstractFloat}
+    duration::Int = 20  # seconds
+) where {T <: AbstractFloat}
     grid_points = vec(grid)
     valid_points = filter(p -> !any(isnan, p), grid_points)
 
@@ -1095,7 +1056,7 @@ function Globtim.create_level_set_animation(
         title = "Level Set Visualization",
         xlabel = "x₁",
         ylabel = "x₂",
-        zlabel = "x₃",
+        zlabel = "x₃"
     )
 
     # Set up initial ranges and limits
@@ -1123,11 +1084,11 @@ function Globtim.create_level_set_animation(
             color = :darkorange,
             marker = :diamond,
             markersize = 20,
-            label = "Data Points",
+            label = "Data Points"
         )
     end
 
-    function update_visualization(level::T) where {T<:AbstractFloat}
+    function update_visualization(level::T) where {T <: AbstractFloat}
         level_data =
             prepare_level_set_data(grid, values, level, tolerance = params.point_tolerance)
 
