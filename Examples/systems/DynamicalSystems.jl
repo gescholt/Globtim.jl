@@ -299,7 +299,7 @@ function make_error_distance(
     # Generate reference solution once during function creation
     problem = ODEProblem(
         ModelingToolkit.complete(model),
-        initial_conditions,
+        ModelingToolkit.unknowns(model) .=> initial_conditions,
         time_interval,
         Dict(ModelingToolkit.parameters(model) .=> p_true),
     )

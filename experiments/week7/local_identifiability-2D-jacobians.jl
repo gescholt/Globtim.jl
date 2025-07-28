@@ -21,14 +21,14 @@ using HomotopyContinuation, ProgressLogging
 
 config = (
     n = 2,
-    d = (:one_d_for_all, 14),
+    d = (:one_d_for_all, 12),
     GN = 300,
     time_interval = T[0.0, 1.0],
     p_true = [T[0.3, 0.1], T[0.3, -0.1]],
     ic = T[0.3],
     num_points = 20,
     sample_range = 0.3,
-    distance = log_L2_norm,
+    distance = L2_norm,
     model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
     precision = RationalPrecision,
@@ -131,7 +131,22 @@ if true
         model_func = config.model_func,
     )
 
-    pts_along_valley = df_cheb[df_cheb.z .< -5, :]
+    pullback(x) = (1 / pol_cheb.scale_factor) * (x .- TR.center)
+    poly_func(poly) =
+        p -> DynamicPolynomials.coefficients(
+            DynamicPolynomials.subs(poly, x => p),
+        )[1]
+
+    # pts_along_valley = df_cheb[df_cheb.z .< -5, :]
+    pts_along_valley = df_cheb[df_cheb.z .< 1e-2, :]
+    grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
+    grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
+    grad_at_cp = map(pt -> grad_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    hess = DynamicPolynomials.differentiate(grad, x)
+    hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
+    hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
     # for pt in eachrow(pts_along_valley)
     #     jac = ForwardDiff.gradient(
     #         error_func,
