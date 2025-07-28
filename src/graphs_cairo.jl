@@ -17,13 +17,13 @@ function analyze_convergence_distances(df::DataFrame)
     n_points = nrow(df)
     min_distances = Float64[]
 
-    for i = 1:n_points
-        point_i = [df[i, Symbol("x$j")] for j = 1:dim]
+    for i in 1:n_points
+        point_i = [df[i, Symbol("x$j")] for j in 1:dim]
         min_dist = Inf
 
-        for j = 1:n_points
+        for j in 1:n_points
             if i != j
-                point_j = [df[j, Symbol("x$j")] for j = 1:dim]
+                point_j = [df[j, Symbol("x$j")] for j in 1:dim]
                 dist = norm(point_i - point_j)
                 min_dist = min(min_dist, dist)
             end
@@ -41,7 +41,7 @@ function analyze_convergence_distances(df::DataFrame)
         return (
             maximum = maximum(min_distances),
             average = mean(min_distances),
-            minimum = minimum(min_distances),
+            minimum = minimum(min_distances)
         )
     end
 end
@@ -57,12 +57,12 @@ function analyze_captured_distances(df::DataFrame, df_check::DataFrame)
     # Calculate minimum distance for each point in df to any point in df_check
     min_distances = Float64[]
 
-    for i = 1:nrow(df)
-        point = [df[i, Symbol("x$j")] for j = 1:dim]
+    for i in 1:nrow(df)
+        point = [df[i, Symbol("x$j")] for j in 1:dim]
         min_dist = Inf
 
-        for j = 1:nrow(df_check)
-            check_point = [df_check[j, Symbol("x$j")] for j = 1:dim]
+        for j in 1:nrow(df_check)
+            check_point = [df_check[j, Symbol("x$j")] for j in 1:dim]
             dist = norm(point - check_point)
             min_dist = min(min_dist, dist)
         end
@@ -77,7 +77,7 @@ function analyze_captured_distances(df::DataFrame, df_check::DataFrame)
         return (
             maximum = maximum(min_distances),
             average = mean(min_distances),
-            minimum = minimum(min_distances),
+            minimum = minimum(min_distances)
         )
     end
 end
@@ -107,7 +107,7 @@ function Globtim.plot_discrete_l2(results, start_degree::Int, end_degree::Int, s
         color = :purple,
         markersize = 8,
         linewidth = 2,
-        label = "L2 Norm",
+        label = "L2 Norm"
     )
 
     # axislegend removed per user request
@@ -125,7 +125,7 @@ function Globtim.capture_histogram(
     end_degree::Int,
     step::Int;
     tol_dist::Float64 = 0.001,
-    show_legend::Bool = false,
+    show_legend::Bool = false
 )
 
     degrees = start_degree:step:end_degree
@@ -147,7 +147,7 @@ function Globtim.capture_histogram(
         # ylabel removed per user request
         titlesize = 20,
         xlabelsize = 14,
-        ylabelsize = 14,
+        ylabelsize = 14
     )
 
     positions = collect(degrees)
@@ -157,7 +157,7 @@ function Globtim.capture_histogram(
         positions,
         total_mins,
         color = (:forestgreen, 0.8),
-        label = "Captured (tol = $(tol_dist))",
+        label = "Captured (tol = $(tol_dist))"
     )
 
     barplot!(
@@ -165,7 +165,7 @@ function Globtim.capture_histogram(
         positions,
         uncaptured_mins,
         color = (:firebrick, 0.8),
-        label = "Uncaptured",
+        label = "Uncaptured"
     )
 
     ax.xticks = (positions, string.(degrees))
@@ -186,7 +186,7 @@ function Globtim.plot_convergence_analysis(
     start_degree::Int,
     end_degree::Int,
     step::Int;
-    show_legend::Bool = true,
+    show_legend::Bool = true
 )
     degrees = start_degree:step:end_degree
     max_distances = Float64[]
@@ -204,7 +204,7 @@ function Globtim.plot_convergence_analysis(
     ax = Axis(
         fig[1, 1],
         # title="Distance to Nearest Critical Point",
-        xlabel = "Degree",
+        xlabel = "Degree"
     )
 
     scatterlines!(ax, degrees, max_distances, label = "Maximum", color = :red)
@@ -220,12 +220,12 @@ function compute_min_distances(df, df_check)
     min_distances = Float64[]
 
     # For each row in df, find distance to closest point in df_check
-    for i = 1:nrow(df)
+    for i in 1:nrow(df)
         point = Array(df[i, :])  # Convert row to array
         min_dist = Inf
 
         # Compare with each point in df_check
-        for j = 1:nrow(df_check)
+        for j in 1:nrow(df_check)
             check_point = Array(df_check[j, :])
             dist = norm(point - check_point)  # Euclidean distance
             min_dist = min(min_dist, dist)
@@ -241,16 +241,16 @@ end
 Updated visualization function to handle per-coordinate scaling factors.
 """
 function Globtim.cairo_plot_polyapprox_levelset(
-    pol::ApproxPoly{T,S},
+    pol::ApproxPoly{T, S},
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int} = (1000, 600),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    figure_size::Tuple{Int, Int} = (1000, 600),
+    z_limits::Union{Nothing, Tuple{Float64, Float64}} = nothing,
     chebyshev_levels::Bool = false,
     num_levels::Int = 30,
-    show_captured::Bool = true,  # New parameter
-) where {T<:Number,S<:Union{Float64,Vector{Float64}}}
+    show_captured::Bool = true  # New parameter
+) where {T <: Number, S <: Union{Float64, Vector{Float64}}}
     # Type-stable coordinate transformation using multiple dispatch
     coords = transform_coordinates(pol.scale_factor, pol.grid, TR.center)
 
@@ -270,7 +270,7 @@ function Globtim.cairo_plot_polyapprox_levelset(
 
         # Calculate levels
         levels = if chebyshev_levels
-            k = collect(0:num_levels-1)
+            k = collect(0:(num_levels - 1))
             cheb_nodes = -cos.((2k .+ 1) .* π ./ (2 * num_levels))
             z_min, z_max = z_limits
             (z_max - z_min) ./ 2 .* cheb_nodes .+ (z_max + z_min) ./ 2
@@ -311,7 +311,7 @@ function Globtim.cairo_plot_polyapprox_levelset(
                     color = :white,
                     strokecolor = :black,
                     strokewidth = 1,
-                    label = "Far",
+                    label = "Far"
                 )
                 push!(legend_entries, "Far")
             end
@@ -327,7 +327,7 @@ function Globtim.cairo_plot_polyapprox_levelset(
                     color = :green,
                     strokecolor = :black,
                     strokewidth = 1,
-                    label = "Near",
+                    label = "Near"
                 )
                 push!(legend_entries, "Near")
             end
@@ -339,7 +339,7 @@ function Globtim.cairo_plot_polyapprox_levelset(
                 df.x2,
                 markersize = 2,
                 color = :orange,
-                label = "All points",
+                label = "All points"
             )
             push!(legend_entries, "All points")
         end
@@ -357,7 +357,7 @@ function Globtim.cairo_plot_polyapprox_levelset(
                     markersize = 15,
                     marker = :diamond,
                     color = :red,
-                    label = "Uncaptured",
+                    label = "Uncaptured"
                 )
                 push!(legend_entries, "Uncaptured")
             end
@@ -371,7 +371,7 @@ function Globtim.cairo_plot_polyapprox_levelset(
                     markersize = 15,
                     marker = :diamond,
                     color = :blue,
-                    label = "Captured",
+                    label = "Captured"
                 )
                 push!(legend_entries, "Captured")
             end
@@ -390,14 +390,14 @@ function Globtim.plot_filtered_y_distances(
         Int,
         NamedTuple{
             (:df, :df_min, :convergence_stats, :discrete_l2),
-            Tuple{DataFrame,DataFrame,NamedTuple,Float64},
-        },
+            Tuple{DataFrame, DataFrame, NamedTuple, Float64}
+        }
     },
     start_degree::Int,
     end_degree::Int,
     step::Int = 1;
     use_optimized::Bool = true,
-    show_legend::Bool = true,
+    show_legend::Bool = true
 )
 
     degrees = start_degree:step:end_degree
@@ -415,9 +415,9 @@ function Globtim.plot_filtered_y_distances(
     for (i, row) in enumerate(eachrow(df_in_domain))  # Changed to df_in_domain
         # Select either y (optimized) or x (initial) values based on flag
         point_coords::Vector{Float64} = if use_optimized
-            [row[Symbol("y$j")] for j = 1:n_dims]
+            [row[Symbol("y$j")] for j in 1:n_dims]
         else
-            [row[Symbol("x$j")] for j = 1:n_dims]
+            [row[Symbol("x$j")] for j in 1:n_dims]
         end
 
         # Skip points with NaN coordinates
@@ -432,7 +432,7 @@ function Globtim.plot_filtered_y_distances(
 
             min_dist::Float64 = Inf
             for raw_row in eachrow(raw_points)
-                point::Vector{Float64} = [raw_row[Symbol("x$j")] for j = 1:n_dims]
+                point::Vector{Float64} = [raw_row[Symbol("x$j")] for j in 1:n_dims]
                 dist::Float64 = norm(point_coords - point)
                 min_dist = min(min_dist, dist)
             end
@@ -441,26 +441,26 @@ function Globtim.plot_filtered_y_distances(
     end
 
     # Filter out NaN values before computing statistics
-    valid_distances = [filter(!isnan, point_distances[:, i]) for i = 1:length(degrees)]
+    valid_distances = [filter(!isnan, point_distances[:, i]) for i in 1:length(degrees)]
     max_distances = [maximum(dists) for dists in valid_distances]
     min_distances = [minimum(dists) for dists in valid_distances]
     avg_distances = [sum(dists) / length(dists) for dists in valid_distances]
     overall_avg = sum(sum.(valid_distances)) / sum(length.(valid_distances))
 
     max_distances::Vector{Float64} =
-        [maximum(point_distances[:, i]) for i = 1:length(degrees)]
+        [maximum(point_distances[:, i]) for i in 1:length(degrees)]
     avg_distances::Vector{Float64} =
-        [sum(point_distances[:, i]) / n_points for i = 1:length(degrees)]
+        [sum(point_distances[:, i]) / n_points for i in 1:length(degrees)]
     min_distances::Vector{Float64} =
-        [minimum(point_distances[:, i]) for i = 1:length(degrees)]
+        [minimum(point_distances[:, i]) for i in 1:length(degrees)]
     overall_avg::Float64 = sum(avg_distances) / length(avg_distances)
 
     println("\n$(green)▶ $(reset)Distance Statistics:")
     println(
-        "   $(bold)Overall maximum distance:$(reset) $(round(maximum(max_distances), digits=6))",
+        "   $(bold)Overall maximum distance:$(reset) $(round(maximum(max_distances), digits=6))"
     )
     println(
-        "   $(bold)Overall minimum distance:$(reset) $(round(minimum(min_distances), digits=6))",
+        "   $(bold)Overall minimum distance:$(reset) $(round(minimum(min_distances), digits=6))"
     )
     println("   $(bold)Overall average distance:$(reset) $(round(overall_avg, digits=6))")
 
@@ -480,7 +480,7 @@ function Globtim.plot_filtered_y_distances(
         fig[1, 1],
         # title="Distance from Each $point_label Point to Nearest Initial Point",
         xlabel = "Degree",
-        ylabel = "",
+        ylabel = ""
     )
 
     scatterlines!(ax, degrees, max_distances, label = "Maximum", color = :red)
@@ -494,7 +494,10 @@ end
 """
 Plot the outputs of`analyze_converged_points` function. 
 """
-function Globtim.plot_distance_statistics(stats::Dict{String,Any}; show_legend::Bool = true)
+function Globtim.plot_distance_statistics(
+    stats::Dict{String, Any};
+    show_legend::Bool = true
+)
     fig = Figure(size = (600, 400))
 
     ax = Axis(fig[1, 1], xlabel = "Degree")
@@ -520,7 +523,7 @@ function Globtim.create_legend_figure(tol_dist::Float64)
         [1],
         [1],
         color = (:forestgreen, 0.8),
-        label = "Captured (tol = $(tol_dist))",
+        label = "Captured (tol = $(tol_dist))"
     )
     barplot!(ax, [1], [1], color = (:firebrick, 0.8), label = "Uncaptured")
 
@@ -530,7 +533,7 @@ function Globtim.create_legend_figure(tol_dist::Float64)
         orientation = :horizontal,
         framevisible = true,
         backgroundcolor = (:white, 0.9),
-        padding = (10, 10, 10, 10),
+        padding = (10, 10, 10, 10)
     )
 
     return fig
@@ -542,7 +545,7 @@ function Globtim.plot_convergence_captured(
     start_degree::Int,
     end_degree::Int,
     step::Int;
-    show_legend::Bool = true,
+    show_legend::Bool = true
 )
     degrees = start_degree:step:end_degree
     max_distances = Float64[]
@@ -563,7 +566,7 @@ function Globtim.plot_convergence_captured(
         fig[1, 1],
         # title="",
         xlabel = "Degree",
-        ylabel = "",
+        ylabel = ""
     )
 
     scatterlines!(ax, degrees, max_distances, label = "Maximum", color = :red)
@@ -587,16 +590,16 @@ function Globtim.histogram_enhanced(
     step::Int;
     tol_bfgs::Float64 = 0.001,      # Tolerance for BFGS convergence to theoretical points
     tol_raw::Float64 = 0.1,         # Tolerance for raw points to theoretical minimizers
-    show_legend::Bool = true,
+    show_legend::Bool = true
 )
     degrees = start_degree:step:end_degree
 
     # Extract theoretical minimizers (type_4d == "min")
     theoretical_mins = if "type_4d" in names(df_theoretical)
-        df_theoretical[df_theoretical.type_4d.=="min", :]
+        df_theoretical[df_theoretical.type_4d .== "min", :]
     else
         # If no type column, assume points with very small function values are minima
-        df_theoretical[df_theoretical.function_value.<1e-10, :]
+        df_theoretical[df_theoretical.function_value .< 1e-10, :]
     end
 
     # Arrays to store counts for each degree
@@ -610,12 +613,12 @@ function Globtim.histogram_enhanced(
 
         # Count BFGS points that converged to theoretical minimizers
         bfgs_count = 0
-        for i = 1:nrow(df_bfgs)
-            bfgs_pt = [df_bfgs[i, Symbol("x$j")] for j = 1:4]
+        for i in 1:nrow(df_bfgs)
+            bfgs_pt = [df_bfgs[i, Symbol("x$j")] for j in 1:4]
 
             # Check distance to each theoretical minimizer
-            for j = 1:nrow(theoretical_mins)
-                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k = 1:4]
+            for j in 1:nrow(theoretical_mins)
+                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k in 1:4]
                 if norm(bfgs_pt - theo_pt) < tol_bfgs
                     bfgs_count += 1
                     break  # Count each BFGS point only once
@@ -626,12 +629,12 @@ function Globtim.histogram_enhanced(
 
         # Count raw points close to theoretical minimizers
         raw_count = 0
-        for i = 1:nrow(df_raw)
-            raw_pt = [df_raw[i, Symbol("x$j")] for j = 1:4]
+        for i in 1:nrow(df_raw)
+            raw_pt = [df_raw[i, Symbol("x$j")] for j in 1:4]
 
             # Check distance to each theoretical minimizer
-            for j = 1:nrow(theoretical_mins)
-                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k = 1:4]
+            for j in 1:nrow(theoretical_mins)
+                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k in 1:4]
                 if norm(raw_pt - theo_pt) < tol_raw
                     raw_count += 1
                     break  # Count each raw point only once
@@ -650,7 +653,7 @@ function Globtim.histogram_enhanced(
         # ylabel removed per user request
         titlesize = 20,
         xlabelsize = 14,
-        ylabelsize = 14,
+        ylabelsize = 14
     )
 
     positions = collect(degrees)
@@ -662,7 +665,7 @@ function Globtim.histogram_enhanced(
         positions,
         bfgs_to_mins,
         color = (:steelblue, 0.8),
-        label = "BFGS → Minimizers (tol = $(tol_bfgs))",
+        label = "BFGS → Minimizers (tol = $(tol_bfgs))"
     )
 
     # Top layer: Raw points close to minimizers (green portion)
@@ -672,7 +675,7 @@ function Globtim.histogram_enhanced(
         positions,
         raw_close_to_mins,
         color = (:forestgreen, 0.8),
-        label = "Raw → Minimizers (tol = $(tol_raw))",
+        label = "Raw → Minimizers (tol = $(tol_raw))"
     )
 
     ax.xticks = (positions, string.(degrees))
@@ -686,7 +689,7 @@ function Globtim.histogram_enhanced(
         maximum(vcat(bfgs_to_mins, raw_close_to_mins)) * 1.1,
         text = "$(nrow(theoretical_mins)) theoretical minimizers",
         align = (:center, :bottom),
-        fontsize = 14,
+        fontsize = 14
     )
 
     # Legend removed - no axis legend per user request
@@ -705,15 +708,15 @@ function Globtim.histogram_minimizers_only(
     end_degree::Int,
     step::Int;
     tol_theoretical::Float64 = 0.001,  # Tolerance for matching theoretical minimizers
-    show_legend::Bool = true,
+    show_legend::Bool = true
 )
     degrees = start_degree:step:end_degree
 
     # Extract theoretical minimizers (only "min" points, not saddle points)
     theoretical_mins = if "type_4d" in names(df_theoretical)
-        df_theoretical[df_theoretical.type_4d.=="min", :]
+        df_theoretical[df_theoretical.type_4d .== "min", :]
     else
-        df_theoretical[df_theoretical.function_value.<1e-10, :]
+        df_theoretical[df_theoretical.function_value .< 1e-10, :]
     end
 
     # Arrays to store counts
@@ -729,12 +732,12 @@ function Globtim.histogram_minimizers_only(
         raw_found = Set{Int}()   # Indices of theoretical minimizers found by raw points
 
         # Check BFGS points against theoretical minimizers
-        for i = 1:nrow(df_bfgs)
-            bfgs_pt = [df_bfgs[i, Symbol("x$j")] for j = 1:4]
+        for i in 1:nrow(df_bfgs)
+            bfgs_pt = [df_bfgs[i, Symbol("x$j")] for j in 1:4]
 
             # Find closest theoretical minimizer
-            for j = 1:nrow(theoretical_mins)
-                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k = 1:4]
+            for j in 1:nrow(theoretical_mins)
+                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k in 1:4]
                 if norm(bfgs_pt - theo_pt) < tol_theoretical
                     push!(bfgs_found, j)  # Mark this theoretical minimizer as found
                     break  # Move to next BFGS point
@@ -743,12 +746,12 @@ function Globtim.histogram_minimizers_only(
         end
 
         # Check raw points against theoretical minimizers
-        for i = 1:nrow(df_raw)
-            raw_pt = [df_raw[i, Symbol("x$j")] for j = 1:4]
+        for i in 1:nrow(df_raw)
+            raw_pt = [df_raw[i, Symbol("x$j")] for j in 1:4]
 
             # Find closest theoretical minimizer
-            for j = 1:nrow(theoretical_mins)
-                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k = 1:4]
+            for j in 1:nrow(theoretical_mins)
+                theo_pt = [theoretical_mins[j, Symbol("x$k")] for k in 1:4]
                 if norm(raw_pt - theo_pt) < 0.1  # Using larger tolerance for raw points
                     push!(raw_found, j)  # Mark this theoretical minimizer as found
                     break  # Move to next raw point
@@ -770,7 +773,7 @@ function Globtim.histogram_minimizers_only(
         # ylabel removed per user request
         titlesize = 20,
         xlabelsize = 14,
-        ylabelsize = 14,
+        ylabelsize = 14
     )
 
     positions = collect(degrees)
@@ -782,7 +785,7 @@ function Globtim.histogram_minimizers_only(
         positions,
         bfgs_minima_count,
         color = (:steelblue, 0.8),
-        label = "BFGS → Theoretical Min (tol=$(tol_theoretical))",
+        label = "BFGS → Theoretical Min (tol=$(tol_theoretical))"
     )
 
     # Top layer: Raw points close to theoretical minimizers
@@ -791,7 +794,7 @@ function Globtim.histogram_minimizers_only(
         positions,
         raw_minima_count,
         color = (:forestgreen, 0.8),
-        label = "Raw → Theoretical Min (tol=0.1)",
+        label = "Raw → Theoretical Min (tol=0.1)"
     )
 
     ax.xticks = (positions, string.(degrees))
@@ -805,7 +808,7 @@ function Globtim.histogram_minimizers_only(
         color = :red,
         linestyle = :dash,
         linewidth = 2,
-        label = "Theoretical minimizer count",
+        label = "Theoretical minimizer count"
     )
 
     if show_legend
@@ -814,7 +817,7 @@ function Globtim.histogram_minimizers_only(
             ax,
             framevisible = true,
             backgroundcolor = (:white, 0.9),
-            padding = (10, 10, 10, 10),
+            padding = (10, 10, 10, 10)
         )
         colsize!(fig.layout, 1, Relative(0.75))
         colsize!(fig.layout, 2, Relative(0.25))

@@ -59,7 +59,7 @@ real_pts_cheb, (_pol, _sys, _nsols) = solve_polynomial_system(
     d,
     pol_cheb.coeffs;
     basis = pol_cheb.basis,
-    return_system = true,
+    return_system = true
 )
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 # df_cheb, df_min_cheb = analyze_critical_points(error_func, df_cheb, TR, tol_dist=0.05);
@@ -82,7 +82,7 @@ println(
     "   Bezout bound: ",
     map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys),
     " which is ",
-    prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys)),
+    prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys))
 )
 println("Critical points found:\n", df_cheb)
 println(
@@ -91,11 +91,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 # println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 

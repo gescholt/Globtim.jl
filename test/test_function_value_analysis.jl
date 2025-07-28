@@ -22,7 +22,7 @@ using LinearAlgebra
             theoretical_points,
             computed_points,
             f;
-            match_threshold = 0.1,
+            match_threshold = 0.1
         )
 
         @test length(errors) == 1  # Should match the closest point
@@ -45,7 +45,7 @@ using LinearAlgebra
                 :minimum,
                 0.014,
                 0.0,
-                0.02,
+                0.02
             ),
             FunctionValueError(
                 [1.0, 1.0],
@@ -57,8 +57,8 @@ using LinearAlgebra
                 :minimum,
                 0.014,
                 0.0,
-                0.02,
-            ),
+                0.02
+            )
         ]
 
         metrics = compute_error_metrics(errors)
@@ -82,7 +82,7 @@ using LinearAlgebra
                 :minimum,
                 0.014,
                 0.0,
-                0.02,
+                0.02
             ),
             FunctionValueError(
                 [1.0, 0.0],
@@ -94,7 +94,7 @@ using LinearAlgebra
                 :saddle,
                 0.014,
                 0.0,
-                0.02,
+                0.02
             ),
             FunctionValueError(
                 [0.0, 1.0],
@@ -106,8 +106,8 @@ using LinearAlgebra
                 :saddle,
                 0.014,
                 0.0,
-                0.02,
-            ),
+                0.02
+            )
         ]
 
         metrics_by_type = analyze_errors_by_type(errors)
@@ -129,7 +129,7 @@ using LinearAlgebra
             theoretical_points,
             computed_points,
             f;
-            point_types = [:minimum],
+            point_types = [:minimum]
         )
 
         df = create_error_analysis_dataframe(errors)
@@ -144,7 +144,7 @@ using LinearAlgebra
 
     @testset "Convergence Analysis" begin
         # Mock tolerance results
-        tolerance_results = Dict{Float64,Vector{FunctionValueError}}()
+        tolerance_results = Dict{Float64, Vector{FunctionValueError}}()
 
         # Decreasing errors with decreasing tolerance
         for (tol, err_scale) in [(1e-2, 1e-2), (1e-3, 1e-3), (1e-4, 1e-4)]
@@ -159,8 +159,8 @@ using LinearAlgebra
                     :minimum,
                     sqrt(2) * err_scale,
                     0.0,
-                    2 * err_scale,
-                ),
+                    2 * err_scale
+                )
             ]
             tolerance_results[tol] = errors
         end
@@ -185,7 +185,7 @@ using LinearAlgebra
             y1 = [0.01, 0.48],
             y2 = [0.01, -0.49],
             converged = [true, true],
-            z = [f([0.05, 0.05]), f([0.5, -0.5])],
+            z = [f([0.05, 0.05]), f([0.5, -0.5])]
         )
 
         theoretical_points = [[0.0, 0.0], [0.5, -0.5]]
@@ -196,7 +196,7 @@ using LinearAlgebra
             df,
             f,
             theoretical_points;
-            theoretical_types = theoretical_types,
+            theoretical_types = theoretical_types
         )
 
         @test "has_theoretical_match" in names(df_enhanced)
@@ -216,7 +216,7 @@ using LinearAlgebra
         # (combinations of 2D Deuflhard critical points)
         theoretical_points = [
             [0.0, 0.0, 0.0, 0.0],  # Global minimum
-            [0.0, 0.9, 0.0, 0.9],   # Local minimum
+            [0.0, 0.9, 0.0, 0.9]   # Local minimum
         ]
 
         # Computed points with small perturbations
@@ -227,7 +227,7 @@ using LinearAlgebra
             computed_points,
             f;
             match_threshold = 0.1,
-            point_types = [:minimum, :minimum],
+            point_types = [:minimum, :minimum]
         )
 
         @test length(errors) == 2

@@ -17,7 +17,7 @@ if bump_type == "patch"
     new_version = VersionNumber(
         current_version.major,
         current_version.minor,
-        current_version.patch + 1,
+        current_version.patch + 1
     )
 elseif bump_type == "minor"
     new_version = VersionNumber(current_version.major, current_version.minor + 1, 0)
@@ -38,9 +38,9 @@ end
 println("Version bumped from $current_version to $new_version")
 println("\nNext steps:")
 println(
-    "1. Commit the version change: git add Project.toml && git commit -m \"Bump version to v$new_version\"",
+    "1. Commit the version change: git add Project.toml && git commit -m \"Bump version to v$new_version\""
 )
 println("2. Push to main branch: git push origin main")
 println(
-    "3. The GitHub Actions will automatically sync to github-release branch and create a release",
+    "3. The GitHub Actions will automatically sync to github-release branch and create a release"
 )

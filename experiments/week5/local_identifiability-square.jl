@@ -37,7 +37,7 @@ config = (
     distance = L2_norm,
     model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
-    precision = RationalPrecision,
+    precision = RationalPrecision
 )
 config = merge(config, (; p_center = [0.35, 0.35]))
 
@@ -50,7 +50,7 @@ error_func = make_error_distance(
     config.p_true,
     config.time_interval,
     config.num_points,
-    config.distance,
+    config.distance
 )
 
 @polyvar(x[1:config.n]); # Define polynomial ring
@@ -59,7 +59,7 @@ TR = test_input(
     dim = config.n,
     center = config.p_center,
     GN = config.GN,
-    sample_range = config.sample_range,
+    sample_range = config.sample_range
 );
 
 pol_cheb = Constructor(
@@ -67,7 +67,7 @@ pol_cheb = Constructor(
     config.d,
     basis = config.basis,
     precision = config.precision,
-    verbose = true,
+    verbose = true
 )
 real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     x,
@@ -75,7 +75,7 @@ real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     config.d,
     pol_cheb.coeffs;
     basis = pol_cheb.basis,
-    return_system = true,
+    return_system = true
 )
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
@@ -94,7 +94,7 @@ open(joinpath(@__DIR__, "images", "$(id)_lotka_volterra_2D_error_func1.txt"), "w
         "   Bezout bound: ",
         map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys),
         " which is ",
-        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys)),
+        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys))
     )
     println(io, "Critical points found:\n", df_cheb)
     if !isempty(df_cheb)
@@ -119,7 +119,7 @@ if true
         config.time_interval,
         config.num_points;
         ground_truth = length(params),
-        plot_title = "Locally Identifiable model Error Function $(config.p_true) ± $plot_range",
+        plot_title = "Locally Identifiable model Error Function $(config.p_true) ± $plot_range"
     )
 
     display(fig)
@@ -127,6 +127,6 @@ if true
     Makie.save(
         joinpath(@__DIR__, "images", "$(id)_locally_ident_2D_error_func.png"),
         fig,
-        px_per_unit = 1.5,
+        px_per_unit = 1.5
     )
 end

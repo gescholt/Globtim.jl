@@ -38,7 +38,7 @@ function define_fitzhugh_nagumo_3D_model()
         [D(V) ~ g * (V - V^3 / 3 + R), D(R) ~ 1 / g * (V - a + b * R)],
         t,
         states,
-        params,
+        params
     )
     return model, params, states, outputs
 end
@@ -54,7 +54,7 @@ function define_lotka_volterra_3D_model()
         [D(x1) ~ a * x1 + b * x1 * x2, D(x2) ~ b * x1 * x2 + c * x2],
         t,
         states,
-        params,
+        params
     )
     outputs = [y1 ~ x1]
     return model, params, states, outputs
@@ -71,7 +71,7 @@ function define_lotka_volterra_3D_model_v2()
         [D(x1) ~ a * x1 + -b * x1 * x2, D(x2) ~ -b * x2 + c * x1 * x2],
         t,
         states,
-        params,
+        params
     )
     outputs = [y1 ~ x1]
     return model, params, states, outputs
@@ -89,7 +89,7 @@ function define_lotka_volterra_2D_model()
         [D(x1) ~ a * x1 + b * x1 * x2, D(x2) ~ b * x1 * x2 + x2],
         t,
         states,
-        params,
+        params
     )
     outputs = [y1 ~ x1]
     return model, params, states, outputs
@@ -107,7 +107,7 @@ function define_lotka_volterra_2D_model_v2()
         [D(x1) ~ a * x1 + b * x1 * x2, D(x2) ~ b * x1 * x2 + 0.1 * x2],
         t,
         states,
-        params,
+        params
     )
     outputs = [y1 ~ x1]
     return model, params, states, outputs
@@ -156,18 +156,18 @@ function sample_data(
     p_true,
     u0,
     num_points::Int;
-    kwargs...,
-)
+    kwargs...
+) where {T<:Number}
 
     N = length(p_true)
     return sample_data(
         model,
         measured_data,
         time_interval,
-        SVector{N,eltype(p_true)}(p_true),
+        SVector{N,T}(p_true),
         u0,
         num_points;
-        kwargs...,
+        kwargs...
     )
 end
 
@@ -218,8 +218,8 @@ function sample_data(
     mean_noise = zero(T),
     stddev_noise = one(T),
     abstol = convert(T, 1e-14),
-    reltol = convert(T, 1e-14),
-) where {T<:Number}
+    reltol = convert(T, 1e-14)
+) where {T <: Number}
 
     @assert length(time_interval) == 2 "Time interval must be [start_time, end_time]"
 
@@ -239,7 +239,7 @@ function sample_data(
     solution_true =
         ModelingToolkit.solve(problem, solver, saveat = sampling_times; abstol, reltol)
 
-    data_sample = DataStructures.OrderedDict{Any,Vector{T}}(
+    data_sample = DataStructures.OrderedDict{Any, Vector{T}}(
         Num(v.lhs) => solution_true[Num(v.rhs)] for v in measured_data
     )
 
@@ -288,7 +288,7 @@ function make_error_distance(
     time_interval,
     numpoints::Int = 5,
     distance_function = L2_norm,
-    add_noise_in_time_series = nothing,
+    add_noise_in_time_series = nothing
 ) where {T}
     @assert length(p_true) == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
     @assert length(initial_conditions) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
@@ -301,7 +301,7 @@ function make_error_distance(
         ModelingToolkit.complete(model),
         ModelingToolkit.unknowns(model) .=> initial_conditions,
         time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_true),
+        Dict(ModelingToolkit.parameters(model) .=> p_true)
     )
 
     data_sample_true = sample_data(
@@ -311,7 +311,7 @@ function make_error_distance(
         time_interval,
         p_true,
         initial_conditions,
-        numpoints,
+        numpoints
     )
     Y_true = data_sample_true[first(keys(data_sample_true))]
 
@@ -321,9 +321,9 @@ function make_error_distance(
 
     function Error_distance(
         p_test::Union{SVector{N,T2},Vector{T2}};
-        measured_data = outputs,
-        time_interval = time_interval,
-        datasize = numpoints,
+        measured_data=outputs,
+        time_interval=time_interval,
+        datasize=numpoints
     ) where {T2,N}
 
         # problem = remake(problem, p = Dict(ModelingToolkit.parameters(model) .=> p_test))
@@ -340,7 +340,7 @@ function make_error_distance(
                 time_interval,
                 p_test,
                 initial_conditions,
-                datasize,
+                datasize
             )
 
             if isempty(data_sample_test) ||
@@ -405,7 +405,7 @@ function plot_model_outputs(
         title = plot_title,
         xlabel = "Time",
         ylabel = "Value",
-        yscale = yaxis,
+        yscale = yaxis
     )
 
     # Generate data for each parameter set
@@ -414,7 +414,7 @@ function plot_model_outputs(
             ModelingToolkit.complete(model),
             ic,
             time_interval,
-            Dict(ModelingToolkit.parameters(model) .=> p),
+            Dict(ModelingToolkit.parameters(model) .=> p)
         )
         data_sample = sample_data(problem, model, outputs, time_interval, p, ic, num_points)
 
@@ -426,7 +426,7 @@ function plot_model_outputs(
 
             if length(values) != num_points
                 println(
-                    "Skipping parameter set $(idx) - $(key) due to mismatched data length",
+                    "Skipping parameter set $(idx) - $(key) due to mismatched data length"
                 )
                 continue
             end
@@ -455,7 +455,7 @@ function plot_model_outputs(
                     linewidth = linewidth,
                     color = color,
                     linestyle = style,
-                    alpha = alpha,
+                    alpha = alpha
                 )
             end
         end
@@ -478,8 +478,8 @@ function plot_error_function_2D(
     num_points;
     ground_truth = nothing,
     plot_title = "Error Function",
-    figure_size = (800, 500),
-) where {T<:Number}
+    figure_size = (800, 500)
+) where {T <: Number}
 
     @assert length(ic) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
 
@@ -530,19 +530,19 @@ function plot_time_series_comparison(
     outputs::Vector{ModelingToolkit.Equation},
     ic,
     time_interval,
-    p_true::Union{Vector{T},SVector{N,T}},
-    p_test::Union{Vector{T},SVector{N,T}},
+    p_true::Union{Vector{T}, SVector{N, T}},
+    p_test::Union{Vector{T}, SVector{N, T}},
     numpoints::Int = 100;
     plot_title::String = "Time Series Comparison",
-    figure_size = (800, 500),
-) where {N,T<:Number}
+    figure_size = (800, 500)
+) where {N, T <: Number}
 
     # Convert Vector to SVector if needed
     if p_true isa Vector
-        p_true = SVector{length(p_true),T}(p_true)
+        p_true = SVector{length(p_true), T}(p_true)
     end
     if p_test isa Vector
-        p_test = SVector{length(p_test),T}(p_test)
+        p_test = SVector{length(p_test), T}(p_test)
     end
 
     # Generate data for both parameter sets
@@ -550,7 +550,7 @@ function plot_time_series_comparison(
         ModelingToolkit.complete(model),
         ic,
         time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_true),
+        Dict(ModelingToolkit.parameters(model) .=> p_true)
     )
     data_true = sample_data(problem, model, outputs, time_interval, p_true, ic, numpoints)
 
@@ -558,7 +558,7 @@ function plot_time_series_comparison(
         ModelingToolkit.complete(model),
         ic,
         time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_test),
+        Dict(ModelingToolkit.parameters(model) .=> p_test)
     )
     data_test = sample_data(problem, model, outputs, time_interval, p_test, ic, numpoints)
 
@@ -590,7 +590,7 @@ function plot_time_series_comparison(
                 values_true,
                 label = "True - $(key)",
                 color = colors[1],
-                linewidth = 2,
+                linewidth = 2
             )
 
             # Plot test values
@@ -601,7 +601,7 @@ function plot_time_series_comparison(
                 label = "Test - $(key)",
                 color = colors[2],
                 linewidth = 2,
-                linestyle = :dash,
+                linestyle = :dash
             )
         end
     end
@@ -617,7 +617,7 @@ function plot_time_series_comparison(
         y_min,
         text = error_text,
         align = (:right, :bottom),
-        offset = (0, 10),
+        offset = (0, 10)
     )
 
     # Add legend
@@ -643,10 +643,10 @@ function plot_parameter_result(
     outputs::Vector{ModelingToolkit.Equation},
     ic,
     time_interval,
-    p_true::Union{Vector{T},SVector{N,T}},
-    p_test::Union{Vector{T},SVector{N,T}};
-    kwargs...,
-) where {N,T<:Number}
+    p_true::Union{Vector{T}, SVector{N, T}},
+    p_test::Union{Vector{T}, SVector{N, T}};
+    kwargs...
+) where {N, T <: Number}
     fig = plot_time_series_comparison(
         model,
         outputs,
@@ -654,7 +654,7 @@ function plot_parameter_result(
         time_interval,
         p_true,
         p_test;
-        kwargs...,
+        kwargs...
     )
     display(fig)
     return fig

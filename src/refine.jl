@@ -17,7 +17,7 @@ Vector{Int}: Region ID (1 to n_regions_per_dim^n) for each point in df
 function assign_spatial_regions(
     df::DataFrame,
     TR::test_input,
-    n_regions_per_dim::Int = 5,
+    n_regions_per_dim::Int = 5
 )::Vector{Int}
     n_dims = count(col -> startswith(string(col), "x"), names(df))
     n_points = nrow(df)
@@ -35,9 +35,9 @@ function assign_spatial_regions(
     # Compute region size per dimension
     region_sizes = (bounds_max .- bounds_min) ./ n_regions_per_dim
 
-    for i = 1:n_points
+    for i in 1:n_points
         region_coords = Vector{Int}(undef, n_dims)
-        for j = 1:n_dims
+        for j in 1:n_dims
             coord = df[i, Symbol("x$j")]
             # Clamp to avoid boundary issues
             normalized = (coord - bounds_min[j]) / region_sizes[j]
@@ -47,7 +47,7 @@ function assign_spatial_regions(
         # Convert n-dimensional region coordinates to single ID
         region_id = 1
         multiplier = 1
-        for j = 1:n_dims
+        for j in 1:n_dims
             region_id += region_coords[j] * multiplier
             multiplier *= n_regions_per_dim
         end
@@ -67,7 +67,7 @@ Vector{Int}: Cluster assignment (1 to n_clusters) for each point
 """
 function cluster_function_values(
     z_values::Vector{Float64},
-    n_clusters::Int = 5,
+    n_clusters::Int = 5
 )::Vector{Int}
     # Handle edge cases
     if length(z_values) <= n_clusters
@@ -109,13 +109,13 @@ function compute_nearest_neighbors(df::DataFrame, n_dims::Int)::Vector{Float64}
 
     # Extract coordinates
     coords = Matrix{Float64}(undef, n_points, n_dims)
-    for i = 1:n_dims
+    for i in 1:n_dims
         coords[:, i] = df[!, Symbol("x$i")]
     end
 
-    for i = 1:n_points
+    for i in 1:n_points
         min_dist = Inf
-        for j = 1:n_points
+        for j in 1:n_points
             if i != j
                 dist = norm(coords[i, :] - coords[j, :])
                 min_dist = min(min_dist, dist)
@@ -143,7 +143,7 @@ function compute_gradients(f::Function, points::Matrix{Float64})::Vector{Float64
     n_points, n_dims = size(points)
     grad_norms = Vector{Float64}(undef, n_points)
 
-    for i = 1:n_points
+    for i in 1:n_points
         try
             point = points[i, :]
             grad = ForwardDiff.gradient(f, point)
@@ -172,23 +172,23 @@ function analyze_basins(
     df::DataFrame,
     df_min::DataFrame,
     n_dims::Int,
-    tol_dist::Float64,
-)::Tuple{Vector{Int},Vector{Float64},Vector{Int}}
+    tol_dist::Float64
+)::Tuple{Vector{Int}, Vector{Float64}, Vector{Int}}
     n_minimizers = nrow(df_min)
     basin_sizes = zeros(Int, n_minimizers)
     avg_steps = zeros(Float64, n_minimizers)
     region_coverage = zeros(Int, n_minimizers)
 
     # For each minimizer, find which critical points converge to it
-    for i = 1:n_minimizers
-        minimizer = [df_min[i, Symbol("x$j")] for j = 1:n_dims]
+    for i in 1:n_minimizers
+        minimizer = [df_min[i, Symbol("x$j")] for j in 1:n_dims]
         converging_points = Int[]
         total_steps = 0.0
         regions_covered = Set{Int}()
 
-        for k = 1:nrow(df)
+        for k in 1:nrow(df)
             if df[k, :converged]
-                optimized_point = [df[k, Symbol("y$j")] for j = 1:n_dims]
+                optimized_point = [df[k, Symbol("y$j")] for j in 1:n_dims]
                 if norm(optimized_point - minimizer) < tol_dist
                     push!(converging_points, k)
                     total_steps += df[k, :steps]
@@ -225,8 +225,8 @@ function points_in_hypercube(df::DataFrame, TR; use_y::Bool = false)
     in_cube = trues(nrow(df))
 
     # Check each point
-    for i = 1:nrow(df)
-        for j = 1:n_dims
+    for i in 1:nrow(df)
+        for j in 1:n_dims
             coord = df[i, Symbol("$(prefix)$j")]
 
             # Skip NaN coordinates when checking y values
@@ -269,8 +269,8 @@ function points_in_range(df::DataFrame, TR, value_range::Float64)
     min_val = minimum(df.z)
 
     # Check each point's function evaluation
-    for i = 1:nrow(df)
-        point = [df[i, Symbol("x$j")] for j = 1:n_dims]
+    for i in 1:nrow(df)
+        point = [df[i, Symbol("x$j")] for j in 1:n_dims]
         val = TR.objective(point)
         if abs(val - min_val) ≤ value_range
             in_range[i] = true
@@ -386,7 +386,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     hessian_tol_zero = 1e-8,
     bfgs_g_tol = 1e-8,
     bfgs_f_abstol = 1e-8,
-    bfgs_x_abstol = 0.0,
+    bfgs_x_abstol = 0.0
 )
     n_dims = count(col -> startswith(string(col), "x"), names(df))  # Count x-columns
 
@@ -395,7 +395,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     red_cross = "\e[31m✗\e[0m"
 
     # Initialize result columns
-    for i = 1:n_dims
+    for i in 1:n_dims
         df[!, Symbol("y$i")] = zeros(nrow(df))
     end
     df[!, :close] = falses(nrow(df))
@@ -404,18 +404,18 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
 
     # Create df_min for collecting unique minimizers
     min_cols = [:value, :captured]
-    for i = 1:n_dims
+    for i in 1:n_dims
         pushfirst!(min_cols, Symbol("x$i"))
     end
-    df_min = DataFrame([name => Float64[] for name in min_cols[1:end-1]])
+    df_min = DataFrame([name => Float64[] for name in min_cols[1:(end - 1)]])
     df_min[!, :captured] = Bool[]
 
-    for i = 1:nrow(df)
+    for i in 1:nrow(df)
         try
             verbose && println("Processing point $i of $(nrow(df))")
 
             # Extract starting point
-            x0 = [df[i, Symbol("x$j")] for j = 1:n_dims]
+            x0 = [df[i, Symbol("x$j")] for j in 1:n_dims]
 
             # Optimization
             res = Optim.optimize(
@@ -427,8 +427,8 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
                     f_calls_limit = max_iters_in_optim,
                     g_tol = bfgs_g_tol,
                     f_abstol = bfgs_f_abstol,
-                    x_abstol = bfgs_x_abstol,
-                ),
+                    x_abstol = bfgs_x_abstol
+                )
                 # https://discourse.julialang.org/t/how-to-properly-specify-maximum-interations-in-optimization/109144/5
             )
 
@@ -443,7 +443,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
                 all(abs.(minimizer .- TR.center[1:n_dims]) .<= TR.sample_range)
             else
                 # Vector sample_range case
-                all(abs.(minimizer[j] - TR.center[j]) <= TR.sample_range[j] for j = 1:n_dims)
+                all(abs.(minimizer[j] - TR.center[j]) <= TR.sample_range[j] for j in 1:n_dims)
             end
 
             # Only mark as converged if both optimization converged AND within bounds
@@ -454,19 +454,19 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
                 println(
                     converged ? "Optimization has converged within bounds: $green_check" :
                     "Optimization status: $red_cross" *
-                    (optim_converged ? " (outside bounds)" : " (did not converge)"),
+                    (optim_converged ? " (outside bounds)" : " (did not converge)")
                 )
             end
 
             # Update df results
-            for j = 1:n_dims
+            for j in 1:n_dims
                 df[i, Symbol("y$j")] = minimizer[j]
             end
             df[i, :steps] = steps
             df[i, :converged] = converged  # Updated to use new converged status
 
             # Check if minimizer is close to starting point
-            distance = norm([df[i, Symbol("x$j")] - minimizer[j] for j = 1:n_dims])
+            distance = norm([df[i, Symbol("x$j")] - minimizer[j] for j in 1:n_dims])
             df[i, :close] = distance < tol_dist
 
             # Skip adding to df_min if outside bounds
@@ -474,8 +474,9 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
 
             # Check if the minimizer is new
             is_new = true
-            for j = 1:nrow(df_min)
-                if norm([df_min[j, Symbol("x$k")] - minimizer[k] for k = 1:n_dims]) < tol_dist
+            for j in 1:nrow(df_min)
+                if norm([df_min[j, Symbol("x$k")] - minimizer[k] for k in 1:n_dims]) <
+                   tol_dist
                     is_new = false
                     break
                 end
@@ -485,13 +486,13 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
             if is_new
                 # Check if minimizer is captured by any initial point
                 is_captured = any(
-                    norm([df[k, Symbol("x$j")] - minimizer[j] for j = 1:n_dims]) < tol_dist
-                    for k = 1:nrow(df)
+                    norm([df[k, Symbol("x$j")] - minimizer[j] for j in 1:n_dims]) < tol_dist
+                    for k in 1:nrow(df)
                 )
 
                 # Create new row for df_min
-                new_row = Dict{Symbol,Any}()
-                for j = 1:n_dims
+                new_row = Dict{Symbol, Any}()
+                for j in 1:n_dims
                     new_row[Symbol("x$j")] = minimizer[j]
                 end
                 new_row[:value] = min_value
@@ -503,7 +504,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         catch e
             verbose && println("Error processing point $i: $e")
             # Handle errors in df
-            for j = 1:n_dims
+            for j in 1:n_dims
                 df[i, Symbol("y$j")] = NaN
             end
             df[i, :close] = false
@@ -543,7 +544,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         println("Computing gradient norms at critical points...")
     end
     points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
-    for i = 1:n_dims
+    for i in 1:n_dims
         points_matrix[:, i] = df[!, Symbol("x$i")]
     end
     grad_norms = compute_gradients(f, points_matrix)
@@ -565,7 +566,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
             println("Computing gradient norms at minimizers...")
         end
         min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
-        for i = 1:n_dims
+        for i in 1:n_dims
             min_points[:, i] = df_min[!, Symbol("x$i")]
         end
         min_grad_norms = compute_gradients(f, min_points)
@@ -575,11 +576,11 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     if verbose
         println("Enhanced statistics computed successfully!")
         println(
-            "New df columns: region_id, function_value_cluster, nearest_neighbor_dist, gradient_norm",
+            "New df columns: region_id, function_value_cluster, nearest_neighbor_dist, gradient_norm"
         )
         if nrow(df_min) > 0
             println(
-                "New df_min columns: basin_points, average_convergence_steps, region_coverage_count, gradient_norm_at_min",
+                "New df_min columns: basin_points, average_convergence_steps, region_coverage_count, gradient_norm_at_min"
             )
         end
     end
@@ -595,7 +596,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
             println("Computing Hessian matrices...")
         end
         points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
-        for i = 1:n_dims
+        for i in 1:n_dims
             points_matrix[:, i] = df[!, Symbol("x$i")]
         end
         @debug "analyze_critical_points: points_matrix size: $(size(points_matrix))"
@@ -648,7 +649,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
                 println("Computing Hessian analysis for minimizers...")
             end
             min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
-            for i = 1:n_dims
+            for i in 1:n_dims
                 min_points[:, i] = df_min[!, Symbol("x$i")]
             end
             min_hessians = compute_hessians(f, min_points)
@@ -672,7 +673,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         if verbose
             println("Hessian analysis complete!")
             println(
-                "New df columns: critical_point_type, smallest_positive_eigenval, largest_negative_eigenval, hessian_norm, hessian_*",
+                "New df columns: critical_point_type, smallest_positive_eigenval, largest_negative_eigenval, hessian_norm, hessian_*"
             )
             if nrow(df_min) > 0
                 println("New df_min columns: same Hessian-based columns as df")
@@ -703,7 +704,7 @@ Analyze Optim result to determine why optimization stopped.
 function determine_convergence_reason(
     result::Optim.OptimizationResults,
     tolerance_used::Float64,
-    config::BFGSConfig,
+    config::BFGSConfig
 )
     if Optim.converged(result)
         # Check which convergence criterion was met
@@ -748,7 +749,7 @@ function enhanced_bfgs_refinement(
     orthant_labels::Vector{String},
     objective_function::Function,
     config::BFGSConfig = BFGSConfig();
-    expected_minimum::Union{Vector{Float64},Nothing} = nothing,
+    expected_minimum::Union{Vector{Float64}, Nothing} = nothing
 )
 
     results = BFGSResult[]
@@ -780,8 +781,8 @@ function enhanced_bfgs_refinement(
                 x_abstol = config.x_tol,
                 show_trace = config.show_trace,
                 store_trace = true,
-                extended_trace = true,
-            ),
+                extended_trace = true
+            )
         )
 
         optimization_time = time() - start_time
@@ -821,7 +822,7 @@ function enhanced_bfgs_refinement(
             abs(refined_value - value),
             label,
             distance_to_expected,
-            optimization_time,
+            optimization_time
         )
 
         push!(results, bfgs_result)
@@ -832,13 +833,13 @@ function enhanced_bfgs_refinement(
             println("  Tolerance used: $tolerance_used ($tolerance_reason)")
             println("  Converged: $(Optim.converged(result)) (reason: $convergence_reason)")
             println(
-                "  Iterations: $(bfgs_result.iterations_used), f_calls: $f_calls, g_calls: $g_calls",
+                "  Iterations: $(bfgs_result.iterations_used), f_calls: $f_calls, g_calls: $g_calls"
             )
             println(
-                "  Value improvement: $(round(bfgs_result.value_improvement, sigdigits=3))",
+                "  Value improvement: $(round(bfgs_result.value_improvement, sigdigits=3))"
             )
             println(
-                "  Final gradient norm: $(round(bfgs_result.final_grad_norm, sigdigits=3))",
+                "  Final gradient norm: $(round(bfgs_result.final_grad_norm, sigdigits=3))"
             )
             println("  Time: $(round(optimization_time, digits=3))s")
         end
@@ -867,7 +868,7 @@ function refine_with_enhanced_bfgs(
     df::DataFrame,
     objective_function::Function,
     config::BFGSConfig = BFGSConfig();
-    expected_minima::Union{Vector{Vector{Float64}},Nothing} = nothing,
+    expected_minima::Union{Vector{Vector{Float64}}, Nothing} = nothing
 )
 
     # Extract dimension
@@ -878,8 +879,8 @@ function refine_with_enhanced_bfgs(
     initial_values = Float64[]
     orthant_labels = String[]
 
-    for i = 1:nrow(df)
-        point = [df[i, Symbol("x$j")] for j = 1:n_dims]
+    for i in 1:nrow(df)
+        point = [df[i, Symbol("x$j")] for j in 1:n_dims]
         push!(initial_points, point)
         push!(initial_values, df[i, :z])
 
@@ -903,7 +904,7 @@ function refine_with_enhanced_bfgs(
         orthant_labels,
         objective_function,
         config;
-        expected_minimum = expected_minimum,
+        expected_minimum = expected_minimum
     )
 
     # Add results to DataFrame
@@ -923,8 +924,8 @@ function refine_with_enhanced_bfgs(
     end
 
     # Add refined coordinates
-    for i = 1:nrow(df)
-        for j = 1:n_dims
+    for i in 1:nrow(df)
+        for j in 1:n_dims
             df[i, Symbol("y$j")] = results[i].refined_point[j]
         end
         df[i, :refined_value] = results[i].refined_value

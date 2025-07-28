@@ -33,12 +33,12 @@ using StaticArrays
 
         # Create anisotropic grid: more points in x than y
         nx, ny = 10, 5
-        x_points = cos.((2 .* (0:nx-1) .+ 1) .* π ./ (2 * nx))
-        y_points = cos.((2 .* (0:ny-1) .+ 1) .* π ./ (2 * ny))
+        x_points = cos.((2 .* (0:(nx - 1)) .+ 1) .* π ./ (2 * nx))
+        y_points = cos.((2 .* (0:(ny - 1)) .+ 1) .* π ./ (2 * ny))
 
         grid_2d = Matrix{Float64}(undef, nx * ny, 2)
         idx = 1
-        for i = 1:nx, j = 1:ny
+        for i in 1:nx, j in 1:ny
             grid_2d[idx, 1] = x_points[i]
             grid_2d[idx, 2] = y_points[j]
             idx += 1

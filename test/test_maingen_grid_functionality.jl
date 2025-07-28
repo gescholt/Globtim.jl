@@ -52,12 +52,12 @@ using StaticArrays
         # Create a custom grid that maintains tensor product structure
         # This demonstrates current limitation: grids must be tensor products
         GN = 4  # 4x4 grid
-        points = [cos((2i + 1) * π / (2 * GN)) for i = 0:GN-1]
+        points = [cos((2i + 1) * π / (2 * GN)) for i in 0:(GN - 1)]
 
         # Create tensor product grid manually
         grid_matrix = Matrix{Float64}(undef, GN^2, 2)
         idx = 1
-        for i = 1:GN, j = 1:GN
+        for i in 1:GN, j in 1:GN
             grid_matrix[idx, 1] = points[i]
             grid_matrix[idx, 2] = points[j]
             idx += 1
@@ -88,7 +88,7 @@ using StaticArrays
             0.1,
             0.99,
             1.0,
-            1.0,
+            1.0
         )
 
         # Test empty grid
@@ -100,7 +100,7 @@ using StaticArrays
             0.1,
             0.99,
             1.0,
-            1.0,
+            1.0
         )
     end
 
@@ -127,7 +127,7 @@ using StaticArrays
             1.0,
             1.0,
             basis = :chebyshev,
-            verbose = 0,
+            verbose = 0
         )
         @test pol_cheb.basis == :chebyshev
 
@@ -141,7 +141,7 @@ using StaticArrays
             1.0,
             1.0,
             basis = :legendre,
-            verbose = 0,
+            verbose = 0
         )
         @test pol_leg.basis == :legendre
 

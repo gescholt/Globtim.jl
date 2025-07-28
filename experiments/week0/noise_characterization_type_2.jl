@@ -71,7 +71,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     (y_true, y_pred) ->
-        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64),
+        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64)
 )
 
 n = 2
@@ -110,7 +110,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     (y_true, y_pred) ->
-        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64),
+        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64)
 )
 
 n = 2
@@ -149,7 +149,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     (y_true, y_pred) ->
-        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64),
+        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64)
 )
 
 n = 2
@@ -188,7 +188,7 @@ error_func = make_error_distance(
     time_interval,
     num_points,
     (y_true, y_pred) ->
-        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64),
+        log_L2_norm(y_true, y_pred) + noise * rand((-1, 1)) * rand(Float64)
 )
 
 n = 2

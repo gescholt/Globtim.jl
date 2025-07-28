@@ -1,0 +1,262 @@
+# Enhanced GitLab CI/CD with HPC/MPI Integration for Globtim.jl
+
+stages:
+  - validate
+  - test-basic
+  - test-hpc
+  - benchmark
+  - analyze
+  - deploy
+
+variables:
+  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
+  JULIA_NUM_THREADS: "4"
+  # HPC Configuration
+  SLURM_PARTITION: "compute"
+  SLURM_TIME_LIMIT: "30:00"
+  SLURM_NODES: "1"
+  SLURM_NTASKS: "8"
+
+# Basic validation (fast)
+validate:syntax:
+  stage: validate
+  before_script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - find src -name "*.jl" -exec julia --syntax-check {} \;
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# Standard tests
+test:julia-standard:
+  stage: test-basic
+  before_script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+    - julia --project=@. -e 'using Pkg; Pkg.test()'
+  artifacts:
+    when: always
+    paths:
+      - "**/*.cov"
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# HPC Performance Tests (if SLURM available)
+test:hpc-performance:
+  stage: test-hpc
+  tags:
+    - slurm  # Requires runner with SLURM access
+  before_script:
+    - module load julia/1.11 || echo "Julia module not available, installing manually"
+    - if ! command -v julia &> /dev/null; then
+        curl -fsSL https://install.julialang.org | sh -s -- -y;
+        export PATH="$HOME/.juliaup/bin:$PATH";
+        juliaup add 1.11;
+      fi
+  script:
+    - |
+      # Create SLURM job script for large-scale testing
+      cat > hpc_test.slurm << 'EOF'
+      #!/bin/bash
+      #SBATCH --job-name=globtim-ci
+      #SBATCH --partition=${SLURM_PARTITION}
+      #SBATCH --time=${SLURM_TIME_LIMIT}
+      #SBATCH --nodes=${SLURM_NODES}
+      #SBATCH --ntasks=${SLURM_NTASKS}
+      #SBATCH --output=hpc_test_%j.out
+      #SBATCH --error=hpc_test_%j.err
+      
+      module load julia/1.11 || true
+      export JULIA_NUM_THREADS=${SLURM_NTASKS}
+      
+      julia --project=@. -e '
+        using Globtim, DynamicPolynomials
+        println("Running HPC performance test with $(Threads.nthreads()) threads")
+        
+        # Test high-dimensional optimization
+        f = Deuflhard
+        TR = test_input(f, dim=4, center=zeros(4), sample_range=1.2)
+        pol = Constructor(TR, 10)  # Higher degree for HPC test
+        
+        @time begin
+          @polyvar x[1:4]
+          solutions = solve_polynomial_system(x, 4, 10, pol.coeffs)
+          df = process_crit_pts(solutions, f, TR)
+          println("Found $(nrow(df)) critical points")
+        end
+      '
+      EOF
+    - sbatch --wait hpc_test.slurm
+    - cat hpc_test_*.out
+  artifacts:
+    when: always
+    paths:
+      - "hpc_test_*.out"
+      - "hpc_test_*.err"
+    expire_in: 1 week
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# Parallel scaling benchmarks
+benchmark:scaling:
+  stage: benchmark
+  before_script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+    - |
+      julia --project=@. -e '
+        using Globtim, DynamicPolynomials, JSON, TimerOutputs
+        
+        results = Dict()
+        thread_counts = [1, 2, 4, 8]
+        
+        for nthreads in thread_counts
+          ENV["JULIA_NUM_THREADS"] = string(nthreads)
+          println("Testing with $nthreads threads")
+          
+          f = Deuflhard
+          TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+          
+          # Benchmark polynomial construction
+          time_construct = @elapsed pol = Constructor(TR, 8)
+          
+          # Benchmark solving
+          @polyvar x[1:2]
+          time_solve = @elapsed solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
+          
+          results[nthreads] = Dict(
+            "construct_time" => time_construct,
+            "solve_time" => time_solve,
+            "total_time" => time_construct + time_solve,
+            "solutions_found" => length(solutions)
+          )
+        end
+        
+        # Save results
+        open("scaling_results.json", "w") do f
+          JSON.print(f, results, 2)
+        end
+        
+        # Print summary
+        println("\n=== Scaling Results ===")
+        for (threads, data) in sort(collect(results))
+          println("$threads threads: $(round(data["total_time"], digits=3))s total")
+        end
+      '
+  artifacts:
+    paths:
+      - scaling_results.json
+    expire_in: 1 week
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+
+# Memory profiling for large problems
+analyze:memory:
+  stage: analyze
+  before_script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+    - |
+      julia --project=@. -e '
+        using Globtim, DynamicPolynomials
+        
+        println("=== Memory Usage Analysis ===")
+        
+        # Test different problem sizes
+        dimensions = [2, 3, 4]
+        degrees = [6, 8, 10]
+        
+        for dim in dimensions, deg in degrees
+          println("\nTesting dim=$dim, degree=$deg")
+          
+          f = Deuflhard
+          TR = test_input(f, dim=dim, center=zeros(dim), sample_range=1.2)
+          
+          # Measure memory before
+          mem_before = Base.gc_live_bytes()
+          
+          pol = Constructor(TR, deg)
+          
+          # Measure memory after
+          mem_after = Base.gc_live_bytes()
+          mem_used = (mem_after - mem_before) / 1024^2  # MB
+          
+          println("  Memory used: $(round(mem_used, digits=2)) MB")
+          println("  Polynomial degree: $(pol.degree)")
+          println("  L2 norm error: $(pol.nrm)")
+        end
+      '
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+# Deploy performance dashboard
+pages:
+  stage: deploy
+  dependencies:
+    - benchmark:scaling
+  script:
+    - mkdir public
+    - |
+      cat > public/index.html << 'EOF'
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Globtim.jl Performance Dashboard</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+      </head>
+      <body>
+        <h1>Globtim.jl CI/CD Performance Dashboard</h1>
+        <div id="scaling-plot" style="width:100%;height:400px;"></div>
+        <script>
+          // Load and visualize scaling results
+          fetch('scaling_results.json')
+            .then(response => response.json())
+            .then(data => {
+              const threads = Object.keys(data).map(Number).sort((a,b) => a-b);
+              const times = threads.map(t => data[t].total_time);
+              
+              Plotly.newPlot('scaling-plot', [{
+                x: threads,
+                y: times,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Total Time'
+              }], {
+                title: 'Scaling Performance',
+                xaxis: { title: 'Number of Threads' },
+                yaxis: { title: 'Time (seconds)' }
+              });
+            });
+        </script>
+      </body>
+      </html>
+      EOF
+    - cp scaling_results.json public/ || echo "No scaling results found"
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
