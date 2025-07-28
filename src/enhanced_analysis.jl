@@ -77,7 +77,7 @@ function analyze_critical_points_with_tables(
     table_width = 80,
     export_tables = false,
     export_prefix = "critical_point_analysis",
-    kwargs...,
+    kwargs...
 )
 
     # Perform standard Phase 2 analysis first
@@ -87,8 +87,8 @@ function analyze_critical_points_with_tables(
     @debug "analyze_critical_points completed. DataFrame columns: $(names(df_enhanced))"
 
     # Initialize return containers
-    rendered_tables = Dict{Symbol,String}()
-    stats_objects = Dict{Symbol,ComprehensiveStatsTable}()
+    rendered_tables = Dict{Symbol, String}()
+    stats_objects = Dict{Symbol, ComprehensiveStatsTable}()
 
     # Generate tables if requested and Hessian analysis is enabled
     if show_tables && enable_hessian
@@ -230,10 +230,10 @@ export_analysis_tables(tables, "critical_point_analysis",
 ```
 """
 function export_analysis_tables(
-    rendered_tables::Dict{Symbol,String},
+    rendered_tables::Dict{Symbol, String},
     base_filename::String;
     formats = [:console],
-    include_timestamp = true,
+    include_timestamp = true
 )
 
     timestamp_str = include_timestamp ? "_$(Dates.format(now(), "yyyymmdd_HHMMSS"))" : ""
@@ -277,7 +277,7 @@ function create_statistical_summary(df_enhanced::DataFrame)
     # Count by type
     type_counts = DataFrames.combine(
         DataFrames.groupby(df_enhanced, :critical_point_type),
-        DataFrames.nrow => :count,
+        DataFrames.nrow => :count
     )
     total_points = nrow(df_enhanced)
 
@@ -300,7 +300,7 @@ function create_statistical_summary(df_enhanced::DataFrame)
     push!(lines, "├─────────────────┼───────────┼───────────┤")
     push!(
         lines,
-        "│ $(rpad("TOTAL", 15)) │ $(lpad(total_points, 9)) │ $(lpad("100.0%", 9)) │",
+        "│ $(rpad("TOTAL", 15)) │ $(lpad(total_points, 9)) │ $(lpad("100.0%", 9)) │"
     )
     push!(lines, "└─────────────────┴───────────┴───────────┘")
 
@@ -340,7 +340,7 @@ function quick_table_preview(f, df, TR; point_types = [:minimum, :maximum])
             println("\n$(uppercase(string(point_type))) Quick Stats:")
             println("  Count: $(hs.count)")
             println(
-                "  Hessian norm: $(round(hs.mean, digits=3)) ± $(round(hs.std, digits=3))",
+                "  Hessian norm: $(round(hs.mean, digits=3)) ± $(round(hs.std, digits=3))"
             )
             if ca.total_count > 0
                 println("  Well-conditioned: $(ca.well_conditioned_percentage)%")

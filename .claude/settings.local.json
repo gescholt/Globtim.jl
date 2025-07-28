@@ -55,7 +55,13 @@
       "Bash(gh api:*)",
       "Bash(sed:*)",
       "WebFetch(domain:git.mpi-cbg.de)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(./scripts/sprint-dashboard.sh:*)",
+      "Bash(./scripts/sprint-transition.sh:*)",
+      "Bash(./scripts/sprint-planning.sh:*)",
+      "Bash(./scripts/add-to-sprint.sh:*)",
+      "Bash(./scripts/format-julia.sh:*)",
+      "Bash(git rebase:*)"
     ]
   },
   "enableAllProjectMcpServers": false

@@ -61,7 +61,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    return_system = false,
+    return_system = false
 )
     # Use the updated main_nd function with all parameters
     pol = main_nd(
@@ -72,7 +72,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
         basis = basis,
         precision = precision,
         normalized = normalized,
-        power_of_two_denom = power_of_two_denom,
+        power_of_two_denom = power_of_two_denom
     )
 
     # Compute the gradient and solve the system
@@ -151,7 +151,7 @@ Automatically determines the correct degree from the ApproxPoly structure.
 """
 function solve_polynomial_system_from_approx(
     x,
-    pol_approx::ApproxPoly,
+    pol_approx::ApproxPoly
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
@@ -159,7 +159,7 @@ function solve_polynomial_system_from_approx(
         basis = pol_approx.basis,
         precision = pol_approx.precision,
         normalized = pol_approx.normalized,
-        power_of_two_denom = pol_approx.power_of_two_denom,
+        power_of_two_denom = pol_approx.power_of_two_denom
     )
 end
 
@@ -185,8 +185,8 @@ function main_nd(
     x::Vector{
         Variable{
             DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},
-            Graded{LexOrder},
-        },
+            Graded{LexOrder}
+        }
     },
     n::Int,
     d,
@@ -195,7 +195,7 @@ function main_nd(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    verbose::Bool = false,
+    verbose::Bool = false
 )
     # Handle backward compatibility: convert integer degree to tuple format
     degree = if isa(d, Int)
@@ -226,7 +226,7 @@ function main_nd(
             precision;
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
-            verbose = verbose,
+            verbose = verbose
         )
     end
 

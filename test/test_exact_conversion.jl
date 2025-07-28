@@ -76,7 +76,7 @@ using LinearAlgebra
             4,
             basis = :chebyshev,
             center = [0.0],
-            sample_range = 1.0,
+            sample_range = 1.0
         )
 
         @test isa(exact_poly, AbstractPolynomial)

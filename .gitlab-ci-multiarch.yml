@@ -1,0 +1,305 @@
+# Multi-Architecture Testing for Globtim.jl
+
+stages:
+  - test-multiarch
+  - compatibility-matrix
+  - deployment-test
+
+variables:
+  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
+
+# Test on different architectures using Docker
+.test_template: &test_template
+  stage: test-multiarch
+  before_script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - juliaup default 1.11
+  script:
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --version
+    - uname -a
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+    - |
+      julia --project=@. -e '
+        using Globtim, DynamicPolynomials
+        
+        println("🧪 Testing Globtim.jl on $(Sys.MACHINE)")
+        println("Julia version: $(VERSION)")
+        println("Architecture: $(Sys.ARCH)")
+        println("CPU threads: $(Threads.nthreads())")
+        
+        # Run basic functionality test
+        f = Deuflhard
+        TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+        
+        println("📊 Testing polynomial construction...")
+        pol = Constructor(TR, 6)  # Use lower degree for compatibility
+        println("✅ Polynomial constructed, degree: $(pol.degree)")
+        
+        println("📊 Testing critical point finding...")
+        @polyvar x[1:2]
+        solutions = solve_polynomial_system(x, 2, 6, pol.coeffs)
+        println("✅ Found $(length(solutions)) solutions")
+        
+        println("📊 Testing solution processing...")
+        df = process_crit_pts(solutions, f, TR)
+        println("✅ Processed $(nrow(df)) critical points")
+        
+        # Save architecture-specific results
+        open("test_results_$(Sys.ARCH).json", "w") do file
+          write(file, """
+          {
+            "architecture": "$(Sys.ARCH)",
+            "machine": "$(Sys.MACHINE)",
+            "julia_version": "$(VERSION)",
+            "num_threads": $(Threads.nthreads()),
+            "polynomial_degree": $(pol.degree),
+            "solutions_found": $(length(solutions)),
+            "critical_points": $(nrow(df)),
+            "l2_norm_error": $(pol.nrm),
+            "timestamp": "$(now())"
+          }
+          """)
+        end
+        
+        println("✅ All tests passed on $(Sys.ARCH)")
+      '
+  artifacts:
+    when: always
+    paths:
+      - "test_results_*.json"
+    expire_in: 1 week
+
+# x86_64 (AMD64) testing
+test:x86_64:
+  <<: *test_template
+  tags:
+    - docker
+    - x86_64
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# ARM64 testing (if available)
+test:arm64:
+  <<: *test_template
+  tags:
+    - docker
+    - arm64
+  allow_failure: true  # ARM64 runners might not always be available
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+
+# Test with different Julia versions
+.julia_version_test: &julia_version_test
+  stage: compatibility-matrix
+  script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add $JULIA_VERSION
+    - juliaup default $JULIA_VERSION
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - julia --version
+    - julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+    - |
+      julia --project=@. -e '
+        using Globtim, DynamicPolynomials
+        
+        println("🧪 Testing with Julia $(VERSION)")
+        
+        # Quick compatibility test
+        f = Deuflhard
+        TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+        pol = Constructor(TR, 4)  # Small test
+        
+        @polyvar x[1:2]
+        solutions = solve_polynomial_system(x, 2, 4, pol.coeffs)
+        
+        println("✅ Julia $(VERSION) compatibility confirmed")
+        println("   Solutions found: $(length(solutions))")
+        
+        # Save version-specific results
+        open("julia_$(VERSION)_results.json", "w") do f
+          write(f, """{"julia_version": "$(VERSION)", "status": "success", "solutions": $(length(solutions))}""")
+        end
+      '
+  artifacts:
+    when: always
+    paths:
+      - "julia_*_results.json"
+    expire_in: 1 week
+
+# Julia 1.10 compatibility
+test:julia-1.10:
+  <<: *julia_version_test
+  variables:
+    JULIA_VERSION: "1.10"
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Julia 1.11 (current)
+test:julia-1.11:
+  <<: *julia_version_test
+  variables:
+    JULIA_VERSION: "1.11"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Julia nightly (development)
+test:julia-nightly:
+  <<: *julia_version_test
+  variables:
+    JULIA_VERSION: "nightly"
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+# Test different operating systems (if multi-OS runners available)
+test:ubuntu:
+  <<: *test_template
+  image: ubuntu:22.04
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Compatibility matrix summary
+compatibility-summary:
+  stage: compatibility-matrix
+  dependencies:
+    - test:x86_64
+    - test:julia-1.10
+    - test:julia-1.11
+  script:
+    - |
+      echo "📊 Compatibility Matrix Summary"
+      echo "=" * 40
+      
+      # Collect all test results
+      total_tests=0
+      passed_tests=0
+      
+      for result_file in *_results.json; do
+        if [ -f "$result_file" ]; then
+          echo "📋 Processing $result_file"
+          total_tests=$((total_tests + 1))
+          
+          # Simple check if test passed (file exists and contains success)
+          if grep -q "success\|solutions" "$result_file"; then
+            passed_tests=$((passed_tests + 1))
+            echo "  ✅ PASSED"
+          else
+            echo "  ❌ FAILED"
+          fi
+        fi
+      done
+      
+      echo ""
+      echo "📈 Summary:"
+      echo "  Total tests: $total_tests"
+      echo "  Passed: $passed_tests"
+      echo "  Failed: $((total_tests - passed_tests))"
+      
+      if [ $passed_tests -eq $total_tests ] && [ $total_tests -gt 0 ]; then
+        echo "✅ All compatibility tests passed!"
+      else
+        echo "⚠️  Some compatibility tests failed"
+      fi
+      
+      # Create summary report
+      cat > compatibility_summary.json << EOF
+      {
+        "total_tests": $total_tests,
+        "passed_tests": $passed_tests,
+        "failed_tests": $((total_tests - passed_tests)),
+        "success_rate": $(echo "scale=2; $passed_tests * 100 / $total_tests" | bc -l 2>/dev/null || echo "0"),
+        "timestamp": "$(date -Iseconds)"
+      }
+      EOF
+  artifacts:
+    paths:
+      - compatibility_summary.json
+    expire_in: 1 week
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Test deployment scenarios
+deploy-test:package-installation:
+  stage: deployment-test
+  script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - |
+      # Test fresh installation scenario
+      julia -e '
+        using Pkg
+        
+        println("🚀 Testing fresh package installation")
+        
+        # Create temporary environment
+        Pkg.activate(mktempdir())
+        
+        # Add package from current directory
+        Pkg.develop(path=".")
+        
+        # Test basic functionality
+        using Globtim
+        println("✅ Package loaded successfully")
+        
+        # Test that exports work
+        f = Deuflhard
+        println("✅ Test function accessible")
+        
+        println("✅ Fresh installation test passed")
+      '
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Test with minimal dependencies
+deploy-test:minimal-deps:
+  stage: deployment-test
+  script:
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - |
+      julia -e '
+        using Pkg
+        
+        println("🧪 Testing with minimal dependencies")
+        
+        # Create clean environment
+        Pkg.activate(mktempdir())
+        
+        # Only add essential dependencies
+        Pkg.add(["DynamicPolynomials", "DataFrames", "LinearAlgebra"])
+        
+        # Try to add our package
+        Pkg.develop(path=".")
+        
+        # Test core functionality
+        using Globtim, DynamicPolynomials
+        
+        f = Deuflhard
+        TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=0.5)
+        
+        println("✅ Minimal dependency test passed")
+      '
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual

@@ -72,7 +72,7 @@ using StaticArrays
             1.0,
             GN = 3,
             basis = :chebyshev,
-            verbose = 0,
+            verbose = 0
         )
         @test pol_cheb.basis == :chebyshev
 
@@ -87,7 +87,7 @@ using StaticArrays
             1.0,
             GN = 3,
             basis = :legendre,
-            verbose = 0,
+            verbose = 0
         )
         @test pol_leg.basis == :legendre
     end

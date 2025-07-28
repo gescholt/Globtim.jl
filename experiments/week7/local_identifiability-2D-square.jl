@@ -40,14 +40,14 @@ config = (
     basis = :chebyshev,
     precision = RationalPrecision,
     my_eps = 0.02,
-    fine_step = 0.002,
+    fine_step = 0.002
 )
 config = merge(
     config,
     (;
         plot_range = [
-            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
-            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
+            (-(config.sample_range + config.my_eps)):config.fine_step:(config.sample_range + config.my_eps),
+            (-(config.sample_range + config.my_eps)):config.fine_step:(config.sample_range + config.my_eps),
         ],
         p_center = [config.p_true[1][1] + 0.05, config.p_true[1][2] - 0.05],
     ),
@@ -62,7 +62,7 @@ error_func = make_error_distance(
     config.p_true[1],
     config.time_interval,
     config.num_points,
-    config.distance,
+    config.distance
 )
 
 @polyvar(x[1:config.n]); # Define polynomial ring
@@ -71,7 +71,7 @@ TR = test_input(
     dim = config.n,
     center = config.p_center,
     GN = config.GN,
-    sample_range = config.sample_range,
+    sample_range = config.sample_range
 );
 
 pol_cheb = Constructor(
@@ -79,7 +79,7 @@ pol_cheb = Constructor(
     config.d,
     basis = config.basis,
     precision = config.precision,
-    verbose = true,
+    verbose = true
 )
 real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     x,
@@ -87,7 +87,7 @@ real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     config.d,
     pol_cheb.coeffs;
     basis = pol_cheb.basis,
-    return_system = true,
+    return_system = true
 )
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
@@ -107,7 +107,7 @@ open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
         "   Bezout bound: ",
         map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys),
         " which is ",
-        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys)),
+        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys))
     )
     println(io, "Critical points found:\n", df_cheb)
     if !isempty(df_cheb)
@@ -135,7 +135,7 @@ if true
         colorbar = true,
         colorbar_label = "Loss Value",
         num_levels = 200,
-        model_func = config.model_func,
+        model_func = config.model_func
     )
 
     display(fig)
@@ -143,6 +143,6 @@ if true
     Makie.save(
         joinpath(@__DIR__, "images", "$(filename).png"),
         fig,
-        px_per_unit = 1.5,
+        px_per_unit = 1.5
     )
 end

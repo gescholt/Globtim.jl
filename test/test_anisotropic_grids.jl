@@ -9,18 +9,18 @@ using StaticArrays
         # Test 1: 2D anisotropic grid
         grid_2d = generate_anisotropic_grid([3, 5], basis = :chebyshev)
         @test size(grid_2d) == (4, 6)  # 3+1, 5+1
-        @test eltype(grid_2d) <: SVector{2,Float64}
-        @test all(p -> all(-1 <= p[i] <= 1 for i = 1:2), grid_2d)
+        @test eltype(grid_2d) <: SVector{2, Float64}
+        @test all(p -> all(-1 <= p[i] <= 1 for i in 1:2), grid_2d)
 
         # Test 2: 3D anisotropic grid  
         grid_3d = generate_anisotropic_grid([2, 4, 3], basis = :legendre)
         @test size(grid_3d) == (3, 5, 4)
-        @test eltype(grid_3d) <: SVector{3,Float64}
+        @test eltype(grid_3d) <: SVector{3, Float64}
 
         # Test 3: High-dimensional anisotropic grid
         grid_5d = generate_anisotropic_grid([2, 3, 2, 4, 3], basis = :uniform)
         @test size(grid_5d) == (3, 4, 3, 5, 4)
-        @test eltype(grid_5d) <: SVector{5,Float64}
+        @test eltype(grid_5d) <: SVector{5, Float64}
     end
 
     @testset "Grid Properties" begin
@@ -107,7 +107,7 @@ using StaticArrays
 
     @testset "High-Dimensional Anisotropic Grids" begin
         # Test in 4D with very anisotropic grid
-        f_4d = x -> exp(-sum(i * x[i]^2 for i = 1:4))
+        f_4d = x -> exp(-sum(i * x[i]^2 for i in 1:4))
 
         # Very anisotropic: more points where function varies more
         grid_sizes = [10, 8, 6, 4]  # Decreasing resolution
@@ -161,7 +161,7 @@ function demonstrate_anisotropic_benefits()
         ([10, 10], "Isotropic 10×10"),
         ([14, 7], "Anisotropic 14×7"),
         ([12, 8], "Anisotropic 12×8"),
-        ([11, 9], "Anisotropic 11×9"),
+        ([11, 9], "Anisotropic 11×9")
     ]
 
     println("\nGrid Configuration Results:")
@@ -172,7 +172,7 @@ function demonstrate_anisotropic_benefits()
         rel_error = error / l2_ref * 100
         total_points = prod(grid_size .+ 1)
         println(
-            "$name ($(total_points) points): L2=$l2, Error=$error ($(round(rel_error, digits=3))%)",
+            "$name ($(total_points) points): L2=$l2, Error=$error ($(round(rel_error, digits=3))%)"
         )
     end
 end

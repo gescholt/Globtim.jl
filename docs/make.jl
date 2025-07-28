@@ -9,7 +9,7 @@ makedocs(
         repolink = "https://github.com/gescholt/Globtim.jl",
         canonical = "https://gescholt.github.io/Globtim.jl/stable/",
         edit_link = "main",
-        assets = String[],
+        assets = String[]
     ),
     pages = [
         "Home" => "index.md",
@@ -24,13 +24,13 @@ makedocs(
         "Testing" => [
             "Test Documentation" => "test_documentation.md",
             "Test Running Guide" => "test_running_guide.md",
-            "Anisotropic Grid Tests" => "anisotropic_grid_tests.md",
+            "Anisotropic Grid Tests" => "anisotropic_grid_tests.md"
         ],
         "Examples" => "examples.md",
         "Visualization" => "visualization.md",
-        "API Reference" => "api_reference.md",
+        "API Reference" => "api_reference.md"
     ],
-    checkdocs = :none,
+    checkdocs = :none
 )
 
 deploydocs(repo = "github.com/gescholt/Globtim.jl.git")

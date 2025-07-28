@@ -38,7 +38,7 @@ if false
     plot_range = -0.5:0.05:0.5
     params = vcat(
         [[p_true[1] + e1, p_true[2] + e2] for e1 in plot_range for e2 in plot_range],
-        [p_true],
+        [p_true]
     )
     fig = plot_model_outputs(
         model,
@@ -48,7 +48,7 @@ if false
         time_interval,
         num_points;
         ground_truth = length(params),
-        plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range",
+        plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range"
     )
 
     save(joinpath(@__DIR__, "lotka_volterra_2D_parameter_map.png"), fig)
@@ -67,7 +67,7 @@ if false
         p_true,
         time_interval,
         num_points,
-        log_L2_norm,
+        log_L2_norm
     )
 
     plot_range = -0.5:0.02:0.5
@@ -81,7 +81,7 @@ if false
         time_interval,
         num_points;
         ground_truth = length(params),
-        plot_title = "Lotka-Volterra Error Function $(p_true) ± $plot_range",
+        plot_title = "Lotka-Volterra Error Function $(p_true) ± $plot_range"
     )
 
     save(joinpath(@__DIR__, "lotka_volterra_2D_error_func_002.png"), fig)
@@ -98,7 +98,7 @@ if false
         p_true,
         time_interval,
         num_points,
-        log_L2_norm,
+        log_L2_norm
     )
 
     plot_range = -0.5:0.03:0.5
@@ -112,7 +112,7 @@ if false
         time_interval,
         num_points;
         ground_truth = length(params),
-        plot_title = "Lotka-Volterra Error Function $(p_true) ± $plot_range",
+        plot_title = "Lotka-Volterra Error Function $(p_true) ± $plot_range"
     )
 
     save(joinpath(@__DIR__, "lotka_volterra_2D_error_func_003.png"), fig)
@@ -136,7 +136,7 @@ if false
     plot_range = -0.5:0.05:0.5
     params = vcat(
         [[p_true[1] + e1, p_true[2] + e2] for e1 in plot_range for e2 in plot_range],
-        [p_true],
+        [p_true]
     )
     fig = plot_model_outputs(
         model,
@@ -147,7 +147,7 @@ if false
         num_points;
         ground_truth = length(params),
         yaxis = log10,
-        plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range",
+        plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range"
     )
 
     save(joinpath(@__DIR__, "lotka_volterra_2D_parameter_map_longer_time.png"), fig)
@@ -167,7 +167,7 @@ if true
     plot_range = -0.5:0.05:0.5
     params = vcat(
         [[p_true[1] + e1, p_true[2] + e2] for e1 in plot_range for e2 in plot_range],
-        [p_true],
+        [p_true]
     )
     fig = plot_model_outputs(
         model,
@@ -178,7 +178,7 @@ if true
         num_points;
         ground_truth = length(params),
         yaxis = log10,
-        plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range",
+        plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range"
     )
 
     save(joinpath(@__DIR__, "lotka_volterra_2D_parameter_map_longer_time_2.png"), fig)

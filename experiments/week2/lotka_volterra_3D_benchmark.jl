@@ -81,11 +81,11 @@ println(
         findmin(
             map(
                 p -> abs(sum((p .- p_true) .^ 2)),
-                zip([getproperty(df_cheb, Symbol(:x, i)) for i = 1:n]...),
-            ),
+                zip([getproperty(df_cheb, Symbol(:x, i)) for i in 1:n]...)
+            )
         )[2],
-        :,
-    ],
+        :
+    ]
 )
 # println("\n(after optimization)  Best critical points:\n", df_min_cheb)
 

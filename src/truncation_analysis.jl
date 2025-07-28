@@ -39,7 +39,7 @@ function truncate_polynomial(
     coeff_threshold::Real = 1e-12;
     mode::Symbol = :relative,
     domain::BoxDomain = BoxDomain(length(variables(poly)), 1.0),
-    l2_tolerance::Real = 0.05,
+    l2_tolerance::Real = 0.05
 )
 
     # Get coefficients and monomials
@@ -91,7 +91,7 @@ function truncate_polynomial(
         removed_terms = removed_terms,
         l2_ratio = l2_ratio,
         original_terms = length(monoms),
-        remaining_terms = length(keep_indices),
+        remaining_terms = length(keep_indices)
     )
 end
 
@@ -133,7 +133,7 @@ function monomial_l2_contributions(poly, domain::BoxDomain)
 
         push!(
             contributions,
-            (monomial = monom, coefficient = coeff, l2_contribution = l2_contrib),
+            (monomial = monom, coefficient = coeff, l2_contribution = l2_contrib)
         )
     end
 
@@ -160,7 +160,7 @@ Analyze the impact of truncation for different threshold values.
 function analyze_truncation_impact(
     poly,
     domain::BoxDomain;
-    thresholds = [1e-2, 1e-4, 1e-6, 1e-8, 1e-10],
+    thresholds = [1e-2, 1e-4, 1e-6, 1e-8, 1e-10]
 )
     results = []
 
@@ -175,8 +175,8 @@ function analyze_truncation_impact(
                 remaining_terms = result.remaining_terms,
                 removed_terms = length(result.removed_terms),
                 sparsity = result.remaining_terms / result.original_terms,
-                l2_ratio = result.l2_ratio,
-            ),
+                l2_ratio = result.l2_ratio
+            )
         )
     end
 

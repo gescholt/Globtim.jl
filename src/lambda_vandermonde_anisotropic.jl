@@ -18,7 +18,7 @@ Stores information about an anisotropic grid including unique nodes per dimensio
 """
 struct AnisotropicGridInfo{T}
     unique_points_per_dim::Vector{Vector{T}}
-    point_indices_per_dim::Vector{Dict{T,Int}}
+    point_indices_per_dim::Vector{Dict{T, Int}}
     n_dims::Int
     n_points::Int
     is_tensor_product::Bool
@@ -56,9 +56,9 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
 
     # Extract unique points for each dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dims)
-    point_indices_per_dim = Vector{Dict{T,Int}}(undef, n_dims)
+    point_indices_per_dim = Vector{Dict{T, Int}}(undef, n_dims)
 
-    for d = 1:n_dims
+    for d in 1:n_dims
         unique_points = sort(unique(S[:, d]))
         unique_points_per_dim[d] = unique_points
         point_indices_per_dim[d] = Dict(pt => i for (i, pt) in enumerate(unique_points))
@@ -72,12 +72,12 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
     # Additional check: verify all combinations exist
     if is_tensor_product
         # Create set of existing points for fast lookup
-        existing_points = Set([SVector{n_dims}(S[i, :]) for i = 1:n_points])
+        existing_points = Set([SVector{n_dims}(S[i, :]) for i in 1:n_points])
 
         # Check all tensor product combinations
         for indices in
             Iterators.product((1:length(pts) for pts in unique_points_per_dim)...)
-            point = SVector{n_dims}([unique_points_per_dim[d][indices[d]] for d = 1:n_dims])
+            point = SVector{n_dims}([unique_points_per_dim[d][indices[d]] for d in 1:n_dims])
             if !(point in existing_points)
                 is_tensor_product = false
                 break
@@ -90,7 +90,7 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
         point_indices_per_dim,
         n_dims,
         n_points,
-        is_tensor_product,
+        is_tensor_product
     )
 end
 
@@ -148,7 +148,7 @@ function lambda_vandermonde_anisotropic(
     Lambda::NamedTuple,
     S::Matrix{T};
     basis::Symbol = :chebyshev,
-    grid_info::Union{Nothing,AnisotropicGridInfo} = nothing,
+    grid_info::Union{Nothing, AnisotropicGridInfo} = nothing
 ) where {T}
     # Analyze grid structure if not provided
     info = isnothing(grid_info) ? analyze_grid_structure(S) : grid_info
@@ -165,24 +165,24 @@ function lambda_vandermonde_anisotropic(
 
     # Find maximum degree needed per dimension
     max_degrees = zeros(Int, n_dims)
-    for j = 1:m
-        for k = 1:n_dims
+    for j in 1:m
+        for k in 1:n_dims
             max_degrees[k] = max(max_degrees[k], Lambda.data[j, k])
         end
     end
 
     # Pre-compute polynomial evaluations for each dimension
-    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dims)
+    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dims)
 
     if basis == :chebyshev
-        for d = 1:n_dims
-            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
+        for d in 1:n_dims
+            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
             unique_points = info.unique_points_per_dim[d]
 
             # Special handling for exact types vs floating point
             if T <: Rational || T <: Integer
                 # Use recurrence relation for exact computation
-                for degree = 0:max_degrees[d]
+                for degree in 0:max_degrees[d]
                     eval_cache_per_dim[d][degree] =
                         T[chebyshev_value_exact(degree, T(pt)) for pt in unique_points]
                 end
@@ -190,7 +190,7 @@ function lambda_vandermonde_anisotropic(
                 # Use cosine formula for floating point
                 for (idx, point) in enumerate(unique_points)
                     theta = acos(clamp(T(point), T(-1), T(1)))
-                    for degree = 0:max_degrees[d]
+                    for degree in 0:max_degrees[d]
                         if !haskey(eval_cache_per_dim[d], degree)
                             eval_cache_per_dim[d][degree] =
                                 Vector{T}(undef, length(unique_points))
@@ -202,16 +202,16 @@ function lambda_vandermonde_anisotropic(
         end
 
     elseif basis == :legendre
-        for d = 1:n_dims
-            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
+        for d in 1:n_dims
+            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
             unique_points = info.unique_points_per_dim[d]
 
-            for degree = 0:max_degrees[d]
+            for degree in 0:max_degrees[d]
                 # Generate Legendre polynomial symbolically
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true,
+                    normalized = true
                 )
 
                 # Evaluate at unique points for this dimension
@@ -225,12 +225,12 @@ function lambda_vandermonde_anisotropic(
     end
 
     # Construct Vandermonde matrix
-    for i = 1:n_points
-        for j = 1:m
+    for i in 1:n_points
+        for j in 1:m
             P = one(T)
 
             # Product over dimensions
-            for k = 1:n_dims
+            for k in 1:n_dims
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
 
@@ -291,7 +291,7 @@ function is_grid_anisotropic(S::Matrix{T}) where {T}
     n_unique_first = length(unique_first)
 
     # Check if all other dimensions have same number of unique points
-    for d = 2:n_dims
+    for d in 2:n_dims
         unique_d = unique(S[:, d])
         if length(unique_d) != n_unique_first
             return true  # Different number of unique points → anisotropic
