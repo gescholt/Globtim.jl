@@ -91,16 +91,24 @@ function Globtim.plot_error_function_1D_with_critical_points(
         fine_values_f;
         alpha=0.3
     )
-    for p_true_i in p_true
-        pt = scatter!(
-            ax,
-            p_true_i[1],
-            TR.objective(p_true_i),
-            markersize = 10,
-            color = :green,
-            marker = :diamond,
-        )
-    end
+    pt = scatter!(
+        ax,
+        map(first, p_true),
+        TR.objective.(map(p -> p[1:1], p_true)),
+        markersize = 20,
+        color = :green,
+        marker = :diamond,
+    )
+    # for p_true_i in p_true
+    #     pt = scatter!(
+    #         ax,
+    #         p_true_i[1],
+    #         TR.objective(p_true_i),
+    #         markersize = 20,
+    #         color = :green,
+    #         marker = :diamond,
+    #     )
+    # end
     # pt = arc!(
     #     ax,
     #     p_true,
@@ -125,7 +133,7 @@ function Globtim.plot_error_function_1D_with_critical_points(
         fine_values_wd;
         alpha=0.3
     )
-    cp = scatter!(ax, df.x1, poly_func.((x -> Vector([x])).(df.x1)), markersize = 10, color = :blue, marker = :diamond)
+    cp = scatter!(ax, df.x1, poly_func.((x -> Vector(pullback([x]))).(df.x1)), markersize = 10, color = :blue, marker = :diamond)
     # rct = lines!(
     #     ax,
     #     [
@@ -148,6 +156,16 @@ function Globtim.plot_error_function_1D_with_critical_points(
     # )
 
     # Colorbar(fig[1, 3], cf, label = "")
+
+    Legend(
+        fig[2, 1],
+        [cf, cp, pt],
+        ["function", "Critical Points of w_d", "True Parameter"],
+        orientation = :horizontal,  # Make legend horizontal for better space usage
+        tellwidth = false,         # Don't have legend width affect layout
+        tellheight = true,
+        patchsize = (30, 20),
+    )
 
     fig
 end
@@ -237,16 +255,25 @@ function Globtim.plot_error_function_2D_with_critical_points(
         colormap = chosen_colormap,
         levels = levels,
     )
-    for p_true_i in p_true
-        pt = scatter!(
-            ax,
-            p_true_i[1],
-            p_true_i[2],
-            markersize = 10,
-            color = :green,
-            marker = :diamond,
-        )
-    end
+
+    pt = scatter!(
+        ax,
+        map(first, p_true),
+        map(last, p_true),
+        markersize = 10,
+        color = :green,
+        marker = :diamond,
+    )
+    # for p_true_i in p_true
+    #     pt = scatter!(
+    #         ax,
+    #         p_true_i[1],
+    #         p_true_i[2],
+    #         markersize = 10,
+    #         color = :green,
+    #         marker = :diamond,
+    #     )
+    # end
     # pt = arc!(
     #     ax,
     #     p_true,
@@ -296,6 +323,16 @@ function Globtim.plot_error_function_2D_with_critical_points(
     )
 
     Colorbar(fig[1, 3], cf, label = "")
+
+    Legend(
+        fig[2, 1],
+        [cp, pt, rct],
+        ["Critical Points of w_d", "True Parameter", "Sample Range"],
+        orientation = :horizontal,  # Make legend horizontal for better space usage
+        tellwidth = false,         # Don't have legend width affect layout
+        tellheight = true,
+        patchsize = (30, 20),
+    )
 
     fig
 end
