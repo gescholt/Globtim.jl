@@ -20,7 +20,7 @@ grid = generate_grid(2, 10, basis=:chebyshev)  # 11×11 Array{SVector{2,Float64}
 matrix = grid_to_matrix(grid)                   # 121×2 Matrix{Float64}
 ```
 """
-function grid_to_matrix(grid::Array{SVector{N,T},N}) where {N,T}
+function grid_to_matrix(grid::Array{SVector{N, T}, N}) where {N, T}
     # Reshape to 1D array of SVectors, transpose each to row, then concatenate
     return reduce(vcat, map(x -> x', reshape(grid, :)))
 end
@@ -77,12 +77,12 @@ function matrix_to_grid(matrix::Matrix{T}, dim::Int) where {T}
     # Verify we have the right number of points for a regular grid
     if points_per_dim^dim != n_points
         error(
-            "Matrix has $n_points points, which is not a perfect power for dimension $dim",
+            "Matrix has $n_points points, which is not a perfect power for dimension $dim"
         )
     end
 
     # Convert each row to an SVector
-    svectors = [SVector{dim,T}(matrix[i, :]) for i = 1:n_points]
+    svectors = [SVector{dim, T}(matrix[i, :]) for i in 1:n_points]
 
     # Reshape into the appropriate dimensional array
     return reshape(svectors, ntuple(_ -> points_per_dim, dim))
@@ -106,7 +106,7 @@ function get_grid_info(grid)
             format = :matrix,
             n_points = size(grid, 1),
             dim = size(grid, 2),
-            is_regular = true,  # Assume regular for matrix format
+            is_regular = true  # Assume regular for matrix format
         )
     elseif isa(grid, Array{<:SVector})
         N = ndims(grid)
@@ -114,7 +114,7 @@ function get_grid_info(grid)
             format = :svector_array,
             n_points = length(grid),
             dim = N,
-            is_regular = all(size(grid, i) == size(grid, 1) for i = 1:N),
+            is_regular = all(size(grid, i) == size(grid, 1) for i in 1:N)
         )
     else
         error("Unknown grid format: $(typeof(grid))")

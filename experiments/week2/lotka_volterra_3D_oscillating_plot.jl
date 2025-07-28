@@ -41,7 +41,7 @@ params = vcat(
         [p_true[1] + e1, p_true[2] + e2, p_true[3] + e3] for e1 in plot_range for
         e2 in plot_range for e3 in plot_range
     ],
-    [p_true],
+    [p_true]
 )
 fig = plot_model_outputs(
     model,
@@ -52,13 +52,13 @@ fig = plot_model_outputs(
     num_points;
     ground_truth = length(params),
     yaxis = log10,
-    plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range",
+    plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range"
 )
 
 Makie.save(
     joinpath(@__DIR__, "images", "lotka_volterra_3D_parameter_map_oscillating_02.png"),
     fig;
-    px_per_unit = 1.0,
+    px_per_unit = 1.0
 )
 
 
@@ -68,7 +68,7 @@ params = vcat(
         [p_true[1] + e1, p_true[2] + e2, p_true[3] + e3] for e1 in plot_range for
         e2 in plot_range for e3 in plot_range
     ],
-    [p_true],
+    [p_true]
 )
 fig = plot_model_outputs(
     model,
@@ -79,11 +79,11 @@ fig = plot_model_outputs(
     num_points;
     ground_truth = length(params),
     yaxis = log10,
-    plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range",
+    plot_title = "Lotka-Volterra Model Outputs $(p_true) ± $plot_range"
 )
 
 Makie.save(
     joinpath(@__DIR__, "images", "lotka_volterra_3D_parameter_map_oscillating_04.png"),
     fig;
-    px_per_unit = 1.0,
+    px_per_unit = 1.0
 )

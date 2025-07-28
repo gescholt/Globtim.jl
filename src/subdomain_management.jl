@@ -60,7 +60,7 @@ function create_orthant_test_inputs(
     base_center::Vector{Float64},
     base_range::Float64,
     tolerance::Float64;
-    overlap_factor::Float64 = 0.1,
+    overlap_factor::Float64 = 0.1
 )
 
     orthant_centers = generate_4d_orthant_centers(base_center, base_range)
@@ -74,7 +74,7 @@ function create_orthant_test_inputs(
             dim = 4,
             center = center,
             sample_range = subdomain_range,
-            tolerance = tolerance,
+            tolerance = tolerance
         )
         push!(test_inputs, TR)
     end
@@ -100,7 +100,7 @@ function orthant_id_to_signs(orthant_id::Int)
     idx = orthant_id - 1
 
     signs = Vector{Int}(undef, 4)
-    for i = 1:4
+    for i in 1:4
         signs[i] = ((idx >> (i - 1)) & 1) == 0 ? -1 : 1
     end
 
@@ -123,7 +123,7 @@ function signs_to_orthant_id(signs::Vector{Int})
     @assert all(s -> s == -1 || s == 1, signs) "Signs must be -1 or 1"
 
     idx = 0
-    for i = 1:4
+    for i in 1:4
         if signs[i] == 1
             idx |= (1 << (i - 1))
         end
@@ -167,12 +167,12 @@ Filter critical points belonging to a specific orthant.
 function filter_points_by_orthant(
     df::DataFrame,
     orthant_id::Int,
-    base_center::Vector{Float64},
+    base_center::Vector{Float64}
 )
     mask = Bool[]
 
-    for i = 1:nrow(df)
-        point = [df[i, Symbol("x$j")] for j = 1:4]
+    for i in 1:nrow(df)
+        point = [df[i, Symbol("x$j")] for j in 1:4]
         point_orthant = point_to_orthant_id(point, base_center)
         push!(mask, point_orthant == orthant_id)
     end
@@ -197,7 +197,7 @@ Merge results from all orthants, removing duplicates at boundaries.
 function merge_orthant_results(
     orthant_dfs::Vector{DataFrame},
     base_center::Vector{Float64};
-    distance_tolerance::Float64 = 1e-6,
+    distance_tolerance::Float64 = 1e-6
 )
 
     # Combine all DataFrames
@@ -211,19 +211,19 @@ function merge_orthant_results(
     n_dims = 4
     keep_mask = trues(nrow(merged_df))
 
-    for i = 1:nrow(merged_df)-1
+    for i in 1:(nrow(merged_df) - 1)
         if !keep_mask[i]
             continue
         end
 
-        point_i = [merged_df[i, Symbol("x$j")] for j = 1:n_dims]
+        point_i = [merged_df[i, Symbol("x$j")] for j in 1:n_dims]
 
-        for j = i+1:nrow(merged_df)
+        for j in (i + 1):nrow(merged_df)
             if !keep_mask[j]
                 continue
             end
 
-            point_j = [merged_df[j, Symbol("x$j")] for j = 1:n_dims]
+            point_j = [merged_df[j, Symbol("x$j")] for j in 1:n_dims]
 
             # Check if points are too close
             if norm(point_i - point_j) < distance_tolerance
@@ -254,16 +254,16 @@ Analyze distribution of critical points across orthants.
 - `Dict{Int, Int}`: Count of points in each orthant
 """
 function analyze_orthant_coverage(df::DataFrame, base_center::Vector{Float64})
-    coverage = Dict{Int,Int}()
+    coverage = Dict{Int, Int}()
 
     # Initialize all orthants
-    for i = 1:16
+    for i in 1:16
         coverage[i] = 0
     end
 
     # Count points in each orthant
-    for i = 1:nrow(df)
-        point = [df[i, Symbol("x$j")] for j = 1:4]
+    for i in 1:nrow(df)
+        point = [df[i, Symbol("x$j")] for j in 1:4]
         orthant_id = point_to_orthant_id(point, base_center)
         coverage[orthant_id] += 1
     end
@@ -301,7 +301,7 @@ function compute_orthant_statistics(orthant_results::Vector{OrthantResult})
         total_computation_time = sum(computation_times),
         min_success_rate = minimum(success_rates),
         max_success_rate = maximum(success_rates),
-        orthants_with_points = count(c -> c > 0, raw_counts),
+        orthants_with_points = count(c -> c > 0, raw_counts)
     )
 end
 

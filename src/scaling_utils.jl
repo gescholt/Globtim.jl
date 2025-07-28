@@ -19,7 +19,7 @@ Type-stable scaling functions that use multiple dispatch instead of runtime type
 @inline scale_point(s::Float64, x::SVector{N}) where {N} = s * x
 @inline scale_point(s::SVector{N}, x::SVector{N}) where {N} = s .* x
 @inline scale_point(s::Vector{Float64}, x::SVector{N}) where {N} =
-    SVector{N}(s[i] * x[i] for i = 1:N)
+    SVector{N}(s[i] * x[i] for i in 1:N)
 
 """
     get_scale_factor_type(scale_factor, dim)
@@ -34,8 +34,8 @@ end
 function get_scale_factor_type(scale_factor::AbstractVector, dim::Int)
     length(scale_factor) == dim || throw(
         ArgumentError(
-            "scale_factor vector length ($( length(scale_factor))) must match dimension ($dim)",
-        ),
+            "scale_factor vector length ($( length(scale_factor))) must match dimension ($dim)"
+        )
     )
     return Vector{Float64}(scale_factor)
 end
@@ -106,7 +106,7 @@ Type-stable coordinate transformation for visualization.
 function transform_coordinates(
     scale_factor::Float64,
     grid::Matrix{Float64},
-    center::Vector{Float64},
+    center::Vector{Float64}
 )
     # Scalar version: simple broadcasting
     scale_factor * grid .+ center'
@@ -115,12 +115,12 @@ end
 function transform_coordinates(
     scale_factor::Vector{Float64},
     grid::Matrix{Float64},
-    center::Vector{Float64},
+    center::Vector{Float64}
 )
     # Vector version: element-wise scaling per dimension
     scaled_coords = similar(grid)
-    for i = 1:size(grid, 1)
-        for j = 1:size(grid, 2)
+    for i in 1:size(grid, 1)
+        for j in 1:size(grid, 2)
             scaled_coords[i, j] = scale_factor[j] * grid[i, j] + center[j]
         end
     end

@@ -225,13 +225,13 @@ end
 
         # Generate a grid manually
         nx, ny = 10, 15  # Anisotropic
-        grid_x = cos.((2 .* (0:nx-1) .+ 1) .* π ./ (2 * nx))
-        grid_y = cos.((2 .* (0:ny-1) .+ 1) .* π ./ (2 * ny))
+        grid_x = cos.((2 .* (0:(nx - 1)) .+ 1) .* π ./ (2 * nx))
+        grid_y = cos.((2 .* (0:(ny - 1)) .+ 1) .* π ./ (2 * ny))
 
         # Create grid in expected format
         grid = Matrix{Float64}(undef, nx * ny, 2)
         idx = 1
-        for i = 1:nx, j = 1:ny
+        for i in 1:nx, j in 1:ny
             grid[idx, 1] = grid_x[i]
             grid[idx, 2] = grid_y[j]
             idx += 1

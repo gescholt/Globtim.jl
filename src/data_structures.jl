@@ -52,7 +52,7 @@ struct OrthantResult
         median_distance,
         outlier_count,
         polynomial_degree,
-        computation_time,
+        computation_time
     )
         @assert 1 <= orthant_id <= 16 "Orthant ID must be between 1 and 16 for 4D analysis"
         @assert length(center) == 4 "Center must be 4D for orthant analysis"
@@ -75,7 +75,7 @@ struct OrthantResult
             median_distance,
             outlier_count,
             polynomial_degree,
-            computation_time,
+            computation_time
         )
     end
 end
@@ -106,7 +106,7 @@ struct ToleranceResult
     polynomial_degrees::Vector{Int}
     sample_counts::Vector{Int}
     computation_time::Float64
-    success_rates::NamedTuple{(:raw, :bfgs, :combined),Tuple{Float64,Float64,Float64}}
+    success_rates::NamedTuple{(:raw, :bfgs, :combined), Tuple{Float64, Float64, Float64}}
 
     # Validation constructor
     function ToleranceResult(
@@ -118,7 +118,7 @@ struct ToleranceResult
         polynomial_degrees,
         sample_counts,
         computation_time,
-        success_rates,
+        success_rates
     )
         @assert tolerance > 0 "Tolerance must be positive"
         @assert length(raw_distances) == length(bfgs_distances) == length(point_types) "Distance arrays must have equal length"
@@ -137,7 +137,7 @@ struct ToleranceResult
             polynomial_degrees,
             sample_counts,
             computation_time,
-            success_rates,
+            success_rates
         )
     end
 end
@@ -158,7 +158,7 @@ Designed for publication-quality visualization and statistical analysis.
 """
 struct MultiToleranceResults
     tolerance_sequence::Vector{Float64}
-    results_by_tolerance::Dict{Float64,ToleranceResult}
+    results_by_tolerance::Dict{Float64, ToleranceResult}
     total_computation_time::Float64
     analysis_timestamp::String
     function_name::String
@@ -170,7 +170,7 @@ struct MultiToleranceResults
         total_computation_time,
         analysis_timestamp,
         function_name,
-        domain_config,
+        domain_config
     )
         @assert length(tolerance_sequence) >= 2 "Need at least 2 tolerance levels for convergence analysis"
         @assert all(t -> haskey(results_by_tolerance, t), tolerance_sequence) "All tolerances must have corresponding results"
@@ -183,7 +183,7 @@ struct MultiToleranceResults
             total_computation_time,
             analysis_timestamp,
             function_name,
-            domain_config,
+            domain_config
         )
     end
 end
@@ -221,7 +221,7 @@ mutable struct BFGSConfig
         f_abs_tol = 1e-20,
         x_tol = 1e-12,
         show_trace = false,
-        track_hyperparameters = true,
+        track_hyperparameters = true
     )
         new(
             standard_tolerance,
@@ -231,7 +231,7 @@ mutable struct BFGSConfig
             f_abs_tol,
             x_tol,
             show_trace,
-            track_hyperparameters,
+            track_hyperparameters
         )
     end
 end

@@ -13,9 +13,9 @@ struct FunctionParameters
     center::Vector{Float64}
     num_samples::Int
     sample_range::Float64
-    tolerance::Union{Float64,Nothing}
-    delta::Union{Float64,Nothing}
-    alpha::Union{Float64,Nothing}
+    tolerance::Union{Float64, Nothing}
+    delta::Union{Float64, Nothing}
+    alpha::Union{Float64, Nothing}
 end
 
 function FunctionParameters(config::Dict)
@@ -26,6 +26,6 @@ function FunctionParameters(config::Dict)
         config["sample_range"],
         get(config, "tolerance", nothing),
         get(config, "delta", nothing),
-        get(config, "alpha", nothing),
+        get(config, "alpha", nothing)
     )
 end

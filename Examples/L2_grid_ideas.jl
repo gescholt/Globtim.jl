@@ -5,7 +5,7 @@ function compute_L2_norm_tensor(f, S::Vector{Int}, poly_type = :chebyshev)
 
     # Create univariate orthogonal polynomials for each dimension
     ops = []
-    for i = 1:n
+    for i in 1:n
         if poly_type == :chebyshev
             # Chebyshev polynomials on [-1,1]
             push!(ops, Uniform_11OrthoPoly(S[i]))  # degree = nodes
@@ -26,12 +26,12 @@ function compute_L2_norm_tensor(f, S::Vector{Int}, poly_type = :chebyshev)
     L2_norm_squared = 0.0
 
     # Iterate over all combinations (tensor product)
-    for idx in Iterators.product([1:S[i] for i = 1:n]...)
+    for idx in Iterators.product([1:S[i] for i in 1:n]...)
         # Get the n-dimensional point
-        x = [nodes_1d[i][idx[i]] for i = 1:n]
+        x = [nodes_1d[i][idx[i]] for i in 1:n]
 
         # Get the n-dimensional weight (product of 1D weights)
-        w = prod(weights_1d[i][idx[i]] for i = 1:n)
+        w = prod(weights_1d[i][idx[i]] for i in 1:n)
 
         # Evaluate function and accumulate
         L2_norm_squared += w * abs2(f(x))
@@ -75,9 +75,9 @@ function compute_L2_norm_mixed(f, specs)
     L2_norm_squared = 0.0
     S = [s for (s, _) in specs]
 
-    for idx in Iterators.product([1:S[i] for i = 1:n]...)
-        x = [nodes_1d[i][idx[i]] for i = 1:n]
-        w = prod(weights_1d[i][idx[i]] for i = 1:n)
+    for idx in Iterators.product([1:S[i] for i in 1:n]...)
+        x = [nodes_1d[i][idx[i]] for i in 1:n]
+        w = prod(weights_1d[i][idx[i]] for i in 1:n)
         L2_norm_squared += w * abs2(f(x))
     end
 
@@ -97,9 +97,9 @@ function setup_tensor_quadrature(S::Vector{Int}, poly_types = nothing)
 
     if poly_types === nothing
         # Default to Chebyshev
-        ops = [Uniform_11OrthoPoly(S[i] - 1) for i = 1:n]
+        ops = [Uniform_11OrthoPoly(S[i] - 1) for i in 1:n]
     else
-        ops = [construct_poly(S[i] - 1, poly_types[i]) for i = 1:n]
+        ops = [construct_poly(S[i] - 1, poly_types[i]) for i in 1:n]
     end
 
     # Create multivariate orthogonal polynomial

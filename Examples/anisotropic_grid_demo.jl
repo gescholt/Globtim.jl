@@ -56,7 +56,7 @@ println("\n3. High-Dimensional Example (4D)")
 println("-"^40)
 
 # 4D function with different decay rates
-f_4d = x -> exp(-sum(i * x[i]^2 for i = 1:4))
+f_4d = x -> exp(-sum(i * x[i]^2 for i in 1:4))
 println("Testing function: f(x) = exp(-x₁² - 2x₂² - 3x₃² - 4x₄²)")
 
 # Anisotropic grid: more points where function varies less rapidly
@@ -82,10 +82,10 @@ t2 = @elapsed l2_riemann = discrete_l2_norm_riemann(f_test, grid)
 
 println("Grid: $(grid_spec[1])×$(grid_spec[2])")
 println(
-    "Quadrature L2 norm: $(@sprintf("%.8f", l2_quad)) (time: $(@sprintf("%.3f", t1*1000)) ms)",
+    "Quadrature L2 norm: $(@sprintf("%.8f", l2_quad)) (time: $(@sprintf("%.3f", t1*1000)) ms)"
 )
 println(
-    "Riemann L2 norm:    $(@sprintf("%.8f", l2_riemann)) (time: $(@sprintf("%.3f", t2*1000)) ms)",
+    "Riemann L2 norm:    $(@sprintf("%.8f", l2_riemann)) (time: $(@sprintf("%.3f", t2*1000)) ms)"
 )
 println("Relative difference: $(@sprintf("%.2e", abs(l2_quad - l2_riemann)/l2_quad))")
 
@@ -105,7 +105,7 @@ configurations = [
     ([20, 20], "Isotropic"),
     ([30, 13], "Anisotropic 30×13"),
     ([40, 10], "Anisotropic 40×10"),
-    ([50, 8], "Anisotropic 50×8"),
+    ([50, 8], "Anisotropic 50×8")
 ]
 
 println("\nTesting different configurations (~400 total points each):")

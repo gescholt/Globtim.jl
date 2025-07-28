@@ -1,0 +1,80 @@
+# Example GitLab CI configuration with npm integration
+# This shows how to add Node.js/npm to your Julia pipeline
+
+# Add Node.js installation to your existing jobs
+.install_node: &install_node
+  - |
+    if ! command -v node &> /dev/null; then
+      echo "Installing Node.js via NodeSource..."
+      curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+      sudo apt-get install -y nodejs
+    fi
+  - node --version
+  - npm --version
+
+# Example job for building enhanced documentation with npm tools
+build-docs-enhanced:
+  stage: build
+  before_script:
+    - *install_node
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - juliaup default 1.11
+  script:
+    # Install npm dependencies if package.json exists
+    - |
+      if [ -f "docs/package.json" ]; then
+        cd docs
+        npm ci
+        cd ..
+      fi
+    # Build Julia documentation
+    - julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+    - julia --project=docs docs/make.jl
+    # Run any npm post-processing
+    - |
+      if [ -f "docs/package.json" ]; then
+        cd docs
+        npm run build || true
+        cd ..
+      fi
+  artifacts:
+    paths:
+      - docs/build/
+    expire_in: 1 week
+
+# Example job for JavaScript linting in documentation
+lint-docs-js:
+  stage: check
+  before_script:
+    - *install_node
+  script:
+    - |
+      if [ -f "docs/package.json" ]; then
+        cd docs
+        npm ci
+        npm run lint || echo "No lint script defined"
+      else
+        echo "No package.json found, skipping JS linting"
+      fi
+  allow_failure: true
+
+# Alternative: Use Node.js Docker image for npm-heavy jobs
+docs-with-node:
+  stage: build
+  image: node:lts
+  before_script:
+    # Install Julia in Node.js container
+    - apt-get update && apt-get install -y curl
+    - curl -fsSL https://install.julialang.org | sh -s -- -y
+    - export PATH="$HOME/.juliaup/bin:$PATH"
+    - juliaup add 1.11
+    - juliaup default 1.11
+  script:
+    - cd docs
+    - npm ci
+    - cd ..
+    - julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+    - julia --project=docs docs/make.jl
+    - cd docs && npm run postbuild

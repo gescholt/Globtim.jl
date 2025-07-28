@@ -23,14 +23,14 @@ function Globtim.plot_polyapprox_3d(
     TR::test_input,
     df::DataFrame,
     df_min::DataFrame;
-    figure_size::Tuple{Int,Int} = (1000, 800),
-    z_limits::Union{Nothing,Tuple{Float64,Float64}} = nothing,
+    figure_size::Tuple{Int, Int} = (1000, 800),
+    z_limits::Union{Nothing, Tuple{Float64, Float64}} = nothing,
     show_captured::Bool = true,
     alpha_surface::Float64 = 0.7,
     rotate::Bool = false,
     filename::String = "function_3d_rotation.mp4",
     fade::Bool = false,
-    z_cut = 0.25,
+    z_cut = 0.25
 )
     # Type-stable coordinate transformation using multiple dispatch
     coords = transform_coordinates(pol.scale_factor, pol.grid, TR.center)
@@ -45,7 +45,7 @@ function Globtim.plot_polyapprox_3d(
             # title = "",
             xlabel = "x₁",
             ylabel = "x₂",
-            zlabel = "",
+            zlabel = ""
         )
 
         # Calculate z_limits if not provided
@@ -88,8 +88,8 @@ function Globtim.plot_polyapprox_3d(
             Z_upper = copy(Z)
 
             # Mask the matrices to separate lower and upper parts
-            for i = 1:size(Z, 1)
-                for j = 1:size(Z, 2)
+            for i in 1:size(Z, 1)
+                for j in 1:size(Z, 2)
                     if !isnan(Z[i, j])
                         if Z[i, j] >= z_threshold
                             Z_lower[i, j] = NaN
@@ -109,11 +109,11 @@ function Globtim.plot_polyapprox_3d(
                 colormap = :viridis,
                 transparency = true,
                 alpha = alpha_surface,
-                colorrange = z_limits,
+                colorrange = z_limits
             )
 
             # Plot the upper (faded) part with gradually decreasing alpha
-            for fade_level = 1:10
+            for fade_level in 1:10
                 # Calculate alpha for this level
                 fade_alpha = alpha_surface * (1.0 - (fade_level - 1) / 10 * 0.9)
 
@@ -123,8 +123,8 @@ function Globtim.plot_polyapprox_3d(
 
                 # Create a Z matrix for this level
                 Z_level = copy(Z)
-                for i = 1:size(Z, 1)
-                    for j = 1:size(Z, 2)
+                for i in 1:size(Z, 1)
+                    for j in 1:size(Z, 2)
                         if isnan(Z[i, j]) || Z[i, j] < z_min || Z[i, j] >= z_max
                             Z_level[i, j] = NaN
                         end
@@ -140,7 +140,7 @@ function Globtim.plot_polyapprox_3d(
                     colormap = :viridis,
                     transparency = true,
                     alpha = fade_alpha,
-                    colorrange = z_limits,
+                    colorrange = z_limits
                 )
             end
         else
@@ -153,7 +153,7 @@ function Globtim.plot_polyapprox_3d(
                 colormap = :viridis,
                 transparency = true,
                 alpha = alpha_surface,
-                colorrange = z_limits,
+                colorrange = z_limits
             )
         end
 
@@ -175,7 +175,7 @@ function Globtim.plot_polyapprox_3d(
                     color = :green,
                     strokecolor = :black,
                     strokewidth = 1,
-                    label = "Near",
+                    label = "Near"
                 )
             end
 
@@ -191,7 +191,7 @@ function Globtim.plot_polyapprox_3d(
                     color = :white,
                     strokecolor = :black,
                     strokewidth = 1,
-                    label = "Far",
+                    label = "Far"
                 )
             end
         else
@@ -203,7 +203,7 @@ function Globtim.plot_polyapprox_3d(
                 df.z,
                 markersize = 20,
                 color = :orange,
-                label = "All Points",
+                label = "All Points"
             )
         end
 
@@ -220,7 +220,7 @@ function Globtim.plot_polyapprox_3d(
                     markersize = 40,
                     marker = :diamond,
                     color = :red,
-                    label = "Uncaptured",
+                    label = "Uncaptured"
                 )
             end
 
@@ -236,7 +236,7 @@ function Globtim.plot_polyapprox_3d(
                         markersize = 40,
                         marker = :diamond,
                         color = :blue,
-                        label = "Captured",
+                        label = "Captured"
                     )
                 end
             end

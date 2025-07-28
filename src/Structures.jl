@@ -23,7 +23,7 @@ The `ApproxPoly` struct is used to store the results of a polynomial approximati
 
 The type parameter `S` makes the scale_factor field type-stable, eliminating runtime dispatch when accessing it.
 """
-struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
+struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     coeffs::Vector{T}
     support::Any
     degree::Any
@@ -46,9 +46,9 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
         N::Int,
         scale_factor::Float64,
         grid::Matrix{Float64},
-        z::Vector{Float64},
-    ) where {T<:Number}
-        new{T,Float64}(
+        z::Vector{Float64}
+    ) where {T <: Number}
+        new{T, Float64}(
             coeffs,
             nothing,
             degree,
@@ -61,7 +61,7 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
             RationalPrecision,
             true,
             false,
-            1.0,
+            1.0
         )
     end
 
@@ -73,9 +73,9 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
         N::Int,
         scale_factor::Vector{Float64},
         grid::Matrix{Float64},
-        z::Vector{Float64},
-    ) where {T<:Number}
-        new{T,Vector{Float64}}(
+        z::Vector{Float64}
+    ) where {T <: Number}
+        new{T, Vector{Float64}}(
             coeffs,
             nothing,
             degree,
@@ -88,7 +88,7 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
             RationalPrecision,
             true,
             false,
-            1.0,
+            1.0
         )
     end
 
@@ -106,9 +106,9 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
         precision::PrecisionType,
         normalized::Bool,
         power_of_two_denom::Bool,
-        cond_vandermonde::Float64,
-    ) where {T<:Number}
-        new{T,Float64}(
+        cond_vandermonde::Float64
+    ) where {T <: Number}
+        new{T, Float64}(
             coeffs,
             support,
             degree,
@@ -121,7 +121,7 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde,
+            cond_vandermonde
         )
     end
 
@@ -139,9 +139,9 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
         precision::PrecisionType,
         normalized::Bool,
         power_of_two_denom::Bool,
-        cond_vandermonde::Float64,
-    ) where {T<:Number}
-        new{T,Vector{Float64}}(
+        cond_vandermonde::Float64
+    ) where {T <: Number}
+        new{T, Vector{Float64}}(
             coeffs,
             support,
             degree,
@@ -154,7 +154,7 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde,
+            cond_vandermonde
         )
     end
 
@@ -165,17 +165,17 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
         degree,
         nrm::Float64,
         N::Int,
-        scale_factor::Union{Float64,Vector{Float64}},
+        scale_factor::Union{Float64, Vector{Float64}},
         grid::Matrix{Float64},
         z::Vector{Float64};
         basis::Symbol = :chebyshev,
         precision::PrecisionType = RationalPrecision,
         normalized::Bool = true,
         power_of_two_denom::Bool = false,
-        cond_vandermonde::Float64 = 1.0,
-    ) where {T<:Number}
+        cond_vandermonde::Float64 = 1.0
+    ) where {T <: Number}
         S = typeof(scale_factor)
-        new{T,S}(
+        new{T, S}(
             sol.u,
             support,
             degree,
@@ -188,12 +188,12 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde,
+            cond_vandermonde
         )
     end
 
     # General constructor with both type parameters
-    function ApproxPoly{T,S}(
+    function ApproxPoly{T, S}(
         coeffs::Vector{T},
         support,
         degree,
@@ -206,9 +206,9 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
         precision::PrecisionType,
         normalized::Bool,
         power_of_two_denom::Bool,
-        cond_vandermonde::Float64,
-    ) where {T<:Number,S<:Union{Float64,Vector{Float64}}}
-        new{T,S}(
+        cond_vandermonde::Float64
+    ) where {T <: Number, S <: Union{Float64, Vector{Float64}}}
+        new{T, S}(
             coeffs,
             support,
             degree,
@@ -221,7 +221,7 @@ struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde,
+            cond_vandermonde
         )
     end
 end
@@ -240,8 +240,8 @@ function ApproxPoly(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    cond_vandermonde::Float64 = 1.0,
-) where {T<:Number,S<:Union{Float64,Vector{Float64}}}
+    cond_vandermonde::Float64 = 1.0
+) where {T <: Number, S <: Union{Float64, Vector{Float64}}}
     return ApproxPoly{T}(
         coeffs,
         support,
@@ -255,7 +255,7 @@ function ApproxPoly(
         precision,
         normalized,
         power_of_two_denom,
-        cond_vandermonde,
+        cond_vandermonde
     )
 end
 
@@ -287,13 +287,13 @@ Fields:
 struct test_input
     dim::Int
     center::Vector{Float64}
-    GN::Union{Int,Nothing}
-    prec::Union{Tuple{Float64,Float64},Nothing}
-    tolerance::Union{Float64,Nothing}
-    noise::Union{Tuple{Float64,Float64},Nothing}
-    sample_range::Union{Float64,Vector{Float64},Nothing}
-    reduce_samples::Union{Float64,Nothing}
-    degree_max::Union{Int,Nothing}
+    GN::Union{Int, Nothing}
+    prec::Union{Tuple{Float64, Float64}, Nothing}
+    tolerance::Union{Float64, Nothing}
+    noise::Union{Tuple{Float64, Float64}, Nothing}
+    sample_range::Union{Float64, Vector{Float64}, Nothing}
+    reduce_samples::Union{Float64, Nothing}
+    degree_max::Union{Int, Nothing}
     objective::Function
 
     """
@@ -342,15 +342,15 @@ struct test_input
         f::Function;
         dim::Int = 2,
         center::AbstractVector{<:Real} = fill(0.0, dim),
-        GN::Union{Int,Nothing} = nothing,
-        alpha::Union{Real,Nothing} = 0.1,
-        delta::Union{Real,Nothing} = 0.5,
-        tolerance::Union{Real,Nothing} = 2e-3,
-        sample_range::Union{Real,AbstractVector{<:Real},Nothing} = 1.0,
-        reduce_samples::Union{Real,Nothing} = 1.0,
+        GN::Union{Int, Nothing} = nothing,
+        alpha::Union{Real, Nothing} = 0.1,
+        delta::Union{Real, Nothing} = 0.5,
+        tolerance::Union{Real, Nothing} = 2e-3,
+        sample_range::Union{Real, AbstractVector{<:Real}, Nothing} = 1.0,
+        reduce_samples::Union{Real, Nothing} = 1.0,
         degree_max::Int = 6,
-        model::Union{Nothing,Any} = nothing,
-        outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
+        model::Union{Nothing, Any} = nothing,
+        outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
     )
         # Type conversions
         center_vec = Vector{Float64}(float.(center))
@@ -409,7 +409,7 @@ struct test_input
             sample_range_converted,
             reduce_samples_float,
             degree_max,
-            objective,
+            objective
         )
     end
 end
@@ -438,12 +438,12 @@ function create_test_input(
     center::AbstractVector{Float64} = fill(0.0, n),
     tolerance::Float64 = 2e-3,
     alpha::Float64 = 0.1,
-    delta::Union{Real,Nothing} = nothing,
-    sample_range::Union{Float64,AbstractVector{<:Real}} = 1.0,
-    reduce_samples::Union{Real,Nothing} = nothing,
+    delta::Union{Real, Nothing} = nothing,
+    sample_range::Union{Float64, AbstractVector{<:Real}} = 1.0,
+    reduce_samples::Union{Real, Nothing} = nothing,
     degree_max::Int = 6,
-    model::Union{Nothing,Any} = nothing,
-    outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
+    model::Union{Nothing, Any} = nothing,
+    outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
 )::test_input
     return test_input(
         f;
@@ -456,6 +456,6 @@ function create_test_input(
         reduce_samples = reduce_samples,
         degree_max = degree_max,
         model = model,
-        outputs = outputs,
+        outputs = outputs
     )
 end

@@ -8,7 +8,7 @@ println("Checking if process_crit_pts is defined: ", isdefined(Globtim, :process
 # You're already using Constructor and test_input in your test, so they should be defined
 println(
     "Names exported from Globtim: ",
-    filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim)),
+    filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim))
 )
 
 using CSV
@@ -32,7 +32,14 @@ using ProgressLogging
     println("Number of samples: ", SMPL^n)
 
     # Create test input
-    TR = test_input(f, dim = n, center = [0.0, 0.0], GN = SMPL, sample_range = scale_factor, tolerance = nothing)
+    TR = test_input(
+        f,
+        dim = n,
+        center = [0.0, 0.0],
+        GN = SMPL,
+        sample_range = scale_factor,
+        tolerance = nothing
+    )
 
     # Define df_cheb at this scope level so both nested testsets can access it
     df_cheb = nothing
@@ -52,7 +59,7 @@ using ProgressLogging
                 d,
                 pol_cheb.coeffs;
                 basis = :chebyshev,
-                normalized = false,
+                normalized = false
             )
         end
         println("Time to solve Chebyshev system: $(time_solve) seconds")
@@ -165,3 +172,6 @@ include("test_lambda_vandermonde_anisotropic.jl")
 
 # Include convenience methods tests
 include("test_convenience_methods.jl")
+
+# Include Aqua.jl quality assurance tests
+include("test_aqua.jl")

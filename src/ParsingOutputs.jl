@@ -26,7 +26,7 @@ function process_crit_pts(
     f::Function,
     TR::test_input;
     skip_filtering::Bool = false,
-    kwargs...,
+    kwargs...
 )::DataFrame
     # Validate input dimensions
     if !all(p -> length(p) == TR.dim, real_pts)
@@ -53,7 +53,7 @@ function process_crit_pts(
 
     # Handle case with no valid points
     if isempty(filtered_points)
-        result = Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim)
+        result = Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim)
         result[:z] = Float64[]
         return DataFrame(result)
     end
@@ -67,7 +67,7 @@ function process_crit_pts(
         [TR.sample_range .* p .+ center_vec for p in filtered_points]
     else
         # Vector scaling - apply per-coordinate scaling
-        [[TR.sample_range[i] * p[i] + center_vec[i] for i = 1:TR.dim] for p in filtered_points]
+        [[TR.sample_range[i] * p[i] + center_vec[i] for i in 1:TR.dim] for p in filtered_points]
     end
 
     # Evaluate function at transformed points
@@ -94,8 +94,8 @@ function process_crit_pts(
                     ArgumentError(
                         "Function doesn't accept expected input format. " *
                         "For 1D problems, function should accept either scalar (e.g., x -> sin(x)) " *
-                        "or vector input (e.g., x -> sin(x[1])).",
-                    ),
+                        "or vector input (e.g., x -> sin(x[1]))."
+                    )
                 )
             end
         end
@@ -114,9 +114,9 @@ function process_crit_pts(
     # Create DataFrame
     return DataFrame(
         merge(
-            Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i = 1:TR.dim),
-            Dict(:z => z),
-        ),
+            Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim),
+            Dict(:z => z)
+        )
     )
 end
 
@@ -161,7 +161,7 @@ function msolve_parser(
     file_path::String,
     f::Function,
     TR::test_input;
-    skip_filtering::Bool = false,
+    skip_filtering::Bool = false
 )::DataFrame
     total_time = @elapsed begin
         println("\n=== Starting MSolve Parser (dimension: $(TR.dim)) ===")
@@ -196,7 +196,7 @@ function msolve_parser(
                     end
 
                     # Extract the content after [0, [1,
-                    inner_content = content[start_idx[end]+1:end]
+                    inner_content = content[(start_idx[end] + 1):end]
 
                     # Use a regex that properly captures rational numbers
                     # Match patterns like [[x, y], [data]] where x,y can be:
@@ -256,7 +256,7 @@ function msolve_parser(
                 end
             end
             println(
-                "Processed $(length(points)) points ($(round(process_time, digits=3))s)",
+                "Processed $(length(points)) points ($(round(process_time, digits=3))s)"
             )
 
             if !all(p -> length(p) == TR.dim, points)
@@ -287,7 +287,7 @@ function msolve_parser(
 
             if isempty(filtered_points)
                 println("No valid points found after filtering")
-                return DataFrame(Dict(Symbol("x$i") => Float64[] for i = 1:TR.dim))
+                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim))
             end
 
             # Convert center to vector if it's not already
@@ -300,7 +300,8 @@ function msolve_parser(
             else
                 # Vector sample_range - apply per-coordinate scaling
                 [
-                    [TR.sample_range[i] * p[i] + center_vec[i] for i = 1:TR.dim] for
+                    [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:TR.dim]
+                    for
                     p in filtered_points
                 ]
             end
@@ -310,10 +311,10 @@ function msolve_parser(
             df = DataFrame(
                 merge(
                     Dict(
-                        Symbol("x$i") => [p[i] for p in points_to_process] for i = 1:TR.dim
+                        Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim
                     ),
-                    Dict(:z => z),
-                ),
+                    Dict(:z => z)
+                )
             )
 
             return df

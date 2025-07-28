@@ -24,8 +24,8 @@ function symbolic_orthopoly(type::Symbol, n::Integer; kwargs...)
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
-            ),
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev"
+            )
         )
     end
 end
@@ -48,8 +48,8 @@ function evaluate_orthopoly(type::Symbol, P, x_val::Number)
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
-            ),
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev"
+            )
         )
     end
 end
@@ -72,8 +72,8 @@ function get_orthopoly_coeffs(type::Symbol, max_degree::Integer; kwargs...)
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
-            ),
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev"
+            )
         )
     end
 end
@@ -116,7 +116,7 @@ function construct_orthopoly_polynomial(
     precision::PrecisionType = RationalPrecision;
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    verbose::Bool = false,
+    verbose::Bool = false
 )
     # Handle backward compatibility: convert integer degree to tuple format
     degree_tuple = if isa(degree, Int)
@@ -139,7 +139,7 @@ function construct_orthopoly_polynomial(
     if length(coeffs) != m
         if verbose
             println(
-                "The length of coeffs ($(length(coeffs))) does not match the dimension of the space we project onto ($m)",
+                "The length of coeffs ($(length(coeffs))) does not match the dimension of the space we project onto ($m)"
             )
         end
         error("The length of coeffs must match the dimension of the space we project onto")
@@ -152,7 +152,7 @@ function construct_orthopoly_polynomial(
         println("Converted coefficient types: ", typeof(coeffs_converted))
         println(
             "First few converted coefficients: ",
-            coeffs_converted[1:min(3, length(coeffs_converted))],
+            coeffs_converted[1:min(3, length(coeffs_converted))]
         )
     end
 
@@ -165,7 +165,7 @@ function construct_orthopoly_polynomial(
             _convert_value(coeffs[1], precision),
             " (",
             typeof(_convert_value(coeffs[1], precision)),
-            ")",
+            ")"
         )
     end
 
@@ -178,7 +178,7 @@ function construct_orthopoly_polynomial(
             degree;
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom,
+            power_of_two_denom = power_of_two_denom
         )
     elseif basis == :chebyshev
         result = construct_chebyshev_approx(
@@ -187,13 +187,13 @@ function construct_orthopoly_polynomial(
             degree;
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom,
+            power_of_two_denom = power_of_two_denom
         )
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial basis: $basis. Use :legendre or :chebyshev",
-            ),
+                "Unsupported polynomial basis: $basis. Use :legendre or :chebyshev"
+            )
         )
     end
 
@@ -204,4 +204,113 @@ function construct_orthopoly_polynomial(
     end
 
     return result
+end
+
+# ============================================================================
+# Exact Conversion Functions
+# ============================================================================
+
+"""
+    to_exact_monomial_basis(pol::ApproxPoly; variables=nothing)
+
+Convert a polynomial from orthogonal basis (Chebyshev/Legendre) to monomial basis using exact arithmetic.
+
+# Arguments
+- `pol::ApproxPoly`: Polynomial approximation from Globtim
+- `variables`: Array of polynomial variables (created automatically if not provided)
+
+# Returns
+- `DynamicPolynomials.Polynomial`: Polynomial in monomial basis with exact coefficients
+
+# Example
+```julia
+TR = test_input(x -> sin(x[1]), dim=1, center=[0.0], sample_range=1.0)
+pol = Constructor(TR, 10, basis=:chebyshev)
+@polyvar x
+mono_poly = to_exact_monomial_basis(pol, variables=[x])
+```
+"""
+function to_exact_monomial_basis(pol::ApproxPoly; variables = nothing)
+    # Get dimension from the polynomial
+    dim = size(pol.grid, 2)
+
+    # Create variables if not provided
+    if variables === nothing
+        @polyvar x[1:dim]
+        variables = x
+    end
+
+    # Use Globtim's function to construct the polynomial
+    # This handles the basis conversion internally
+    mono_poly = construct_orthopoly_polynomial(
+        variables,
+        pol.coeffs,
+        pol.degree,
+        pol.basis,
+        pol.precision;
+        normalized = pol.normalized,
+        power_of_two_denom = pol.power_of_two_denom
+    )
+
+    # Scale the polynomial to account for domain transformation
+    # Globtim uses [-1,1]^n as reference domain, scaled by scale_factor
+    # Note: scale_factor scales the domain, so we need to scale variables accordingly
+    if pol.scale_factor != 1.0
+        # Create substitution pairs
+        subs_pairs = [v => v / pol.scale_factor for v in variables]
+        # Apply substitution
+        mono_poly = DynamicPolynomials.subs(mono_poly, subs_pairs...)
+    end
+
+    return mono_poly
+end
+
+"""
+    exact_polynomial_coefficients(f::Function, dim::Int, degree::Int; kwargs...)
+
+Convenience function to get exact monomial coefficients directly from a function.
+
+# Arguments
+- `f::Function`: Function to approximate
+- `dim::Int`: Dimension of the input
+- `degree::Int`: Maximum polynomial degree
+- `basis::Symbol = :chebyshev`: Basis to use (`:chebyshev` or `:legendre`)
+- `center::Vector = zeros(dim)`: Center of approximation domain
+- `sample_range::Real = 1.0`: Radius of approximation domain
+- `tolerance::Real = 0.5`: Tolerance for approximation
+- `precision = Float64Precision`: Arithmetic precision
+
+# Returns
+- `DynamicPolynomials.Polynomial`: Polynomial in monomial basis
+
+# Example
+```julia
+f = x -> x[1]^2 + x[2]^2
+mono_poly = exact_polynomial_coefficients(f, 2, 4, basis=:chebyshev)
+```
+"""
+function exact_polynomial_coefficients(
+    f::Function,
+    dim::Int,
+    degree::Int;
+    basis::Symbol = :chebyshev,
+    center::Vector = zeros(dim),
+    sample_range::Real = 1.0,
+    tolerance::Real = 0.5,
+    precision = Float64Precision
+)
+    # Create test input
+    TR = test_input(
+        f,
+        dim = dim,
+        center = center,
+        sample_range = sample_range,
+        tolerance = tolerance
+    )
+
+    # Construct polynomial approximation
+    pol = Constructor(TR, degree, basis = basis, precision = precision)
+
+    # Convert to monomial basis
+    return to_exact_monomial_basis(pol)
 end

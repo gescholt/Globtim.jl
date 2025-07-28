@@ -28,7 +28,7 @@ Generate the symbolic Legendre polynomial of degree n.
 function symbolic_legendre(
     n::Integer;
     precision::PrecisionType = RationalPrecision,
-    normalized::Bool = true,
+    normalized::Bool = true
 )
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
@@ -61,7 +61,7 @@ function _build_legendre_polynomial(n::Integer, precision::PrecisionType)
     p_prev = _convert_value(1, precision)  # P₀(x)
     p_curr = x                            # P₁(x)
 
-    for k = 1:(n-1)
+    for k in 1:(n - 1)
         if precision == Float64Precision
             # Use floating-point division for Float64Precision
             k_rat = Float64(k)
@@ -163,20 +163,20 @@ Generate coefficient vectors for Legendre polynomials from degree 0 to max_degre
 function get_legendre_coeffs(
     max_degree::Integer;
     precision::PrecisionType = RationalPrecision,
-    normalized::Bool = true,
+    normalized::Bool = true
 )
     # Vector to store coefficient vectors
     legendre_coeffs = Vector{Vector}(undef, max_degree + 1)
 
     # For each degree, generate polynomial and extract coefficients
-    for deg = 0:max_degree
+    for deg in 0:max_degree
         P = symbolic_legendre(deg; precision = precision, normalized = normalized)
 
         # Handle constant polynomials
         if P isa Number
             coeff_type = precision == RationalPrecision ? Rational{BigInt} : Float64
             # Convert to the correct type
-            legendre_coeffs[deg+1] = [convert(coeff_type, P)]
+            legendre_coeffs[deg + 1] = [convert(coeff_type, P)]
         else
             # Extract coefficients from terms
             terms_array = terms(P)
@@ -190,10 +190,10 @@ function get_legendre_coeffs(
             full_coeffs = zeros(coeff_type, deg + 1)
             for (d, c) in zip(degrees, coeffs)
                 # Convert each coefficient to the desired type
-                full_coeffs[d+1] = convert(coeff_type, c)
+                full_coeffs[d + 1] = convert(coeff_type, c)
             end
 
-            legendre_coeffs[deg+1] = full_coeffs
+            legendre_coeffs[deg + 1] = full_coeffs
         end
     end
 
@@ -220,7 +220,7 @@ Generate a matrix where each row contains the coefficients of a Legendre polynom
 function legendre_coeff_matrix(
     n::Integer;
     precision::PrecisionType = RationalPrecision,
-    normalized::Bool = true,
+    normalized::Bool = true
 )
     coeffs = get_legendre_coeffs(n; precision = precision, normalized = normalized)
 
@@ -229,9 +229,9 @@ function legendre_coeff_matrix(
     result = zeros(T, n + 1, n + 1)
 
     # Fill in the coefficient matrix
-    for i = 0:n
-        row = coeffs[i+1]
-        result[i+1, 1:length(row)] = row
+    for i in 0:n
+        row = coeffs[i + 1]
+        result[i + 1, 1:length(row)] = row
     end
 
     return result
@@ -264,7 +264,7 @@ function construct_legendre_approx(
     degree;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false,
+    power_of_two_denom::Bool = false
 )
     n = length(x_vars)  # number of variables
 
@@ -295,11 +295,11 @@ function construct_legendre_approx(
     S = zero(x_vars[1])
 
     # Construct polynomial using Legendre basis
-    for j = 1:m
+    for j in 1:m
         term = one(x_vars[1])
-        for k = 1:n
+        for k in 1:n
             deg = lambda[j, k]
-            coeff_vec = legendre_coeffs[deg+1]
+            coeff_vec = legendre_coeffs[deg + 1]
 
             # Create monomial vector for this variable
             monom_vec = MonomialVector([x_vars[k]], 0:deg)

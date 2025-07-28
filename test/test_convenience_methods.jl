@@ -69,7 +69,7 @@ using DataFrames
                 (x -> cos(x), "cos"),
                 (x -> exp(x), "exp"),
                 (x -> x^2, "x^2"),
-                (x -> x^3 - x, "x^3 - x"),
+                (x -> x^3 - x, "x^3 - x")
             ]
 
             for (f, fname) in test_functions
@@ -85,7 +85,7 @@ using DataFrames
                 @test "z" in names(df)
 
                 # Verify function values are computed correctly
-                for i = 1:size(df, 1)
+                for i in 1:size(df, 1)
                     x_transformed = TR.sample_range * test_points[i][1] + TR.center[1]
                     expected_z = f(x_transformed)
                     @test df.z[i] ≈ expected_z atol = 1e-10
