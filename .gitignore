@@ -31,3 +31,7 @@ data/figures/
 
 # Environment files with secrets
 .env.gitlab
+
+# Node.js dependencies
+docs/node_modules/
+docs/package-lock.json

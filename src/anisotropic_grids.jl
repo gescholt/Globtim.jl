@@ -33,9 +33,9 @@ function generate_anisotropic_grid(grid_sizes::Vector{Int}; basis::Symbol = :che
 
     for GN in grid_sizes
         nodes = if basis == :chebyshev
-            [cos((2i + 1) * π / (2 * GN + 2)) for i = 0:GN]
+            [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
         elseif basis == :legendre
-            [-1 + 2 * i / GN for i = 0:GN]
+            [-1 + 2 * i / GN for i in 0:GN]
         elseif basis == :uniform
             # True uniform spacing including endpoints
             range(-1, 1, length = GN + 1) |> collect
@@ -50,7 +50,7 @@ function generate_anisotropic_grid(grid_sizes::Vector{Int}; basis::Symbol = :che
 
     # Use array comprehension with direct SVector construction
     grid = [
-        SVector{n_dims,Float64}(ntuple(d -> nodes_per_dim[d][idx[d]], n_dims)) for
+        SVector{n_dims, Float64}(ntuple(d -> nodes_per_dim[d][idx[d]], n_dims)) for
         idx in Iterators.product((1:length(nodes) for nodes in nodes_per_dim)...)
     ]
 
@@ -152,7 +152,7 @@ function convert_to_svector_grid(matrix::Matrix{Float64})
     n = size(matrix, 2)
     n_points = size(matrix, 1)
 
-    return [SVector{n,Float64}(matrix[i, :]) for i = 1:n_points]
+    return [SVector{n, Float64}(matrix[i, :]) for i in 1:n_points]
 end
 
 """
@@ -187,8 +187,8 @@ function validate_grid(grid::Matrix{Float64}, n::Int; basis::Symbol = :chebyshev
 
     # Check if points are in valid range for basis
     if basis == :chebyshev || basis == :legendre
-        for i = 1:size(grid, 1)
-            for j = 1:n
+        for i in 1:size(grid, 1)
+            for j in 1:n
                 if abs(grid[i, j]) > 1.0 + 1e-10  # Small tolerance for numerical errors
                     @warn "Grid point at ($i,$j) = $(grid[i,j]) is outside [-1,1] range for $basis basis"
                 end

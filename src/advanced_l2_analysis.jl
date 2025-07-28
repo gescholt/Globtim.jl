@@ -37,7 +37,7 @@ function compute_l2_norm(poly, domain::BoxDomain; n_points = 20)
 
     # Simple quadrature-based L2 norm computation
     # Generate Chebyshev points for each dimension
-    nodes = [cos((2i + 1) * π / (2 * n_points)) for i = 0:n_points-1]
+    nodes = [cos((2i + 1) * π / (2 * n_points)) for i in 0:(n_points - 1)]
 
     # Create grid and compute function values
     if dim == 1
@@ -55,28 +55,28 @@ function compute_l2_norm(poly, domain::BoxDomain; n_points = 20)
         # Create grid points for each dimension
         total = 0.0
         n_total = n_points^dim
-        
+
         # Generate all combinations of indices
-        for idx = 0:n_total-1
+        for idx in 0:(n_total - 1)
             # Convert linear index to multi-dimensional indices
             indices = zeros(Int, dim)
             temp = idx
-            for d = 1:dim
+            for d in 1:dim
                 indices[d] = temp % n_points
                 temp = temp ÷ n_points
             end
-            
+
             # Create point from indices
             x = zeros(dim)
-            for d = 1:dim
-                x[d] = nodes[indices[d]+1] * domain.radius
+            for d in 1:dim
+                x[d] = nodes[indices[d] + 1] * domain.radius
             end
-            
+
             # Evaluate polynomial at this point
             val = poly(x)
             total += val^2
         end
-        
+
         # Compute quadrature weight
         weight = (2.0 * domain.radius / n_points)^dim
         return sqrt(total * weight)
@@ -146,7 +146,7 @@ function compute_l2_norm_coeffs(pol::ApproxPoly, coeffs::Vector; grid_points = n
         pol.precision,
         pol.normalized,
         pol.power_of_two_denom,
-        pol.cond_vandermonde,
+        pol.cond_vandermonde
     )
 
     # Simple approximation: scale the original norm by coefficient ratio
@@ -185,7 +185,7 @@ function sparsify_polynomial(
     pol::ApproxPoly,
     threshold::Real;
     mode::Symbol = :relative,
-    preserve_indices = Int[],
+    preserve_indices = Int[]
 )
     # Copy coefficients
     new_coeffs = copy(pol.coeffs)
@@ -225,7 +225,7 @@ function sparsify_polynomial(
         pol.precision,
         pol.normalized,
         pol.power_of_two_denom,
-        pol.cond_vandermonde,
+        pol.cond_vandermonde
     )
 
     # Compute sparsity metrics
@@ -239,7 +239,7 @@ function sparsify_polynomial(
         zeroed_indices = zeroed_indices,
         l2_ratio = l2_sparsified / l2_original,
         original_nnz = original_nnz,
-        new_nnz = new_nnz,
+        new_nnz = new_nnz
     )
 end
 
@@ -306,7 +306,7 @@ Analyze sparsity vs accuracy tradeoffs for different thresholds.
 """
 function analyze_sparsification_tradeoff(
     pol::ApproxPoly;
-    thresholds = [1e-6, 1e-8, 1e-10, 1e-12],
+    thresholds = [1e-6, 1e-8, 1e-10, 1e-12]
 )
     results = []
 
@@ -337,7 +337,7 @@ function analyze_approximation_error_tradeoff(
     f::Function,
     pol::ApproxPoly,
     TR;
-    thresholds = [1e-6, 1e-8, 1e-10],
+    thresholds = [1e-6, 1e-8, 1e-10]
 )
     # Compute original approximation error
     error_original = compute_approximation_error(f, pol, TR)
@@ -358,8 +358,8 @@ function analyze_approximation_error_tradeoff(
                 approx_error = error_sparse,
                 approx_error_ratio = error_sparse / error_original,
                 l2_poly_original = compute_l2_norm_vandermonde(pol),
-                l2_poly_sparse = compute_l2_norm_vandermonde(sparse_result.polynomial),
-            ),
+                l2_poly_sparse = compute_l2_norm_vandermonde(sparse_result.polynomial)
+            )
         )
     end
 
@@ -384,7 +384,7 @@ function verify_truncation_quality(
     original_poly,
     truncated_poly,
     domain::BoxDomain;
-    n_points = 20,
+    n_points = 20
 )
     # Compute both norms using the same grid for consistency
     l2_original = compute_l2_norm(original_poly, domain, n_points = n_points)

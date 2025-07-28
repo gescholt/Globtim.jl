@@ -52,7 +52,7 @@ function execute_single_tolerance_analysis(
     center::Vector{Float64},
     sample_range::Float64,
     outlier_threshold::Float64,
-    verbose::Bool,
+    verbose::Bool
 )
 
     verbose && @info "Setting up test input" tolerance = tolerance
@@ -63,7 +63,7 @@ function execute_single_tolerance_analysis(
         dim = 4,
         center = center,
         sample_range = sample_range,
-        tolerance = tolerance,
+        tolerance = tolerance
     )
 
     # Construct polynomial with automatic degree adaptation
@@ -87,7 +87,7 @@ function execute_single_tolerance_analysis(
     outlier_count = 0
     if nrow(df) > 0
         distances_to_center =
-            [norm([df[i, Symbol("x$j")] for j = 1:4] .- center) for i = 1:nrow(df)]
+            [norm([df[i, Symbol("x$j")] for j in 1:4] .- center) for i in 1:nrow(df)]
         valid_indices = findall(d -> d <= outlier_threshold, distances_to_center)
         outlier_count = nrow(df) - length(valid_indices)
 
@@ -105,7 +105,7 @@ function execute_single_tolerance_analysis(
 
     # Placeholder for BFGS refinement (to be integrated)
     # For now, use raw points as refined points
-    for i = 1:nrow(df)
+    for i in 1:nrow(df)
         push!(raw_distances, 0.0)  # Placeholder
         push!(bfgs_distances, 0.0)  # Placeholder
         push!(point_types, "unknown")  # Placeholder
@@ -113,7 +113,7 @@ function execute_single_tolerance_analysis(
 
     # Create orthant results (simplified for now)
     orthant_data = OrthantResult[]
-    for orthant_id = 1:16
+    for orthant_id in 1:16
         # Placeholder orthant result
         push!(
             orthant_data,
@@ -127,8 +127,8 @@ function execute_single_tolerance_analysis(
                 0.01,
                 0,
                 actual_degree,
-                1.0,
-            ),
+                1.0
+            )
         )
     end
 
@@ -145,7 +145,7 @@ function execute_single_tolerance_analysis(
         [actual_degree],
         [pol.GN],
         1.0,
-        success_rates,
+        success_rates
     )
 
     return tolerance_result
@@ -181,7 +181,7 @@ function execute_multi_tolerance_analysis(
     sample_range::Float64 = 0.5,
     outlier_threshold::Float64 = 2.0,
     max_retries::Int = 3,
-    verbose::Bool = true,
+    verbose::Bool = true
 )
 
     # Validate inputs
@@ -201,7 +201,7 @@ function execute_multi_tolerance_analysis(
     end
 
     # Initialize results storage
-    results_by_tolerance = Dict{Float64,ToleranceResult}()
+    results_by_tolerance = Dict{Float64, ToleranceResult}()
     total_start_time = time()
 
     verbose &&
@@ -218,7 +218,7 @@ function execute_multi_tolerance_analysis(
         local tolerance_result
 
         # Retry loop for robustness
-        for attempt = 1:max_retries
+        for attempt in 1:max_retries
             try
                 verbose &&
                     attempt > 1 &&
@@ -231,7 +231,7 @@ function execute_multi_tolerance_analysis(
                     center,
                     sample_range,
                     outlier_threshold,
-                    verbose,
+                    verbose
                 )
 
                 success = true
@@ -263,7 +263,7 @@ function execute_multi_tolerance_analysis(
         center = center,
         sample_range = sample_range,
         outlier_threshold = outlier_threshold,
-        dimension = 4,
+        dimension = 4
     )
 
     # Build final results container
@@ -273,7 +273,7 @@ function execute_multi_tolerance_analysis(
         total_time,
         analysis_timestamp,
         function_name,
-        domain_config,
+        domain_config
     )
 
     verbose && @info "Multi-tolerance analysis completed" total_time_seconds =

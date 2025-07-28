@@ -81,12 +81,12 @@ grid = generate_grid(3, 3, basis=:legendre)  # Creates a 4×4×4 array of SVecto
 TimerOutputs.@timeit _TO function generate_grid(
     n::Int,
     GN::Int;
-    basis::Symbol = :chebyshev,
-)::Array{SVector{n,Float64},n}
+    basis::Symbol = :chebyshev
+)::Array{SVector{n, Float64}, n}
     nodes = if basis == :chebyshev
-        (cos((2i + 1) * π / (2 * GN + 2)) for i = 0:GN)
+        (cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN)
     elseif basis == :legendre
-        (-1 + 2 * i / GN for i = 0:GN)
+        (-1 + 2 * i / GN for i in 0:GN)
     else
         error("Unsupported basis: $basis")
     end
@@ -95,8 +95,8 @@ TimerOutputs.@timeit _TO function generate_grid(
 
     # Use array comprehension with direct SVector construction
     [
-        SVector{n,Float64}(ntuple(d -> nodes_vec[idx[d]], n)) for
-        idx in Iterators.product(fill(1:GN+1, n)...)
+        SVector{n, Float64}(ntuple(d -> nodes_vec[idx[d]], n)) for
+        idx in Iterators.product(fill(1:(GN + 1), n)...)
     ]
 end
 
@@ -131,21 +131,21 @@ This version is optimized for small N (typically N ≤ 4) using compile-time unr
 TimerOutputs.@timeit _TO function generate_grid_small_n(
     N::Int,
     GN::Int;
-    basis::Symbol = :chebyshev,
-)::Array{SVector{N,Float64},N}
+    basis::Symbol = :chebyshev
+)::Array{SVector{N, Float64}, N}
     nodes = if basis == :chebyshev
-        [cos((2i + 1) * π / (2 * GN + 2)) for i = 0:GN]
+        [cos((2i + 1) * π / (2 * GN + 2)) for i in 0:GN]
     elseif basis == :legendre
-        [-1 + 2 * i / GN for i = 0:GN]
+        [-1 + 2 * i / GN for i in 0:GN]
     else
         error("Unsupported basis: $basis")
     end
 
     reshape(
         [
-            SVector{N,Float64}(ntuple(d -> nodes[idx[d]], N)) for
-            idx in Iterators.product(fill(1:GN+1, N)...)
+            SVector{N, Float64}(ntuple(d -> nodes[idx[d]], N)) for
+            idx in Iterators.product(fill(1:(GN + 1), N)...)
         ],
-        fill(GN + 1, N)...,
+        fill(GN + 1, N)...
     )
 end

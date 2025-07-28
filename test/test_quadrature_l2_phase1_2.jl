@@ -105,11 +105,14 @@ using StaticArrays
                 # Check convergence: differences should decrease
                     begin
                         diffs =
-                            [abs(norms_1d[i+1] - norms_1d[i]) for i = 1:length(norms_1d)-1]
+                            [
+                                abs(norms_1d[i + 1] - norms_1d[i]) for
+                                i in 1:(length(norms_1d) - 1)
+                            ]
                         # Either decreasing or very small
                         all(
-                            i -> diffs[i+1] < diffs[i] || diffs[i+1] < 1e-10,
-                            1:length(diffs)-1,
+                            i -> diffs[i + 1] < diffs[i] || diffs[i + 1] < 1e-10,
+                            1:(length(diffs) - 1)
                         )
                     end
             end
@@ -128,7 +131,10 @@ using StaticArrays
                 # Check convergence
                     begin
                         diffs =
-                            [abs(norms_2d[i+1] - norms_2d[i]) for i = 1:length(norms_2d)-1]
+                            [
+                                abs(norms_2d[i + 1] - norms_2d[i]) for
+                                i in 1:(length(norms_2d) - 1)
+                            ]
                         # Last difference should be smaller than first
                         diffs[end] < diffs[1] || diffs[end] < 1e-8
                     end
@@ -161,7 +167,7 @@ using StaticArrays
             end
 
             # 4D Gaussian
-            f_gauss_4d = x -> exp(-sum(x[i]^2 for i = 1:4))
+            f_gauss_4d = x -> exp(-sum(x[i]^2 for i in 1:4))
             @test begin
                 l2_norm = compute_l2_norm_quadrature(f_gauss_4d, [5, 5, 5, 5], :chebyshev)
                 l2_norm > 0 && isfinite(l2_norm)

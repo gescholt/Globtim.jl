@@ -63,21 +63,15 @@ export test_input,
     solve_polynomial_system,
     msolve_polynomial_system,
     msolve_parser,
-    process_output_file,
-    plot_polyapprox,
     generate_grid,
     SupportGen,
-    ChebyshevPolyExact,
     construct_chebyshev_approx,
     subdivide_domain,
     solve_and_parse,
     analyze_critical_points,
-    plot_talk,
     load_function_params,
     FunctionParameters,
-    analyze_converged_points,
     generate_grid_small_n,
-    Toy_gen,
     simple_lambda_vandermonde,
     create_level_set_animation,
     create_level_set_visualization,
@@ -146,7 +140,6 @@ include("grid_utils.jl") #Grid format conversion utilities
 include("subdomain_management.jl") #4D subdomain decomposition management
 include("multi_tolerance_analysis.jl") #Multi-tolerance execution framework
 include("function_value_analysis.jl") #Function value error analysis
-include("exact_conversion.jl") #Exact arithmetic polynomial conversion
 include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsification
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
@@ -257,6 +250,71 @@ function plot_filtered_y_distances end
 function plot_distance_statistics end
 function histogram_enhanced end
 function histogram_minimizers_only end
+
+# Type definitions for GLMakie extension
+# These types need to be defined in the main module to be exportable
+
+"""
+    LevelSetData{T<:AbstractFloat}
+
+Structure to hold level set computation results.
+
+# Fields
+- `points::Vector{SVector{3,T}}`: Points near the level set
+- `values::Vector{T}`: Function values at the points
+- `level::T`: The target level value
+"""
+struct LevelSetData{T <: AbstractFloat}
+    points::Vector{StaticArrays.SVector{3, T}}
+    values::Vector{T}
+    level::T
+
+    # Inner constructor for validation
+    function LevelSetData{T}(
+        points::Vector{StaticArrays.SVector{3, T}},
+        values::Vector{T},
+        level::T
+    ) where {T <: AbstractFloat}
+        length(points) == length(values) ||
+            throw(ArgumentError("Points and values must have same length"))
+        new{T}(points, values, level)
+    end
+end
+
+# Outer constructor for type inference
+LevelSetData(
+    points::Vector{StaticArrays.SVector{3, T}},
+    values::Vector{T},
+    level::T
+) where {T <: AbstractFloat} = LevelSetData{T}(points, values, level)
+
+"""
+    VisualizationParameters{T<:AbstractFloat}
+
+Parameters for level set visualization.
+
+# Fields
+- `point_tolerance::T`: Tolerance for level set point detection (default: 1e-1)
+- `point_window::T`: Window size for point filtering (default: 2e-1)
+- `fig_size::Tuple{Int,Int}`: Figure size in pixels (default: (1000, 800))
+"""
+struct VisualizationParameters{T <: AbstractFloat}
+    point_tolerance::T
+    point_window::T
+    fig_size::Tuple{Int, Int}
+
+    # Constructor with defaults
+    function VisualizationParameters{T}(;
+        point_tolerance::T = T(1e-1),
+        point_window::T = T(2e-1),
+        fig_size::Tuple{Int, Int} = (1000, 800)
+    ) where {T <: AbstractFloat}
+        new{T}(point_tolerance, point_window, fig_size)
+    end
+end
+
+# Convenience constructor
+VisualizationParameters(; kwargs...) = VisualizationParameters{Float64}(; kwargs...)
 
 # Stub functions for GLMakie extension
 # These will be properly implemented when GLMakie is loaded

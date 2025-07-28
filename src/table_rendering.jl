@@ -37,13 +37,13 @@ function format_table_row(label::String, value::String, width::Int; label_width_
 
     # Truncate if necessary
     display_label = if length(label) > label_width
-        label[1:label_width-3] * "..."
+        label[1:(label_width - 3)] * "..."
     else
         label
     end
 
     display_value = if length(value) > value_width
-        value[1:value_width-3] * "..."
+        value[1:(value_width - 3)] * "..."
     else
         value
     end
@@ -102,32 +102,32 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
             format_table_row(
                 "Mean ± Std",
                 "$(round(hs.mean, digits=3)) ± $(round(hs.std, digits=3))",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Median (IQR)",
                 "$(round(hs.median, digits=3)) ($(round(hs.q1, digits=3))-$(round(hs.q3, digits=3)))",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Range",
                 "[$(round(hs.min, digits=3)), $(round(hs.max, digits=3))]",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Outliers",
                 "$(hs.outlier_count) ($(hs.outlier_percentage)%)",
-                table_width,
-            ),
+                table_width
+            )
         )
     else
         push!(lines, format_table_row("Count", "0", table_width))
@@ -147,40 +147,40 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
             format_table_row(
                 "Excellent (< 1e3)",
                 "$(ca.excellent_count) ($(round(100*ca.excellent_count/total, digits=1))%)",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Good (1e3-1e6)",
                 "$(ca.good_count) ($(round(100*ca.good_count/total, digits=1))%)",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Fair (1e6-1e9)",
                 "$(ca.fair_count) ($(round(100*ca.fair_count/total, digits=1))%)",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Poor (1e9-1e12)",
                 "$(ca.poor_count) ($(round(100*ca.poor_count/total, digits=1))%)",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Critical (≥ 1e12)",
                 "$(ca.critical_count) ($(round(100*ca.critical_count/total, digits=1))%)",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(lines, format_table_row("Overall Quality", ca.overall_quality, table_width))
     end
@@ -203,7 +203,7 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
                 status = format_validation_value(vr.eigenvalue_signs_correct)
                 push!(
                     lines,
-                    format_table_row("All eigenvalues positive", status, table_width),
+                    format_table_row("All eigenvalues positive", status, table_width)
                 )
             end
             if !ismissing(vr.positive_eigenvalue_count)
@@ -212,8 +212,8 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
                     format_table_row(
                         "Positive eigenvalue count",
                         string(vr.positive_eigenvalue_count),
-                        table_width,
-                    ),
+                        table_width
+                    )
                 )
             end
             if !ismissing(vr.determinant_positive)
@@ -226,7 +226,7 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
                 status = format_validation_value(vr.eigenvalue_signs_correct)
                 push!(
                     lines,
-                    format_table_row("All eigenvalues negative", status, table_width),
+                    format_table_row("All eigenvalues negative", status, table_width)
                 )
             end
             if !ismissing(vr.negative_eigenvalue_count)
@@ -235,15 +235,15 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
                     format_table_row(
                         "Negative eigenvalue count",
                         string(vr.negative_eigenvalue_count),
-                        table_width,
-                    ),
+                        table_width
+                    )
                 )
             end
             if !ismissing(vr.determinant_sign_consistent)
                 status = format_validation_value(vr.determinant_sign_consistent)
                 push!(
                     lines,
-                    format_table_row("Determinant sign consistent", status, table_width),
+                    format_table_row("Determinant sign consistent", status, table_width)
                 )
             end
 
@@ -252,7 +252,7 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
                 status = format_validation_value(vr.mixed_eigenvalue_signs)
                 push!(
                     lines,
-                    format_table_row("Mixed eigenvalue signs", status, table_width),
+                    format_table_row("Mixed eigenvalue signs", status, table_width)
                 )
             end
         end
@@ -279,23 +279,23 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
 
             push!(
                 lines,
-                format_table_row("Eigenvalue count", string(es.count), table_width),
+                format_table_row("Eigenvalue count", string(es.count), table_width)
             )
             push!(
                 lines,
                 format_table_row(
                     "Mean ± Std",
                     "$(round(es.mean, digits=6)) ± $(round(es.std, digits=6))",
-                    table_width,
-                ),
+                    table_width
+                )
             )
             push!(
                 lines,
                 format_table_row(
                     "Range",
                     "[$(round(es.min, digits=6)), $(round(es.max, digits=6))]",
-                    table_width,
-                ),
+                    table_width
+                )
             )
         end
     end
@@ -320,7 +320,7 @@ function render_console_table(stats_table::ComprehensiveStatsTable; width = 80)
                     else
                         push!(
                             lines,
-                            format_table_row("", rstrip(current_line), table_width),
+                            format_table_row("", rstrip(current_line), table_width)
                         )
                         current_line = "  " * word * " "
                     end
@@ -423,7 +423,7 @@ function render_comparative_table(stats_list::Vector{ComprehensiveStatsTable}; w
         push!(lines, create_table_border(table_width, :middle))
         push!(
             lines,
-            format_table_row("Total critical points", string(total_points), table_width),
+            format_table_row("Total critical points", string(total_points), table_width)
         )
         push!(
             lines,
@@ -431,24 +431,24 @@ function render_comparative_table(stats_list::Vector{ComprehensiveStatsTable}; w
                 "Overall numerical quality",
                 overall_well_cond > 80 ? "EXCELLENT" :
                 overall_well_cond > 60 ? "GOOD" : "FAIR",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Mathematical validation",
                 "$(overall_valid)% pass rate",
-                table_width,
-            ),
+                table_width
+            )
         )
         push!(
             lines,
             format_table_row(
                 "Production readiness",
                 (overall_well_cond > 70 && overall_valid > 80) ? "READY" : "NEEDS REVIEW",
-                table_width,
-            ),
+                table_width
+            )
         )
     end
 

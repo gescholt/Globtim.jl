@@ -8,7 +8,6 @@
 ## Sprint Events
 
 ### 1. Sprint Planning (Day 1)
-- **Duration**: 2 hours
 - **Agenda**:
   1. Review previous sprint outcomes
   2. Define sprint goal
@@ -17,7 +16,6 @@
   5. Assign ownership
 
 ### 2. Daily Standups
-- **Duration**: 15 minutes
 - **Format**: Async updates in GitLab
 - **Questions**:
   - What did I complete yesterday?
@@ -25,14 +23,12 @@
   - Any blockers?
 
 ### 3. Sprint Review (Day 10)
-- **Duration**: 1 hour
 - **Agenda**:
   1. Demo completed features
   2. Review metrics
   3. Gather feedback
 
 ### 4. Sprint Retrospective (Day 10)
-- **Duration**: 45 minutes
 - **Format**:
   - What went well?
   - What could improve?
