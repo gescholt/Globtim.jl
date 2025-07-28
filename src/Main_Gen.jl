@@ -161,12 +161,12 @@ TimerOutputs.@timeit _TO function MainGenerate(
         # Evaluate function on grid points
         if isa(scale_factor, Number)
             # Scalar scale_factor
-            if n == 1
+            # if n == 1
                 # For 1D functions, extract scalar from SVector
-                F = map(x -> f((scale_factor*x+scaled_center)[1]), grid_points)
-            else
+                # F = map(x -> f((scale_factor*x+scaled_center)[1]), grid_points)
+            # else
                 F = map(x -> f(scale_factor * x + scaled_center), grid_points)
-            end
+            # end
         else
             # Vector scale_factor - element-wise multiplication for each coordinate
             # Create a function to apply per-coordinate scaling
