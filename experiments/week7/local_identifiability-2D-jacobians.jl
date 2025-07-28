@@ -1,19 +1,11 @@
-
 using Pkg; Pkg.activate(@__DIR__)
 
 using Revise
 using Globtim
-using DynamicPolynomials, DataFrames
-using ProgressLogging
-using Optim
-using ModelingToolkit
-using OrdinaryDiffEq
-using StaticArrays
-using DataStructures
-using LinearAlgebra
-using TimerOutputs
-using Makie
-using GLMakie
+using DynamicPolynomials, DataFrames, ProgressLogging
+using Optim, ModelingToolkit, OrdinaryDiffEq
+using StaticArrays, DataStructures, LinearAlgebra, TimerOutputs, ForwardDiff
+using Makie, GLMakie
 
 #
 
@@ -28,16 +20,16 @@ using DynamicPolynomials
 using HomotopyContinuation, ProgressLogging
 
 config = (
-    n = 1,
-    d = (:one_d_for_all, 12),
+    n = 2,
+    d = (:one_d_for_all, 14),
     GN = 300,
     time_interval = T[0.0, 1.0],
-    p_true = [T[0.1], T[-0.1]],
+    p_true = [T[0.3, 0.1], T[0.3, -0.1]],
     ic = T[0.3],
     num_points = 20,
-    sample_range = 0.4,
-    distance = L2_norm,
-    model_func = define_simple_1D_model_locally_identifiable,
+    sample_range = 0.3,
+    distance = log_L2_norm,
+    model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
     precision = RationalPrecision,
     my_eps = 0.02,
@@ -48,8 +40,9 @@ config = merge(
     (;
         plot_range = [
             -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
+            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
         ],
-        p_center = [config.p_true[1][1] + 0.05],
+        p_center = [config.p_true[1][1] + 0.05, config.p_true[1][2] - 0.05],
     ),
 )
 
@@ -93,10 +86,10 @@ df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
 @info "" df_cheb
 
-id = "id_1D"
+id = "id_2D_jacobians"
 filename = "$(id)_$(config.model_func)_$(config.distance)"
 
-open(joinpath(@__DIR__, "images", "$filename.txt"), "w") do io
+open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     println(io, "config = ", config, "\n\n")
     println(io, "Condition number of the Vandermonde system: ", pol_cheb.cond_vandermonde)
     println(io, "L2 norm (error of approximation): ", pol_cheb.nrm)
@@ -121,7 +114,7 @@ end
 println(Globtim._TO)
 
 if true
-    fig = Globtim.plot_error_function_1D_with_critical_points(
+    fig = Globtim.plot_error_function_2D_with_critical_points(
         pol_cheb,
         TR,
         df_cheb,
@@ -131,13 +124,26 @@ if true
         config.plot_range,
         config.distance;
         xlabel = "Parameter 1",
+        ylabel = "Parameter 2",
+        colorbar = true,
+        colorbar_label = "Loss Value",
+        num_levels = 200,
         model_func = config.model_func,
     )
+
+    pts_along_valley = df_cheb[df_cheb.z .< -5, :]
+    # for pt in eachrow(pts_along_valley)
+    #     jac = ForwardDiff.gradient(
+    #         error_func,
+    #         [0.2, 0.2],
+    #     )
+    #     @info "" jac
+    # end
 
     display(fig)
 
     Makie.save(
-        joinpath(@__DIR__, "images", "$filename.png"),
+        joinpath(@__DIR__, "images", "$(filename).png"),
         fig,
         px_per_unit = 1.5,
     )
