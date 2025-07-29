@@ -28,14 +28,14 @@ using HomotopyContinuation, ProgressLogging
 
 config = (
     n = 2,
-    d = (:one_d_for_all, 40),
+    d = (:one_d_for_all, 30),
     GN = 200,
     time_interval = T[0.0, 1.0],
     p_true = [T[1., 1.]],
     ic = T[100., 100.],
     num_points = 100,
     sample_range = 0.2,
-    distance = log_L2_norm,
+    distance = L2_norm,
     model_func = define_lotka_volterra_2D_model_v3,
     basis = :chebyshev,
     precision = RationalPrecision,
@@ -101,8 +101,9 @@ df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
 @info "" df_cheb
 
-id = "time_2D-v4-no_oscillation-t$(round(Int, config.time_interval[2]))"
+id = "$(chopsuffix(basename(@__FILE__), ".jl"))_$(round(Int, config.time_interval[2]))"
 filename = "$(id)_$(config.model_func)_$(config.distance)"
+@info "Saving results to file: $(filename)"
 
 open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     println(io, "config = ", config, "\n\n")
@@ -172,8 +173,97 @@ if true
     display(fig)
 
     Makie.save(
-        joinpath(@__DIR__, "images", "$(filename).png"),
+        joinpath(@__DIR__, "images", "2D-$(filename).png"),
         fig,
         px_per_unit = 1.5
     )
+end
+
+if true
+figure_size = (800, 600)
+fig = Figure(size = figure_size)
+ax = Axis(fig[1, 1],
+    xlabel = "Parameter 1",
+    ylabel = "error_func",
+    title = "error_func, walk along valley (parameter 2 := 1.0)",
+)
+
+p1_delta = 0.0:0.001:0.00
+p2 = 0.9:0.001:1.265
+for (i, delta) in enumerate(p1_delta)
+    values = error_func.([[p, 1.0+delta] for p in p2])
+    lines!(ax, p2, values,
+        color=:blue,
+        alpha = (length(p1_delta) - i + 1) / length(p1_delta),
+    )
+    values = error_func.([[p, 1.0-delta] for p in p2])
+    lines!(ax, p2, values,
+        color=:blue,
+        alpha = (length(p1_delta) - i + 1) / length(p1_delta),
+    )
+end
+scatter!(
+    ax,
+    df_cheb.x1,
+    error_func.([[df_cheb.x1[i], 1.0] for i in 1:nrow(df_cheb)]),
+    markersize = 10,
+    color = :blue,
+    marker = :diamond,
+    label = "Critical Points of w_d",
+)
+tp = scatter!(
+    ax,
+    [config.p_true[1][1]],
+    [error_func(config.p_true[1])],
+    markersize = 10,
+    color = :green,
+    marker = :diamond,
+    label = "True Parameter",
+)
+
+ax = Axis(fig[1, 2],
+    xlabel = "Parameter 1",
+    ylabel = "w_d",
+    title = "w_d, walk along valley (parameter 2 := 1.0)",
+)
+pullback(x) = (1 / pol_cheb.scale_factor) * (x .- TR.center)
+poly_func(poly) =
+    p -> (
+        cfs = DynamicPolynomials.coefficients(DynamicPolynomials.subs(poly, x => p));
+        isempty(cfs) ? 0.0 : cfs[1]
+    )
+for (i, delta) in enumerate(p1_delta)
+    values = poly_func(wd_in_std_basis).(([(pullback([p, 1.0+delta])) for p in p2]))
+    lines!(ax, p2, values,
+        color=:blue,
+        alpha = (length(p1_delta) - i + 1) / length(p1_delta),
+    )
+    values = poly_func(wd_in_std_basis).(([pullback([p, 1.0-delta]) for p in p2]))
+    lines!(ax, p2, values,
+        color=:blue,
+        alpha = (length(p1_delta) - i + 1) / length(p1_delta),
+    )
+end
+cp = scatter!(
+    ax,
+    df_cheb.x1,
+    poly_func(wd_in_std_basis).((pullback.([[df_cheb.x1[i], 1.0] for i in 1:nrow(df_cheb)]))),
+    markersize = 10,
+    color = :blue,
+    marker = :diamond,
+    label = "Critical Points of w_d",
+)
+Legend(fig[2, 1], [tp, cp], ["True Parameter", "Critical Points of w_d"],
+    orientation = :horizontal, fontsize = 12,
+    tellheight = false,
+    framevisible = false
+)
+
+display(fig)
+
+Makie.save(
+    joinpath(@__DIR__, "images", "valley_$(filename).png"),
+    fig,
+    px_per_unit = 1.5
+)
 end

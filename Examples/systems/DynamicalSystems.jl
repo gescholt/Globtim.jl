@@ -172,28 +172,6 @@ function define_simple_1D_model_locally_identifiable()
     return model, params, states, outputs
 end
 
-function sample_data(
-    model::ModelingToolkit.ODESystem,
-    measured_data::Vector{ModelingToolkit.Equation},
-    time_interval,
-    p_true,
-    u0,
-    num_points::Int;
-    kwargs...
-) where {T<:Number}
-
-    N = length(p_true)
-    return sample_data(
-        model,
-        measured_data,
-        time_interval,
-        SVector{N,T}(p_true),
-        u0,
-        num_points;
-        kwargs...
-    )
-end
-
 """
     sample_data(model::ModelingToolkit.ODESystem,
                 measured_data::Vector{ModelingToolkit.Equation},
