@@ -12,7 +12,11 @@ using Makie, GLMakie
 Revise.includet(joinpath(@__DIR__, "../../Examples/systems/DynamicalSystems.jl"))
 using .DynamicalSystems
 
-reset_timer!(Globtim._TO)
+# Create a local timer if _TO is not accessible
+if !@isdefined(_TO)
+    const _TO = TimerOutputs.TimerOutput()
+end
+reset_timer!(_TO)
 
 const T = Float64
 
@@ -31,7 +35,7 @@ config = (
     distance = L2_norm,
     model_func = define_simple_2D_model_locally_identifiable_square,
     basis = :chebyshev,
-    precision = RationalPrecision,
+    precision = Globtim.RationalPrecision,
     my_eps = 0.02,
     fine_step = 0.002,
 )
@@ -108,10 +112,10 @@ open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     else
         println(io, "No critical points found.")
     end
-    println(io, Globtim._TO)
+    println(io, _TO)
 end
 
-println(Globtim._TO)
+println(_TO)
 
 if true
     fig = Globtim.plot_error_function_2D_with_critical_points(

@@ -117,6 +117,9 @@ export compute_l2_norm_quadrature
 # Anisotropic grid support
 export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
 
+# Timer for performance tracking
+export _TO
+
 include("config.jl")
 include("LibFunctions.jl") #list of test functions. 
 include("Structures.jl") # list of structures used in the code.

@@ -1,7 +1,6 @@
 module GlobtimGLMakieExt
 
 using Globtim
-using Makie
 using GLMakie
 using DataFrames
 using StaticArrays  # Required for LevelSetViz.jl
@@ -53,7 +52,7 @@ function Globtim.plot_error_function_1D_with_critical_points(
     # @info "" fine_values_f fine_values_wd
 
     # ||f - w_d||_s
-    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f))
+    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f) .+ eps(Float64))
 
     z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
     z_limits_wd = (minimum(fine_values_wd), maximum(fine_values_wd))
@@ -206,7 +205,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
     # @info "" fine_grid fine_grid_pullback
 
     # f(x) on [a, b] ± [c, d]
-    fine_values_f = map(TR.objective, fine_grid)
+    fine_values_f = Float64.(map(TR.objective, fine_grid))
 
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
     poly_func(poly) =
@@ -219,7 +218,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
     # @info "" fine_values_f fine_values_wd
 
     # ||f - w_d||_s
-    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f))
+    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f) .+ eps(Float64))
 
     z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
     z_limits_wd = (minimum(fine_values_wd), maximum(fine_values_wd))
@@ -340,7 +339,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
     println(norm.(grad_at_cp))
 
     norm_factor = arrow_norm_factor * TR.sample_range
-    ar = arrows2d!(
+    ar = arrows!(
         ax, 
         repeat([pts_along_valley.x1[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
         repeat([pts_along_valley.x2[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
@@ -354,7 +353,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
         ),
         color = :red,
         alpha = 0.6,
-        shaftwidth=2.0,
+        linewidth=2.0,
         # label="My Arrow"
     )
 
@@ -371,6 +370,222 @@ function Globtim.plot_error_function_2D_with_critical_points(
     )
 
     fig
+end
+
+# Convenience method that creates its own figure
+function Globtim.plot_error_function_2D_with_critical_points(
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    x,
+    wd_in_std_basis,
+    p_true,
+    plot_range,
+    distance;
+    figure_size = (1200, 1000),
+    kwargs...
+)
+    fig = Figure(size = figure_size)
+    plot_error_function_2D_with_critical_points(
+        fig,
+        pol,
+        TR,
+        df,
+        x,
+        wd_in_std_basis,
+        p_true,
+        plot_range,
+        distance;
+        figure_size = figure_size,
+        kwargs...
+    )
+    return fig
+end
+
+# Method that accepts a GridPosition or GridLayout position
+function Globtim.plot_error_function_2D_with_critical_points(
+    grid_position::Union{Makie.GridPosition, Makie.GridLayout},
+    pol::ApproxPoly,
+    TR::test_input,
+    df::DataFrame,
+    x,
+    wd_in_std_basis,
+    p_true,
+    plot_range,
+    distance;
+    arrow_norm_factor = 0.1,
+    xlabel = "Parameter 1",
+    ylabel = "Parameter 2",
+    model_func = "Unknown Model",
+    colorbar = true,
+    figure_size = (1200, 1000),
+    chosen_colormap = :inferno,
+    colorbar_label = "Loss Value",
+    num_levels = 30,
+    critical_point_threshold_for_hessian = 1e-2,
+    # Layout control parameters for GridPosition usage
+    plot1_pos = (1, 1),
+    plot2_pos = (1, 2),
+    colorbar_pos = (1, 3),
+    legend_pos = (2, 1),
+    legend_span = nothing
+)
+    @assert size(pol.grid, 2) == 2 "Grid must be 2D for this function"
+
+    # Grid on [a, b] ± [c, d]
+    fine_grid = Iterators.product(plot_range...) |> collect
+    fine_grid = map(i -> TR.center + collect(i), fine_grid)
+
+    # Grid on [-1, 1] x [-1, 1] ± eps
+    pullback(x) = (1 / pol.scale_factor) * (x .- TR.center)
+    pushforward(x) = pol.scale_factor * x .+ TR.center
+    fine_grid_pullback = map(pullback, fine_grid)
+
+    # f(x) on [a, b] ± [c, d]
+    fine_values_f = Float64.(map(TR.objective, fine_grid))
+
+    # w_d(x) on [-1, 1] x [-1, 1] ± eps
+    poly_func(poly) =
+        p -> (
+            cfs = DynamicPolynomials.coefficients(DynamicPolynomials.subs(poly, x => p));
+            isempty(cfs) ? 0.0 : cfs[1]
+        )
+    fine_values_wd = map(poly_func(wd_in_std_basis), fine_grid_pullback)
+
+    # ||f - w_d||_s
+    fine_values_f_minus_wd = log2.(abs.(fine_values_wd .- fine_values_f) .+ eps(Float64))
+
+    z_limits_f = (minimum(fine_values_f), maximum(fine_values_f))
+    z_limits_wd = (minimum(fine_values_wd), maximum(fine_values_wd))
+    z_limits_f_minus_wd = (minimum(fine_values_f_minus_wd), maximum(fine_values_f_minus_wd))
+
+    @info "" z_limits_f z_limits_wd z_limits_f_minus_wd
+
+    # Combine z_limits
+    z_limits = z_limits_f
+    z_limits = (
+        z_limits[1] - 0.1 * abs(z_limits[2] - z_limits[1]),
+        z_limits[2] + 0.1 * abs(z_limits[2] - z_limits[1])
+    )
+    @info "" z_limits
+
+    levels = range(z_limits[1], z_limits[2], length = num_levels)
+    levels_f_wd = range(z_limits_f_minus_wd[1], z_limits_f_minus_wd[2], length = num_levels)
+
+    # First plot
+    ax = Axis(
+        grid_position[plot1_pos...],
+        title = "$model_func, f(x) = $distance",
+        xlabel = xlabel,
+        ylabel = ylabel
+    )
+
+    # Extract x and y coordinates
+    x_coords = Float64.(plot_range[1] .+ TR.center[1])
+    y_coords = Float64.(plot_range[2] .+ TR.center[2])
+    
+    cf = contourf!(
+        ax,
+        x_coords,
+        y_coords,
+        reshape(fine_values_f, length(plot_range[2]), length(plot_range[1]))' |> Matrix{Float64};
+        colormap = chosen_colormap,
+        levels = levels
+    )
+
+    pt = scatter!(
+        ax,
+        map(first, p_true),
+        map(last, p_true),
+        markersize = 10,
+        color = :green,
+        marker = :diamond,
+    )
+    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
+
+    # Second plot
+    ax = Axis(
+        grid_position[plot2_pos...],
+        title = "w_d(x), d = $(pol.degree)",
+        xlabel = xlabel,
+        ylabel = ylabel
+    )
+
+    cf = contourf!(
+        ax,
+        x_coords,
+        y_coords,
+        reshape(fine_values_wd, length(plot_range[2]), length(plot_range[1]))' |> Matrix{Float64},
+        colormap = chosen_colormap,
+        levels = levels
+    )
+    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
+    rct = lines!(
+        ax,
+        [
+            TR.center[1] - TR.sample_range,
+            TR.center[1] - TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] + TR.sample_range,
+            TR.center[1] - TR.sample_range
+        ],
+        [
+            TR.center[2] - TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] + TR.sample_range,
+            TR.center[2] - TR.sample_range,
+            TR.center[2] - TR.sample_range
+        ],
+        color = :black,
+        linewidth = 3,
+        linestyle = :dash
+    )
+
+    pts_along_valley = df[df.z .< critical_point_threshold_for_hessian, :]
+
+    grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
+    grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
+    grad_at_cp = map(pt -> grad_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    hess = DynamicPolynomials.differentiate(grad, x)
+    hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
+    hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    println(norm.(grad_at_cp))
+
+    norm_factor = arrow_norm_factor * TR.sample_range
+    ar = arrows!(
+        ax, 
+        repeat([pts_along_valley.x1[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
+        repeat([pts_along_valley.x2[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
+        vcat(
+            [eigvecs(hess_at_cp[i])[1, 1] * norm_factor for i in 1:length(eachrow(pts_along_valley))], 
+            [eigvecs(hess_at_cp[i])[2, 1] * norm_factor for i in 1:length(eachrow(pts_along_valley))]
+        ), 
+        vcat(
+            [eigvecs(hess_at_cp[i])[1, 2] * norm_factor for i in 1:length(eachrow(pts_along_valley))], 
+            [eigvecs(hess_at_cp[i])[2, 2] * norm_factor for i in 1:length(eachrow(pts_along_valley))]
+        ),
+        color = :red,
+        alpha = 0.6,
+        linewidth=2.0,
+    )
+
+    if colorbar
+        Colorbar(grid_position[colorbar_pos...], cf, label = colorbar_label)
+    end
+
+    legend_position = isnothing(legend_span) ? grid_position[legend_pos...] : grid_position[legend_pos[1], legend_span]
+    Legend(
+        legend_position,
+        [cp, pt, rct, ar],
+        ["Critical Points of w_d", "True Parameter", "Sample Range", "Eigenvectors of Hessian"],
+        orientation = :horizontal,
+        tellwidth = false,
+        tellheight = true,
+    )
+
+    return grid_position
 end
 
 # Include Phase 2 Hessian visualization functions with proper GLMakie scope
