@@ -172,6 +172,7 @@ function Globtim.plot_error_function_1D_with_critical_points(
 end
 
 function Globtim.plot_error_function_2D_with_critical_points(
+    fig,
     pol::ApproxPoly,
     TR::test_input,
     df::DataFrame,
@@ -188,7 +189,8 @@ function Globtim.plot_error_function_2D_with_critical_points(
     figure_size = (1200, 1000),
     chosen_colormap = :inferno,
     colorbar_label = "Loss Value",
-    num_levels = 30
+    num_levels = 30,
+    critical_point_threshold_for_hessian = 1e-2,
 )
     @assert size(pol.grid, 2) == 2 "Grid must be 2D for this function"
 
@@ -208,9 +210,10 @@ function Globtim.plot_error_function_2D_with_critical_points(
 
     # w_d(x) on [-1, 1] x [-1, 1] ± eps
     poly_func(poly) =
-        p -> DynamicPolynomials.coefficients(
-            DynamicPolynomials.subs(poly, x => p)
-        )[1]
+        p -> (
+            cfs = DynamicPolynomials.coefficients(DynamicPolynomials.subs(poly, x => p));
+            isempty(cfs) ? 0.0 : cfs[1]
+        )
     fine_values_wd = map(poly_func(wd_in_std_basis), fine_grid_pullback)
 
     # @info "" fine_values_f fine_values_wd
@@ -238,7 +241,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
     levels = range(z_limits[1], z_limits[2], length = num_levels)
     levels_f_wd = range(z_limits_f_minus_wd[1], z_limits_f_minus_wd[2], length = num_levels)
 
-    fig = Figure(size = figure_size)
+    # fig = Figure(size = figure_size)
 
     ax = Axis(
         fig[1, 1],
@@ -324,7 +327,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
         linestyle = :dash
     )
 
-    pts_along_valley = df[df.z .< 1e-2, :]
+    pts_along_valley = df[df.z .< critical_point_threshold_for_hessian, :]
 
     grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
     grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
