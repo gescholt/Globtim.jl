@@ -10,6 +10,7 @@ export define_lotka_volterra_model,
     define_lotka_volterra_3D_model,
     define_lotka_volterra_2D_model,
     define_lotka_volterra_2D_model_v2,
+    define_lotka_volterra_2D_model_v3,
     define_lotka_volterra_3D_model_v2,
     define_fitzhugh_nagumo_3D_model,
     sample_data,
@@ -68,7 +69,8 @@ function define_lotka_volterra_3D_model_v2()
     params = [a, b, c]
     states = [x1, x2]
     @named model = ODESystem(
-        [D(x1) ~ a * x1 + -b * x1 * x2, D(x2) ~ -b * x2 + c * x1 * x2],
+        [D(x1) ~ a * x1 + -b * x1 * x2, 
+        D(x2) ~ -b * x2 + c * x1 * x2],
         t,
         states,
         params
@@ -95,6 +97,25 @@ function define_lotka_volterra_2D_model()
     return model, params, states, outputs
 end
 
+# c := 0.5
+function define_lotka_volterra_2D_model_v3()
+    @independent_variables t
+    @variables x1(t) x2(t) y1(t)
+    @parameters a b
+    D = Differential(t)
+    params = [a, b]
+    states = [x1, x2]
+    @named model = ODESystem(
+        [D(x1) ~ a * x1 + -b * x1 * x2, 
+        D(x2) ~ -b * x2 + 0.5 * x1 * x2],
+        t,
+        states,
+        params
+    )
+    outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
 # c := 0.1
 function define_lotka_volterra_2D_model_v2()
     @independent_variables t
@@ -104,7 +125,9 @@ function define_lotka_volterra_2D_model_v2()
     params = [a, b]
     states = [x1, x2]
     @named model = ODESystem(
-        [D(x1) ~ a * x1 + b * x1 * x2, D(x2) ~ b * x1 * x2 + 0.1 * x2],
+        [
+            D(x1) ~ a * x1 + b * x1 * x2, 
+            D(x2) ~ b * x1 * x2 + 0.1 * x2],
         t,
         states,
         params
@@ -299,9 +322,11 @@ function make_error_distance(
     # Generate reference solution once during function creation
     problem = ODEProblem(
         ModelingToolkit.complete(model),
-        ModelingToolkit.unknowns(model) .=> initial_conditions,
+        merge(
+            Dict(ModelingToolkit.unknowns(model) .=> initial_conditions),
+            Dict(ModelingToolkit.parameters(model) .=> p_true)
+        ),
         time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_true)
     )
 
     data_sample_true = sample_data(
@@ -382,6 +407,8 @@ using StaticArrays
 using ModelingToolkit
 
 function plot_model_outputs(
+    fig,
+    config,
     model::ModelingToolkit.ODESystem,
     outputs::Vector{ModelingToolkit.Equation},
     ic::Vector{T},
@@ -392,29 +419,31 @@ function plot_model_outputs(
     yaxis = identity,
     plot_title = "Model Outputs",
     figure_size = (800, 500),
-    param_alpha = 0.1
+    param_alpha = 0.1,
+    ax = nothing
 ) where {T<:Number,A}
 
     @assert length(parameter_values) > 0 "At least one parameter set must be provided"
     @assert length(ic) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
 
-    # Create figure and axis
-    fig = Figure(size = figure_size)
     ax = Axis(
         fig[1, 1],
-        title = plot_title,
+        title = "$(config.model_func)",
         xlabel = "Time",
-        ylabel = "Value",
-        yscale = yaxis
+        ylabel = "y(t)",
+        yscale = identity
     )
 
+    green, blue = nothing, nothing
     # Generate data for each parameter set
     for (idx, p) in enumerate(parameter_values)
         problem = ODEProblem(
             ModelingToolkit.complete(model),
-            ic,
+            merge(
+                Dict(ModelingToolkit.unknowns(model) .=> ic),
+                Dict(ModelingToolkit.parameters(model) .=> p)
+            ),
             time_interval,
-            Dict(ModelingToolkit.parameters(model) .=> p)
         )
         data_sample = sample_data(problem, model, outputs, time_interval, p, ic, num_points)
 
@@ -431,27 +460,36 @@ function plot_model_outputs(
                 continue
             end
 
+            if key == "t"
+                continue  # Skip time array
+            end
+
             if idx == ground_truth
                 # Highlight ground truth in a different color
                 color = :green
                 alpha = 1.0
                 linewidth = 3
-                label = "Set $(idx) - $(key) - $(p) (Ground Truth)"
+                # label = "Ground truth: parameters are $(p)"
                 style = :solid
+                green = lines!(
+                    ax,
+                    t,
+                    values,
+                    linewidth = linewidth,
+                    color = color,
+                    linestyle = style,
+                    alpha = alpha
+                )
             else
                 color = :blue
                 alpha = param_alpha
                 linewidth = 1
                 label = nothing # "Set $(idx) - $(key) - $(p)"
                 style = :solid
-            end
-
-            if key != "t"  # Skip time array
-                lines!(
+                blue = lines!(
                     ax,
                     t,
                     values,
-                    label = label,
                     linewidth = linewidth,
                     color = color,
                     linestyle = style,
@@ -461,10 +499,18 @@ function plot_model_outputs(
         end
     end
 
-    # Add legend
-    axislegend(ax, position = :lt)  # top-left position
+    Legend(
+        fig[1, 1],
+        [green, blue],
+        ["Ground Truth, parameters are $(round.(config.p_true[1], digits=2))", "Parameters from $(round.(minimum(parameter_values), digits=2)) to $(round.(maximum(parameter_values), digits=2))"],
+        orientation = :vertical,  # Make legend horizontal for better space usage
+        tellwidth = false,         # Don't have legend width affect layout
+        tellheight = false,
+        halign = :left, valign = :top,
+        # patchsize = (30, 20),
+    )
 
-    return fig
+    # return fig
 end
 
 function plot_error_function_2D(
@@ -548,17 +594,21 @@ function plot_time_series_comparison(
     # Generate data for both parameter sets
     problem = ODEProblem(
         ModelingToolkit.complete(model),
-        ic,
+        merge(
+            Dict(ModelingToolkit.unknowns(model) .=> ic),
+            Dict(ModelingToolkit.parameters(model) .=> p_true)
+        ),
         time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_true)
     )
     data_true = sample_data(problem, model, outputs, time_interval, p_true, ic, numpoints)
 
     problem = ODEProblem(
         ModelingToolkit.complete(model),
-        ic,
+        merge(
+            Dict(ModelingToolkit.unknowns(model) .=> ic),
+            Dict(ModelingToolkit.parameters(model) .=> p_test)
+        ),
         time_interval,
-        Dict(ModelingToolkit.parameters(model) .=> p_test)
     )
     data_test = sample_data(problem, model, outputs, time_interval, p_test, ic, numpoints)
 
