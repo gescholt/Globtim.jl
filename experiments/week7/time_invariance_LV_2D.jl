@@ -1,4 +1,3 @@
-
 using Pkg; Pkg.activate(@__DIR__)
 
 using Revise
@@ -28,28 +27,34 @@ using DynamicPolynomials
 using HomotopyContinuation, ProgressLogging
 
 config = (
-    n = 1,
-    d = (:one_d_for_all, 20),
-    GN = 300,
+    n = 2,
+    d = (:one_d_for_all, 40),
+    GN = 200,
     time_interval = T[0.0, 1.0],
-    p_true = [T[0.1], T[-0.1]],
-    ic = T[0.3],
-    num_points = 20,
-    sample_range = 0.4,
+    p_true = [T[1., 1.]],
+    ic = T[100., 100.],
+    num_points = 100,
+    sample_range = 0.2,
     distance = L2_norm,
-    model_func = define_simple_1D_model_locally_identifiable,
+    model_func = define_lotka_volterra_2D_model_v3,
     basis = :chebyshev,
     precision = RationalPrecision,
     my_eps = 0.02,
     fine_step = 0.002,
+    coarse_step = 0.02,
 )
 config = merge(
     config,
     (;
         plot_range = [
-            -(config.sample_range+config.my_eps):config.fine_step:(config.sample_range+config.my_eps),
+            (-(config.sample_range + config.my_eps)):config.fine_step:(config.sample_range + config.my_eps),
+            (-(config.sample_range + config.my_eps)):config.fine_step:(config.sample_range + config.my_eps),
         ],
-        p_center = [config.p_true[1][1] + 0.05],
+        plot_range_coarse = [
+            (-(config.sample_range + config.my_eps)):config.coarse_step:(config.sample_range + config.my_eps),
+            (-(config.sample_range + config.my_eps)):config.coarse_step:(config.sample_range + config.my_eps),
+        ],
+        p_center = [config.p_true[1][1] + 0.05, config.p_true[1][2] - 0.05],
     ),
 )
 
@@ -62,8 +67,11 @@ error_func = make_error_distance(
     config.p_true[1],
     config.time_interval,
     config.num_points,
-    config.distance,
+    config.distance
 )
+# coeff = error_func_([1.0, 1.1]) / error_func_([1.1, 1.0])
+# error_func = x -> error_func_([x[1], 1.0 + (x[2] - 1.0) / coeff])
+
 
 @polyvar(x[1:config.n]); # Define polynomial ring
 TR = test_input(
@@ -71,7 +79,7 @@ TR = test_input(
     dim = config.n,
     center = config.p_center,
     GN = config.GN,
-    sample_range = config.sample_range,
+    sample_range = config.sample_range
 );
 
 pol_cheb = Constructor(
@@ -79,7 +87,7 @@ pol_cheb = Constructor(
     config.d,
     basis = config.basis,
     precision = config.precision,
-    verbose = true,
+    verbose = true
 )
 real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     x,
@@ -87,16 +95,16 @@ real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
     config.d,
     pol_cheb.coeffs;
     basis = pol_cheb.basis,
-    return_system = true,
+    return_system = true
 )
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
 @info "" df_cheb
 
-id = "id_1D"
+id = "time_2D-v4-no_oscillation-t$(round(Int, config.time_interval[2]))"
 filename = "$(id)_$(config.model_func)_$(config.distance)"
 
-open(joinpath(@__DIR__, "images", "$filename.txt"), "w") do io
+open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     println(io, "config = ", config, "\n\n")
     println(io, "Condition number of the Vandermonde system: ", pol_cheb.cond_vandermonde)
     println(io, "L2 norm (error of approximation): ", pol_cheb.nrm)
@@ -107,7 +115,7 @@ open(joinpath(@__DIR__, "images", "$filename.txt"), "w") do io
         "   Bezout bound: ",
         map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys),
         " which is ",
-        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys)),
+        prod(map(eq -> HomotopyContinuation.ModelKit.degree(eq), _sys))
     )
     println(io, "Critical points found:\n", df_cheb)
     if !isempty(df_cheb)
@@ -120,28 +128,18 @@ end
 
 println(Globtim._TO)
 
-problem = ODEProblem(
-    ModelingToolkit.complete(model),
-    merge(
-        Dict(ModelingToolkit.unknowns(model) .=> config.ic),
-        Dict(ModelingToolkit.parameters(model) .=> config.p_true[1]),
-    ),
-    config.time_interval,
-)
-data_sample_true = sample_data(
-    problem,
-    model,
-    outputs,
-    config.time_interval,
-    config.p_true[1],
-    config.ic,
-    config.num_points,
-)
-Y_true = data_sample_true[first(keys(data_sample_true))]
-println("Sampled data (true): ", Y_true)
-
 if true
-    fig = Globtim.plot_error_function_1D_with_critical_points(
+    params_to_plot = [config.p_true[1],]
+    params_to_plot = vcat(params_to_plot, 
+    [
+        [config.p_true[1][1] .+ e1, config.p_true[1][2] + e2] 
+        for e1 in config.plot_range_coarse[1] for e2 in config.plot_range_coarse[2]
+    ])
+
+    figure_size = (1200, 1000)
+    fig = Figure(size = figure_size)
+    Globtim.plot_error_function_2D_with_critical_points(
+        fig[1, 1:2],
         pol_cheb,
         TR,
         df_cheb,
@@ -151,14 +149,31 @@ if true
         config.plot_range,
         config.distance;
         xlabel = "Parameter 1",
+        ylabel = "Parameter 2",
+        colorbar = true,
+        colorbar_label = "Loss Value",
+        num_levels = 200,
         model_func = config.model_func,
+        critical_point_threshold_for_hessian = Inf,
+    )
+
+    DynamicalSystems.plot_model_outputs(
+        fig[2, 1:2],
+        config,
+        model, outputs, config.ic, 
+        params_to_plot,
+        config.time_interval, config.num_points; 
+        ground_truth=1,
+        yaxis=identity,
+        plot_title="$(config.model_func)", 
+        param_alpha=0.1,
     )
 
     display(fig)
 
     Makie.save(
-        joinpath(@__DIR__, "images", "$filename.png"),
+        joinpath(@__DIR__, "images", "$(filename).png"),
         fig,
-        px_per_unit = 1.5,
+        px_per_unit = 1.5
     )
 end

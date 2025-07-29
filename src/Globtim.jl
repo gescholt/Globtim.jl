@@ -333,5 +333,6 @@ function plot_raw_vs_refined_eigenvalues end
 function plot_error_function_2D_with_critical_points end
 function plot_polyapprox_levelset_2D end
 function plot_error_function_1D_with_critical_points end
+function plot_error_function_2D_with_critical_points_with_outputs end
 
 end
