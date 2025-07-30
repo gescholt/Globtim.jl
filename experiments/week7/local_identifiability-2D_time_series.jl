@@ -19,7 +19,9 @@ using GLMakie
 Revise.includet(joinpath(@__DIR__, "../../Examples/systems/DynamicalSystems.jl"))
 using .DynamicalSystems
 
-reset_timer!(Globtim._TO)
+# Create a local timer if _TO is not accessible
+const _TO = TimerOutputs.TimerOutput()
+reset_timer!(_TO)
 
 const T = Float64
 
@@ -115,10 +117,10 @@ open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
     else
         println(io, "No critical points found.")
     end
-    println(io, Globtim._TO)
+    println(io, _TO)
 end
 
-println(Globtim._TO)
+println(_TO)
 
 if true
     params_to_plot = [
