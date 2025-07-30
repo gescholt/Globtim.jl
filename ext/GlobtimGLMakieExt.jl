@@ -261,11 +261,22 @@ function Globtim.plot_error_function_2D_with_critical_points(
         levels = levels
     )
 
+    pts_along_valley = df[df.z .< critical_point_threshold_for_hessian, :]
+
+    grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
+    grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
+    grad_at_cp = map(pt -> grad_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    hess = DynamicPolynomials.differentiate(grad, x)
+    hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
+    hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
+
+    percent(x, v) = 1 - count(<(x), v) / length(v)
+
     pt = scatter!(
         ax,
         map(first, p_true),
         map(last, p_true),
-        markersize = 10,
         color = :green,
         marker = :diamond,
     )
@@ -288,7 +299,10 @@ function Globtim.plot_error_function_2D_with_critical_points(
     #     color = :green,
     #     label = "p_true",
     # )
-    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
+    cp = scatter!(ax, df.x1, df.x2,         
+        markersize = round.(Int, 10*percent.(norm.(grad_at_cp), Ref(norm.(grad_at_cp))), RoundUp), 
+        # markersize = max.(1, round.(Int, 15*norm.(grad_at_cp) ./ maximum(norm.(grad_at_cp)))),
+        color = :blue, marker = :diamond)
 
     ax = Axis(
         fig[1, 2],
@@ -305,7 +319,11 @@ function Globtim.plot_error_function_2D_with_critical_points(
         colormap = chosen_colormap,
         levels = levels
     )
-    cp = scatter!(ax, df.x1, df.x2, markersize = 10, color = :blue, marker = :diamond)
+
+    cp = scatter!(
+        ax, df.x1, df.x2, 
+        markersize = 10,# round.(Int, 10*percent.(norm.(grad_at_cp), Ref(norm.(grad_at_cp))), RoundUp), 
+        color = :blue, marker = :diamond)
     rct = lines!(
         ax,
         [
@@ -326,18 +344,6 @@ function Globtim.plot_error_function_2D_with_critical_points(
         linewidth = 3,
         linestyle = :dash
     )
-
-    pts_along_valley = df[df.z .< critical_point_threshold_for_hessian, :]
-
-    grad = DynamicPolynomials.differentiate(wd_in_std_basis, x)
-    grad_func(x) = map(f -> f(pullback(x)), poly_func.(grad))
-    grad_at_cp = map(pt -> grad_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
-
-    hess = DynamicPolynomials.differentiate(grad, x)
-    hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
-    hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
-
-    println(norm.(grad_at_cp))
 
     norm_factor = arrow_norm_factor * TR.sample_range
     ar = arrows2d!(
@@ -363,7 +369,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
     Legend(
         fig[2, 1],
         [cp, pt, rct, ar],
-        ["Critical Points of w_d", "True Parameter", "Sample Range", "Eigenvectors of Hessian"],
+        ["Critical Points of w_d (size is norm of Hessisan of w_d)", "True Parameter", "Sample Range", "Eigenvectors of Hessian"],
         orientation = :horizontal,  # Make legend horizontal for better space usage
         tellwidth = false,         # Don't have legend width affect layout
         tellheight = true,
