@@ -25,7 +25,26 @@ export define_lotka_volterra_model,
     EllipseSupport,
     define_simple_2D_model_locally_identifiable,
     define_simple_2D_model_locally_identifiable_square,
-    define_simple_1D_model_locally_identifiable
+    define_simple_1D_model_locally_identifiable,
+    define_daisy_ex3_model_4D
+
+# p7 := -0.2
+function define_daisy_ex3_model_4D()
+    @independent_variables t
+    @parameters p1 p3 p4 p6
+    @variables x1(t) x2(t) x3(t) u0(t) y1(t) y2(t)
+    D = Differential(t)
+
+    states = [x1, x2, x3, u0]
+    parameters = [p1, p3, p4, p6]
+    @named model = ODESystem([D(x1) ~ -1 * p1 * x1 + x2 + u0,
+                                D(x2) ~ p3 * x1 - p4 * x2 + x3,
+                                D(x3) ~ p6 * x1 + 0.2 * x3,
+                                D(u0) ~ 1],
+                            t, states, parameters)
+    measured_quantities = [y1 ~ x1 + x3, y2 ~ x2]
+    model, parameters, states, measured_quantities
+end
 
 function define_fitzhugh_nagumo_3D_model()
     @independent_variables t
