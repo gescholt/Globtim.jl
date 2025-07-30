@@ -22,6 +22,20 @@ Examples/**/outputs.ms
 Examples/**/*.png
 Examples/**/*.pdf
 
+# All image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+*.tiff
+*.tif
+*.webp
+*.ico
+*.heic
+*.heif
+
 # Notebooks not ready for public release
 Examples/Notebooks/AnisotropicGridComparison.ipynb
 Examples/Notebooks/Triple_Graph*.ipynb
