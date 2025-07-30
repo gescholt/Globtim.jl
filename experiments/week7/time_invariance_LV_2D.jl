@@ -99,9 +99,9 @@ real_pts_cheb, (wd_in_std_basis, _sys, _nsols) = solve_polynomial_system(
 )
 df_cheb = process_crit_pts(real_pts_cheb, error_func, TR)
 
-@info "" df_cheb
+@info "" sort(df_cheb, [:z])
 
-id = "time_2D-v4-no_oscillation-t$(round(Int, config.time_interval[2]))"
+id = "sized_markers_percentile_$(round(Int, config.time_interval[2]))"
 filename = "$(id)_$(config.model_func)_$(config.distance)"
 
 open(joinpath(@__DIR__, "images", "$(filename).txt"), "w") do io
