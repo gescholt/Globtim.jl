@@ -40,6 +40,69 @@ const T = Float64
 FUNCTION_NAME = :himmelblau  # Has 4 minima and 5 critical points total
 func_info = get_test_function_info(FUNCTION_NAME)
 objective_func = func_info.func
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+# Base configuration
+base_config = (
+    n = 2,                          # Dimensionality (number of variables)
+    p_center = [0.0, 0.0],          # Center of sampling domain
+    sample_range = 5.0,             # Sampling range: creates [-5, 5] x [-5, 5] domain
+    basis = :chebyshev,             # Polynomial basis (Chebyshev for numerical stability)
+    precision = Globtim.Float64Precision,  # Float64 precision for speed
+    my_eps = 0.02,                  # Epsilon for numerical derivatives (if used)
+    fine_step = 0.01,               # Fine step size for optimization
+    coarse_step = 0.05,             # Coarse step size for initial search
+)
+
+# COMPARISON SETUP: We'll compare two approaches
+# Approach A: Approximate f, find critical points, walk on f
+# Approach B: Approximate log(f), find critical points, walk on log(f)
+
+println("Setting up comparison between f and log(f) approaches...")
+
+# First, create safe log transformation
+println("Finding function range for safe log transformation...")
+sample_points = []
+for x in range(base_config.p_center[1] - base_config.sample_range,
+               base_config.p_center[1] + base_config.sample_range, length=20)
+    for y in range(base_config.p_center[2] - base_config.sample_range,
+                   base_config.p_center[2] + base_config.sample_range, length=20)
+        push!(sample_points, [x, y])
+    end
+end
+
+sample_values = [objective_func(p) for p in sample_points]
+min_val = minimum(sample_values)
+max_val = maximum(sample_values)
+
+println("Function range: [$min_val, $max_val]")
+
+# Create safe log-transformed version
+if min_val <= 0
+    shift = abs(min_val) + 1.0  # Ensure all values are > 1
+    println("Shifting function by $shift to ensure positivity")
+    log_objective_func = x -> log10(objective_func(x) + shift)
+else
+    # Function is already positive, just add small epsilon
+    log_objective_func = x -> log10(objective_func(x) + 1e-12)
+end
+
+# Test the transformation
+test_point = base_config.p_center
+orig_val = objective_func(test_point)
+log_val = log_objective_func(test_point)
+println("Test at center point $test_point:")
+println("  Original f: $orig_val")
+println("  Log-transformed log(f): $log_val")
+
+# Define both approaches
+original_objective_func = objective_func  # For visualization
+approach_A_func = objective_func          # Approximate f, walk on f
+approach_B_func = log_objective_func      # Approximate log(f), walk on log(f)
+
 true_minima = func_info.true_minima
 
 println("\n" * "="^80)
@@ -90,183 +153,164 @@ domain_bounds = (
 # ============================================================================
 
 println("\n" * "="^80)
-println("TESTING DIFFERENT POLYNOMIAL DEGREES")
+println("TESTING BOTH APPROACHES: f vs log(f)")
 println("="^80)
 
-# Test different polynomial degrees
-@timeit TIMER "Polynomial degree testing" begin
-    test_results = test_polynomial_degrees(
-        objective_func, 
-        base_config, 
+# APPROACH A: Test polynomial degrees on original function f
+println("\nAPPROACH A: Approximating f, finding critical points of polynomial(f)")
+println("-"^60)
+@timeit TIMER "Approach A: f polynomial testing" begin
+    test_results_A = test_polynomial_degrees(
+        approach_A_func,
+        base_config,
         degree_configs,
         timer=TIMER,
         verbose=true
     )
 end
 
-# Collect all critical points from all polynomial degrees for visualization
-all_critical_points_by_degree = Dict{Int, DataFrame}()
-for result in test_results
+# APPROACH B: Test polynomial degrees on log-transformed function
+println("\nAPPROACH B: Approximating log(f), finding critical points of polynomial(log(f))")
+println("-"^60)
+@timeit TIMER "Approach B: log(f) polynomial testing" begin
+    test_results_B = test_polynomial_degrees(
+        approach_B_func,
+        base_config,
+        degree_configs,
+        timer=TIMER,
+        verbose=true
+    )
+end
+
+# Collect critical points from both approaches
+all_critical_points_A = Dict{Int, DataFrame}()  # Critical points from approximating f
+all_critical_points_B = Dict{Int, DataFrame}()  # Critical points from approximating log(f)
+
+println("\nAPPROACH A RESULTS (approximating f):")
+for result in test_results_A
     if haskey(result, :critical_points) && !isnothing(result.critical_points)
-        all_critical_points_by_degree[result.degree] = result.critical_points
-        println("Degree $(result.degree): $(nrow(result.critical_points)) critical points")
+        all_critical_points_A[result.degree] = result.critical_points
+        println("  Degree $(result.degree): $(nrow(result.critical_points)) critical points")
     end
 end
 
-# Display comparison table
-display_polynomial_comparison_table(test_results)
-
-# Analyze convergence to true minimum
-# For functions with multiple minima, use the first one as reference
-true_minimum_ref = if isa(true_minima[1], Vector)
-    true_minima[1]  # First minimum for multi-minima functions
-else
-    true_minima  # Single minimum
+println("\nAPPROACH B RESULTS (approximating log(f)):")
+for result in test_results_B
+    if haskey(result, :critical_points) && !isnothing(result.critical_points)
+        all_critical_points_B[result.degree] = result.critical_points
+        println("  Degree $(result.degree): $(nrow(result.critical_points)) critical points")
+    end
 end
-convergence_results = analyze_convergence_to_minimum(test_results, true_minimum_ref)
-display_convergence_table(convergence_results, true_minimum_ref)
 
-# Select best configuration
-best_config, best_idx = select_best_configuration(test_results)
+# Display comparison tables for both approaches
+println("\nAPPROACH A COMPARISON TABLE (approximating f):")
+display_polynomial_comparison_table(test_results_A)
 
-if best_config === nothing
-    println("\n⚠️  No suitable configuration found - using fallback")
-    # Create fallback configuration
-    config = merge(base_config, (
-        d = (:one_d_for_all, 8),
-        GN = 120,
-    ))
-    
-    # Manually create polynomial approximation using direct Globtim calls
-    degree = 8
-    
-    # Step 1: Create test input
-    TR = Globtim.test_input(
-        objective_func,
-        dim = config.n,
-        center = config.p_center,
-        sample_range = config.sample_range,
-        GN = config.GN,
-        tolerance = nothing  # Disable automatic degree increase
-    )
-    
-    # Step 2: Construct polynomial
-    polynomial = Globtim.Constructor(TR, degree,
-                                   basis = config.basis,
-                                   precision = config.precision)
-    
-    # Step 3: Find critical points
-    @polyvar x[1:config.n]
-    solutions = Globtim.solve_polynomial_system(
-        x, config.n, degree, polynomial.coeffs;
-        basis = polynomial.basis,
-        precision = polynomial.precision,
-        normalized = config.basis == :legendre,
-        power_of_two_denom = polynomial.power_of_two_denom
-    )
-    
-    # Step 4: Process critical points
-    critical_points_df = Globtim.process_crit_pts(solutions, objective_func, TR)
+println("\nAPPROACH B COMPARISON TABLE (approximating log(f)):")
+display_polynomial_comparison_table(test_results_B)
+
+# Select best configurations from both approaches
+best_config_A, best_idx_A = select_best_configuration(test_results_A)
+best_config_B, best_idx_B = select_best_configuration(test_results_B)
+
+println("\nSelected configurations:")
+if best_config_A !== nothing
+    println("✅ Approach A: degree $(best_config_A.degree), $(nrow(best_config_A.critical_points)) critical points")
 else
-    println("\nSelected configuration: Degree $(best_config.degree) with $(best_config.samples) samples")
-    
-    # Use best configuration
-    config = merge(base_config, (
-        d = (:one_d_for_all, best_config.degree),
-        GN = best_config.samples,
-    ))
-    
-    polynomial = best_config.polynomial
-    critical_points_df = best_config.critical_points
+    println("❌ Approach A: No suitable configuration found")
 end
+
+if best_config_B !== nothing
+    println("✅ Approach B: degree $(best_config_B.degree), $(nrow(best_config_B.critical_points)) critical points")
+else
+    println("❌ Approach B: No suitable configuration found")
+end
+
+# Use the configurations directly (no need to search again)
+# The best_config_A and best_config_B already contain the critical points
+
+# We'll use the critical points from both approaches directly
+# No need for a single fallback configuration since we have approach-specific ones
 
 # ============================================================================
-# CRITICAL POINTS ANALYSIS
+# CRITICAL POINTS ANALYSIS FOR BOTH APPROACHES
 # ============================================================================
 
 println("\n" * "="^80)
 println("CRITICAL POINTS ANALYSIS")
 println("="^80)
 
-# Display critical points table (show all critical points)
-display_critical_points_table(critical_points_df, max_rows=20)
-
-# Find best critical point (with smallest function value) using direct DataFrame operation
-if !isempty(critical_points_df)
-    best_idx = argmin(critical_points_df.z)
-    best_row = critical_points_df[best_idx, :]
-    n_dims = count(name -> startswith(String(name), "x"), names(critical_points_df))
-    best_critical_point = [best_row[Symbol("x$i")] for i in 1:n_dims]
-    best_f_value = best_row.z
-else
-    best_critical_point = nothing
-    best_f_value = Inf
+# Display critical points from both approaches
+if best_config_A !== nothing && haskey(best_config_A, :critical_points)
+    println("\nAPPROACH A: Critical points from polynomial(f)")
+    println("Found $(nrow(best_config_A.critical_points)) critical points")
+    display_critical_points_table(best_config_A.critical_points, max_rows=50)
 end
 
-# Check if we have refined critical points
-has_refined = best_config !== nothing && 
-              haskey(best_config, :critical_points_refined) && 
-              !isnothing(best_config.critical_points_refined)
+if best_config_B !== nothing && haskey(best_config_B, :critical_points)
+    println("\nAPPROACH B: Critical points from polynomial(log(f))")
+    println("Found $(nrow(best_config_B.critical_points)) critical points")
+    display_critical_points_table(best_config_B.critical_points, max_rows=50)
+end
 
-# Use the best refined critical point as the true minimum for plotting
-# If refined points exist, use the best one; otherwise use the best raw critical point
+# For visualization, use the best critical point from approach A as reference
 true_minimum_for_plot = nothing
-if has_refined && !isempty(best_config.critical_points_refined)
-    # Find the best refined critical point
-    sorted_refined = sort(best_config.critical_points_refined, :z)
-    true_minimum_for_plot = [sorted_refined[1, :x1], sorted_refined[1, :x2]]
-    println("\nUsing best refined critical point as true minimum: $(format_point(true_minimum_for_plot))")
-    println("Function value: $(@sprintf("%.6e", sorted_refined[1, :z]))")
-elseif best_critical_point !== nothing
-    true_minimum_for_plot = best_critical_point
-    println("\nUsing best raw critical point as true minimum: $(format_point(true_minimum_for_plot))")
-    println("Function value: $(@sprintf("%.6e", best_f_value))")
+if best_config_A !== nothing && haskey(best_config_A, :critical_points) && !isempty(best_config_A.critical_points)
+    best_idx = argmin(best_config_A.critical_points.z)
+    best_row = best_config_A.critical_points[best_idx, :]
+    true_minimum_for_plot = [best_row.x1, best_row.x2]
+    println("\nUsing best critical point from Approach A as reference: $(format_point(true_minimum_for_plot))")
+    println("Function value: $(@sprintf("%.6e", best_row.z))")
+elseif best_config_B !== nothing && haskey(best_config_B, :critical_points) && !isempty(best_config_B.critical_points)
+    best_idx = argmin(best_config_B.critical_points.z)
+    best_row = best_config_B.critical_points[best_idx, :]
+    true_minimum_for_plot = [best_row.x1, best_row.x2]
+    println("\nUsing best critical point from Approach B as reference: $(format_point(true_minimum_for_plot))")
 else
-    # Fallback to hardcoded value if no critical points found
+    # Fallback to hardcoded value
     true_minimum_for_plot = isa(true_minima[1], Vector) ? true_minima[1] : true_minima
     println("\nNo critical points found, using default: $(format_point(true_minimum_for_plot))")
 end
 
 # ============================================================================
-# VALLEY WALKING FROM CRITICAL POINTS AND OTHER STARTING POINTS
+# VALLEY WALKING FROM BOTH APPROACHES
 # ============================================================================
 
 println("\n" * "="^80)
-println("VALLEY WALKING FROM MULTIPLE STARTING POINTS")
+println("VALLEY WALKING COMPARISON: f vs log(f)")
 println("="^80)
 
-# Initialize results storage for different starting points
-valley_results_by_degree = Dict{Int, Vector}()  # Store results by polynomial degree
-
-# Function to perform valley walking from a set of critical points
-function perform_valley_walks(critical_points_df, label)
+# Function to perform valley walking from critical points with specified objective function
+function perform_valley_walks_with_func(critical_points_df, objective_function, label, approach_name)
     results = []
-    
+
     if !isempty(critical_points_df)
-        # Use ALL critical points (not just top N)
-        n_start_points = nrow(critical_points_df)  # Use all critical points
-        sorted_df = sort(critical_points_df, :z)
-        starting_points = [[row.x1, row.x2] for row in eachrow(sorted_df[1:n_start_points, :])]
-        
+        # Use ALL critical points
+        starting_points = [[row.x1, row.x2] for row in eachrow(critical_points_df)]
+
         println("\n$label: Starting valley walking from $(length(starting_points)) critical points")
-        
+
         for (i, x0) in enumerate(starting_points)
             println("  Starting valley walk from point $i: $(format_point(x0))")
-            
+
             try
                 @timeit TIMER "Valley walk $label $i" begin
-                    points, eigenvals, f_vals, step_types = enhanced_valley_walk(
-                        objective_func, x0;
-                        n_steps = 200,              # Maximum number of steps in the walk
-                        step_size = 0.015,          # Step size for valley walking (when Hessian is rank-deficient)
-                        ε_null = 1e-6,              # Threshold for identifying null space of Hessian
-                        gradient_step_size = 0.008, # Step size for gradient descent (when Hessian is well-conditioned)
-                        rank_deficiency_threshold = 1e-5,  # Threshold for detecting rank deficiency in Hessian
-                        gradient_norm_tolerance = 1e-6,    # Threshold for gradient norm to switch strategies
-                        verbose = true              # Show detailed output during walking
+                    # Use the improved valley walking algorithm
+                    points, eigenvals, f_vals, step_types = enhanced_valley_walk_no_oscillation(
+                        objective_function, x0;  # Use the specified objective function
+                        n_steps = 100,              # Reduced steps for comparison
+                        step_size = 0.015,
+                        ε_null = 1e-6,
+                        gradient_step_size = 0.008,
+                        rank_deficiency_threshold = 1e-5,
+                        gradient_norm_tolerance = 1e-6,
+                        momentum_factor = 0.3,
+                        oscillation_threshold = 3,
+                        min_progress_threshold = 1e-8,
+                        verbose = false             # Reduced verbosity for comparison
                     )
                 end
-                
+
                 push!(results, (
                     start_point = x0,
                     points = points,
@@ -274,15 +318,16 @@ function perform_valley_walks(critical_points_df, label)
                     f_values = f_vals,
                     step_types = step_types,
                     critical_point_index = i,
-                    source = label
+                    source = label,
+                    approach = approach_name,
+                    objective_function = objective_function
                 ))
-                
+
                 # Quick summary
                 n_valley = count(s -> s == "valley", step_types)
                 n_gradient = count(s -> s == "gradient", step_types)
                 println("    Completed: $(length(points)) points, $n_valley valley steps, $n_gradient gradient steps")
-                println("    Function decrease: $(f_vals[1]) → $(f_vals[end])")
-                
+
             catch e
                 println("    Failed: $e")
             end
@@ -290,180 +335,152 @@ function perform_valley_walks(critical_points_df, label)
     else
         println("$label: No critical points found - cannot perform valley walking")
     end
-    
+
     return results
 end
 
-# Perform valley walking from critical points of each polynomial degree
-for (degree, cp_df) in all_critical_points_by_degree
-    degree_results = perform_valley_walks(cp_df, "Degree $degree critical points")
-    
-    # Add degree information to each result
-    for result in degree_results
-        result = merge(result, (degree = degree,))
-    end
-    
-    valley_results_by_degree[degree] = degree_results
+# Perform valley walking for both approaches using the selected degree
+valley_results_A = []
+valley_results_B = []
+
+if best_config_A !== nothing && haskey(best_config_A, :critical_points)
+    println("\nAPPROACH A: Valley walking on f using critical points from polynomial(f)")
+    valley_results_A = perform_valley_walks_with_func(
+        best_config_A.critical_points,
+        approach_A_func,  # Walk on original function f
+        "Approach A (f)",
+        "A"
+    )
 end
 
-# Removed test points - only using critical points from polynomial approximation
-
-# Combine all results for compatibility with existing code
-valley_results = []
-for (degree, degree_results) in valley_results_by_degree
-    for result in degree_results
-        # Add degree and source information
-        result_with_degree = merge(result, (degree = degree, source = "Degree $degree"))
-        push!(valley_results, result_with_degree)
-    end
+if best_config_B !== nothing && haskey(best_config_B, :critical_points)
+    println("\nAPPROACH B: Valley walking on log(f) using critical points from polynomial(log(f))")
+    valley_results_B = perform_valley_walks_with_func(
+        best_config_B.critical_points,
+        approach_B_func,  # Walk on log-transformed function
+        "Approach B (log(f))",
+        "B"
+    )
 end
-# No test point results to add
+
+# Combine results for visualization
+valley_results = vcat(valley_results_A, valley_results_B)
 
 # ============================================================================
-# VISUALIZATION
+# VISUALIZATION: COMPARISON ON LOG(F) LEVEL SETS
 # ============================================================================
 
 if !isempty(valley_results)
     println("\n" * "="^80)
-    println("CREATING VISUALIZATIONS")
+    println("CREATING COMPARISON VISUALIZATION")
     println("="^80)
-    
-    # Create the visualization showing all paths (raw and refined)
-    @timeit TIMER "Creating visualization" begin
-        # Create the simple visualization with all paths
-        fig = plot_valley_walk_simple(
-            valley_results,
-            objective_func,
-            domain_bounds,
-            fig_size = (2000, 500),
-            show_true_minimum = true_minimum_for_plot,
-            path_index = :all,  # Show all paths
-            colormap = :viridis,
-            use_log_scale = true,
-            raw_color = :red,       # Red for raw critical points
-            refined_color = :blue,   # Blue for refined critical points
-            degree_colors = Dict(4 => :red, 6 => :blue, 8 => :purple, 14 => :green, 18 => :orange)
-        )
-        
-        # Create the visualization with approximation error
-        # Use the best polynomial from our testing
-        if best_config !== nothing && haskey(best_config, :polynomial) && haskey(best_config, :test_input)
-            fig_with_error = plot_valley_walk_with_error(
-                valley_results,
-                objective_func,
-                best_config.polynomial,
-                best_config.test_input,
-                domain_bounds,
-                fig_size = (1800, 500),
-                show_true_minimum = true_minimum_for_plot,
-                path_index = :all,
-                colormap = :viridis,
-                use_log_scale = true,
-                error_use_log_scale = true,
-                degree_colors = Dict(4 => :red, 6 => :blue, 8 => :purple)
-            )
-        elseif !isnothing(polynomial)
-            # Fallback to using the polynomial variable if best_config failed
-            # TR is the global test_input we created at the beginning
-            fig_with_error = plot_valley_walk_with_error(
-                valley_results,
-                objective_func,
-                polynomial,
-                TR,
-                domain_bounds,
-                fig_size = (1800, 500),
-                show_true_minimum = true_minimum_for_plot,
-                path_index = :all,
-                colormap = :viridis,
-                use_log_scale = true,
-                error_use_log_scale = true,
-                degree_colors = Dict(4 => :red, 6 => :blue, 8 => :purple)
-            )
-        end
-        
-        # Add critical points to BOTH level set plots
-        # Get axes by iterating through figure content to find Axis objects
-        axes = [c for c in fig.content if isa(c, Axis)]
-        ax_level_linear = axes[1]  # Linear scale level set axis
-        ax_level_log = axes[2]     # Log scale level set axis
-        
-        # Define degree colors to match path colors
-        degree_color_map = Dict(4 => :red, 6 => :blue, 8 => :purple, 14 => :green, 18 => :orange)
-        
-        # PLOT RAW CRITICAL POINTS on BOTH axes
-        # Plot all raw critical points from all polynomial degrees
-        for (degree, cp_df) in all_critical_points_by_degree
-            if !isempty(cp_df)
-                color = get(degree_color_map, degree, :gray)
-                # Plot on linear scale axis
-                plot_critical_points!(ax_level_linear, cp_df,
-                                    color = color,
-                                    markersize = 15,
-                                    marker = :circle,
-                                    label = "Raw critical points (deg $degree)")
-                # Plot on log scale axis
-                plot_critical_points!(ax_level_log, cp_df,
-                                    color = color,
-                                    markersize = 15,
-                                    marker = :circle,
-                                    label = "Raw critical points (deg $degree)")
-                println("Plotted $(nrow(cp_df)) raw critical points for degree $degree")
+
+    # Create a single level set plot of log(f) showing both approaches
+    @timeit TIMER "Creating comparison visualization" begin
+        # Create figure with single axis for log(f) level sets
+        fig = Figure(size = (1200, 800))
+        ax = Axis(fig[1, 1],
+                 title = "Valley Walking Comparison: f vs log(f) approaches on log(f) level sets",
+                 xlabel = "x₁",
+                 ylabel = "x₂")
+
+        # Plot level sets of log(f) as background
+        x_range = range(domain_bounds[1], domain_bounds[2], length=100)
+        y_range = range(domain_bounds[3], domain_bounds[4], length=100)
+
+        # Create grid for level sets
+        X = [x for x in x_range, y in y_range]
+        Y = [y for x in x_range, y in y_range]
+        Z_log = [log_objective_func([x, y]) for x in x_range, y in y_range]
+
+        # Plot level sets of log(f)
+        contour!(ax, x_range, y_range, Z_log,
+                levels = 20,
+                colormap = :grays,
+                alpha = 0.6)
+
+        # Plot critical points from both approaches with different colors
+        if best_config_A !== nothing && haskey(best_config_A, :critical_points)
+            cp_A = best_config_A.critical_points
+            scatter!(ax, cp_A.x1, cp_A.x2,
+                    color = :red,
+                    markersize = 15,
+                    marker = :circle,
+                    label = "Critical points from polynomial(f) - $(nrow(cp_A)) pts")
+
+            # Add numbers to critical points A
+            for (i, row) in enumerate(eachrow(cp_A))
+                text!(ax, row.x1, row.x2,
+                     text = "A$i",
+                     color = :red,
+                     fontsize = 10,
+                     align = (:center, :bottom),
+                     offset = (0, 5))
             end
         end
-        
-        # Collect all refined critical points from all degrees
-        all_refined_points = DataFrame()
-        for result in test_results
-            if haskey(result, :critical_points_refined) && !isnothing(result.critical_points_refined)
-                if !isempty(result.critical_points_refined)
-                    println("Debug: Found refined points for degree $(result.degree)")
-                    println("  Columns: ", names(result.critical_points_refined))
-                    # Filter to only the best (minima) from each degree
-                    # Check if critical_point_type column exists, otherwise use all points
-                    if "critical_point_type" in names(result.critical_points_refined)
-                        unique_types = unique(result.critical_points_refined.critical_point_type)
-                        println("  Unique critical point types: ", unique_types)
-                        # Filter for minima (critical_point_type is a symbol)
-                        minima_df = result.critical_points_refined[
-                            result.critical_points_refined.critical_point_type .== :minimum, :]
-                    else
-                        # If no type info, use points with low function values (the 4 true minima)
-                        local sorted_refined = sort(result.critical_points_refined, :z)
-                        minima_df = sorted_refined[1:min(4, nrow(sorted_refined)), :]
-                    end
-                    if !isempty(minima_df)
-                        println("  Adding $(nrow(minima_df)) refined minima")
-                        append!(all_refined_points, minima_df)
-                    end
-                end
+
+        if best_config_B !== nothing && haskey(best_config_B, :critical_points)
+            cp_B = best_config_B.critical_points
+            scatter!(ax, cp_B.x1, cp_B.x2,
+                    color = :blue,
+                    markersize = 15,
+                    marker = :diamond,
+                    label = "Critical points from polynomial(log(f)) - $(nrow(cp_B)) pts")
+
+            # Add numbers to critical points B
+            for (i, row) in enumerate(eachrow(cp_B))
+                text!(ax, row.x1, row.x2,
+                     text = "B$i",
+                     color = :blue,
+                     fontsize = 10,
+                     align = (:center, :top),
+                     offset = (0, -5))
             end
         end
-        
-        # Plot all refined/optimized critical points as black stars on BOTH axes
-        if !isempty(all_refined_points)
-            unique_refined = unique(all_refined_points, [:x1, :x2])
-            # Plot on linear scale axis
-            plot_critical_points!(ax_level_linear, unique_refined,
-                                color = :black, 
-                                markersize = 20,
-                                marker = :star5,
-                                label = "Optimized minima")
-            # Plot on log scale axis
-            plot_critical_points!(ax_level_log, unique_refined,
-                                color = :black, 
-                                markersize = 20,
-                                marker = :star5,
-                                label = "Optimized minima")
+
+        # Plot valley walking paths from both approaches
+        for result in valley_results
+            if result.approach == "A"
+                # Approach A paths in red tones
+                path_points = result.points
+                xs = [p[1] for p in path_points]
+                ys = [p[2] for p in path_points]
+                lines!(ax, xs, ys,
+                      color = (:red, 0.7),
+                      linewidth = 2,
+                      linestyle = :solid)
+                # Mark start point
+                scatter!(ax, [xs[1]], [ys[1]],
+                        color = :red,
+                        markersize = 8,
+                        marker = :star5)
+            elseif result.approach == "B"
+                # Approach B paths in blue tones
+                path_points = result.points
+                xs = [p[1] for p in path_points]
+                ys = [p[2] for p in path_points]
+                lines!(ax, xs, ys,
+                      color = (:blue, 0.7),
+                      linewidth = 2,
+                      linestyle = :dash)
+                # Mark start point
+                scatter!(ax, [xs[1]], [ys[1]],
+                        color = :blue,
+                        markersize = 8,
+                        marker = :star5)
+            end
         end
+
+        # Add legend
+        axislegend(ax, position = :rt)
+
+        # Set axis limits
+        xlims!(ax, domain_bounds[1], domain_bounds[2])
+        ylims!(ax, domain_bounds[3], domain_bounds[4])
     end
-    
-    # Display only the figure with approximation error
-    if @isdefined(fig_with_error)
-        display(fig_with_error)
-    else
-        # Fallback to simple figure if error figure wasn't created
-        display(fig)
-    end
+
+    # Display the comparison figure
+    display(fig)
 end
 
 # ============================================================================
@@ -474,10 +491,58 @@ println("\n" * "="^80)
 println("FINAL SUMMARY")
 println("="^80)
 
+# Critical points summary for both approaches
+println("\n" * "="^80)
+println("CRITICAL POINTS COMPARISON SUMMARY")
+println("="^80)
+
+println("\nAPPROACH A: Critical points from polynomial approximation of f")
+println("-"^60)
+if best_config_A !== nothing && haskey(best_config_A, :critical_points)
+    cp_A = best_config_A.critical_points
+    println("Found $(nrow(cp_A)) critical points")
+    sorted_cp_A = sort(cp_A, :z)
+    for (i, row) in enumerate(eachrow(sorted_cp_A))
+        if i <= 5
+            println("  A$i: [$(round(row.x1, digits=4)), $(round(row.x2, digits=4))] → f = $(round(row.z, digits=8))")
+        elseif i == 6 && nrow(sorted_cp_A) > 5
+            println("  ... and $(nrow(sorted_cp_A) - 5) more points")
+            break
+        end
+    end
+else
+    println("No critical points found for Approach A")
+end
+
+println("\nAPPROACH B: Critical points from polynomial approximation of log(f)")
+println("-"^60)
+if best_config_B !== nothing && haskey(best_config_B, :critical_points)
+    cp_B = best_config_B.critical_points
+    println("Found $(nrow(cp_B)) critical points")
+    sorted_cp_B = sort(cp_B, :z)
+    for (i, row) in enumerate(eachrow(sorted_cp_B))
+        if i <= 5
+            println("  B$i: [$(round(row.x1, digits=4)), $(round(row.x2, digits=4))] → log(f) = $(round(row.z, digits=8))")
+        elseif i == 6 && nrow(sorted_cp_B) > 5
+            println("  ... and $(nrow(sorted_cp_B) - 5) more points")
+            break
+        end
+    end
+else
+    println("No critical points found for Approach B")
+end
+
+total_A = best_config_A !== nothing && haskey(best_config_A, :critical_points) ? nrow(best_config_A.critical_points) : 0
+total_B = best_config_B !== nothing && haskey(best_config_B, :critical_points) ? nrow(best_config_B.critical_points) : 0
+println("\nTOTAL: Approach A = $total_A points, Approach B = $total_B points")
+
 # Valley walking summary
 if !isempty(valley_results)
+    println("\n" * "="^80)
+    println("VALLEY WALKING SUMMARY")
+    println("="^80)
     display_valley_walking_summary(valley_results)
-    
+
     # Create summary statistics
     summary_stats = create_summary_statistics(valley_results)
     println("\nSummary Statistics:")
