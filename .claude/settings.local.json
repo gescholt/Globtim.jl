@@ -61,7 +61,8 @@
       "Bash(./scripts/sprint-planning.sh:*)",
       "Bash(./scripts/add-to-sprint.sh:*)",
       "Bash(./scripts/format-julia.sh:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(cat:*)"
     ]
   },
   "enableAllProjectMcpServers": false
