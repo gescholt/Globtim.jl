@@ -43,7 +43,8 @@ end
 
 if !BENCHMARKTOOLS_AVAILABLE
     println("⚠️  BenchmarkTools not available - using basic timing fallback")
-    println("   For better benchmarking, install with: Pkg.add(\"BenchmarkTools\")")
+    println("   For better benchmarking, run: include(\"Examples/install_optional_deps.jl\")")
+    println("   Or manually: Pkg.add(\"BenchmarkTools\")")
     println("   Then restart Julia and reload this framework.")
 else
     println("✅ BenchmarkTools available - full benchmarking features enabled")
