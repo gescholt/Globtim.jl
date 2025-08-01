@@ -27,9 +27,47 @@ Usage:
 using Globtim
 using DynamicPolynomials
 using DataFrames
-using BenchmarkTools
 using Statistics
 using LinearAlgebra
+
+# Import Pkg at top level for installation helper
+import Pkg
+
+# Optional BenchmarkTools - use fallback timing if not available
+const BENCHMARKTOOLS_AVAILABLE = try
+    using BenchmarkTools
+    true
+catch
+    false
+end
+
+if !BENCHMARKTOOLS_AVAILABLE
+    println("⚠️  BenchmarkTools not available - using basic timing fallback")
+    println("   For better benchmarking, install with: Pkg.add(\"BenchmarkTools\")")
+    println("   Then restart Julia and reload this framework.")
+else
+    println("✅ BenchmarkTools available - full benchmarking features enabled")
+end
+
+"""
+    install_benchmarktools()
+
+Helper function to install BenchmarkTools if needed.
+Call this function, then restart Julia and reload the framework.
+"""
+function install_benchmarktools()
+    if !BENCHMARKTOOLS_AVAILABLE
+        println("Installing BenchmarkTools...")
+        Pkg.add("BenchmarkTools")
+        println("✅ BenchmarkTools installed!")
+        println("📋 Next steps:")
+        println("   1. Restart Julia")
+        println("   2. Reload the framework: include(\"test/adaptive_precision_4d_framework.jl\")")
+        println("   3. You'll then have access to detailed benchmarking statistics")
+    else
+        println("✅ BenchmarkTools is already available.")
+    end
+end
 
 # ============================================================================
 # 4D TEST FUNCTION LIBRARY
@@ -435,6 +473,7 @@ end
     benchmark_4d_construction(func_name=:gaussian; degree=6, samples=100, trials=5)
 
 Detailed performance benchmarking of 4D polynomial construction.
+Uses BenchmarkTools if available, otherwise falls back to basic timing.
 """
 function benchmark_4d_construction(func_name=:gaussian; degree=6, samples=100, trials=5)
     println("⏱️  Benchmarking 4D Construction for $func_name")
@@ -442,34 +481,72 @@ function benchmark_4d_construction(func_name=:gaussian; degree=6, samples=100, t
 
     TR = create_4d_test_input(func_name, STANDARD_CONFIG, samples=samples)
 
-    # Benchmark Float64Precision
-    println("🔍 Benchmarking Float64Precision...")
-    bench_f64 = @benchmark construct_4d_polynomial($TR, $degree, Float64Precision) samples=trials
+    if BENCHMARKTOOLS_AVAILABLE
+        # Use BenchmarkTools for detailed statistics
+        println("🔍 Benchmarking Float64Precision...")
+        bench_f64 = @benchmark construct_4d_polynomial($TR, $degree, Float64Precision) samples=trials
 
-    # Benchmark AdaptivePrecision
-    println("🔍 Benchmarking AdaptivePrecision...")
-    bench_adaptive = @benchmark construct_4d_polynomial($TR, $degree, AdaptivePrecision) samples=trials
+        println("🔍 Benchmarking AdaptivePrecision...")
+        bench_adaptive = @benchmark construct_4d_polynomial($TR, $degree, AdaptivePrecision) samples=trials
 
-    # Results
-    results = Dict(
-        :function => func_name,
-        :degree => degree,
-        :samples => samples,
-        :float64_median => median(bench_f64.times) / 1e9,  # Convert to seconds
-        :float64_mean => mean(bench_f64.times) / 1e9,
-        :float64_std => std(bench_f64.times) / 1e9,
-        :adaptive_median => median(bench_adaptive.times) / 1e9,
-        :adaptive_mean => mean(bench_adaptive.times) / 1e9,
-        :adaptive_std => std(bench_adaptive.times) / 1e9,
-        :overhead_median => median(bench_adaptive.times) / median(bench_f64.times),
-        :overhead_mean => mean(bench_adaptive.times) / mean(bench_f64.times)
-    )
+        # Results with detailed statistics
+        results = Dict(
+            :function => func_name,
+            :degree => degree,
+            :samples => samples,
+            :float64_median => median(bench_f64.times) / 1e9,  # Convert to seconds
+            :float64_mean => mean(bench_f64.times) / 1e9,
+            :float64_std => std(bench_f64.times) / 1e9,
+            :adaptive_median => median(bench_adaptive.times) / 1e9,
+            :adaptive_mean => mean(bench_adaptive.times) / 1e9,
+            :adaptive_std => std(bench_adaptive.times) / 1e9,
+            :overhead_median => median(bench_adaptive.times) / median(bench_f64.times),
+            :overhead_mean => mean(bench_adaptive.times) / mean(bench_f64.times)
+        )
 
-    println("📊 Benchmark Results:")
-    println("  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s")
-    println("  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s")
-    println("  Overhead (median): $(round(results[:overhead_median], digits=2))x")
-    println("  Overhead (mean): $(round(results[:overhead_mean], digits=2))x")
+        println("📊 Benchmark Results:")
+        println("  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s")
+        println("  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s")
+        println("  Overhead (median): $(round(results[:overhead_median], digits=2))x")
+        println("  Overhead (mean): $(round(results[:overhead_mean], digits=2))x")
+
+    else
+        # Fallback to basic timing
+        println("🔍 Basic timing Float64Precision...")
+        times_f64 = Float64[]
+        for i in 1:trials
+            time_f64 = @elapsed construct_4d_polynomial(TR, degree, Float64Precision)
+            push!(times_f64, time_f64)
+        end
+
+        println("🔍 Basic timing AdaptivePrecision...")
+        times_adaptive = Float64[]
+        for i in 1:trials
+            time_adaptive = @elapsed construct_4d_polynomial(TR, degree, AdaptivePrecision)
+            push!(times_adaptive, time_adaptive)
+        end
+
+        # Results with basic statistics
+        results = Dict(
+            :function => func_name,
+            :degree => degree,
+            :samples => samples,
+            :float64_median => median(times_f64),
+            :float64_mean => mean(times_f64),
+            :float64_std => std(times_f64),
+            :adaptive_median => median(times_adaptive),
+            :adaptive_mean => mean(times_adaptive),
+            :adaptive_std => std(times_adaptive),
+            :overhead_median => median(times_adaptive) / median(times_f64),
+            :overhead_mean => mean(times_adaptive) / mean(times_f64)
+        )
+
+        println("📊 Basic Timing Results:")
+        println("  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s")
+        println("  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s")
+        println("  Overhead (median): $(round(results[:overhead_median], digits=2))x")
+        println("  Overhead (mean): $(round(results[:overhead_mean], digits=2))x")
+    end
 
     return results
 end
@@ -530,3 +607,82 @@ function generate_4d_test_report(results_df)
 
     println("\n✅ Report generation completed!")
 end
+
+# ============================================================================
+# FRAMEWORK DISCOVERY AND HELP
+# ============================================================================
+
+"""
+    show_4d_framework_functions()
+
+Display all available functions in the 4D AdaptivePrecision testing framework.
+"""
+function show_4d_framework_functions()
+    println("🚀 4D AdaptivePrecision Testing Framework - Available Functions")
+    println("=" ^ 70)
+
+    println("\n📊 Quick Testing:")
+    println("  run_4d_quick_test()                    - Fast verification test")
+    println("  compare_4d_precisions(func, deg, smp)  - Single comparison")
+
+    println("\n📈 Comprehensive Analysis:")
+    println("  run_4d_precision_comparison()          - Multi-function comparison")
+    println("  run_4d_scaling_analysis(func)          - Degree/sample scaling")
+    println("  analyze_4d_sparsity(func)              - Coefficient sparsity analysis")
+
+    println("\n⏱️  Performance Benchmarking:")
+    println("  benchmark_4d_construction(func)        - Detailed timing analysis")
+
+    println("\n📋 Reporting:")
+    println("  generate_4d_test_report(results_df)    - Comprehensive report")
+
+    println("\n🔧 Utilities:")
+    println("  install_benchmarktools()               - Install optional dependencies")
+    println("  create_4d_test_input(func, config)     - Create test input")
+    println("  construct_4d_polynomial(TR, deg, prec) - Build polynomial")
+
+    println("\n📚 Available Test Functions:")
+    for (name, func) in TEST_FUNCTIONS_4D
+        println("  :$name")
+    end
+
+    println("\n⚙️  Available Configurations:")
+    println("  QUICK_CONFIG        - Fast testing (degrees 2-4, samples 10-20)")
+    println("  STANDARD_CONFIG     - Balanced testing (degrees 4-8, samples 20-100)")
+    println("  COMPREHENSIVE_CONFIG - Full analysis (degrees 4-12, samples 50-500)")
+
+    println("\n💡 Quick Start Examples:")
+    println("  # Quick test")
+    println("  results = run_4d_quick_test()")
+    println("")
+    println("  # Compare specific function")
+    println("  result, pol_f64, pol_adaptive = compare_4d_precisions(:gaussian, 6, 50)")
+    println("")
+    println("  # Full comparison study")
+    println("  comparison_df = run_4d_precision_comparison()")
+    println("  generate_4d_test_report(comparison_df)")
+    println("")
+    println("  # Sparsity analysis")
+    println("  analysis, mono_f64, mono_adaptive = analyze_4d_sparsity(:sparse)")
+
+    println("\n🎯 Framework Status:")
+    println("  BenchmarkTools available: $BENCHMARKTOOLS_AVAILABLE")
+    println("  Test functions loaded: $(length(TEST_FUNCTIONS_4D))")
+    println("  Configurations available: 3")
+
+    println("\n📖 For detailed help on any function, use: ?function_name")
+end
+
+# Display framework info when loaded
+println("\n🎯 4D AdaptivePrecision Testing Framework Loaded!")
+println("📋 Type show_4d_framework_functions() to see all available functions")
+println("🚀 Quick start: run_4d_quick_test()")
+
+# Make key functions easily discoverable by defining short aliases
+const help_4d = show_4d_framework_functions
+const quick_test = run_4d_quick_test
+const compare_precisions = run_4d_precision_comparison
+const scaling_analysis = run_4d_scaling_analysis
+const sparsity_analysis = analyze_4d_sparsity
+
+println("💡 Short aliases available: help_4d(), quick_test(), compare_precisions(), scaling_analysis(), sparsity_analysis()")
