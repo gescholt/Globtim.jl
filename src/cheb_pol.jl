@@ -125,6 +125,9 @@ function _convert_value(val, precision::PrecisionType)
         end
     elseif precision == BigFloatPrecision
         return BigFloat(val)
+    elseif precision == AdaptivePrecision
+        # For AdaptivePrecision, use BigFloat with adaptive precision
+        return _convert_value_adaptive(val)
     else # BigIntPrecision
         if val isa Integer
             return BigInt(val)
@@ -133,6 +136,37 @@ function _convert_value(val, precision::PrecisionType)
         else
             error("Cannot convert non-integer to BigInt")
         end
+    end
+end
+
+"""
+    _convert_value_adaptive(val)
+
+Convert value to BigFloat with adaptive precision based on magnitude and context.
+For AdaptivePrecision, we use BigFloat but with smart precision selection.
+"""
+function _convert_value_adaptive(val)
+    # Set BigFloat precision based on value magnitude and global context
+    # Higher precision for smaller values (more sensitive to precision loss)
+    abs_val = abs(Float64(val))
+
+    if abs_val < 1e-12
+        # Very small values need high precision
+        old_precision = Base.precision(BigFloat)
+        Base.setprecision(BigFloat, 512)  # High precision
+        result = BigFloat(val)
+        Base.setprecision(BigFloat, old_precision)
+        return result
+    elseif abs_val < 1e-6
+        # Small values need medium precision
+        old_precision = Base.precision(BigFloat)
+        Base.setprecision(BigFloat, 256)  # Medium precision
+        result = BigFloat(val)
+        Base.setprecision(BigFloat, old_precision)
+        return result
+    else
+        # Normal values use standard BigFloat precision
+        return BigFloat(val)
     end
 end
 
@@ -382,4 +416,108 @@ function construct_chebyshev_approx(
     end
 
     return S
+end
+
+"""
+    truncate_polynomial_adaptive(poly, threshold::Real; relative::Bool=false)
+
+Truncate polynomial coefficients using extended precision for accurate threshold comparison.
+This function is designed to work well with AdaptivePrecision polynomials.
+
+# Arguments
+- `poly`: DynamicPolynomials.Polynomial with extended precision coefficients
+- `threshold::Real`: Truncation threshold
+- `relative::Bool`: If true, threshold is relative to largest coefficient
+
+# Returns
+- Truncated polynomial with small coefficients removed
+- Statistics about the truncation (number of terms removed, etc.)
+"""
+function truncate_polynomial_adaptive(poly, threshold::Real; relative::Bool=false)
+    terms_list = terms(poly)
+    coeffs = [coefficient(t) for t in terms_list]
+
+    # Convert to Float64 for magnitude comparison (but keep original precision)
+    coeff_magnitudes = [abs(Float64(c)) for c in coeffs]
+
+    # Determine effective threshold
+    effective_threshold = if relative
+        threshold * maximum(coeff_magnitudes)
+    else
+        Float64(threshold)
+    end
+
+    # Find terms to keep
+    keep_mask = coeff_magnitudes .> effective_threshold
+    n_kept = sum(keep_mask)
+    n_total = length(coeffs)
+
+    if n_kept == n_total
+        # No truncation needed
+        return poly, (n_total=n_total, n_kept=n_kept, n_removed=0, sparsity_ratio=0.0)
+    elseif n_kept == 0
+        # All coefficients too small - keep the largest one
+        max_idx = argmax(coeff_magnitudes)
+        keep_mask[max_idx] = true
+        n_kept = 1
+    end
+
+    # Build truncated polynomial
+    kept_terms = terms_list[keep_mask]
+    truncated_poly = sum(kept_terms)
+
+    # Statistics
+    n_removed = n_total - n_kept
+    sparsity_ratio = n_removed / n_total
+
+    stats = (
+        n_total = n_total,
+        n_kept = n_kept,
+        n_removed = n_removed,
+        sparsity_ratio = sparsity_ratio,
+        threshold_used = effective_threshold,
+        largest_removed = n_removed > 0 ? maximum(coeff_magnitudes[.!keep_mask]) : 0.0,
+        smallest_kept = minimum(coeff_magnitudes[keep_mask])
+    )
+
+    return truncated_poly, stats
+end
+
+"""
+    analyze_coefficient_distribution(poly)
+
+Analyze the distribution of polynomial coefficients for truncation guidance.
+Works with extended precision coefficients from AdaptivePrecision.
+"""
+function analyze_coefficient_distribution(poly)
+    coeffs = [coefficient(t) for t in terms(poly)]
+    coeff_magnitudes = [abs(Float64(c)) for c in coeffs]
+
+    # Sort by magnitude
+    sorted_mags = sort(coeff_magnitudes, rev=true)
+
+    # Statistics
+    n_total = length(sorted_mags)
+    max_coeff = maximum(sorted_mags)
+    min_coeff = minimum(sorted_mags[sorted_mags .> 0])
+
+    # Find natural gaps in coefficient magnitudes (potential truncation points)
+    log_mags = log10.(sorted_mags[sorted_mags .> 0])
+    gaps = diff(log_mags)
+    large_gaps = findall(gaps .< -2.0)  # Gaps of more than 2 orders of magnitude
+
+    suggested_thresholds = if !isempty(large_gaps)
+        [10^log_mags[gap_idx+1] for gap_idx in large_gaps[1:min(3, end)]]
+    else
+        [max_coeff * 1e-12, max_coeff * 1e-10, max_coeff * 1e-8]
+    end
+
+    return (
+        n_total = n_total,
+        max_coefficient = max_coeff,
+        min_coefficient = min_coeff,
+        dynamic_range = max_coeff / min_coeff,
+        suggested_thresholds = suggested_thresholds,
+        coefficient_magnitudes = coeff_magnitudes
+    )
 end
