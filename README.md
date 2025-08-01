@@ -187,6 +187,7 @@ Comprehensive testing infrastructure for high-dimensional AdaptivePrecision deve
 - **Revise.jl Integration**: Automatic code reloading for seamless development
 - **Performance Profiling**: Detailed runtime breakdown and bottleneck identification
 - **Systematic Parameter Studies**: Automated testing across degrees and sample sizes
+- **High-Quality Plotting**: CairoMakie integration for publication-ready figures
 
 **Testing Framework:**
 ```julia
@@ -243,7 +244,7 @@ pkg> add Globtim
 ```
 
 ### Optional Dependencies
-- **For visualization**: `add CairoMakie` or `add GLMakie`
+- **For visualization**: `add CairoMakie` (static plots) or `add GLMakie` (interactive plots)
 - **For exact solving**: Install [Msolve](https://msolve.lip6.fr/) for symbolic polynomial system solving
 - **For enhanced benchmarking**: `add BenchmarkTools` (enables detailed performance analysis in 4D framework)
 - **For development profiling**: `add ProfileView` (interactive performance profiling in notebooks)

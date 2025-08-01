@@ -20,7 +20,8 @@ println("=" ^ 70)
 optional_packages = [
     ("BenchmarkTools", "Detailed performance benchmarking"),
     ("ProfileView", "Interactive performance profiling"),
-    ("PlotlyJS", "Interactive plotting in notebooks"),
+    ("CairoMakie", "High-quality static plotting for notebooks"),
+    ("GLMakie", "Interactive plotting (optional alternative to CairoMakie)"),
     ("Revise", "Automatic code reloading for development")
 ]
 
@@ -65,7 +66,8 @@ end
 println("\n💡 Package Usage:")
 println("  • BenchmarkTools: Detailed timing with @benchmark macro")
 println("  • ProfileView: Interactive profiling with ProfileView.view()")
-println("  • PlotlyJS: Interactive plots in notebooks")
+println("  • CairoMakie: High-quality static plots - use 'using CairoMakie' for notebooks")
+println("  • GLMakie: Interactive plots - use 'using GLMakie' for interactive exploration")
 println("  • Revise: Automatic code reloading - load with 'using Revise' first")
 
 println("\n🚀 Ready for AdaptivePrecision development!")

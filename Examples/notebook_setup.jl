@@ -43,7 +43,7 @@ optional_packages = [
     ("Revise", "Automatic code reloading"),
     ("BenchmarkTools", "Detailed performance benchmarking"),
     ("ProfileView", "Interactive performance profiling"),
-    ("PlotlyJS", "Interactive plotting")
+    ("CairoMakie", "High-quality static plotting for notebooks")
 ]
 
 println("\n🔧 Checking optional packages...")
@@ -100,7 +100,7 @@ println("  Core packages: ✅ Loaded")
 println("  Revise: $(available_packages[\"Revise\"] ? \"✅\" : \"❌\") $(available_packages[\"Revise\"] ? \"(auto-reload enabled)\" : \"(manual reload required)\")")
 println("  BenchmarkTools: $(available_packages[\"BenchmarkTools\"] ? \"✅\" : \"❌\") $(available_packages[\"BenchmarkTools\"] ? \"(detailed benchmarking)\" : \"(basic timing only)\")")
 println("  ProfileView: $(available_packages[\"ProfileView\"] ? \"✅\" : \"❌\") $(available_packages[\"ProfileView\"] ? \"(interactive profiling)\" : \"(basic profiling only)\")")
-println("  PlotlyJS: $(available_packages[\"PlotlyJS\"] ? \"✅\" : \"❌\") $(available_packages[\"PlotlyJS\"] ? \"(interactive plots)\" : \"(no plotting)\")")
+println("  CairoMakie: $(available_packages[\"CairoMakie\"] ? \"✅\" : \"❌\") $(available_packages[\"CairoMakie\"] ? \"(high-quality plotting)\" : \"(no plotting)\")")
 
 if any(values(available_packages) .== false)
     println("\n💡 To install missing packages, run:")
