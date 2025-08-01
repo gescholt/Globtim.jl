@@ -84,13 +84,53 @@ plot_critical_eigenvalues(df_enhanced)             # Minima/maxima eigenvalue va
 plot_all_eigenvalues(f, df_enhanced)               # Complete eigenvalue spectrum (NEW!)
 ```
 
+### NEW: AdaptivePrecision for Extended Precision Polynomial Expansion
+
+Globtim introduces **AdaptivePrecision**, a hybrid precision system that combines Float64 performance with BigFloat accuracy for polynomial coefficient manipulation:
+
+**Key Benefits:**
+- **Hybrid Performance**: Float64 for function evaluation (fast), BigFloat for polynomial expansion (accurate)
+- **Extended Precision**: BigFloat coefficients enable accurate manipulation of coefficients with extreme magnitude ranges
+- **Smart Sparsification**: Enhanced coefficient truncation with extended precision analysis
+- **Seamless Integration**: Drop-in replacement for existing workflows
+
+**Basic Usage:**
+```julia
+using Globtim, DynamicPolynomials
+
+# Standard workflow with AdaptivePrecision
+f = shubert_4d  # 4D test function
+TR = test_input(f, dim=4, center=[0.0, 0.0, 0.0, 0.0], sample_range=2.0)
+
+# Use AdaptivePrecision for construction
+pol = Constructor(TR, 8, precision=AdaptivePrecision)  # BigFloat coefficients
+
+# Convert to monomial basis (where precision conversion happens)
+@polyvar x[1:4]
+mono_poly = to_exact_monomial_basis(pol, variables=x)  # BigFloat coefficients
+
+# Advanced coefficient analysis
+analysis = analyze_coefficient_distribution(mono_poly)
+println("Dynamic range: $(analysis.dynamic_range)")
+println("Suggested thresholds: $(analysis.suggested_thresholds)")
+
+# Smart truncation with extended precision
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, 1e-12)
+println("Achieved $(round(stats.sparsity_ratio*100, digits=1))% sparsity")
+```
+
+**Precision Types:**
+- `Float64Precision` (default): Standard Float64 arithmetic
+- `AdaptivePrecision` (new): Hybrid Float64/BigFloat system
+
 ### NEW: Polynomial Sparsification and Exact Arithmetic
 
-Globtim now provides powerful tools for polynomial sparsification and exact coefficient conversion:
+Enhanced sparsification tools with extended precision support:
 
 **Key Capabilities:**
 - **Exact Conversion**: Transform polynomials from Chebyshev/Legendre basis to exact monomial form
 - **Intelligent Sparsification**: Remove small coefficients while tracking approximation quality
+- **Extended Precision Analysis**: BigFloat coefficient analysis for extreme dynamic ranges
 - **L2-Norm Tracking**: Monitor the error introduced by sparsification at each step
 - **Memory Efficiency**: Reduce polynomial complexity for faster evaluation and storage
 
@@ -98,23 +138,28 @@ Globtim now provides powerful tools for polynomial sparsification and exact coef
 ```julia
 using Globtim, DynamicPolynomials
 
-# Create polynomial approximation
+# Create polynomial approximation with AdaptivePrecision
 f = Deuflhard
 TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
-pol = Constructor(TR, 8)  # Degree 8 approximation
+pol = Constructor(TR, 8, precision=AdaptivePrecision)  # Extended precision
 
 # Convert to exact monomial basis
 @polyvar x y
 mono_poly = to_exact_monomial_basis(pol, variables=[x, y])
 
-# Sparsify polynomial (remove coefficients < 1e-8 relative to max)
-result = sparsify_polynomial(pol, 1e-8, mode=:relative)
+# Advanced coefficient analysis
+analysis = analyze_coefficient_distribution(mono_poly)
+println("Dynamic range: $(analysis.dynamic_range)")
+
+# Smart truncation with optimal threshold
+threshold = analysis.suggested_thresholds[1]
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
 
 # Results
-println("Original terms: $(count(!iszero, pol.coeffs))")
-println("Sparse terms: $(result.new_nnz)")  
-println("Achieved $(round((1-result.sparsity)*100))% sparsity")
-println("L2-norm preservation: $(round(result.l2_ratio*100, digits=1))%")
+println("Original terms: $(stats.n_total)")
+println("Kept terms: $(stats.n_kept)")
+println("Achieved $(round(stats.sparsity_ratio*100, digits=1))% sparsity")
+println("Largest removed: $(stats.largest_removed)")
 ```
 
 ## 📦 What's Included
@@ -132,6 +177,53 @@ println("L2-norm preservation: $(round(result.l2_ratio*100, digits=1))%")
 ### 🔧 Optional Extensions
 - **Visualization Suite**: Advanced plotting functions that activate when CairoMakie or GLMakie are loaded
 - **Interactive Analysis**: Real-time exploration of eigenvalue spectra and critical point distributions
+
+### NEW: 4D Testing Framework and Development Tools
+
+Comprehensive testing infrastructure for high-dimensional AdaptivePrecision development:
+
+**Development Environment:**
+- **Interactive Jupyter Notebook**: `Examples/Notebooks/AdaptivePrecision_4D_Development.ipynb`
+- **Revise.jl Integration**: Automatic code reloading for seamless development
+- **Performance Profiling**: Detailed runtime breakdown and bottleneck identification
+- **Systematic Parameter Studies**: Automated testing across degrees and sample sizes
+- **High-Quality Plotting**: CairoMakie integration for publication-ready figures
+
+**Testing Framework:**
+```julia
+# Load the 4D testing framework
+include("test/adaptive_precision_4d_framework.jl")
+
+# Quick verification test
+results = run_4d_quick_test()
+
+# Comprehensive comparison study
+comparison_df = run_4d_precision_comparison()
+generate_4d_test_report(comparison_df)
+
+# Sparsity analysis
+analysis, mono_f64, mono_adaptive = analyze_4d_sparsity(:sparse)
+
+# Performance benchmarking
+benchmark_results = benchmark_4d_construction(:gaussian, degree=6, samples=100)
+```
+
+**Available Test Functions:**
+- `:gaussian` - Smooth, well-behaved 4D Gaussian
+- `:polynomial_exact` - Exact polynomial for accuracy testing
+- `:shubert` - Complex 4D Shubert optimization landscape
+- `:sparse` - Natural sparsity structure for truncation testing
+- `:mixed_frequency` - Multiple scales for sparsity analysis
+
+**Development Script:**
+```julia
+# Quick command-line testing
+julia --project=. Examples/adaptive_precision_4d_dev.jl
+
+# Or in REPL
+include("Examples/adaptive_precision_4d_dev.jl")
+quick_shubert_test(degree=6, samples=100)
+```
 
 ## 📊 Project Status
 
@@ -152,8 +244,10 @@ pkg> add Globtim
 ```
 
 ### Optional Dependencies
-- **For visualization**: `add CairoMakie` or `add GLMakie`
+- **For visualization**: `add CairoMakie` (static plots) or `add GLMakie` (interactive plots)
 - **For exact solving**: Install [Msolve](https://msolve.lip6.fr/) for symbolic polynomial system solving
+- **For enhanced benchmarking**: `add BenchmarkTools` (enables detailed performance analysis in 4D framework)
+- **For development profiling**: `add ProfileView` (interactive performance profiling in notebooks)
 
 ## 📚 Examples
 
@@ -197,6 +291,31 @@ for row in eachrow(df_enhanced)
 end
 ```
 
+### AdaptivePrecision Usage
+```julia
+using Globtim, DynamicPolynomials
+
+# 4D Shubert function with AdaptivePrecision
+f = shubert_4d
+TR = test_input(f, dim=4, center=[0.0, 0.0, 0.0, 0.0], sample_range=2.0)
+
+# Construct with extended precision
+pol = Constructor(TR, 8, precision=AdaptivePrecision)
+println("L2 norm: $(pol.nrm)")
+println("Coefficient type: $(eltype(pol.coeffs))")  # Float64 (for performance)
+
+# Convert to monomial basis (BigFloat coefficients)
+@polyvar x[1:4]
+mono_poly = to_exact_monomial_basis(pol, variables=x)
+coeffs = [coefficient(t) for t in terms(mono_poly)]
+println("Monomial coefficient type: $(typeof(coeffs[1]))")  # BigFloat (for accuracy)
+
+# Coefficient analysis and smart truncation
+analysis = analyze_coefficient_distribution(mono_poly)
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, 1e-12)
+println("Sparsity achieved: $(round(stats.sparsity_ratio*100, digits=1))%")
+```
+
 ### Statistical Analysis
 ```julia
 # Generate comprehensive statistical tables
@@ -234,11 +353,41 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 - **API Documentation**: Available via `?` in Julia REPL
 - **Source Code**: [GitHub Repository](https://github.com/gescholt/Globtim.jl)
 
+### 🚀 Quick Reference: New Features
+
+**AdaptivePrecision System:**
+```julia
+# Basic usage
+pol = Constructor(TR, degree, precision=AdaptivePrecision)
+mono_poly = to_exact_monomial_basis(pol, variables=x)
+
+# Coefficient analysis
+analysis = analyze_coefficient_distribution(mono_poly)
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+```
+
+**4D Testing Framework:**
+```julia
+# Load framework
+include("test/adaptive_precision_4d_framework.jl")
+
+# Quick functions
+help_4d()                    # Show all available functions
+quick_test()                 # Fast verification test
+compare_precisions()         # Full comparison study
+sparsity_analysis(:sparse)   # Coefficient truncation analysis
+```
+
+**Development Environment:**
+- **Notebook**: `Examples/Notebooks/AdaptivePrecision_4D_Development.ipynb`
+- **Script**: `Examples/adaptive_precision_4d_dev.jl`
+- **Framework**: `test/adaptive_precision_4d_framework.jl`
+
 ## 🤝 Contributors
 
 **Authors**
-- Georgy Scholten 
-- Claude (Anthropic) [Hessian analysis, statistical tables, enhanced visualization features]
+- Georgy Scholten
+- Claude (Anthropic) [Hessian analysis, statistical tables, enhanced visualization features, AdaptivePrecision system, 4D testing framework]
 
 **Contributors**
 - Alexander Demin 

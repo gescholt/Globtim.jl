@@ -131,5 +131,49 @@ The pipeline is configured in `.gitlab-ci.yml` with the following stages:
 - If pipelines fail with "julia: command not found", ensure the job has `tags: [Ubuntu-docker]`
 - The `.env.gitlab` file must exist with proper API credentials for the scripts to work
 
+# Valley Walking Experiments (experiments/week7/)
+
+## Overview
+The valley walking experiments provide a modular framework for polynomial approximation of objective functions and optimization using valley walking algorithms. The main script is `walk_along_valley_refactored.jl`.
+
+## Key Components
+1. **test_functions.jl**: Collection of analytical test functions (Rosenbrock, Himmelblau, Beale) and utilities
+2. **valley_walking_utils.jl**: Core algorithm combining valley walking (for rank-deficient Hessians) with gradient descent
+3. **polynomial_degree_optimization.jl**: Systematic testing of polynomial degrees with automatic selection
+4. **valley_walking_tables.jl**: Formatted tabular output for analysis and reporting
+5. **valley_walking_visualization.jl**: GLMakie-based visualization with simplified 2-panel plots (level sets + function values)
+
+## Key Features
+- **Enhanced Valley Walking**: Adaptive strategy switching between valley walking and gradient descent based on Hessian conditioning
+- **Polynomial Degree Optimization**: Automatic testing of degrees 4-14 with condition number monitoring
+- **Critical Points Analysis**: Finding and ranking critical points from polynomial approximation
+- **Comprehensive Visualization**: 2D level sets with paths, function value evolution, eigenvalue tracking
+
+## Usage Pattern
+```julia
+# 1. Select objective function
+func_info = get_test_function_info(:rosenbrock_2d)  # or :himmelblau, :beale, etc.
+
+# 2. Test polynomial degrees
+degree_configs = create_degree_test_configs(min_degree=4, max_degree=14, fixed_samples=10000)
+test_results = test_polynomial_degrees(objective_func, base_config, degree_configs)
+
+# 3. Select best configuration
+best_config, _ = select_best_configuration(test_results)
+
+# 4. Perform valley walking from critical points
+valley_results = enhanced_valley_walk(objective_func, starting_point, ...)
+
+# 5. Visualize results
+fig = plot_valley_walk_simple(valley_results, objective_func, domain_bounds)
+```
+
+## Important Notes
+- The module uses `tolerance = nothing` in `test_input` to prevent automatic degree increase
+- Valley walking switches to gradient descent when Hessian is well-conditioned
+- Visualization now uses simplified 2-panel layout (level sets + function values)
+- All components are modular and can be used independently
+- The refactored script uses `sample_range = 3.0` to ensure the sampling domain properly covers the visualization domain
+
 # Quick Code Notes
 - Let Georgy run the tests and examples now 
