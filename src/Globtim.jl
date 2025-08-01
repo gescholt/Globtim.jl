@@ -16,7 +16,13 @@ using ForwardDiff
 using Clustering
 using Optim
 
-@enum PrecisionType Float64Precision RationalPrecision BigFloatPrecision BigIntPrecision
+@enum PrecisionType begin
+    Float64Precision
+    RationalPrecision
+    BigFloatPrecision
+    BigIntPrecision
+    AdaptivePrecision      # BigFloat for expansion, Float64 for evaluation
+end
 
 import HomotopyContinuation: solve, real_solutions, System
 
@@ -80,7 +86,7 @@ export test_input,
 
 # Precision type export
 export PrecisionType,
-    Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision
+    Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision, AdaptivePrecision
 
 # Legendre polynomial functions
 export symbolic_legendre, evaluate_legendre, get_legendre_coeffs, construct_legendre_approx
@@ -108,6 +114,7 @@ export compute_l2_norm_vandermonde, compute_l2_norm_coeffs, sparsify_polynomial
 export compute_approximation_error,
     analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
 export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
+export truncate_polynomial_adaptive, analyze_coefficient_distribution
 export BoxDomain,
     AbstractDomain, compute_l2_norm, verify_truncation_quality, integrate_monomial
 
