@@ -557,10 +557,8 @@ function Globtim.plot_error_function_2D_with_critical_points(
     hess_func(x) = map(f -> f(pullback(x)), poly_func.(hess))
     hess_at_cp = map(pt -> hess_func([pt.x1, pt.x2]), eachrow(pts_along_valley))
 
-    println(norm.(grad_at_cp))
-
     norm_factor = arrow_norm_factor * TR.sample_range
-    ar = arrows!(
+    ar = arrows2d!(
         ax, 
         repeat([pts_along_valley.x1[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
         repeat([pts_along_valley.x2[i] for i in 1:length(eachrow(pts_along_valley))], 2), 
