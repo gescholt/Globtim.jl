@@ -11,6 +11,7 @@ export define_lotka_volterra_model,
     define_lotka_volterra_2D_model,
     define_lotka_volterra_2D_model_v2,
     define_lotka_volterra_2D_model_v3,
+    define_lotka_volterra_2D_model_v3_two_outputs,
     define_lotka_volterra_3D_model_v2,
     define_fitzhugh_nagumo_3D_model,
     sample_data,
@@ -41,6 +42,23 @@ function define_daisy_ex3_model_4D()
                                 D(x2) ~ p3 * x1 - p4 * x2 + x3,
                                 D(x3) ~ p6 * x1 + 0.2 * x3,
                                 D(u0) ~ 1],
+                            t, states, parameters)
+    measured_quantities = [y1 ~ x1 + x3, y2 ~ x2]
+    model, parameters, states, measured_quantities
+end
+
+# p7 := -0.2, no input
+function define_daisy_ex3_model_4D_no_input()
+    @independent_variables t
+    @parameters p1 p3 p4 p6
+    @variables x1(t) x2(t) x3(t) y1(t) y2(t)
+    D = Differential(t)
+
+    states = [x1, x2, x3]
+    parameters = [p1, p3, p4, p6]
+    @named model = ODESystem([D(x1) ~ -1 * p1 * x1 + x2,
+                                D(x2) ~ p3 * x1 - p4 * x2 + x3,
+                                D(x3) ~ p6 * x1 + 0.2 * x3],
                             t, states, parameters)
     measured_quantities = [y1 ~ x1 + x3, y2 ~ x2]
     model, parameters, states, measured_quantities
@@ -132,6 +150,25 @@ function define_lotka_volterra_2D_model_v3()
         params
     )
     outputs = [y1 ~ x1]
+    return model, params, states, outputs
+end
+
+# c := 0.5
+function define_lotka_volterra_2D_model_v3_two_outputs()
+    @independent_variables t
+    @variables x1(t) x2(t) y1(t) y2(t)
+    @parameters a b
+    D = Differential(t)
+    params = [a, b]
+    states = [x1, x2]
+    @named model = ODESystem(
+        [D(x1) ~ a * x1 + -b * x1 * x2, 
+        D(x2) ~ -b * x2 + 0.5 * x1 * x2],
+        t,
+        states,
+        params
+    )
+    outputs = [y1 ~ x1, y2 ~ x2]
     return model, params, states, outputs
 end
 
@@ -308,6 +345,7 @@ function make_error_distance(
     time_interval,
     numpoints::Int = 5,
     distance_function = L2_norm,
+    aggregate_distances = first,
     add_noise_in_time_series = nothing
 ) where {T}
     @assert length(p_true) == length(ModelingToolkit.parameters(model)) "Parameter vector length mismatch"
@@ -335,10 +373,16 @@ function make_error_distance(
         initial_conditions,
         numpoints
     )
-    Y_true = data_sample_true[first(keys(data_sample_true))]
+    # Y_true = data_sample_true[first(keys(data_sample_true))]
 
-    if add_noise_in_time_series !== nothing
-        Y_true = add_noise_in_time_series(Y_true)
+    if add_noise_in_time_series === nothing
+        add_noise_in_time_series = x -> x  # No noise function, return input as is
+    end
+    for (key, values) in data_sample_true
+        if key == "t"
+            continue  # Skip time array
+        end
+        data_sample_true[key] = add_noise_in_time_series(values)
     end
 
     function Error_distance(
@@ -371,17 +415,23 @@ function make_error_distance(
                 return NaN
             end
 
-            Y_test = data_sample_test[first(keys(data_sample_test))]
-
-            if any(isnan.(Y_test)) ||
-               any(isinf.(Y_test)) ||
-               any(isnan.(Y_true)) ||
-               any(isinf.(Y_true))
-                println("case 3")
-                return NaN
+            for (key, values) in data_sample_test
+                if key == "t"
+                    continue  # Skip time array
+                end
+                if any(isnan.(values)) || any(isinf.(values)) || 
+                    any(isnan.(data_sample_true[key])) || any(isinf.(data_sample_true[key]))
+                    println("case 3")
+                    return NaN
+                end
             end
 
-            return distance_function(Y_true, Y_test)
+            return aggregate_distances(
+                [distance_function(data_sample_true[key], data_sample_test[key]) 
+                for key in keys(data_sample_true) if key != "t"]
+            )
+            
+            # return distance_function(Y_true, Y_test)
             # return 100 * norm(Y_true - Y_test, 1)
             # return log(norm(Y_true - Y_test, 2) + eps(T))
         catch e
@@ -506,6 +556,114 @@ function plot_model_outputs(
         halign = :left, valign = :top,
         # patchsize = (30, 20),
     )
+
+    # return fig
+end
+
+function plot_model_outputs_several(
+    fig,
+    config,
+    model::ModelingToolkit.ODESystem,
+    outputs::Vector{ModelingToolkit.Equation},
+    ic::Vector{T},
+    parameter_values::Vector{A},
+    time_interval,
+    num_points;
+    ground_truth = nothing,
+    yaxis = identity,
+    plot_title = "Model Outputs",
+    figure_size = (800, 500),
+    param_alpha = 0.1,
+) where {T<:Number,A}
+
+    @assert length(parameter_values) > 0 "At least one parameter set must be provided"
+    @assert length(ic) == length(ModelingToolkit.unknowns(model)) "Initial conditions length mismatch"
+
+    for i in 1:length(outputs)
+        ax = Axis(
+            fig[1, i],
+            title = "$(config.model_func) - Output $(outputs[i].lhs)",
+            xlabel = "Time",
+            ylabel = "$(outputs[i].lhs)",
+            yscale = identity
+        )
+
+        green, blue = nothing, nothing
+        # Generate data for each parameter set
+        for (idx, p) in enumerate(parameter_values)
+            problem = ODEProblem(
+                ModelingToolkit.complete(model),
+                merge(
+                    Dict(ModelingToolkit.unknowns(model) .=> ic),
+                    Dict(ModelingToolkit.parameters(model) .=> p)
+                ),
+                time_interval,
+            )
+            data_sample = sample_data(problem, model, outputs, time_interval, p, ic, num_points)
+
+            # Extract time points
+            t = data_sample["t"]
+
+            # Plot each output variable
+            key = outputs[i].lhs
+            values = data_sample[key]
+            
+            if length(values) != num_points
+                println(
+                    "Skipping parameter set $(idx) - $(key) due to mismatched data length"
+                )
+                continue
+            end
+
+            if key == "t"
+                continue  # Skip time array
+            end
+
+            if idx == ground_truth
+                # Highlight ground truth in a different color
+                color = :green
+                alpha = 1.0
+                linewidth = 3
+                # label = "Ground truth: parameters are $(p)"
+                style = :solid
+                green = lines!(
+                    ax,
+                    t,
+                    values,
+                    linewidth = linewidth,
+                    color = color,
+                    linestyle = style,
+                    alpha = alpha
+                )
+            else
+                color = :blue
+                alpha = param_alpha
+                linewidth = 1
+                label = nothing # "Set $(idx) - $(key) - $(p)"
+                style = :solid
+                blue = lines!(
+                    ax,
+                    t,
+                    values,
+                    linewidth = linewidth,
+                    color = color,
+                    linestyle = style,
+                    alpha = alpha
+                )
+            end
+        end
+
+        Legend(
+            fig[1, i],
+            [green, blue],
+            ["Ground Truth, parameters are $(round.(config.p_true[1], digits=2))", "Parameters from $(round.(minimum(parameter_values), digits=2)) to $(round.(maximum(parameter_values), digits=2))"],
+            orientation = :vertical,  # Make legend horizontal for better space usage
+            tellwidth = false,         # Don't have legend width affect layout
+            tellheight = false,
+            halign = :left, valign = :top,
+            # patchsize = (30, 20),
+        )
+    end
 
     # return fig
 end

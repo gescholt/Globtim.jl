@@ -64,8 +64,9 @@ function compute_norm(scale_factor::Float64, VL, sol, F, grid, n, d)
     else
         # Original behavior for Array grids
         grid_flat = reshape(grid, :)
-        residual = x -> begin
-            idx = findfirst(y -> y == x, grid_flat)
+        grid_flat_table = Dict(grid_flat .=> 1:length(grid_flat))
+        function residual(x)
+            idx = grid_flat_table[x]
             idx === nothing ? error("Point not found in grid") : evals[idx]
         end
         discrete_l2_norm_riemann(residual, grid)
