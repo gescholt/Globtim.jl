@@ -135,33 +135,7 @@ Enhanced sparsification tools with extended precision support:
 - **L2-Norm Tracking**: Monitor the error introduced by sparsification at each step
 - **Memory Efficiency**: Reduce polynomial complexity for faster evaluation and storage
 
-**Example:**
-```julia
-using Globtim, DynamicPolynomials
-
-# Create polynomial approximation with AdaptivePrecision
-f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
-pol = Constructor(TR, 8, precision=AdaptivePrecision)  # Extended precision
-
-# Convert to exact monomial basis
-@polyvar x y
-mono_poly = to_exact_monomial_basis(pol, variables=[x, y])
-
-# Advanced coefficient analysis
-analysis = analyze_coefficient_distribution(mono_poly)
-println("Dynamic range: $(analysis.dynamic_range)")
-
-# Smart truncation with optimal threshold
-threshold = analysis.suggested_thresholds[1]
-truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
-
-# Results
-println("Original terms: $(stats.n_total)")
-println("Kept terms: $(stats.n_kept)")
-println("Achieved $(round(stats.sparsity_ratio*100, digits=1))% sparsity")
-println("Largest removed: $(stats.largest_removed)")
-```
+**Usage:** See the AdaptivePrecision example above for complete sparsification workflow.
 
 ## 📦 What's Included
 
@@ -292,30 +266,7 @@ for row in eachrow(df_enhanced)
 end
 ```
 
-### AdaptivePrecision Usage
-```julia
-using Globtim, DynamicPolynomials
 
-# 4D Shubert function with AdaptivePrecision
-f = shubert_4d
-TR = test_input(f, dim=4, center=[0.0, 0.0, 0.0, 0.0], sample_range=2.0)
-
-# Construct with extended precision
-pol = Constructor(TR, 8, precision=AdaptivePrecision)
-println("L2 norm: $(pol.nrm)")
-println("Coefficient type: $(eltype(pol.coeffs))")  # Float64 (for performance)
-
-# Convert to monomial basis (BigFloat coefficients)
-@polyvar x[1:4]
-mono_poly = to_exact_monomial_basis(pol, variables=x)
-coeffs = [coefficient(t) for t in terms(mono_poly)]
-println("Monomial coefficient type: $(typeof(coeffs[1]))")  # BigFloat (for accuracy)
-
-# Coefficient analysis and smart truncation
-analysis = analyze_coefficient_distribution(mono_poly)
-truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, 1e-12)
-println("Sparsity achieved: $(round(stats.sparsity_ratio*100, digits=1))%")
-```
 
 ### Statistical Analysis
 ```julia
@@ -369,35 +320,7 @@ The documentation has been reorganized for better navigation:
 - **[Feature Roadmap](docs/features/roadmap.md)** - Current and planned features
 - **[Development Guide](DEVELOPMENT_GUIDE.md)** - Contributing and development setup
 
-### 🚀 Quick Reference: New Features
 
-**AdaptivePrecision System:**
-```julia
-# Basic usage
-pol = Constructor(TR, degree, precision=AdaptivePrecision)
-mono_poly = to_exact_monomial_basis(pol, variables=x)
-
-# Coefficient analysis
-analysis = analyze_coefficient_distribution(mono_poly)
-truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
-```
-
-**4D Testing Framework:**
-```julia
-# Load framework
-include("test/adaptive_precision_4d_framework.jl")
-
-# Quick functions
-help_4d()                    # Show all available functions
-quick_test()                 # Fast verification test
-compare_precisions()         # Full comparison study
-sparsity_analysis(:sparse)   # Coefficient truncation analysis
-```
-
-**Development Environment:**
-- **Notebook**: `Examples/Notebooks/AdaptivePrecision_4D_Development.ipynb`
-- **Script**: `Examples/adaptive_precision_4d_dev.jl`
-- **Framework**: `test/adaptive_precision_4d_framework.jl`
 
 ## 🤝 Contributors
 
