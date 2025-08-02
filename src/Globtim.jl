@@ -156,6 +156,18 @@ export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
 # Timer for performance tracking
 export _TO
 
+# Error handling framework
+export GlobtimError, InputValidationError, NumericalError, ComputationError, ResourceError, ConvergenceError
+export validate_dimension, validate_polynomial_degree, validate_sample_count, validate_center_vector, validate_sample_range
+export validate_objective_function, check_matrix_conditioning, validate_polynomial_coefficients
+export check_memory_usage, estimate_computation_complexity, suggest_parameter_adjustments, safe_execute_with_fallback
+export ComputationProgress, update_progress!, with_progress_monitoring
+export validate_test_input_parameters, validate_constructor_parameters, create_error_context, log_error_details
+
+# Safe wrapper functions
+export safe_test_input, safe_constructor, safe_solve_polynomial_system, safe_analyze_critical_points
+export safe_globtim_workflow, diagnose_globtim_setup
+
 include("config.jl")
 include("LibFunctions.jl") #list of test functions.
 include("BenchmarkFunctions.jl") #benchmark function categorization and utilities.
@@ -184,6 +196,8 @@ include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsificat
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
+include("error_handling.jl") #Comprehensive error handling framework
+include("safe_wrappers.jl") #Safe wrapper functions with error handling
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
