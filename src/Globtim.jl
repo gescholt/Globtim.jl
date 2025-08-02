@@ -63,6 +63,35 @@ export test_input,
     GaussianParams,
     Rastringin,
     Deuflhard_4d,
+    # New benchmark functions from Jamil & Yang 2013
+    Sphere,
+    Rosenbrock,
+    Griewank,
+    Schwefel,
+    Levy,
+    Zakharov,
+    Beale,
+    Booth,
+    Branin,
+    GoldsteinPrice,
+    Matyas,
+    McCormick,
+    Michalewicz,
+    StyblinskiTang,
+    SumOfDifferentPowers,
+    Trid,
+    RotatedHyperEllipsoid,
+    Powell,
+    # Benchmark function utilities
+    get_function_category,
+    list_functions_by_category,
+    get_function_info,
+    BOWL_SHAPED_FUNCTIONS,
+    MULTIMODAL_FUNCTIONS,
+    VALLEY_SHAPED_FUNCTIONS,
+    PLATE_SHAPED_FUNCTIONS,
+    TWO_D_FUNCTIONS,
+    HIGHER_D_FUNCTIONS,
     calculate_samples,
     create_test_input,
     Constructor,
@@ -128,7 +157,8 @@ export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
 export _TO
 
 include("config.jl")
-include("LibFunctions.jl") #list of test functions. 
+include("LibFunctions.jl") #list of test functions.
+include("BenchmarkFunctions.jl") #benchmark function categorization and utilities.
 include("Structures.jl") # list of structures used in the code.
 include("scaling_utils.jl") # Type-stable scaling utilities
 include("Samples.jl") #functions to generate samples.
