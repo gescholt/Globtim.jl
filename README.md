@@ -86,11 +86,12 @@ plot_all_eigenvalues(f, df_enhanced)               # Complete eigenvalue spectru
 
 ### NEW: AdaptivePrecision for Extended Precision Polynomial Expansion
 
-Globtim introduces **AdaptivePrecision**, a hybrid precision system that combines Float64 performance with BigFloat accuracy for polynomial coefficient manipulation:
+Globtim introduces **AdaptivePrecision**, a hybrid precision system that combines Float64 performance with **BigFloat** accuracy for polynomial coefficient manipulation. BigFloat is Julia's built-in arbitrary precision floating-point arithmetic type (part of Julia Base), providing extended precision beyond standard Float64.
 
 **Key Benefits:**
 - **Hybrid Performance**: Float64 for function evaluation (fast), BigFloat for polynomial expansion (accurate)
-- **Extended Precision**: BigFloat coefficients enable accurate manipulation of coefficients with extreme magnitude ranges
+- **Extended Precision**: BigFloat coefficients (Julia Base) enable accurate manipulation of coefficients with extreme magnitude ranges
+- **Adaptive Precision Selection**: Automatically adjusts BigFloat precision (256-512 bits) based on coefficient magnitude
 - **Smart Sparsification**: Enhanced coefficient truncation with extended precision analysis
 - **Seamless Integration**: Drop-in replacement for existing workflows
 
@@ -348,10 +349,25 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 
 ## 📖 Documentation
 
+### 🗂️ Organized Documentation Structure
+
+The documentation has been reorganized for better navigation:
+
+- **[docs/](docs/)** - Complete documentation index and navigation
+- **[docs/src/](docs/src/)** - Main user documentation (API, examples, guides)
+- **[docs/features/](docs/features/)** - Feature documentation and roadmap
+- **[docs/project-management/](docs/project-management/)** - Development workflow and GitLab processes
+- **[docs/development/](docs/development/)** - Technical implementation details
+- **[docs/user_guides/](docs/user_guides/)** - Specialized usage guides
+
+### 📚 Key Resources
+
 - **Official Documentation**: [https://gescholt.github.io/Globtim.jl/stable/](https://gescholt.github.io/Globtim.jl/stable/)
-- **Examples**: See example code in this README and the [Examples/](Examples/) directory
-- **API Documentation**: Available via `?` in Julia REPL
-- **Source Code**: [GitHub Repository](https://github.com/gescholt/Globtim.jl)
+- **[Getting Started](docs/src/getting_started.md)** - Installation and first steps
+- **[API Reference](docs/src/api_reference.md)** - Complete function reference
+- **[Examples](docs/src/examples.md)** - Practical usage examples
+- **[Feature Roadmap](docs/features/roadmap.md)** - Current and planned features
+- **[Development Guide](DEVELOPMENT_GUIDE.md)** - Contributing and development setup
 
 ### 🚀 Quick Reference: New Features
 
