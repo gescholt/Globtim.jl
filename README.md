@@ -162,7 +162,6 @@ Comprehensive testing infrastructure for high-dimensional AdaptivePrecision deve
 - **Revise.jl Integration**: Automatic code reloading for seamless development
 - **Performance Profiling**: Detailed runtime breakdown and bottleneck identification
 - **Systematic Parameter Studies**: Automated testing across degrees and sample sizes
-- **High-Quality Plotting**: CairoMakie integration for publication-ready figures
 
 **Testing Framework:**
 ```julia
