@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# HPC Tools Convenience Script
+# Provides easy access to all HPC functionality
+
+case "$1" in
+    "monitor")
+        python3 hpc/monitoring/python/slurm_monitor.py "${@:2}"
+        ;;
+    "dashboard")
+        ./hpc/monitoring/bash/globtim_dashboard.sh
+        ;;
+    "sync")
+        ./hpc/infrastructure/sync_fileserver_to_hpc.sh
+        ;;
+    "deploy")
+        ./hpc/infrastructure/deploy_benchmark_infrastructure.sh
+        ;;
+    "create-job")
+        cd hpc/jobs/creation && julia create_working_globtim_job.jl
+        ;;
+    "validate")
+        ./tools/validation/validate_parameters_jl.sh
+        ;;
+    *)
+        echo "HPC Tools - Usage:"
+        echo "  ./hpc_tools.sh monitor [--continuous]  # Monitor SLURM jobs"
+        echo "  ./hpc_tools.sh dashboard              # Show HPC dashboard"
+        echo "  ./hpc_tools.sh sync                   # Sync to HPC cluster"
+        echo "  ./hpc_tools.sh deploy                 # Deploy infrastructure"
+        echo "  ./hpc_tools.sh create-job             # Create new job"
+        echo "  ./hpc_tools.sh validate               # Validate setup"
+        ;;
+esac

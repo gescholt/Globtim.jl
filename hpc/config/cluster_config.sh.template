@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Cluster Configuration Template
+# Copy this file to 'cluster_config.sh' and customize with your settings
+# cluster_config.sh is gitignored and will never be committed
+
+# Server connection details
+export REMOTE_HOST="your_username@your_server"
+export REMOTE_PATH="~/globtim"
+
+# SSH key path (adjust to your actual key location)
+export SSH_KEY_PATH="~/.ssh/id_ed25519"
+
+# Optional: Additional SSH options
+export SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+# Julia settings on remote server
+export JULIA_THREADS="auto"
+export JULIA_PROJECT="."
