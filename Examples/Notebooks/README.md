@@ -19,6 +19,10 @@ These notebooks are fully documented and ready for public use:
 - **Trefethen_3D.ipynb** - 3D Trefethen function
 - **Trefethen_msolve.ipynb** - Trefethen function using Msolve
 
+## Error Handling Framework Tests
+
+- **OTL_Circuit_Error_Handling_Test.ipynb** - Comprehensive test of error handling framework using 6D OTL Circuit function from SFU benchmark suite
+
 ## Development Notebooks (Not for Public Release)
 
 These notebooks are experimental or under development:

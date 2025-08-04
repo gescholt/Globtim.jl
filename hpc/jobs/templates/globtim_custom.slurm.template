@@ -1,0 +1,62 @@
+#!/bin/bash
+#SBATCH --job-name=globtim_custom
+#SBATCH --partition=batch          # Options: batch, long, bigmem, gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=24         # Adjust based on needs (max 24 for batch)
+#SBATCH --time=01:00:00            # Format: HH:MM:SS (max 24h for batch)
+#SBATCH --mem=32G                  # Memory per node (max 256G for batch)
+#SBATCH --output=globtim_custom_%j.out
+#SBATCH --error=globtim_custom_%j.err
+
+# Custom Globtim Job Template
+# Copy this file and modify for your specific needs
+
+echo "=== Custom Globtim Job ==="
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURMD_NODENAME"
+echo "CPUs: $SLURM_CPUS_PER_TASK"
+echo "Memory: $SLURM_MEM_PER_NODE MB"
+echo "Start time: $(date)"
+echo ""
+
+# Set Julia environment
+export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export JULIA_DEPOT_PATH="/tmp/julia_depot_${USER}_${SLURM_JOB_ID}"
+
+# Change to project directory
+cd $SLURM_SUBMIT_DIR
+
+echo "=== Running Custom Globtim Code ==="
+/sw/bin/julia -e '
+# Add your custom Julia code here
+println("=== Custom Globtim Computation ===")
+println("Julia ", VERSION, " with ", Threads.nthreads(), " threads")
+
+# Load Globtim
+using LinearAlgebra, Statistics, Random
+include("src/Structures.jl")
+include("src/BenchmarkFunctions.jl")
+include("src/LibFunctions.jl")
+
+# Your custom computation here
+println("Running custom computation...")
+
+# Example: Test a specific function
+x = [0.1, 0.2, 0.3, 0.4]
+result = trefethen_5_12(x)
+println("Result: ", result)
+
+println("Custom computation completed!")
+'
+
+echo ""
+echo "=== Job Completed ==="
+echo "End time: $(date)"
+echo "Job duration: $SECONDS seconds"
+
+# Partition-specific notes:
+# batch:  Default, 24h max, 3120 cores total, 256GB max memory
+# long:   Unlimited time, 768 cores total, 256GB max memory  
+# bigmem: Unlimited time, 192 cores total, 1TB max memory
+# gpu:    Unlimited time, 880 cores + 44 GPUs, 512GB max memory
