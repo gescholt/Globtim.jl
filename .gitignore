@@ -46,6 +46,37 @@ data/figures/
 # Environment files with secrets
 .env.gitlab
 
+# SSH and server configuration - NEVER COMMIT THESE
+*.pem
+*.key
+*_rsa
+*_ed25519
+*_ecdsa
+id_*
+ssh_config
+server_config.sh
+cluster_config.sh
+fileserver_config.sh
+.ssh/
+ssh_keys/
+
+# Server connection scripts with credentials
+*_server_connect.sh
+*_cluster_connect.sh
+*_fileserver_connect.sh
+
+# Additional security patterns
+*password*
+*secret*
+*token*
+*credential*
+*.p12
+*.pfx
+config.ini
+settings.ini
+.env*
+!.env.example
+
 # Node.js dependencies
 docs/node_modules/
 docs/package-lock.json
