@@ -572,7 +572,7 @@ function Globtim.plot_error_function_2D_with_critical_points(
         ),
         color = :red,
         alpha = 0.6,
-        linewidth=2.0,
+        # linewidth=2.0,
     )
 
     if colorbar
