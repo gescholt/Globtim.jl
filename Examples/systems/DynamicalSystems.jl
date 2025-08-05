@@ -394,7 +394,7 @@ function make_error_distance(
 
         # problem = remake(problem, p = Dict(ModelingToolkit.parameters(model) .=> p_test))
         try
-            if datasize != length(Y_true)
+            if datasize != length(data_sample_true["t"])
                 println("case 1")
                 return NaN
             end
@@ -409,8 +409,7 @@ function make_error_distance(
                 datasize
             )
 
-            if isempty(data_sample_test) ||
-               !haskey(data_sample_test, first(keys(data_sample_test)))
+            if isempty(data_sample_test)
                 println("case 2")
                 return NaN
             end
@@ -439,6 +438,7 @@ function make_error_distance(
             if isa(e, InterruptException)
                 rethrow(e)
             end
+            # rethrow(e)
             println("case 4")
             # println("Error in make_error_distance: ", e)
             return NaN
