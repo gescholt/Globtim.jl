@@ -189,10 +189,12 @@ TimerOutputs.@timeit _TO function MainGenerate(
         linear_prob = LinearProblem(G_original, RHS)
         if verbose == 1
             println("Condition number of G: ", cond_vandermonde)
-            sol = LinearSolve.solve(linear_prob, verbose = true)
+            # Use LU factorization to avoid QR pivot type issues in Julia 1.11
+            sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization(), verbose = true)
             println("Chosen method: ", typeof(sol.alg))
         else
-            sol = LinearSolve.solve(linear_prob)
+            # Use LU factorization to avoid QR pivot type issues in Julia 1.11
+            sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization())
         end
     end
 

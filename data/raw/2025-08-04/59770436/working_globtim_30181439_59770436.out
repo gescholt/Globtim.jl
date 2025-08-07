@@ -1,0 +1,75 @@
+=== Working Globtim Job ===
+Job ID: 30181439
+SLURM Job ID: 59770436
+Node: c02n13
+CPUs: 12
+Memory: 24576 MB
+Start time: Sun Aug  3 16:42:27 CEST 2025
+
+=== Environment Setup ===
+Julia threads: 12
+Julia depot: /tmp/julia_depot_scholten_59770436
+Working directory: /tmp/globtim_59770436
+Available space: 390G
+
+=== Copying Globtim Source ===
+✓ Globtim source copied
+
+=== Installing Essential Packages ===
+Installing essential packages...
+Installing StaticArrays...
+✓ StaticArrays installed successfully
+Installing DataFrames...
+✓ DataFrames installed successfully
+Installing CSV...
+✓ CSV installed successfully
+Installing Parameters...
+✓ Parameters installed successfully
+Installing ForwardDiff...
+✓ ForwardDiff installed successfully
+Installing Distributions...
+✓ Distributions installed successfully
+Installing TimerOutputs...
+✓ TimerOutputs installed successfully
+
+Successfully installed packages: StaticArrays, DataFrames, CSV, Parameters, ForwardDiff, Distributions, TimerOutputs
+
+Installing polynomial packages...
+Installing DynamicPolynomials...
+✓ DynamicPolynomials installed successfully
+Installing MultivariatePolynomials...
+✓ MultivariatePolynomials installed successfully
+
+Installing advanced packages...
+Installing LinearSolve...
+✓ LinearSolve installed successfully
+Installing Optim...
+✓ Optim installed successfully
+Installing Clustering...
+✓ Clustering installed successfully
+
+=== Final Package Status ===
+Installed packages: StaticArrays, DataFrames, CSV, Parameters, ForwardDiff, Distributions, TimerOutputs, DynamicPolynomials, MultivariatePolynomials, LinearSolve, Optim, Clustering
+
+Testing package loading...
+✓ LinearAlgebra (standard library)
+✓ Statistics (standard library)
+✓ Random (standard library)
+✓ StaticArrays (installed)
+✓ DataFrames (installed)
+✓ CSV (installed)
+
+=== Testing Globtim Module Loading ===
+Testing Globtim module loading...
+
+=== Uploading Results ===
+
+=== Cleanup ===
+
+=== Job Summary ===
+Job ID: 30181439
+SLURM Job ID: 59770436
+End time: Sun Aug  3 16:47:39 CEST 2025
+Duration: 312 seconds
+Results in: ~/globtim_hpc/results/experiments/working_globtim_20250803_163245/jobs/30181439/
+Status: GLOBTIM WORKING!

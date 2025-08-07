@@ -1,0 +1,17 @@
+🚀 Custom HPC Test: hpc_no_json3_example.jl
+==================================
+Job ID: 59771557
+Node: c02n16
+CPUs: 2
+Memory: 4G
+Started: Mon Aug  4 12:03:04 CEST 2025
+
+📦 Julia depot: /tmp/julia_depot_59771557
+
+🔧 Julia version:
+julia version 1.11.2
+
+📁 Working directory: /home/scholten/globtim_hpc
+
+📦 Using HPC project configuration...
+📦 Installing packages...
