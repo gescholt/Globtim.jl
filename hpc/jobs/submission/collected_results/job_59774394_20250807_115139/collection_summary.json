@@ -1,0 +1,12 @@
+{
+  "job_id": "59774394",
+  "test_id": "587f142d",
+  "collection_timestamp": "2025-08-07T11:51:41.100883",
+  "local_directory": "collected_results/job_59774394_20250807_115139",
+  "collected_files": {
+    "globtim_comp_587f142d_59774394.err": "collected_results/job_59774394_20250807_115139/globtim_comp_587f142d_59774394.err",
+    "globtim_comp_587f142d_59774394.out": "collected_results/job_59774394_20250807_115139/globtim_comp_587f142d_59774394.out",
+    "globtim_comp_587f142d.slurm": "collected_results/job_59774394_20250807_115139/globtim_comp_587f142d.slurm"
+  },
+  "total_files": 3
+}

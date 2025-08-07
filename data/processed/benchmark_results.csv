@@ -1,0 +1,15 @@
+job_id,collection_time,success,function_name,degree,sample_count,l2_error,critical_points_count,minimizers_count,min_distance_to_global,mean_distance_to_global,convergence_rate,construction_time,globtim_working,parameters_jl_system
+59771287,2025-08-04T11:18:16.608338,False,unknown,,,,,,,,,,False,False
+59771288,2025-08-04T11:18:16.961240,False,unknown,,,,,,,,,,False,False
+59771289,2025-08-04T11:18:17.296656,False,unknown,,,,,,,,,,False,False
+59771290,2025-08-04T11:18:17.664209,True,Sphere4D,,,,,,,,,,True,False
+59771291,2025-08-04T11:18:18.004801,True,Sphere4D,,,,,,,,,,True,False
+59770072,2025-08-04T11:18:18.359844,False,unknown,,,,,,,,,,False,False
+2135d140,2025-08-04T11:18:19.069533,False,unknown,,,,,,,,,,False,False
+59770301,2025-08-04T11:18:19.767893,False,unknown,,,,,,,,,,False,False
+9353c78b,2025-08-04T11:18:20.527654,False,unknown,,,,,,,,,,False,False
+59770062,2025-08-04T11:18:20.878889,False,unknown,,,,,,,,,,False,False
+e536fc2e,2025-08-04T11:18:21.592533,False,unknown,,,,,,,,,,False,False
+59770436,2025-08-04T11:18:21.941671,False,unknown,,,,,,,,,,False,False
+30181439,2025-08-04T11:18:22.681014,False,unknown,,,,,,,,,,False,False
+unknown,2025-08-04T11:18:23.026202,False,unknown,,,,,,,,,,False,False

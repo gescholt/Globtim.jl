@@ -1,0 +1,12 @@
+{
+  "job_id": "59774401",
+  "test_id": "99ecbfe7",
+  "collection_timestamp": "2025-08-07T11:51:48.049837",
+  "local_directory": "collected_results/job_59774401_20250807_115141",
+  "collected_files": {
+    "hpc_deps_99ecbfe7_59774401.err": "collected_results/job_59774401_20250807_115141/hpc_deps_99ecbfe7_59774401.err",
+    "hpc_deps_99ecbfe7_59774401.out": "collected_results/job_59774401_20250807_115141/hpc_deps_99ecbfe7_59774401.out",
+    "hpc_deps_simple_99ecbfe7.slurm": "collected_results/job_59774401_20250807_115141/hpc_deps_simple_99ecbfe7.slurm"
+  },
+  "total_files": 3
+}

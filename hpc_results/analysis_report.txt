@@ -1,0 +1,24 @@
+🎯 HPC BENCHMARK RESULTS ANALYSIS
+==================================================
+Analysis Date: 2025-08-03 18:12:56
+
+📊 OVERALL STATISTICS
+------------------------------
+Total Jobs: 13
+Successful Jobs: 1 (7.7%)
+Globtim Working: 1 (7.7%)
+
+🎯 FUNCTIONS TESTED
+------------------------------
+unknown: 12 jobs
+Sphere4D: 1 jobs
+
+⚡ PERFORMANCE METRICS (Successful Jobs)
+------------------------------
+🕒 RECENT JOBS
+------------------------------
+❌ Job unknown: unknown (collected: 2025-08-03T18:11:16)
+❌ Job 30181439: unknown (collected: 2025-08-03T18:11:14)
+❌ Job 59770436: unknown (collected: 2025-08-03T18:11:11)
+❌ Job e536fc2e: unknown (collected: 2025-08-03T18:11:10)
+❌ Job 59770062: unknown (collected: 2025-08-03T18:11:07)

@@ -1,0 +1,50 @@
+=== Diagnostic Test ===
+Job ID: 2135d140
+SLURM Job ID: 59770072
+Node: c02n13
+Start time: Sun Aug  3 15:46:24 CEST 2025
+
+=== Environment Check ===
+Julia path: /sw/bin/julia
+Julia version:
+julia version 1.11.2
+
+=== Basic Julia Test ===
+Julia is working!
+
+=== Package Test ===
+Testing basic packages...
+✓ LinearAlgebra loaded
+✓ Statistics loaded
+✓ Random loaded
+
+=== Globtim Source Test ===
+Files copied:
+total 120
+drwxr-xr-x    3 scholten cbg    4096 Aug  3 15:46 .
+drwxrwxrwt. 313 root     root 110592 Aug  3 15:46 ..
+-rw-r--r--    1 scholten cbg    1538 Aug  3 15:46 Project.toml
+drwxr-xr-x    3 scholten cbg    4096 Aug  3 15:46 src
+
+=== Globtim Loading Test ===
+Testing Globtim loading...
+✗ Structures.jl failed: LoadError("/tmp/diagnostic_59770072/src/Structures.jl", 3, UndefVarError(:PrecisionType, Main))
+✓ BenchmarkFunctions.jl loaded
+✗ LibFunctions.jl failed: LoadError("/tmp/diagnostic_59770072/src/LibFunctions.jl", 475, UndefVarError(:StaticArraysCore, Main))
+
+=== Simple Math Test ===
+Testing basic math...
+✓ Linear solve works: ||Ax - b|| = 1.1102230246251565e-16
+
+=== Results ===
+Diagnostic completed at: Sun Aug  3 15:46:33 CEST 2025
+Working directory was: /tmp/diagnostic_59770072
+Files created:
+total 120
+drwxr-xr-x    3 scholten cbg    4096 Aug  3 15:46 .
+drwxrwxrwt. 313 root     root 110592 Aug  3 15:46 ..
+-rw-r--r--    1 scholten cbg    1538 Aug  3 15:46 Project.toml
+drwxr-xr-x    3 scholten cbg    4096 Aug  3 15:46 src
+
+=== Cleanup ===
+Diagnostic test completed!

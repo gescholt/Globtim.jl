@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "computation_id": "abc12345",
+    "timestamp_start": "2025-01-08T15:30:00Z",
+    "timestamp_end": "2025-01-08T15:32:15Z",
+    "total_runtime": 135.42,
+    "status": "SUCCESS",
+    "error_message": null,
+    "warnings": [
+      "High condition number detected: 2.45e8",
+      "One critical point failed to converge within iteration limit"
+    ]
+  },
+  "polynomial_results": {
+    "construction_time": 12.34,
+    "l2_error": 1.23e-6,
+    "condition_number": 2.45e8,
+    "n_coefficients": 45,
+    "n_samples_used": 100,
+    "convergence_achieved": true,
+    "basis_used": "chebyshev",
+    "precision_used": "RationalPrecision",
+    "memory_usage_mb": 256.7
+  },
+  "critical_point_results": {
+    "solving_time": 8.76,
+    "analysis_time": 23.45,
+    "n_raw_solutions": 49,
+    "n_real_solutions": 21,
+    "n_valid_critical_points": 13,
+    "n_local_minima": 3,
+    "convergence_statistics": {
+      "n_converged": 12,
+      "n_failed": 1,
+      "average_iterations": 15.2,
+      "max_iterations": 45
+    },
+    "function_value_statistics": {
+      "min_value": 0.205883,
+      "max_value": 14.2605,
+      "mean_value": 5.847,
+      "global_minimum_value": 0.205883
+    }
+  },
+  "hessian_analysis": {
+    "enabled": true,
+    "computation_time": 5.67,
+    "classification_counts": {
+      "minimum": 3,
+      "maximum": 1,
+      "saddle": 9,
+      "degenerate": 0,
+      "unknown": 0
+    },
+    "eigenvalue_statistics": {
+      "min_positive_eigenval": 0.001234,
+      "max_negative_eigenval": -0.005678,
+      "condition_numbers": {
+        "min": 1.23e2,
+        "max": 4.56e6,
+        "mean": 2.34e4
+      }
+    }
+  },
+  "performance_metrics": {
+    "memory_peak_mb": 512.3,
+    "cpu_utilization": 0.85,
+    "disk_io_mb": 15.2,
+    "julia_gc_time": 2.34,
+    "julia_compile_time": 8.91
+  },
+  "detailed_results": {
+    "critical_points_file": "detailed_outputs/critical_points.csv",
+    "minima_file": "detailed_outputs/minima.csv",
+    "polynomial_coeffs_file": "detailed_outputs/polynomial_coeffs.json",
+    "hessian_data_file": "detailed_outputs/hessian_analysis.json",
+    "timing_breakdown_file": "detailed_outputs/timing_breakdown.json"
+  },
+  "quality_metrics": {
+    "approximation_quality": "good",
+    "critical_point_recovery": "complete",
+    "convergence_quality": "good",
+    "overall_success": true
+  }
+}
