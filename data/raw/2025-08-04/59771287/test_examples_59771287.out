@@ -1,0 +1,26 @@
+🧪 Testing Globtim HPC Examples
+================================
+Job ID: 59771287
+Node: c03n10
+Started: Sun Aug  3 17:35:17 CEST 2025
+
+📦 Julia depot: /tmp/julia_depot_59771287
+
+🔧 Julia version:
+julia version 1.11.2
+
+📁 Working directory: /home/scholten/globtim_hpc
+
+📦 Installing required packages...
+✅ Package installation complete
+
+🚀 Running test suite...
+
+🧪 HPC Examples Test Runner
+==================================================
+Started: 2025-08-03T17:40:23.955
+
+📦 Activating project environment...
+
+✅ Test suite completed
+Finished: Sun Aug  3 17:40:26 CEST 2025

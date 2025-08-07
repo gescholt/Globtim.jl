@@ -6,7 +6,7 @@ with @with_kw macros for defaults and @unpack for clean parameter access.
 """
 
 # Load the Parameters.jl-enhanced configuration system
-include("../src/HPC/BenchmarkConfigParameters.jl")
+include("../hpc/config/parameters/BenchmarkConfigParameters.jl")
 
 println("=== Parameters.jl Demo for Globtim HPC Benchmarking ===")
 println()
