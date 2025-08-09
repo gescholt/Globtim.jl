@@ -24,9 +24,12 @@ class FileserverDeuflhardSubmitter:
         self.cluster_host = "scholten@falcon"
         self.remote_dir = "~/globtim_hpc"
         self.fileserver_depot = "~/.julia"  # Complete package ecosystem on mack
-        self.nfs_depot = "/net/fileserver-nfs/stornext/snfs6/projects/scholten/.julia"
-        self.nfs_project = "/net/fileserver-nfs/stornext/snfs6/projects/scholten/globtim_hpc"
-        
+        self.nfs_depot = "~/.julia"  # Fileserver depot accessible via NFS
+        self.nfs_project = "~/globtim_hpc"  # Project directory accessible via NFS
+        # Default base directory for results on compute nodes via NFS
+        # Can be overridden by environment variable or command line argument
+        self.results_base = os.environ.get("GLOBTIM_RESULTS_BASE", f"{self.nfs_project}/results")
+
         # Test modes for Deuflhard benchmark
         self.test_modes = {
             "quick": {
@@ -55,23 +58,25 @@ class FileserverDeuflhardSubmitter:
             }
         }
     
-    def create_slurm_script(self, test_id, mode="quick"):
+    def create_slurm_script(self, test_id, mode="quick", results_base=None):
         """Create SLURM script for Deuflhard benchmark with fileserver integration"""
-        
+
         config = self.test_modes[mode]
-        # Work within existing globtim_hpc directory - no quota issues there
+        # Use relative paths within globtim_hpc directory
         output_dir = f"results/deuflhard_results_{test_id}"
-        
+
         slurm_script = f"""#!/bin/bash
 #SBATCH --job-name=deuflhard_{mode}
 #SBATCH --partition=batch
+#SBATCH --account=mpi
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={config['cpus']}
 #SBATCH --mem={config['memory']}
 #SBATCH --time={config['time_limit']}
-#SBATCH --output={output_dir}/job_%j.out
-#SBATCH --error={output_dir}/job_%j.err
+#SBATCH --output=deuflhard_{test_id}_%j.out
+#SBATCH --error=deuflhard_{test_id}_%j.err
+
 
 echo "=== Deuflhard Benchmark with Fileserver Integration ==="
 echo "Test ID: {test_id}"
@@ -87,8 +92,8 @@ echo ""
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # Try to use fileserver packages via NFS, fallback to /tmp
-if [ -d "{self.nfs_depot}" ]; then
-    export JULIA_DEPOT_PATH="{self.nfs_depot}:$JULIA_DEPOT_PATH"
+if [ -d "$HOME/.julia" ]; then
+    export JULIA_DEPOT_PATH="$HOME/.julia:$JULIA_DEPOT_PATH"
     echo "✅ Using fileserver Julia packages via NFS"
 else
     # Fallback: copy packages to /tmp
@@ -96,8 +101,11 @@ else
     export JULIA_DEPOT_PATH="/tmp/julia_depot_globtim_persistent:$JULIA_DEPOT_PATH"
 fi
 
-# Work within globtim_hpc directory (no quota issues there)
+# Work within globtim_hpc directory (relative paths)
 cd {self.remote_dir}
+
+# Ensure output directory exists (create if needed, ignore quota errors)
+mkdir -p {output_dir} 2>/dev/null || true
 
 echo "=== Environment Verification ==="
 echo "Working directory: $(pwd)"
@@ -143,55 +151,21 @@ EOF
 echo "✅ Test configuration created"
 
 # Package and module verification
+# Simplified to avoid multi-line -e quoting issues
+# (Modules are validated indirectly during the benchmark run)
 echo ""
-echo "=== Package and Module Verification ==="
-/sw/bin/julia --project=. -e '
-println("📦 Verifying Package and Module Availability:")
-println("Depot paths:")
-for (i, path) in enumerate(DEPOT_PATH)
-    println("  $i: $path")
-end
-println()
-
-# Test critical packages
-packages = ["StaticArrays", "JSON3", "TOML", "TimerOutputs", "LinearAlgebra"]
-for pkg in packages
-    try
-        eval(Meta.parse("using $pkg"))
-        println("✅ $pkg available and loaded")
-    catch e
-        println("❌ $pkg not available: $e")
-    end
-end
-
-println()
-println("🧮 Testing Globtim Module Loading:")
-
-# Test BenchmarkFunctions module
-try
-    include("src/BenchmarkFunctions.jl")
-    println("✅ BenchmarkFunctions.jl loaded successfully")
-catch e
-    println("❌ BenchmarkFunctions.jl failed: $e")
-end
-
-# Test LibFunctions module  
-try
-    include("src/LibFunctions.jl")
-    println("✅ LibFunctions.jl loaded successfully")
-catch e
-    println("❌ LibFunctions.jl failed: $e")
-end
-'
-
+echo "=== Package and Module Verification (skipped explicit check) ==="
+echo "Will validate during benchmark execution..."
 echo ""
 
 # Run the Deuflhard benchmark test
 echo "=== Running Deuflhard Benchmark Test ==="
-/sw/bin/julia --project=. -e '
+# Write a standalone Julia script to avoid -e quoting issues
+cat > {output_dir}/run_deuflhard_benchmark.jl << 'EOF_JL'
 using Dates
+using StaticArrays, TimerOutputs, LinearAlgebra
 
-println("🚀 Deuflhard Benchmark Test Starting")
+println("Deuflhard Benchmark Test Starting")
 println("Julia Version: ", VERSION)
 println("Start Time: ", now())
 println("Hostname: ", gethostname())
@@ -199,229 +173,80 @@ println("Working Directory: ", pwd())
 println("Available Threads: ", Threads.nthreads())
 println()
 
-# Load required packages and modules
-println("📦 Loading Required Packages and Modules...")
-try
-    using StaticArrays, TimerOutputs, LinearAlgebra, JSON3, TOML
-    println("  ✅ Core packages loaded successfully")
-    
-    # Define timer and precision types (required for Globtim)
-    const _TO = TimerOutputs.TimerOutput()
-    
-    @enum PrecisionType begin
-        Float64Precision
-        RationalPrecision
-        BigFloatPrecision
-        BigIntPrecision
-        AdaptivePrecision
-    end
-    
-    println("  ✅ Timer and precision types defined")
-    
-    # Load Globtim modules
-    include("src/BenchmarkFunctions.jl")
-    println("  ✅ BenchmarkFunctions.jl loaded")
-    
-    include("src/LibFunctions.jl")
-    println("  ✅ LibFunctions.jl loaded")
-    
-    println("  ✅ All modules loaded successfully")
-    
-catch e
-    println("  ❌ Module loading failed: ", e)
-    
-    # Save error information
-    output_dir = "{output_dir}"
-    open(joinpath(output_dir, "module_loading_error.txt"), "w") do f
-        println(f, "Deuflhard Module Loading Error")
-        println(f, "==============================")
-        println(f, "Timestamp: ", now())
-        println(f, "Error: ", e)
-        println(f, "Test ID: {test_id}")
-        println(f, "Mode: {mode}")
-        println(f, "SLURM Job ID: ", get(ENV, "SLURM_JOB_ID", "not_set"))
-    end
-    
-    exit(1)
+# Define timer and precision types (required for Globtim)
+const _TO = TimerOutputs.TimerOutput()
+@enum PrecisionType begin
+    Float64Precision
+    RationalPrecision
+    BigFloatPrecision
+    BigIntPrecision
+    AdaptivePrecision
 end
 
-println()
+# Load Globtim modules
+include("src/BenchmarkFunctions.jl")
+include("src/LibFunctions.jl")
 
 # Test Deuflhard function
-println("🧮 Testing Deuflhard Function...")
 output_dir = "{output_dir}"
-
 try
-    # Test function evaluation at various points
-    test_points = [
-        [0.0, 0.0],
-        [0.5, 0.5], 
-        [1.0, 1.0],
-        [-0.5, 0.5],
-        [0.2, -0.3],
-        [1.5, -1.0],
-        [-1.2, 0.8]
-    ]
-    
-    function_values = []
-    
-    println("  Testing function evaluation:")
-    for (i, point) in enumerate(test_points)
-        value = Deuflhard(point)
-        push!(function_values, value)
-        println("    $i: f($point) = $value")
+    test_points = [[0.0, 0.0],[0.5, 0.5],[1.0, 1.0],[-0.5, 0.5],[0.2, -0.3],[1.5, -1.0],[-1.2, 0.8]]
+    function_values = Float64[]
+    for point in test_points
+        push!(function_values, Deuflhard(point))
     end
-    
-    println("  ✅ Deuflhard function evaluation successful")
-    
-    # Save function evaluation results
     open(joinpath(output_dir, "function_evaluation_results.txt"), "w") do f
         println(f, "Deuflhard Function Evaluation Results")
         println(f, "=====================================")
         println(f, "Timestamp: ", now())
         println(f, "Function: Deuflhard (2D)")
-        println(f, "Test ID: {test_id}")
-        println(f, "Mode: {mode}")
-        println(f, "SLURM Job ID: ", get(ENV, "SLURM_JOB_ID", "not_set"))
-        println(f, "Node: ", get(ENV, "SLURMD_NODENAME", "not_set"))
-        println(f, "")
         println(f, "Test Points and Values:")
         for (i, (point, value)) in enumerate(zip(test_points, function_values))
-            println(f, "  $i: f($point) = $value")
+            println(f, "  $(i): f($(point)) = $(value)")
         end
         println(f, "")
         println(f, "Statistics:")
         println(f, "  Min value: ", minimum(function_values))
         println(f, "  Max value: ", maximum(function_values))
         println(f, "  Mean value: ", sum(function_values) / length(function_values))
-        println(f, "")
-        println(f, "Environment:")
-        println(f, "  Julia version: ", VERSION)
-        println(f, "  Hostname: ", gethostname())
-        println(f, "  Threads: ", Threads.nthreads())
-        println(f, "  CPUs: ", get(ENV, "SLURM_CPUS_PER_TASK", "not_set"))
     end
-    
-    println("  ✅ Function evaluation results saved")
-    
     # Performance benchmark
-    println()
-    println("⚡ Performance Benchmark:")
-    
-    # Time multiple evaluations
     n_evaluations = 1000
-    start_time = time()
-    
+    t0 = time()
     for i in 1:n_evaluations
-        # Random points in [-1, 1]^2
-        point = [2*rand() - 1, 2*rand() - 1]
-        value = Deuflhard(point)
+        _ = Deuflhard([2*rand()-1, 2*rand()-1])
     end
-    
-    end_time = time()
-    total_time = end_time - start_time
+    total_time = time() - t0
     avg_time = total_time / n_evaluations
-    
-    println("  Evaluations: $n_evaluations")
-    println("  Total time: $total_time seconds")
-    println("  Average time per evaluation: $avg_time seconds")
-    println("  Evaluations per second: ", n_evaluations / total_time)
-    
-    # Save performance results
     open(joinpath(output_dir, "performance_results.txt"), "w") do f
         println(f, "Deuflhard Performance Benchmark Results")
         println(f, "=======================================")
         println(f, "Timestamp: ", now())
-        println(f, "Test ID: {test_id}")
-        println(f, "Mode: {mode}")
-        println(f, "")
         println(f, "Performance Metrics:")
-        println(f, "  Function evaluations: $n_evaluations")
-        println(f, "  Total computation time: $total_time seconds")
-        println(f, "  Average time per evaluation: $avg_time seconds")
+        println(f, "  Function evaluations: ", n_evaluations)
+        println(f, "  Total computation time: ", total_time, " seconds")
+        println(f, "  Average time per evaluation: ", avg_time, " seconds")
         println(f, "  Evaluations per second: ", n_evaluations / total_time)
-        println(f, "")
-        println(f, "Environment:")
-        println(f, "  Julia version: ", VERSION)
-        println(f, "  Hostname: ", gethostname())
-        println(f, "  Threads: ", Threads.nthreads())
-        println(f, "  SLURM Job ID: ", get(ENV, "SLURM_JOB_ID", "not_set"))
-        println(f, "  Node: ", get(ENV, "SLURMD_NODENAME", "not_set"))
-        println(f, "  CPUs: ", get(ENV, "SLURM_CPUS_PER_TASK", "not_set"))
     end
-    
-    println("  ✅ Performance results saved")
-    
+    # Summary
+    open(joinpath(output_dir, "deuflhard_test_summary.txt"), "w") do f
+        println(f, "Deuflhard Benchmark Test Summary")
+        println(f, "================================")
+        println(f, "Timestamp: ", now())
+        println(f, "Test Results: SUCCESS")
+    end
 catch e
-    println("  ❌ Deuflhard function test failed: ", e)
-    
-    # Save error information
     open(joinpath(output_dir, "function_test_error.txt"), "w") do f
         println(f, "Deuflhard Function Test Error")
         println(f, "=============================")
         println(f, "Timestamp: ", now())
         println(f, "Error: ", e)
-        println(f, "Test ID: {test_id}")
-        println(f, "Mode: {mode}")
-        println(f, "SLURM Job ID: ", get(ENV, "SLURM_JOB_ID", "not_set"))
     end
-    
     exit(1)
 end
+EOF_JL
 
-println()
-
-# Create comprehensive results summary
-println("📋 Creating Results Summary...")
-try
-    open(joinpath(output_dir, "deuflhard_test_summary.txt"), "w") do f
-        println(f, "Deuflhard Benchmark Test Summary")
-        println(f, "================================")
-        println(f, "Test ID: {test_id}")
-        println(f, "Mode: {mode}")
-        println(f, "Timestamp: ", now())
-        println(f, "Function: Deuflhard (2D)")
-        println(f, "Execution: SLURM with Fileserver Integration")
-        println(f, "")
-        println(f, "Configuration:")
-        println(f, "  Degree: {config["degree"]}")
-        println(f, "  Samples: {config["samples"]}")
-        println(f, "  CPUs: {config["cpus"]}")
-        println(f, "  Memory: {config["memory"]}")
-        println(f, "  Time Limit: {config["time_limit"]}")
-        println(f, "")
-        println(f, "Environment:")
-        println(f, "  Julia version: ", VERSION)
-        println(f, "  Hostname: ", gethostname())
-        println(f, "  Threads: ", Threads.nthreads())
-        println(f, "  Depot path: ", DEPOT_PATH[1])
-        println(f, "  SLURM Job ID: ", get(ENV, "SLURM_JOB_ID", "not_set"))
-        println(f, "  Node: ", get(ENV, "SLURMD_NODENAME", "not_set"))
-        println(f, "")
-        println(f, "Test Results:")
-        println(f, "  ✅ Package loading: SUCCESS")
-        println(f, "  ✅ Module loading: SUCCESS")
-        println(f, "  ✅ Function evaluation: SUCCESS")
-        println(f, "  ✅ Performance benchmark: SUCCESS")
-        println(f, "  ✅ Output collection: SUCCESS")
-        println(f, "")
-        println(f, "Status: COMPLETE SUCCESS")
-    end
-    
-    println("  ✅ Test summary saved")
-    
-catch e
-    println("  ❌ Summary creation failed: ", e)
-end
-
-println()
-println("🎉 DEUFLHARD BENCHMARK TEST COMPLETED SUCCESSFULLY!")
-println("Test ID: {test_id}")
-println("Mode: {mode}")
-println("End Time: ", now())
-println("All functionality verified ✅")
-'
-
+/sw/bin/julia --project=. {output_dir}/run_deuflhard_benchmark.jl
 JULIA_EXIT_CODE=$?
 
 echo ""
@@ -492,34 +317,28 @@ exit $JULIA_EXIT_CODE
         print()
         
         # Create SLURM script
-        slurm_script = self.create_slurm_script(test_id, mode)
-        
-        # Create results directory within globtim_hpc (no quota issues there)
-        output_dir = f"results/deuflhard_results_{test_id}"
+        slurm_script = self.create_slurm_script(test_id, mode, self.results_base)
+
+        # Create results directory (fileserver path outside home quota)
+        output_dir = f"{self.results_base}/deuflhard_results_{test_id}"
 
         try:
-            # Create output directory within globtim_hpc
-            print("📁 Creating output directory within globtim_hpc...")
-            mkdir_cmd = f"ssh {self.fileserver_host} 'cd {self.remote_dir} && mkdir -p {output_dir}'"
-            result = subprocess.run(mkdir_cmd, shell=True, capture_output=True, text=True)
-            
-            if result.returncode != 0:
-                print(f"❌ Failed to create output directory: {result.stderr}")
-                return None, None
-            
+            # Directory creation will be handled by the SLURM job itself
+            print("📁 Directories will be created by the SLURM job...")
+
             # Create and submit SLURM script in /tmp (fileserver also has quota limits)
             remote_script = f"/tmp/deuflhard_{test_id}.slurm"
 
-            print("📤 Creating and submitting SLURM script on fileserver (using /tmp)...")
-            submit_cmd = f"""ssh {self.fileserver_host} '
+            print("📤 Creating and submitting SLURM script on cluster (using /tmp)...")
+            submit_cmd = f"""ssh {self.cluster_host} '
 cd {self.remote_dir}
-cat > {remote_script} << "EOF"
+cat > {remote_script} << "__SLURM_SCRIPT_EOF__"
 {slurm_script}
-EOF
+__SLURM_SCRIPT_EOF__
 sbatch {remote_script}
 rm {remote_script}
 '"""
-            
+
             result = subprocess.run(submit_cmd, shell=True, capture_output=True, text=True, timeout=60)
             
             if result.returncode == 0:
@@ -531,12 +350,12 @@ rm {remote_script}
                 print()
                 
                 print("📊 Monitoring Commands:")
-                print(f"  Check status: ssh {self.fileserver_host} 'squeue -j {slurm_job_id}'")
-                print(f"  View output:  ssh {self.fileserver_host} 'tail -f {self.remote_dir}/{output_dir}/job_{slurm_job_id}.out'")
-                print(f"  Results dir:  ssh {self.fileserver_host} 'ls -la {self.remote_dir}/{output_dir}/'")
+                print(f"  Check status: ssh {self.cluster_host} 'squeue -j {slurm_job_id}'")
+                print(f"  View output:  ssh {self.cluster_host} 'cd {self.remote_dir} && tail -f deuflhard_{test_id}_{slurm_job_id}.out'")
+                print(f"  Results dir:  ssh {self.fileserver_host} 'cd {self.remote_dir} && ls -la {output_dir}/'")
                 print()
                 print("🤖 Alternative Monitoring:")
-                print(f"  From cluster: ssh {self.cluster_host} 'squeue -j {slurm_job_id}'")
+                print(f"  From fileserver: ssh {self.fileserver_host} 'cd {self.remote_dir} && ls -la {output_dir}/'")
                 
                 return slurm_job_id, test_id
             else:
@@ -552,17 +371,21 @@ rm {remote_script}
 
 def main():
     parser = argparse.ArgumentParser(description="Submit Deuflhard benchmark using fileserver integration")
-    parser.add_argument("--mode", choices=["quick", "standard", "extended"], 
+    parser.add_argument("--mode", choices=["quick", "standard", "extended"],
                        default="quick", help="Test mode (default: quick)")
     parser.add_argument("--auto-collect", action="store_true",
                        help="Automatically collect results when complete")
     parser.add_argument("--list-modes", action="store_true",
                        help="List available test modes")
-    
+    parser.add_argument("--results-base", default=None,
+                       help="Base directory on fileserver for results (default: $GLOBTIM_RESULTS_BASE or NFS project results)")
+
     args = parser.parse_args()
-    
+
     submitter = FileserverDeuflhardSubmitter()
-    
+    if args.results_base:
+        submitter.results_base = args.results_base
+
     if args.list_modes:
         print("Available test modes:")
         for mode, config in submitter.test_modes.items():
@@ -570,14 +393,14 @@ def main():
             print(f"    Resources: {config['cpus']} CPUs, {config['memory']} memory, {config['time_limit']}")
             print(f"    Parameters: degree={config['degree']}, samples={config['samples']}")
         return
-    
+
     slurm_job_id, test_id = submitter.submit_job(args.mode, args.auto_collect)
-    
+
     if slurm_job_id:
         print(f"\n🎯 SUCCESS! Deuflhard benchmark submitted with ID: {slurm_job_id}")
-        print(f"📁 Results will be in: results/deuflhard_results_{test_id}/")
+        print(f"📁 Results will be in: {submitter.remote_dir}/results/deuflhard_results_{test_id}/")
         print(f"🔧 Using fileserver integration for persistent storage")
-        print(f"📋 Job submitted from: {submitter.fileserver_host}")
+        print(f"📋 Job submitted from: {submitter.cluster_host}")
     else:
         print(f"\n❌ FAILED! Job submission unsuccessful")
         exit(1)

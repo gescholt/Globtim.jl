@@ -1,0 +1,11 @@
+{
+  "job_id": "59780288",
+  "test_id": "40b391ea",
+  "collection_timestamp": "2025-08-09T14:05:02.551122",
+  "local_directory": "collected_results/job_59780288_20250809_140457",
+  "collected_files": {
+    "deuflhard_40b391ea_59780288.err": "collected_results/job_59780288_20250809_140457/deuflhard_40b391ea_59780288.err",
+    "deuflhard_40b391ea_59780288.out": "collected_results/job_59780288_20250809_140457/deuflhard_40b391ea_59780288.out"
+  },
+  "total_files": 2
+}

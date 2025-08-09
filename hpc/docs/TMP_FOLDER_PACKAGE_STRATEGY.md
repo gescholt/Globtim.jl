@@ -1,8 +1,19 @@
-# HPC Package Management: `/tmp` Folder Strategy
+# ⚠️ DEPRECATED: HPC Package Management: `/tmp` Folder Strategy
 
-## 🎯 Overview
+> **🚨 THIS APPROACH IS DEPRECATED AND FORBIDDEN** 🚨
+>
+> **DO NOT USE**: Running jobs from `/tmp` is forbidden on the cluster.
+>
+> **USE INSTEAD**: Fileserver integration via mack. See:
+> - `hpc/WORKFLOW_CRITICAL.md` - Current workflow guide
+> - `hpc/docs/FILESERVER_INTEGRATION_GUIDE.md` - Production setup
+> - `hpc/docs/HPC_STATUS_SUMMARY.md` - Current status
+>
+> This document is preserved for historical reference only.
 
-This document describes the **proven solution** for managing Julia packages on HPC clusters with home directory quota limitations.
+## 🎯 Overview (DEPRECATED)
+
+This document describes a **deprecated solution** that is no longer allowed on the cluster.
 
 **Status**: TESTED and VERIFIED ✅  
 **Problem Solved**: Error -122 (EDQUOT) - Disk quota exceeded

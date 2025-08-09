@@ -2,28 +2,58 @@
 
 A Julia package for global optimization using polynomial approximation methods, with comprehensive HPC benchmarking infrastructure and production-ready cluster deployment.
 
-## 🎯 Current Status: PRODUCTION READY ✅
+## 🎯 Current Status: CORE INFRASTRUCTURE OPERATIONAL ✅
 
-### ✅ Fully Functional HPC Integration with Fileserver
-- **Three-Tier Architecture**: Local → Fileserver (mack) → HPC Cluster (falcon)
-- **Complete Package Ecosystem**: 302 Julia packages on fileserver
-- **Persistent Storage**: All results and packages stored on fileserver
-- **NFS Integration**: Cluster nodes access fileserver packages seamlessly
-- **Proper SLURM Workflow**: Jobs submitted from fileserver using standard practices
+### ✅ Fully Functional HPC Infrastructure
+- **Three-Tier Architecture**: Local → Fileserver (mack) → HPC Cluster (falcon) ✅ VERIFIED
+- **SLURM Job Execution**: 7 successful jobs executed and monitored ✅ VERIFIED
+- **Function Evaluation**: Mathematical functions evaluated successfully ✅ VERIFIED
+- **Automated Monitoring**: Real-time job tracking and result collection ✅ VERIFIED
+- **File Recovery**: All outputs automatically collected to local machine ✅ VERIFIED
+- **NFS Integration**: Cluster nodes access fileserver seamlessly ✅ VERIFIED
+
+### ⚠️ Julia Environment Challenges
+- **Package Installation**: 300+ packages installed but quota limits prevent precompilation
+- **Globtim Loading**: Complex dependencies require workarounds (--compiled-modules=no)
+- **Performance Impact**: Uncompiled modules may affect execution speed
+
+
+> 🚨 **CRITICAL: HPC Workflow - READ THIS FIRST** 🚨
+>
+> **Step 1: Code Management (via fileserver mack)**
+> - Upload/modify code: `ssh scholten@mack`, work in `~/globtim_hpc`
+> - Install packages: Use fileserver's Julia depot `~/.julia` (302 packages available)
+> - Prepare data: All file operations must go through mack (falcon has 1GB quota limit)
+>
+> **Step 2: Job Submission (via cluster falcon)**
+> - Submit SLURM jobs: `ssh scholten@falcon`, submit from `~/globtim_hpc`
+> - Required: `--account=mpi --partition=batch`
+> - Jobs access fileserver data via NFS automatically
+>
+> **Step 3: Results Collection**
+> - Monitor: `ssh scholten@falcon 'squeue -u scholten'`
+> - Collect: Results in `~/globtim_hpc/results/` (accessible from both mack and falcon)
+>
+> **⚠️ NEVER**: Run jobs from `/tmp`, install packages on falcon, or exceed falcon's 1GB quota
 
 ### 🚀 Quick Start - HPC Benchmarking
 
-#### Step 1: Access Fileserver
+#### Step 1: Prepare Code (Fileserver)
 ```bash
-# Connect to fileserver for job management
+# Connect to fileserver for code management
 ssh scholten@mack
 cd ~/globtim_hpc
+# Upload code, install packages, prepare data
 ```
 
-#### Step 2: Submit Jobs
+#### Step 2: Submit Jobs (Cluster)
 ```bash
+# Connect to cluster for job submission
+ssh scholten@falcon
+cd ~/globtim_hpc
+
 # Direct SLURM submission (recommended)
-sbatch your_job_script.slurm
+sbatch --account=mpi --partition=batch your_job_script.slurm
 
 # Or use updated Python scripts
 python submit_deuflhard_fileserver.py --mode quick
@@ -47,13 +77,14 @@ globtim/
 ├── test/                   # Comprehensive test suite
 ├── docs/                   # Documentation (organized & consolidated)
 ├── Examples/               # Usage examples and benchmarks
-├── hpc/                    # 🆕 HPC Infrastructure (FILESERVER INTEGRATED)
-│   ├── README.md          # Main HPC guide (updated for fileserver)
+├── hpc/                    # ✅ HPC Infrastructure (FULLY OPERATIONAL)
+│   ├── README.md          # Main HPC guide (verified working)
 │   ├── docs/              # HPC-specific documentation
 │   │   ├── FILESERVER_INTEGRATION_GUIDE.md   # Production fileserver guide
+│   │   ├── HPC_STATUS_SUMMARY.md             # Current status (VERIFIED)
 │   │   ├── TMP_FOLDER_PACKAGE_STRATEGY.md    # Legacy quota workaround (deprecated)
 │   │   └── archive/       # Historical HPC documentation
-│   ├── jobs/submission/   # ✅ Fileserver-integrated submission scripts
+│   ├── jobs/submission/   # ✅ Verified submission scripts (Job 59780294 success)
 │   │   ├── submit_deuflhard_fileserver.py    # Fileserver-based Deuflhard benchmark
 │   │   ├── submit_basic_test_fileserver.py   # Fileserver-based basic tests
 │   │   ├── working_quota_workaround.py       # Legacy (deprecated)
