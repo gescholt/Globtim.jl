@@ -1,0 +1,56 @@
+{
+    "computational_environment": {
+        "julia_version": "1.11.6",
+        "threads": 8,
+        "slurm_job_id": null,
+        "partition": null,
+        "hostname": "harrington-mac-13.local"
+    },
+    "test_input": {
+        "function_name": "anonymous_function",
+        "sample_range": 1.4,
+        "reduce_samples": 1,
+        "degree_max": 6,
+        "precision_params": [
+            0.1,
+            0.5
+        ],
+        "dimension": 2,
+        "center": [
+            0,
+            0
+        ],
+        "GN": null,
+        "noise_params": [
+            0,
+            0
+        ],
+        "tolerance": 0.002
+    },
+    "critical_point_analysis": {
+        "tol_dist": 0.025,
+        "enable_hessian": true,
+        "max_iters_in_optim": 100
+    },
+    "metadata": {
+        "function_name": "anonymous_function",
+        "priority": "high",
+        "computation_id": "3c0f2038",
+        "expected_runtime_minutes": 5,
+        "tags": [
+            "hpc",
+            "integration",
+            "deuflhard"
+        ],
+        "timestamp": "2025-08-09T22:38:44.537",
+        "description": "HPC_integration_example"
+    },
+    "polynomial_construction": {
+        "normalized": false,
+        "precision_type": "Float64",
+        "verbose": 0,
+        "power_of_two_denom": false,
+        "degree": 8,
+        "basis": "chebyshev"
+    }
+}

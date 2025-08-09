@@ -3,9 +3,10 @@
 > **🚨 THIS DOCUMENT IS ARCHIVED AND MAY CONTAIN OUTDATED INFORMATION** 🚨
 >
 > **USE CURRENT DOCUMENTATION INSTEAD**:
-> - `hpc/WORKFLOW_CRITICAL.md` - Current workflow guide
-> - `hpc/docs/FILESERVER_INTEGRATION_GUIDE.md` - Production setup
-> - `hpc/docs/HPC_STATUS_SUMMARY.md` - Current status
+> - **📖 [FILESERVER_INTEGRATION_GUIDE.md](../FILESERVER_INTEGRATION_GUIDE.md)** - **PRIMARY REFERENCE** for current workflow
+> - **📊 [HPC_STATUS_SUMMARY.md](../HPC_STATUS_SUMMARY.md)** - Current system status
+> - **📈 [HPC_WORKFLOW_STATUS.md](../../HPC_WORKFLOW_STATUS.md)** - Detailed status report
+> - **⚡ [WORKFLOW_CRITICAL.md](../../WORKFLOW_CRITICAL.md)** - Quick start guide
 >
 > This document is preserved for historical reference only.
 
@@ -55,15 +56,19 @@ end
 ├── *.out, *.err        # Job outputs (clean regularly)
 └── config files        # Small configuration files
 
-/tmp/globtim_${JOB_ID}/  # Job working directory
-├── src/                # Globtim source code
-├── Project.toml        # Lightweight dependencies
-└── temporary files     # Auto-cleaned after job
+# ⚠️ DEPRECATED: /tmp approach is no longer allowed
+/tmp/globtim_${JOB_ID}/  # ❌ FORBIDDEN - Job working directory
+├── src/                # ❌ DEPRECATED - Globtim source code
+├── Project.toml        # ❌ DEPRECATED - Lightweight dependencies
+└── temporary files     # ❌ DEPRECATED - Auto-cleaned after job
 
-/tmp/julia_depot_${USER}_${JOB_ID}/  # Julia packages
-├── packages/           # Temporary package installation
-├── compiled/           # Compiled modules
-└── registries/         # Package registries
+/tmp/julia_depot_${USER}_${JOB_ID}/  # ❌ FORBIDDEN - Julia packages
+├── packages/           # ❌ DEPRECATED - Temporary package installation
+├── compiled/           # ❌ DEPRECATED - Compiled modules
+└── registries/         # ❌ DEPRECATED - Package registries
+
+# ✅ CURRENT APPROACH: Use fileserver integration instead
+# See: hpc/docs/FILESERVER_INTEGRATION_GUIDE.md
 ```
 
 ### Disk Usage Patterns
