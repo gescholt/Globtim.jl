@@ -137,18 +137,18 @@ Examples/
 function Constructor(TR::test_input, degree::Int; kwargs...)
     # ALGORITHM: Uses Vandermonde matrix approach for polynomial fitting
     # PERFORMANCE: O(n^3) complexity for n sample points
-    
+
     # Step 1: Generate support points (calls external function)
     support = SupportGen(TR.dim, degree)  # EXTERNAL: ApproxConstruct.jl
-    
+
     # Step 2: Build Vandermonde matrix
     # NOTE: This is the computational bottleneck for large problems
     vandermonde = build_vandermonde_matrix(TR.sample_points, support)
-    
+
     # Step 3: Solve linear system
     # PRECISION: Uses Float64 by default, can be overridden
     coeffs = solve_linear_system(vandermonde, TR.function_values)
-    
+
     return polynomial_structure(coeffs, degree, compute_error(coeffs, TR))
 end
 ```
@@ -193,6 +193,15 @@ test/
     ├── test_data.jl
     └── utilities.jl
 ```
+
+### 7a. Julia Type-Verified Tests (Required Best Practice)
+
+To ensure correctness and performance, add Julia tests that explicitly verify types and type-stability alongside numerical accuracy:
+- Assert input/output types for core functions (e.g., function evaluations return Float64 on sample grids; coefficient arrays have expected element type)
+- Check type-stability with @code_warntype in targeted tests for hot paths
+- Validate structures like test_input, Constructor outputs, and processed critical point tables have consistent, documented field types
+- For HPC workflows, include a minimal verification routine that runs post-job to confirm data types, dimensions, and basic invariants before marking a job successful
+
 
 ### 8. **Development Workflow Documentation**
 
