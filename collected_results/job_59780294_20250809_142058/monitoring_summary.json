@@ -1,0 +1,20 @@
+{
+  "monitoring_summary": {
+    "job_id": "59780294",
+    "test_id": "function_eval",
+    "final_state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed_time": "00:00:05",
+    "monitoring_duration": "0.0s",
+    "collection_directory": "collected_results/job_59780294_20250809_142058"
+  },
+  "job_details": {
+    "job_id": "59780294",
+    "name": "function_eval_test",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "start_time": "2025-08-09T14:20:50",
+    "end_time": "2025-08-09T14:20:55",
+    "elapsed": "00:00:05"
+  }
+}

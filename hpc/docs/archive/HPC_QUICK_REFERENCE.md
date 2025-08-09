@@ -1,4 +1,13 @@
-# Globtim HPC Quick Reference
+# ⚠️ ARCHIVED: Globtim HPC Quick Reference
+
+> **🚨 THIS DOCUMENT IS ARCHIVED AND MAY CONTAIN OUTDATED INFORMATION** 🚨
+>
+> **USE CURRENT DOCUMENTATION INSTEAD**:
+> - `hpc/WORKFLOW_CRITICAL.md` - Current workflow guide
+> - `hpc/docs/FILESERVER_INTEGRATION_GUIDE.md` - Production setup
+> - `hpc/docs/HPC_STATUS_SUMMARY.md` - Current status
+>
+> This document is preserved for historical reference only.
 
 ## 🚀 Quick Start Commands
 

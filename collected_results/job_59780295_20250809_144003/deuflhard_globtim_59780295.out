@@ -1,0 +1,278 @@
+=== Deuflhard Globtim SLURM Test ===
+Job ID: 59780295
+Node: c01n02
+CPUs: 4
+Memory: 8192 MB
+Working directory: /home/scholten/globtim_hpc
+Start time: Sat Aug  9 14:37:46 CEST 2025
+
+✅ Using fileserver Julia packages via NFS
+Julia depot: /home/scholten/.julia:
+
+=== Environment Verification ===
+Working directory: /home/scholten/globtim_hpc
+Julia version: julia version 1.11.2
+Julia threads: 4
+Available files:
+  Project_HPC.toml: Project_HPC.toml
+✅
+  src/Globtim.jl: src/Globtim.jl
+✅
+  src/LibFunctions.jl: src/LibFunctions.jl
+✅
+
+=== Running Deuflhard Globtim Test ===
+lld: error: /home/scholten/.julia/compiled/v1.11/VectorizationBase/jl_7hCon4: Archive::children failed: truncated or malformed archive (offset to next archive member past the end of the archive after member text#5.o)
+lld: error: /home/scholten/.julia/compiled/v1.11/JuliaSyntax/jl_VKOQbe: Archive::children failed: truncated or malformed archive (offset to next archive member past the end of the archive after member text#1.o)
+lld: error: /home/scholten/.julia/compiled/v1.11/Polynomials/jl_a8WRDi: Archive::children failed: truncated or malformed archive (offset to next archive member past the end of the archive after member text#1.o)
+=== Deuflhard Globtim Test ===
+Julia Version: 1.11.2
+Start Time: 2025-08-09T14:37:47.644
+Hostname: c01n02
+SLURM Job ID: 59780295
+Working Directory: /home/scholten/globtim_hpc
+
+🔧 Step 1: Setting up HPC Environment
+  ✅ Found HPC-specific Project.toml
+  ✅ Activated HPC environment
+  📦 Instantiating HPC environment...
+  ✅ HPC environment ready
+
+📦 Step 2: Loading Globtim Package
+  📥 Loading Globtim.jl...
+  ❌ Error loading Globtim: LoadError("/home/scholten/globtim_hpc/src/Globtim.jl", 1, PkgPrecompileError: The following 2 direct dependencies failed to precompile:
+
+LinearSolve 
+
+Failed to precompile LinearSolve [7ed4a6bd-45f5-4d41-b270-4a48e9bafcae] to "/home/scholten/.julia/compiled/v1.11/LinearSolve/jl_Afd6pT".
+Downloading artifact: MKL
+     Failure artifact: MKL
+ Downloading artifact: MKL
+     Failure artifact: MKL
+ERROR: LoadError: InitError: Unable to automatically download/install artifact 'MKL' from sources listed in '/home/scholten/.julia/packages/MKL_jll/A29wq/Artifacts.toml'.
+Sources attempted:
+- https://pkg.julialang.org/artifact/27edf95310a71d47422663c3aea849f56efb1360
+    Error: SystemError: close: Disk quota exceeded
+- https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2025.2.0+0/MKL.v2025.2.0.x86_64-linux-gnu.tar.gz
+    Error: RequestError: Failed to connect to github.com port 443 after 0 ms: Couldn't connect to server while requesting https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2025.2.0+0/MKL.v2025.2.0.x86_64-linux-gnu.tar.gz
+
+Stacktrace:
+  [1] error(s::String)
+    @ Base ./error.jl:35
+  [2] ensure_artifact_installed(name::String, meta::Dict{String, Any}, artifacts_toml::String; platform::Base.BinaryPlatforms.Platform, verbose::Bool, quiet_download::Bool, io::IOContext{IO})
+    @ Pkg.Artifacts /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Pkg/src/Artifacts.jl:467
+  [3] _artifact_str(__module__::Module, artifacts_toml::String, name::SubString{String}, path_tail::String, artifact_dict::Dict{String, Any}, hash::Base.SHA1, platform::Base.BinaryPlatforms.Platform, lazyartifacts::Any)
+    @ Artifacts /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Artifacts/src/Artifacts.jl:570
+  [4] invokelatest(::Any, ::Any, ::Vararg{Any}; kwargs::@Kwargs{})
+    @ Base ./essentials.jl:1055
+  [5] invokelatest(::Any, ::Any, ::Vararg{Any})
+    @ Base ./essentials.jl:1052
+  [6] macro expansion
+    @ /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Artifacts/src/Artifacts.jl:717 [inlined]
+  [7] find_artifact_dir()
+    @ MKL_jll ~/.julia/packages/JLLWrappers/m2Pjh/src/wrapper_generators.jl:17
+  [8] __init__()
+    @ MKL_jll ~/.julia/packages/MKL_jll/A29wq/src/wrappers/x86_64-linux-gnu.jl:10
+  [9] run_module_init(mod::Module, i::Int64)
+    @ Base ./loading.jl:1378
+ [10] register_restored_modules(sv::Core.SimpleVector, pkg::Base.PkgId, path::String)
+    @ Base ./loading.jl:1366
+ [11] _include_from_serialized(pkg::Base.PkgId, path::String, ocachepath::String, depmods::Vector{Any}, ignore_native::Nothing; register::Bool)
+    @ Base ./loading.jl:1254
+ [12] _include_from_serialized (repeats 2 times)
+    @ ./loading.jl:1210 [inlined]
+ [13] _require_search_from_serialized(pkg::Base.PkgId, sourcepath::String, build_id::UInt128, stalecheck::Bool; reasons::Dict{String, Int64}, DEPOT_PATH::Vector{String})
+    @ Base ./loading.jl:2057
+ [14] _require(pkg::Base.PkgId, env::String)
+    @ Base ./loading.jl:2527
+ [15] __require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2388
+ [16] #invoke_in_world#3
+    @ ./essentials.jl:1089 [inlined]
+ [17] invoke_in_world
+    @ ./essentials.jl:1086 [inlined]
+ [18] _require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2375
+ [19] macro expansion
+    @ ./loading.jl:2314 [inlined]
+ [20] macro expansion
+    @ ./lock.jl:273 [inlined]
+ [21] __require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2271
+ [22] #invoke_in_world#3
+    @ ./essentials.jl:1089 [inlined]
+ [23] invoke_in_world
+    @ ./essentials.jl:1086 [inlined]
+ [24] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2260
+ [25] top-level scope
+    @ ~/.julia/packages/LinearSolve/wu92d/src/LinearSolve.jl:49
+ [26] include
+    @ ./Base.jl:557 [inlined]
+ [27] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+    @ Base ./loading.jl:2881
+ [28] top-level scope
+    @ stdin:6
+during initialization of module MKL_jll
+in expression starting at /home/scholten/.julia/packages/LinearSolve/wu92d/src/LinearSolve.jl:1
+in expression starting at stdin:6
+LinearSolveSparseArraysExt 
+
+Failed to precompile LinearSolveSparseArraysExt [acf9803d-64eb-5f69-b965-a71e3e6e1ed4] to "/home/scholten/.julia/compiled/v1.11/LinearSolveSparseArraysExt/jl_Atk3R1".
+Downloading artifact: MKL
+     Failure artifact: MKL
+ Downloading artifact: MKL
+     Failure artifact: MKL
+ERROR: LoadError: InitError: Unable to automatically download/install artifact 'MKL' from sources listed in '/home/scholten/.julia/packages/MKL_jll/A29wq/Artifacts.toml'.
+Sources attempted:
+- https://pkg.julialang.org/artifact/27edf95310a71d47422663c3aea849f56efb1360
+    Error: SystemError: close: Disk quota exceeded
+- https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2025.2.0+0/MKL.v2025.2.0.x86_64-linux-gnu.tar.gz
+    Error: RequestError: Failed to connect to github.com port 443 after 0 ms: Couldn't connect to server while requesting https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2025.2.0+0/MKL.v2025.2.0.x86_64-linux-gnu.tar.gz
+
+Stacktrace:
+  [1] error(s::String)
+    @ Base ./error.jl:35
+  [2] ensure_artifact_installed(name::String, meta::Dict{String, Any}, artifacts_toml::String; platform::Base.BinaryPlatforms.Platform, verbose::Bool, quiet_download::Bool, io::IOContext{IO})
+    @ Pkg.Artifacts /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Pkg/src/Artifacts.jl:467
+  [3] _artifact_str(__module__::Module, artifacts_toml::String, name::SubString{String}, path_tail::String, artifact_dict::Dict{String, Any}, hash::Base.SHA1, platform::Base.BinaryPlatforms.Platform, lazyartifacts::Any)
+    @ Artifacts /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Artifacts/src/Artifacts.jl:570
+  [4] invokelatest(::Any, ::Any, ::Vararg{Any}; kwargs::@Kwargs{})
+    @ Base ./essentials.jl:1055
+  [5] invokelatest(::Any, ::Any, ::Vararg{Any})
+    @ Base ./essentials.jl:1052
+  [6] macro expansion
+    @ /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Artifacts/src/Artifacts.jl:717 [inlined]
+  [7] find_artifact_dir()
+    @ MKL_jll ~/.julia/packages/JLLWrappers/m2Pjh/src/wrapper_generators.jl:17
+  [8] __init__()
+    @ MKL_jll ~/.julia/packages/MKL_jll/A29wq/src/wrappers/x86_64-linux-gnu.jl:10
+  [9] run_module_init(mod::Module, i::Int64)
+    @ Base ./loading.jl:1378
+ [10] register_restored_modules(sv::Core.SimpleVector, pkg::Base.PkgId, path::String)
+    @ Base ./loading.jl:1366
+ [11] _include_from_serialized(pkg::Base.PkgId, path::String, ocachepath::String, depmods::Vector{Any}, ignore_native::Nothing; register::Bool)
+    @ Base ./loading.jl:1254
+ [12] _include_from_serialized (repeats 2 times)
+    @ ./loading.jl:1210 [inlined]
+ [13] _require_search_from_serialized(pkg::Base.PkgId, sourcepath::String, build_id::UInt128, stalecheck::Bool; reasons::Dict{String, Int64}, DEPOT_PATH::Vector{String})
+    @ Base ./loading.jl:2057
+ [14] _require(pkg::Base.PkgId, env::String)
+    @ Base ./loading.jl:2527
+ [15] __require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2388
+ [16] #invoke_in_world#3
+    @ ./essentials.jl:1089 [inlined]
+ [17] invoke_in_world
+    @ ./essentials.jl:1086 [inlined]
+ [18] _require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2375
+ [19] macro expansion
+    @ ./loading.jl:2314 [inlined]
+ [20] macro expansion
+    @ ./lock.jl:273 [inlined]
+ [21] __require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2271
+ [22] #invoke_in_world#3
+    @ ./essentials.jl:1089 [inlined]
+ [23] invoke_in_world
+    @ ./essentials.jl:1086 [inlined]
+ [24] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2260
+ [25] top-level scope
+    @ ~/.julia/packages/LinearSolve/wu92d/src/LinearSolve.jl:49
+ [26] include
+    @ ./Base.jl:557 [inlined]
+ [27] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::String)
+    @ Base ./loading.jl:2881
+ [28] top-level scope
+    @ stdin:6
+during initialization of module MKL_jll
+in expression starting at /home/scholten/.julia/packages/LinearSolve/wu92d/src/LinearSolve.jl:1
+in expression starting at stdin:6
+ERROR: LoadError: Failed to precompile LinearSolve [7ed4a6bd-45f5-4d41-b270-4a48e9bafcae] to "/home/scholten/.julia/compiled/v1.11/LinearSolve/jl_7Kn5v0".
+Stacktrace:
+  [1] error(s::String)
+    @ Base ./error.jl:35
+  [2] compilecache(pkg::Base.PkgId, path::String, internal_stderr::IO, internal_stdout::IO, keep_loaded_modules::Bool; flags::Cmd, cacheflags::Base.CacheFlags, reasons::Dict{String, Int64}, loadable_exts::Nothing)
+    @ Base ./loading.jl:3174
+  [3] (::Base.var"#1110#1111"{Base.PkgId})()
+    @ Base ./loading.jl:2579
+  [4] mkpidlock(f::Base.var"#1110#1111"{Base.PkgId}, at::String, pid::Int32; kwopts::@Kwargs{stale_age::Int64, wait::Bool})
+    @ FileWatching.Pidfile /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/FileWatching/src/pidfile.jl:95
+  [5] #mkpidlock#6
+    @ /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/FileWatching/src/pidfile.jl:90 [inlined]
+  [6] trymkpidlock(::Function, ::Vararg{Any}; kwargs::@Kwargs{stale_age::Int64})
+    @ FileWatching.Pidfile /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/FileWatching/src/pidfile.jl:116
+  [7] #invokelatest#2
+    @ ./essentials.jl:1057 [inlined]
+  [8] invokelatest
+    @ ./essentials.jl:1052 [inlined]
+  [9] maybe_cachefile_lock(f::Base.var"#1110#1111"{Base.PkgId}, pkg::Base.PkgId, srcpath::String; stale_age::Int64)
+    @ Base ./loading.jl:3698
+ [10] maybe_cachefile_lock
+    @ ./loading.jl:3695 [inlined]
+ [11] _require(pkg::Base.PkgId, env::String)
+    @ Base ./loading.jl:2565
+ [12] __require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2388
+ [13] #invoke_in_world#3
+    @ ./essentials.jl:1089 [inlined]
+ [14] invoke_in_world
+    @ ./essentials.jl:1086 [inlined]
+ [15] _require_prelocked(uuidkey::Base.PkgId, env::String)
+    @ Base ./loading.jl:2375
+ [16] macro expansion
+    @ ./loading.jl:2314 [inlined]
+ [17] macro expansion
+    @ ./lock.jl:273 [inlined]
+ [18] __require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2271
+ [19] #invoke_in_world#3
+    @ ./essentials.jl:1089 [inlined]
+ [20] invoke_in_world
+    @ ./essentials.jl:1086 [inlined]
+ [21] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:2260
+ [22] include
+    @ ./Base.jl:557 [inlined]
+ [23] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+    @ Base ./loading.jl:2881
+ [24] top-level scope
+    @ stdin:6
+in expression starting at /home/scholten/.julia/packages/LinearSolve/wu92d/ext/LinearSolveSparseArraysExt.jl:1
+in expression starting at stdin:6)
+  🔄 Trying alternative loading method...
+  ❌ Alternative loading failed: LoadError("/home/scholten/globtim_hpc/src/LibFunctions.jl", 475, UndefVarError(:StaticArraysCore, Main))
+
+🧮 Step 3: Testing Deuflhard Function
+  Point 1: Error at [0.0, 0.0] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 2: Error at [0.1, 0.1] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 3: Error at [0.5, 0.5] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 4: Error at [1.0, 1.0] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 5: Error at [1.5, 1.5] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 6: Error at [-0.5, 0.5] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 7: Error at [0.25, 0.75] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 8: Error at [2.0, 0.0] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 9: Error at [0.0, 2.0] - UndefVarError(:successful_evaluations, :local) ❌
+  Point 10: Error at [-1.0, -1.0] - UndefVarError(:successful_evaluations, :local) ❌
+
+📊 Evaluation Summary:
+  Total points: 10
+  Successful evaluations: 0
+  Success rate: 0.0%
+
+💾 Step 4: Saving Results
+  ✅ Created test results directory: results/deuflhard_globtim_2025-08-09T143959.642
+  ✅ CSV results saved: results/deuflhard_globtim_2025-08-09T143959.642/deuflhard_evaluations.csv
+  ✅ Summary saved: results/deuflhard_globtim_2025-08-09T143959.642/test_summary.txt
+  ✅ Environment info saved: results/deuflhard_globtim_2025-08-09T143959.642/environment_info.txt
+
+📁 All results saved to: results/deuflhard_globtim_2025-08-09T143959.642
+
+=== Deuflhard Globtim Test Complete ===
+End Time: 2025-08-09T14:40:00.723
+❌ Test completed with no successful evaluations
+
+=== SLURM Job Complete ===
+End time: Sat Aug  9 14:40:00 CEST 2025
