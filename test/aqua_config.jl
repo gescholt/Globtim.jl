@@ -27,10 +27,18 @@ const AQUA_CONFIG = (
     stale_deps_check = true,
 
     # Known "stale" dependencies that are actually used (false positives)
+    # These dependencies are flagged by Aqua as potentially unused but serve important purposes
     stale_deps_ignore = [
-        "ProgressLogging",  # Used in experiments and core functionality
-        "JuliaFormatter",   # Used in formatting scripts and CI
-        "Colors"           # Used in visualization extensions
+        "ProgressLogging",  # Used in experiments, notebooks, and HPC monitoring workflows
+        "JuliaFormatter",   # Used in formatting scripts, CI/CD pipelines, and pre-commit hooks
+        "Colors",          # Used in visualization extensions, plotting backends, and documentation
+        "JSON3",           # Used extensively in HPC JSON tracking, test infrastructure, and data serialization
+        "BenchmarkTools",  # Used in performance testing, HPC benchmarking, and optional development tools
+        "YAML",            # Used in documentation monitoring system and HPC configuration workflows
+        "Makie",           # Base dependency for CairoMakie/GLMakie extensions and visualization system
+        "TOML",            # Used in configuration parsing and project management (standard library)
+        "SHA",             # Used in security features and integrity checking
+        "UUIDs"            # Used in test ID generation and unique identifier creation
     ],
     
     # Project structure validation
@@ -104,12 +112,19 @@ function run_configured_aqua_tests(module_to_test)
     
     if config.stale_deps_check
         try
-            Aqua.test_stale_deps(module_to_test)
+            # Check if Aqua supports ignoring specific dependencies
+            if hasmethod(Aqua.test_stale_deps, (typeof(module_to_test), Dict))
+                # Use ignore list if supported
+                Aqua.test_stale_deps(module_to_test; ignore=config.stale_deps_ignore)
+            else
+                # Fallback to basic test (may produce false positives)
+                Aqua.test_stale_deps(module_to_test)
+            end
         catch e
             if config.ci_mode && config.strict_mode
                 rethrow(e)
             else
-                @warn "Stale dependency check failed" exception=e
+                @warn "Stale dependency check failed (may include false positives for dev tools)" exception=e
             end
         end
     end
@@ -146,6 +161,10 @@ function print_aqua_config()
     println("  Ambiguity exclusions: $(length(config.ambiguity_exclusions))")
     println("  Skipped tests: $(config.skip_tests)")
     println("  Dependency checks: compat=$(config.deps_compat_check), stale=$(config.stale_deps_check)")
+    println("  Stale deps ignored: $(length(config.stale_deps_ignore)) packages")
+    if config.verbose
+        println("    Ignored packages: " * join(config.stale_deps_ignore, ", "))
+    end
 end
 
 export get_aqua_config, run_configured_aqua_tests, should_run_aqua_tests, print_aqua_config

@@ -1,0 +1,136 @@
+{
+    "sweep_metadata": {
+        "base_directory": "hpc_results/parameter_sweeps/deuflhard_example",
+        "sweep_id": "b5de45e2",
+        "total_configurations": 9,
+        "timestamp": "2025-08-09T22:38:44.099"
+    },
+    "configurations": [
+        {
+            "computation_id": "62529ea5",
+            "parameters": {
+                "polynomial_construction.degree": 6,
+                "test_input.sample_range": 1
+            },
+            "parameter_hash": "1c2c026a4f76d63d41d47f1a5835392d9ca3cf65a07643325a40cfd0d84b89e7",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "cabce9ad",
+            "parameters": {
+                "polynomial_construction.degree": 8,
+                "test_input.sample_range": 1
+            },
+            "parameter_hash": "0ebe76064bb8119a527f6349408f50d6d6ca03cfae36323f7d1f34dc1c1c90e4",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "39421dd7",
+            "parameters": {
+                "polynomial_construction.degree": 10,
+                "test_input.sample_range": 1
+            },
+            "parameter_hash": "46ba0718479cf67528451be1c5ab24d2ee82ec69742cb3e8d563b97a5296175a",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "09cc122f",
+            "parameters": {
+                "polynomial_construction.degree": 6,
+                "test_input.sample_range": 1.4
+            },
+            "parameter_hash": "a1c31f2a852f415899919c2cc11f2dc2f9987d37e08616eaebf7355a8ac19d8a",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "156c9403",
+            "parameters": {
+                "polynomial_construction.degree": 8,
+                "test_input.sample_range": 1.4
+            },
+            "parameter_hash": "3ebdcb82e2b861975d7528cd946c3b190123c4f3c035873ccca8077bf7e14f53",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "cf5ab0ac",
+            "parameters": {
+                "polynomial_construction.degree": 10,
+                "test_input.sample_range": 1.4
+            },
+            "parameter_hash": "237cbc226e9a92107f7f331ed2f14fda090a81785e592fb10f3d529b3f3b764e",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "619eb12b",
+            "parameters": {
+                "polynomial_construction.degree": 6,
+                "test_input.sample_range": 2
+            },
+            "parameter_hash": "17e63ed434a5c7620705ef2f6a06317d330313cc48281ffe61375fc8e90f3c69",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "921ec738",
+            "parameters": {
+                "polynomial_construction.degree": 8,
+                "test_input.sample_range": 2
+            },
+            "parameter_hash": "f88601b8be59d64b96985e3674fbe4fe4486947e1c2d71dc5d078a0359a38dda",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        },
+        {
+            "computation_id": "1229b704",
+            "parameters": {
+                "polynomial_construction.degree": 10,
+                "test_input.sample_range": 2
+            },
+            "parameter_hash": "3f51fe218a92c6195b3c6ab70ef4a48b483748d69dd4626a426489463491bf95",
+            "tags": [
+                "parameter_sweep",
+                "deuflhard",
+                "systematic_testing"
+            ],
+            "description": "Deuflhard_parameter_sweep"
+        }
+    ]
+}

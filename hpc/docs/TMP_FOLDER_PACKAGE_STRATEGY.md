@@ -5,9 +5,12 @@
 > **DO NOT USE**: Running jobs from `/tmp` is forbidden on the cluster.
 >
 > **USE INSTEAD**: Fileserver integration via mack. See:
-> - `hpc/WORKFLOW_CRITICAL.md` - Current workflow guide
-> - `hpc/docs/FILESERVER_INTEGRATION_GUIDE.md` - Production setup
-> - `hpc/docs/HPC_STATUS_SUMMARY.md` - Current status
+> - **📖 [FILESERVER_INTEGRATION_GUIDE.md](FILESERVER_INTEGRATION_GUIDE.md)** - **PRIMARY REFERENCE** for current workflow
+> - **📊 [HPC_STATUS_SUMMARY.md](HPC_STATUS_SUMMARY.md)** - Current system status and readiness
+> - **⚡ [WORKFLOW_CRITICAL.md](../WORKFLOW_CRITICAL.md)** - Quick start guide
+> - **📈 [HPC_WORKFLOW_STATUS.md](../../HPC_WORKFLOW_STATUS.md)** - Detailed status report
+>
+> **Migration Path**: Follow the [FILESERVER_INTEGRATION_GUIDE.md](FILESERVER_INTEGRATION_GUIDE.md) for complete setup instructions.
 >
 > This document is preserved for historical reference only.
 

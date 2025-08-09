@@ -1,10 +1,14 @@
 """
     solve_polynomial_system(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}} or Tuple
 
-Find all critical points of a polynomial by solving ∇p(x) = 0 using HomotopyContinuation.jl.
+**Critical point finder using polynomial system solving.**
 
-This function constructs the gradient system of the polynomial approximation and solves it
-to find all stationary points. It handles both Chebyshev and Legendre basis polynomials.
+Find all critical points of a polynomial approximation by solving the gradient system
+grad(p)(x) = 0 using HomotopyContinuation.jl. This is the core function for locating all
+local minima, maxima, and saddle points of the approximated objective function.
+
+Uses numerical algebraic geometry with homotopy continuation for robust solving.
+Solution count is bounded by Bezout's theorem: (d-1)^n for degree d polynomial.
 
 # Arguments
 - `x`: Polynomial variables (from DynamicPolynomials)
