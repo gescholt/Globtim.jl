@@ -1,8 +1,12 @@
 # Migration Guide: From Quota Workaround to Fileserver Integration
 
+> **📖 For Current Workflow**: See [FILESERVER_INTEGRATION_GUIDE.md](../../docs/FILESERVER_INTEGRATION_GUIDE.md)
+>
+> This document describes the migration from deprecated `/tmp`-based approaches to the current fileserver integration.
+
 ## 🎯 Overview
 
-This guide documents the migration from the temporary quota workaround solution to the production-ready fileserver integration for HPC Globtim workflows.
+This guide documents the migration from the temporary quota workaround solution (now deprecated) to the production-ready fileserver integration for HPC Globtim workflows.
 
 **Migration Status**: COMPLETE ✅  
 **New Architecture**: Three-tier (Local → Fileserver → HPC Cluster)
@@ -170,11 +174,14 @@ ssh scholten@mack 'ls -la ~/globtim_hpc/results/'
 
 ## 🔧 Updated Environment Variables
 
-### **Old Environment Setup**
+### **❌ Old Environment Setup (DEPRECATED)**
 ```bash
-# OLD - Manual depot path setup
+# ❌ DEPRECATED - Manual depot path setup (no longer allowed)
 export JULIA_DEPOT_PATH="/tmp/julia_depot_globtim_persistent:$JULIA_DEPOT_PATH"
 ```
+
+> **⚠️ WARNING**: This approach is deprecated and forbidden on the cluster.
+> Use the fileserver integration approach instead.
 
 ### **New Environment Setup**
 ```bash

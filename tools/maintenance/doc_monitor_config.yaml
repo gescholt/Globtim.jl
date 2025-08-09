@@ -1,0 +1,283 @@
+# Documentation Monitoring Configuration for Globtim.jl
+# Hybrid system using Aqua.jl for quality assurance + custom documentation monitoring
+
+# Global Settings
+global:
+  # Repository root (relative paths resolved from here)
+  repository_root: "."
+  
+  # Monitoring intervals
+  monitoring:
+    daily_drift_check: true
+    weekly_comprehensive_analysis: true
+    monthly_deep_analysis: true
+  
+  # Output settings
+  output:
+    console_verbose: true
+    generate_json_reports: true
+    generate_markdown_reports: true
+    report_directory: "reports/doc_monitoring"
+    
+  # Integration settings
+  integration:
+    git_hooks: true
+    ci_cd_integration: true
+    hpc_cluster_compatible: true
+
+# Aqua.jl Quality Assurance (replaces custom quality checks)
+aqua_quality:
+  enabled: true
+  
+  # Core quality tests (always run)
+  core_tests:
+    undefined_exports: true
+    unbound_args: true
+    ambiguities: true
+    persistent_tasks: true
+    project_extras: true
+  
+  # Optional tests (can be disabled for specific projects)
+  optional_tests:
+    stale_deps: true
+    deps_compat: true
+    piracies: false  # Often too strict for research code
+    undocumented_names: false  # We handle this with custom analysis
+  
+  # Aqua-specific configuration
+  aqua_options:
+    ambiguities:
+      exclude: []  # Functions to exclude from ambiguity checking
+      broken: false  # Whether to allow broken ambiguities
+    
+    stale_deps:
+      ignore: []  # Dependencies to ignore in stale check
+    
+    deps_compat:
+      ignore: []  # Dependencies to ignore in compat check
+    
+    piracies:
+      treat_as_own: []  # Modules to treat as own for piracy detection
+
+# Task List Progress Monitoring (custom implementation)
+task_monitoring:
+  enabled: true
+  
+  # File patterns to scan for tasks
+  scan_patterns:
+    - "**/*.jl"
+    - "**/*.py" 
+    - "**/*.md"
+    - "**/*.toml"
+    - "**/*.yaml"
+    - "**/*.yml"
+  
+  # Exclude patterns
+  exclude_patterns:
+    - ".git/**"
+    - "node_modules/**"
+    - "build/**"
+    - "docs/build/**"
+    - "hpc_results/**"
+    - "collected_results/**"
+    - "archive/**"
+    - "**/.ipynb_checkpoints/**"
+  
+  # Task patterns to detect
+  task_patterns:
+    todo_comments:
+      - "TODO:"
+      - "FIXME:"
+      - "HACK:"
+      - "XXX:"
+      - "NOTE:"
+    
+    markdown_tasks:
+      - "- [ ]"  # Not started
+      - "- [x]"  # Complete
+      - "- [/]"  # In progress
+      - "- [-]"  # Cancelled
+  
+  # Stale task detection (days)
+  stale_task_threshold: 30
+  
+  # Task completion velocity tracking
+  velocity_tracking:
+    enabled: true
+    window_days: 14
+    min_tasks_for_velocity: 5
+
+# Documentation-Code Linkage Monitoring (custom implementation)
+doc_linkage_monitoring:
+  enabled: true
+  
+  # Source code monitoring (focused on documentation linkage only)
+  source_monitoring:
+    julia_files:
+      patterns: ["src/**/*.jl", "Examples/**/*.jl"]
+      track_functions: true
+      track_structs: true
+      track_modules: true
+      track_exports: true  # Complement Aqua's undefined_exports check
+    
+    python_files:
+      patterns: ["**/*.py"]
+      track_functions: true
+      track_classes: true
+      track_modules: true
+  
+  # Documentation files to monitor
+  documentation_files:
+    patterns: 
+      - "docs/**/*.md"
+      - "README.md"
+      - "**/*README*.md"
+      - "hpc/docs/**/*.md"
+      - "Examples/**/*.md"
+  
+  # Linkage detection rules
+  linkage_rules:
+    function_references:
+      enabled: true
+      case_sensitive: false
+      require_backticks: false
+    
+    file_references:
+      enabled: true
+      detect_relative_paths: true
+      detect_include_statements: true
+    
+    module_references:
+      enabled: true
+      track_using_statements: true
+      track_import_statements: true
+
+# Documentation Drift Detection (custom implementation)
+doc_drift_detection:
+  enabled: true
+  
+  # Change thresholds that trigger documentation update alerts
+  change_thresholds:
+    commits_in_period:
+      threshold: 10
+      period_days: 14
+    
+    api_changes:
+      function_signature_changes: true
+      export_changes: true  # Complement Aqua's export checking
+      module_structure_changes: true
+      file_moves_renames: true
+  
+  # Documentation lag detection
+  lag_detection:
+    max_lag_days: 7
+    
+    ignore_patterns:
+      - "test/**"
+      - "**/*_test.jl"
+      - "**/*test*.py"
+      - "archive/**"
+      - "experiments/**"
+  
+  # Git analysis settings
+  git_analysis:
+    default_branch: "main"
+    compare_branches: ["main", "clean-version"]
+    ignore_merge_commits: true
+    ignore_authors: ["dependabot", "github-actions"]
+
+# Documentation File Management (custom implementation)
+doc_file_management:
+  enabled: true
+  
+  # Orphan detection
+  orphan_detection:
+    enabled: true
+    orphan_threshold_days: 90
+    min_source_activity_days: 30
+  
+  # Duplication detection
+  duplication_detection:
+    enabled: true
+    similarity_threshold: 0.8
+    filename_similarity: true
+    header_similarity: true
+  
+  # Broken link detection
+  broken_links:
+    enabled: true
+    check_internal_links: true
+    check_file_references: true
+    check_anchor_links: true
+    check_external_links: false  # Can be slow
+    
+    link_patterns:
+      - "\\[.*\\]\\(.*\\)"  # Markdown links
+      - "\\[.*\\]\\[.*\\]"  # Reference links
+      - "include\\(\".*\"\\)"  # Julia includes
+      - "\\`.*\\.jl\\`"  # Backticked file references
+
+# Reporting Configuration
+reporting:
+  formats:
+    json:
+      enabled: true
+      pretty_print: true
+      include_metadata: true
+    
+    markdown:
+      enabled: true
+      include_summary: true
+      include_details: true
+      include_recommendations: true
+    
+    console:
+      enabled: true
+      color_output: true
+      progress_bars: true
+  
+  # Report sections
+  sections:
+    executive_summary: true
+    aqua_quality_results: true  # New section for Aqua.jl results
+    task_completion_stats: true
+    documentation_health_score: true
+    drift_analysis: true
+    broken_links_inventory: true
+    orphaned_files_list: true
+    recommended_actions: true
+    trend_analysis: true
+  
+  # Notification settings
+  notifications:
+    critical_threshold: 0.3
+    warning_threshold: 0.6
+    console_alerts: true
+    log_file_alerts: true
+
+# Performance and Resource Management
+performance:
+  max_files_per_scan: 10000
+  max_file_size_mb: 10
+  parallel_processing: true
+  max_workers: 4
+  enable_caching: true
+  cache_duration_hours: 24
+  cache_directory: ".doc_monitor_cache"
+  chunk_size: 1000
+  gc_frequency: 100
+
+# HPC Integration
+hpc_integration:
+  slurm_compatible: true
+  hpc_resources:
+    partition: "batch"
+    cpus_per_task: 4
+    memory_gb: 8
+    time_limit: "02:00:00"
+  hpc_paths:
+    working_directory: "~/globtim_hpc"
+    results_directory: "~/globtim_hpc/doc_monitoring_results"
+  cluster_settings:
+    module_loads: []
+    environment_setup: []

@@ -19,7 +19,7 @@ println("=" ^ 70)
 # List of optional packages
 optional_packages = [
     ("BenchmarkTools", "Detailed performance benchmarking"),
-    ("ProfileView", "Interactive performance profiling"),
+    ("ProfileView", "Interactive performance profiling and visualization"),
     ("CairoMakie", "High-quality static plotting for notebooks"),
     ("GLMakie", "Interactive plotting (optional alternative to CairoMakie)"),
     ("Revise", "Automatic code reloading for development")
