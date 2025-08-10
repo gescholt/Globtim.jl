@@ -106,11 +106,14 @@ python working_quota_workaround.py --install-all
 
 ### Step 2: Run Benchmarks
 ```bash
-# Validated Deuflhard benchmark
-python submit_deuflhard_with_quota_workaround.py --mode quick --auto-collect
+# Standard HPC Deuflhard benchmark
+python submit_deuflhard_hpc.py --mode quick --auto-collect
+
+# Fileserver-based Deuflhard benchmark
+python submit_deuflhard_fileserver.py --mode quick --auto-collect
 
 # Basic functionality test
-python submit_basic_test.py --mode quick --auto-collect
+python submit_basic_test_fileserver.py --mode quick --auto-collect
 
 # Custom benchmark functions
 python submit_globtim_compilation_test.py --mode quick --function [FUNCTION_NAME]

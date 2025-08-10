@@ -340,7 +340,7 @@ function print_aqua_summary(results::Dict{String, Any}, verbose::Bool)
             status = get(test_result, "status", "unknown")
             duration = get(test_result, "duration_ms", 0)
             emoji = status == "passed" ? "✅" : status == "failed" ? "❌" : "⚠️"
-            println("       $emoji $(get(test_result, "test_name", test_name)): $status (${duration}ms)")
+            println("       $emoji $(get(test_result, "test_name", test_name)): $status ($(duration)ms)")
             
             if status != "passed" && haskey(test_result, "error_message")
                 error_msg = test_result["error_message"]
@@ -358,7 +358,7 @@ function print_aqua_summary(results::Dict{String, Any}, verbose::Bool)
                 status = get(test_result, "status", "unknown")
                 duration = get(test_result, "duration_ms", 0)
                 emoji = status == "passed" ? "✅" : status == "failed" ? "❌" : "⚠️"
-                println("       $emoji $(get(test_result, "test_name", test_name)): $status (${duration}ms)")
+                println("       $emoji $(get(test_result, "test_name", test_name)): $status ($(duration)ms)")
             end
         end
     end

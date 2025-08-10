@@ -15,10 +15,10 @@ This guide documents the migration from the temporary quota workaround solution 
 
 ### **Before: Quota Workaround (Deprecated)**
 ```bash
-# OLD APPROACH - Temporary solution
+# OLD APPROACH - Temporary solution (FILE REMOVED)
 export JULIA_DEPOT_PATH="/tmp/julia_depot_globtim_persistent:$JULIA_DEPOT_PATH"
 python working_quota_workaround.py --install-all
-python submit_deuflhard_with_quota_workaround.py --mode quick
+python submit_deuflhard_with_quota_workaround.py --mode quick  # FILE NO LONGER EXISTS
 ```
 
 **Issues with Old Approach:**
@@ -61,8 +61,9 @@ python submit_basic_test_fileserver.py --mode quick
 # OLD (Deprecated)
 python submit_deuflhard_with_quota_workaround.py --mode quick
 
-# NEW (Production)
-python submit_deuflhard_fileserver.py --mode quick
+# NEW (Production Options)
+python submit_deuflhard_hpc.py --mode quick          # Standard HPC workflow
+python submit_deuflhard_fileserver.py --mode quick   # Alternative fileserver approach
 ```
 
 ### **2. Package Management**
@@ -193,12 +194,13 @@ export JULIA_DEPOT_PATH="/net/fileserver-nfs/stornext/snfs6/projects/scholten/.j
 
 ### **Files to Stop Using**
 - ❌ `working_quota_workaround.py` - Package installer (deprecated)
-- ❌ `submit_deuflhard_with_quota_workaround.py` - Old Deuflhard script
+- ❌ `submit_deuflhard_with_quota_workaround.py` - Old script (REMOVED)
 - ❌ `submit_basic_test.py` - Old basic test (if using direct execution)
 - ❌ `test_quota_workaround.py` - Testing script for old approach
 
 ### **Files to Use Instead**
-- ✅ `submit_deuflhard_fileserver.py` - New Deuflhard benchmark
+- ✅ `submit_deuflhard_hpc.py` - Standard HPC workflow Deuflhard benchmark
+- ✅ `submit_deuflhard_fileserver.py` - Alternative fileserver-based Deuflhard benchmark
 - ✅ `submit_basic_test_fileserver.py` - New basic test
 - ✅ Standard SLURM scripts with NFS paths
 - ✅ `FILESERVER_INTEGRATION_GUIDE.md` - New documentation
