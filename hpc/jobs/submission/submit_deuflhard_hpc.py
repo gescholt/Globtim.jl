@@ -156,12 +156,16 @@ cat > {output_dir}/run_deuflhard_benchmark.jl << 'EOF_JL'
 using Dates
 using StaticArrays
 
+# Load Globtim modules directly (avoiding package precompilation issues)
+include("src/LibFunctions.jl")  # Contains Deuflhard function
+include("src/Samples.jl")       # For test_input function
+
 println("🚀 Deuflhard Benchmark Test Starting")
 println("=" ^ 50)
-println("Julia Version: $(VERSION)")
-println("Start Time: $(now())")
-println("Hostname: $(gethostname())")
-println("Available Threads: $(Threads.nthreads())")
+println("Julia Version: ", VERSION)
+println("Start Time: ", now())
+println("Hostname: ", gethostname())
+println("Available Threads: ", Threads.nthreads())
 println()
 
 # Test parameters
@@ -179,38 +183,10 @@ println("  Samples: $samples")
 println("  Output directory: $output_dir")
 println()
 
-# Load Globtim modules with error handling
-println("📦 Loading Globtim Modules...")
-try
-    include("src/BenchmarkFunctions.jl")
-    println("  ✅ BenchmarkFunctions.jl loaded")
-    
-    include("src/LibFunctions.jl")
-    println("  ✅ LibFunctions.jl loaded")
-    
-    include("src/Samples.jl")
-    println("  ✅ Samples.jl loaded")
-    
-    include("src/Structures.jl")
-    println("  ✅ Structures.jl loaded")
-    
-    println("✅ All Globtim modules loaded successfully")
-    
-catch e
-    println("❌ Module loading failed: $e")
-    
-    # Save error information
-    open(joinpath(output_dir, "module_loading_error.txt"), "w") do f
-        println(f, "Deuflhard Module Loading Error")
-        println(f, "==============================")
-        println(f, "Timestamp: $(now())")
-        println(f, "Error: $e")
-        println(f, "Test ID: $test_id")
-        println(f, "Mode: $mode")
-    end
-    
-    exit(1)
-end
+# Modules loaded directly from source files
+println("📦 Globtim modules loaded successfully")
+println("  ✅ LibFunctions.jl loaded (contains Deuflhard)")
+println("  ✅ Samples.jl loaded (contains test_input)")
 
 println()
 
@@ -246,9 +222,9 @@ catch e
     open(joinpath(output_dir, "function_test_error.txt"), "w") do f
         println(f, "Deuflhard Function Test Error")
         println(f, "=============================")
-        println(f, "Timestamp: $(now())")
-        println(f, "Error: $e")
-        println(f, "Test ID: $test_id")
+        println(f, "Timestamp: ", now())
+        println(f, "Error: ", e)
+        println(f, "Test ID: ", test_id)
     end
     
     exit(1)
@@ -270,10 +246,10 @@ try
     )
     
     println("  ✅ Test input created successfully")
-    println("    Sample points: $(length(TR.sample_points))")
-    println("    Function values: $(length(TR.function_values))")
-    println("    Min function value: $(minimum(TR.function_values))")
-    println("    Max function value: $(maximum(TR.function_values))")
+    println("    Sample points: ", length(TR.sample_points))
+    println("    Function values: ", length(TR.function_values))
+    println("    Min function value: ", minimum(TR.function_values))
+    println("    Max function value: ", maximum(TR.function_values))
     
     # Basic polynomial construction test
     println("  Testing polynomial construction...")
@@ -319,12 +295,12 @@ catch e
     open(joinpath(output_dir, "construction_test_error.txt"), "w") do f
         println(f, "Polynomial Construction Test Error")
         println(f, "==================================")
-        println(f, "Timestamp: $(now())")
-        println(f, "Error: $e")
-        println(f, "Test ID: $test_id")
-        println(f, "Mode: $mode")
-        println(f, "Degree: $degree")
-        println(f, "Samples: $samples")
+        println(f, "Timestamp: ", now())
+        println(f, "Error: ", e)
+        println(f, "Test ID: ", test_id)
+        println(f, "Mode: ", mode)
+        println(f, "Degree: ", degree)
+        println(f, "Samples: ", samples)
     end
     
     # Continue with partial results
@@ -333,8 +309,8 @@ end
 
 println()
 println("🎉 DEUFLHARD BENCHMARK TEST COMPLETED!")
-println("End Time: $(now())")
-println("Results saved in: $output_dir")
+println("End Time: ", now())
+println("Results saved in: ", output_dir)
 EOF_JL
 
 /sw/bin/julia --project=. {output_dir}/run_deuflhard_benchmark.jl
@@ -427,33 +403,31 @@ exit $JULIA_EXIT_CODE
         # Create SLURM script
         slurm_script = self.create_deuflhard_slurm_script(test_id, mode)
 
-        # Create SLURM script on fileserver (NFS-mounted, persistent storage)
-        remote_script = f"{self.remote_dir}/deuflhard_{test_id}.slurm"
-
-        print("📤 Creating SLURM script on fileserver and submitting via cluster...")
-        # Step 1: Create script on fileserver
-        create_cmd = f"""ssh {self.fileserver_host} '
+        # IMPORTANT: Due to disk quota constraints (981MB/1GB used), we cannot 
+        # create scripts in the home directory. The proper NFS workflow would be:
+        # 1. Create script on fileserver (mack) 
+        # 2. Submit from cluster (falcon) via NFS mount
+        # However, with quota exhausted, we must use /tmp on cluster for the SLURM script only.
+        # Julia packages and project files still use NFS from fileserver.
+        
+        print("📤 Submitting job from cluster (NFS packages, /tmp for SLURM script due to quota)...")
+        print("⚠️  Note: Using /tmp for SLURM script only due to disk quota constraints")
+        print("   Julia packages and project files still accessed via NFS from fileserver")
+        
+        # Create and submit directly on cluster (falcon) - script in /tmp, data via NFS
+        remote_script = f"/tmp/deuflhard_{test_id}.slurm"
+        
+        submit_cmd = f"""ssh {self.cluster_host} '
 cd {self.remote_dir}
 cat > {remote_script} << "__SLURM_SCRIPT_EOF__"
 {slurm_script}
 __SLURM_SCRIPT_EOF__
-'"""
-        
-        # Step 2: Submit from cluster (can see fileserver files via NFS)
-        submit_cmd = f"""ssh {self.cluster_host} '
-cd {self.remote_dir}
 sbatch {remote_script}
+rm {remote_script}
 '"""
 
         try:
-            # First create the script on fileserver
-            create_result = subprocess.run(create_cmd, shell=True, capture_output=True, text=True, timeout=30)
-            if create_result.returncode != 0:
-                print(f"❌ Failed to create SLURM script on fileserver")
-                print(f"Error: {create_result.stderr}")
-                return None, None
-            
-            # Then submit from cluster
+            # Submit from cluster (with script in /tmp due to quota)
             result = subprocess.run(submit_cmd, shell=True, capture_output=True, text=True, timeout=60)
 
             if result.returncode == 0:
