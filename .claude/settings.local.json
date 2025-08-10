@@ -62,7 +62,9 @@
       "Bash(./scripts/add-to-sprint.sh:*)",
       "Bash(./scripts/format-julia.sh:*)",
       "Bash(git rebase:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(ssh:*)",
+      "Bash(python:*)"
     ]
   },
   "enableAllProjectMcpServers": false
