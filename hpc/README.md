@@ -128,7 +128,7 @@ cd ~/globtim_hpc
 # Step 2: Submit jobs from cluster (VERIFIED WORKING!)
 ssh scholten@falcon
 cd ~/globtim_hpc
-sbatch --account=mpi --partition=batch your_job_script.slurm
+sbatch your_job_script.slurm  # Simplified format - no account/partition needed!
 
 # Step 3: Automated monitoring and collection (VERIFIED!)
 python3 hpc/jobs/submission/automated_job_monitor.py --job-id <job_id> --test-id <test_id>
@@ -152,9 +152,13 @@ python3 hpc/jobs/submission/automated_job_monitor.py --job-id <job_id> --test-id
 Jobs submitted from falcon access fileserver packages automatically via NFS:
 ```bash
 #!/bin/bash
-#SBATCH --job-name=globtim_job
-#SBATCH --partition=batch
-#SBATCH --account=mpi
+#SBATCH -J globtim_job
+#SBATCH -t 01:00:00
+#SBATCH -n 1
+#SBATCH -c 4
+#SBATCH --mem-per-cpu=4000
+#SBATCH -o globtim_%j.out
+#SBATCH -e globtim_%j.err
 
 # Fileserver depot accessible via NFS (automatic)
 export JULIA_DEPOT_PATH="/net/fileserver-nfs/stornext/snfs6/projects/scholten/.julia:$JULIA_DEPOT_PATH"
@@ -164,8 +168,10 @@ cd ~/globtim_hpc
 /sw/bin/julia --project=. your_script.jl
 ```
 
-**CRITICAL**: Submit this script from falcon, not mack:
+**CRITICAL**: Create script locally, copy via NFS, then submit from falcon:
 ```bash
+# Create script locally (avoids SSH escaping issues)
+scp job_script.slurm falcon:~/job_script.slurm
 ssh scholten@falcon 'cd ~/globtim_hpc && sbatch job_script.slurm'
 ```
 
