@@ -55,15 +55,18 @@ echo "Memory: $SLURM_MEM_PER_NODE MB"
 echo "Start time: $(date)"
 echo ""
 
-# Environment setup
+# Environment setup with NFS Julia configuration
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-# Use fileserver Julia depot (accessible via NFS)
-if [ -d "$HOME/.julia" ]; then
-    export JULIA_DEPOT_PATH="$HOME/.julia:$JULIA_DEPOT_PATH"
-    echo "✅ Using fileserver Julia packages via NFS"
+# Source NFS Julia configuration script
+echo "=== Configuring Julia for NFS ==="
+source ./setup_nfs_julia.sh
+
+# Verify NFS depot is accessible
+if [ -d "$JULIA_DEPOT_PATH" ]; then
+    echo "✅ NFS Julia depot configured: $JULIA_DEPOT_PATH"
 else
-    echo "❌ Fileserver Julia depot not accessible"
+    echo "❌ NFS Julia depot not accessible: $JULIA_DEPOT_PATH"
     exit 1
 fi
 
