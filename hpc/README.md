@@ -209,18 +209,14 @@ Current status with fileserver integration:
 - **NFS Integration**: ✅ Cluster nodes access fileserver packages
 - **Storage**: ✅ Persistent results on fileserver
 
-## 🚀 Migration from Quota Workaround
+## 🚀 Current Production Architecture
 
-**Old Approach (Deprecated):**
-- Used `/tmp` storage to bypass quota limits
-- Temporary package installations
-- Manual result collection
-
-**New Approach (Production):**
-- Use fileserver (mack) for all storage
-- Persistent Julia packages and results
-- Proper SLURM job management
-- NFS integration for cluster access
+**Production Approach:**
+- Use fileserver (mack) for all storage and code management
+- Persistent Julia packages and results via NFS
+- Automated SLURM job management with Python scripts
+- Comprehensive monitoring and result collection
+- Three-tier architecture: Local → Fileserver → Cluster
 
 ## 📞 Support
 
