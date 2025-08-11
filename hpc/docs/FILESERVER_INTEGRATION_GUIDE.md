@@ -145,34 +145,29 @@ tail -f results/job_12345.out
 
 **⚠️ CRITICAL**: Jobs MUST be submitted from falcon (cluster), not mack (fileserver)!
 
-## 🔄 Migration from Quota Workaround
+## 🚀 Production Workflow
 
-### **Old Approach (Deprecated)**
+### **Current Architecture**
 ```bash
-# OLD: Temporary quota workaround
-export JULIA_DEPOT_PATH="/tmp/julia_depot_globtim_persistent:$JULIA_DEPOT_PATH"
-python working_quota_workaround.py --install-all
-```
-
-### **New Approach (Production)**
-```bash
-# NEW: Fileserver integration
-# Step 1: Prepare on fileserver
+# Step 1: Prepare on fileserver (mack)
 ssh scholten@mack
 cd ~/globtim_hpc
-# (Create SLURM script, prepare data)
+# (Upload code, create SLURM scripts, prepare data)
 
-# Step 2: Submit from cluster (CRITICAL!)
+# Step 2: Submit from cluster (falcon)
 ssh scholten@falcon
 cd ~/globtim_hpc
 sbatch --account=mpi --partition=batch your_job_script.slurm
+
+# Step 3: Monitor and collect results
+python3 hpc/jobs/submission/automated_job_monitor.py --job-id <job_id>
 ```
 
-### **Migration Steps**
-1. **Stop using `/tmp` depot** - packages are now on fileserver
-2. **Update SLURM scripts** - use NFS paths for depot and working directory
-3. **Submit from fileserver** - use `mack` instead of direct cluster access
-4. **Update monitoring** - results stored persistently on fileserver
+### **Key Workflow Principles**
+1. **Code Management**: Always use fileserver (mack) for file operations
+2. **Job Submission**: Always submit from cluster (falcon) using SLURM
+3. **Package Access**: Automatic via NFS - no manual setup required
+4. **Result Collection**: Automated monitoring and local collection
 
 ## 📊 Performance Benefits
 
