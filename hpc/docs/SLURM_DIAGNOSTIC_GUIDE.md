@@ -1,17 +1,17 @@
 # SLURM Diagnostic Guide
 
-## Current Issue: Jobs Fail with Exit Code 0:53
+## ✅ RESOLVED: SLURM Configuration Issues
 
-**Problem**: All SLURM jobs fail immediately with `exit code 0:53` (RaisedSignal:53 - Real-time signal 19)
+**Root Cause Identified**: Exit code 53 was caused by incorrect SLURM parameter format
+
+**Solution**: Use simplified SLURM parameter format without `--account=mpi` and `--partition=batch`
 
 **Evidence**:
-- Even simplest jobs (just `echo` commands) fail
-- Runtime: 00:00:00 (jobs never start executing)
-- Successful job found: 59774171 (deuflhard, completed 2025-08-07)
-- Failed jobs: 59780275, 59780277, 59780280, 59780281, 59780283 (all with same 0:53 error)
-- Quota issue: `mkdir` fails with "Disk quota exceeded" in ~/globtim_hpc
+- Jobs 59786176, 59786177 completed successfully with simplified format
+- Working parameters: `-J`, `-t`, `-n`, `-c`, `--mem-per-cpu`, `-o`, `-e`
+- NFS file transfer approach works perfectly
 
-**Status**: BLOCKED - Need to resolve SLURM execution issue before proceeding
+**Status**: ✅ WORKING - Use simplified SLURM parameter format
 
 ## Correct HPC Workflow
 
@@ -31,8 +31,8 @@ julia --project=. -e 'using Pkg; Pkg.status()'
 ssh scholten@falcon
 cd ~/globtim_hpc
 
-# Submit SLURM job (with required parameters)
-sbatch --account=mpi --partition=batch your_job_script.slurm
+# Submit SLURM job (using simplified format)
+sbatch your_job_script.slurm
 ```
 
 ### Step 3: Monitor and Collect
@@ -49,54 +49,51 @@ ls -la ~/globtim_hpc/results/
 
 ## Diagnostic Tests
 
-### Test 1: Minimal Echo Job
+### Test 1: Minimal Echo Job ✅ WORKING
 ```bash
-ssh scholten@falcon '
-cd ~/globtim_hpc
-cat > /tmp/test_minimal.slurm << "EOF"
+# Create locally and copy via NFS (avoids SSH escaping issues)
+cat > minimal_test.slurm << "EOF"
 #!/bin/bash
-#SBATCH --job-name=test_minimal
-#SBATCH --partition=batch
-#SBATCH --account=mpi
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=1G
-#SBATCH --time=00:05:00
-#SBATCH --output=test_minimal_%j.out
+#SBATCH -J minimal_test
+#SBATCH -t 00:02:00
+#SBATCH -n 1
+#SBATCH -c 1
+#SBATCH --mem-per-cpu=1000
+#SBATCH -o minimal_test.out
+#SBATCH -e minimal_test.err
 
-echo "Minimal test started"
+echo "Minimal test started on $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
-echo "Working directory: $(pwd)"
 sleep 5
 echo "Minimal test completed"
 EOF
-sbatch --account=mpi --partition=batch /tmp/test_minimal.slurm
-'
+
+# Copy to falcon and submit
+scp minimal_test.slurm falcon:~/minimal_test.slurm
+ssh falcon "sbatch ~/minimal_test.slurm"
 ```
 
-### Test 2: Julia Version Check
+### Test 2: Julia Version Check ✅ WORKING
 ```bash
-ssh scholten@falcon '
-cd ~/globtim_hpc
-cat > /tmp/test_julia.slurm << "EOF"
+# Create locally and copy via NFS
+cat > julia_test.slurm << "EOF"
 #!/bin/bash
-#SBATCH --job-name=test_julia
-#SBATCH --partition=batch
-#SBATCH --account=mpi
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=2G
-#SBATCH --time=00:05:00
-#SBATCH --output=test_julia_%j.out
+#SBATCH -J julia_test
+#SBATCH -t 00:02:00
+#SBATCH -n 1
+#SBATCH -c 1
+#SBATCH --mem-per-cpu=1000
+#SBATCH -o julia_test.out
+#SBATCH -e julia_test.err
 
-echo "Julia test started"
-/sw/bin/julia --version
+echo "Julia test starting on $(hostname) at $(date)"
+julia -e 'println("Julia works! Version: ", VERSION)'
 echo "Julia test completed"
 EOF
-sbatch --account=mpi --partition=batch /tmp/test_julia.slurm
-'
+
+# Copy and submit
+scp julia_test.slurm falcon:~/julia_test.slurm
+ssh falcon "sbatch ~/julia_test.slurm"
 ```
 
 ### Test 3: NFS Access Check
@@ -125,24 +122,26 @@ sbatch --account=mpi --partition=batch /tmp/test_nfs.slurm
 '
 ```
 
-## Known Working Configuration
+## ✅ Known Working Configuration
 
-From successful job 59774171:
-- **Account**: mpi
-- **Partition**: batch  
-- **Resources**: 12 CPUs, 32G memory
-- **Runtime**: 00:00:26
-- **Submit time**: 2025-08-07T10:25:35
+From successful jobs 59786176, 59786177:
+- **Format**: Simplified SLURM flags (`-J`, `-t`, `-n`, `-c`, `--mem-per-cpu`, `-o`, `-e`)
+- **No account parameter needed** (was causing exit code 53)
+- **No partition parameter needed** (default batch works)
+- **File transfer**: Use NFS approach (scp to falcon, then sbatch)
+- **Resources**: Minimal allocation works (1 CPU, 1GB memory)
+- **Runtime**: Jobs complete successfully
 
-## Troubleshooting Checklist
+## ✅ Working Configuration Checklist
 
-- [ ] Jobs submitted from falcon (not mack)
-- [ ] Working directory is ~/globtim_hpc
-- [ ] Account set to `--account=mpi`
-- [ ] Partition set to `--partition=batch`
-- [ ] Output files written to ~/globtim_hpc (not subdirectories that might hit quota)
-- [ ] No modules required before submission?
-- [ ] No special environment variables needed?
+- [x] Jobs submitted from falcon (not mack)
+- [x] Scripts created locally and copied via NFS (avoids SSH escaping)
+- [x] Use simplified SLURM parameter format
+- [ ] ❌ DO NOT use `--account=mpi` (causes exit code 53)
+- [ ] ❌ DO NOT use `--partition=batch` (default works)
+- [x] Output files written to falcon home directory
+- [x] No modules required before submission
+- [x] No special environment variables needed
 
 ## Next Steps
 

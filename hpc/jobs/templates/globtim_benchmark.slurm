@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=globtim_benchmark
-#SBATCH --partition=batch
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
-#SBATCH --time=02:00:00
-#SBATCH --mem=64G
-#SBATCH --output=globtim_benchmark_%j.out
-#SBATCH --error=globtim_benchmark_%j.err
+#SBATCH -J globtim_benchmark
+#SBATCH -t 02:00:00              # 2 hours
+#SBATCH -n 1                     # 1 task
+#SBATCH -c 12                    # 12 CPUs per task
+#SBATCH --mem-per-cpu=4000       # 4GB per CPU (48GB total)
+#SBATCH -o globtim_benchmark_%j.out
+#SBATCH -e globtim_benchmark_%j.err
 
 # Globtim Benchmark Job
 # Run benchmark functions and optimization tests
@@ -20,12 +18,14 @@ echo "Memory: $SLURM_MEM_PER_NODE MB"
 echo "Start time: $(date)"
 echo ""
 
-# Set Julia threading and environment
+# Set Julia threading and environment - NFS setup
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export JULIA_DEPOT_PATH="/tmp/julia_depot_${USER}_${SLURM_JOB_ID}"
+export JULIA_DEPOT_PATH="/stornext/snfs3/home/scholten/julia_depot_nfs"
+export TMPDIR="/stornext/snfs3/home/scholten/tmp_nfs"
 
-# Change to project directory
-cd $SLURM_SUBMIT_DIR
+# Create NFS temp directory and change to project
+mkdir -p "$TMPDIR"
+cd ~/globtim_hpc
 
 echo "=== Environment Setup ==="
 echo "Julia threads: $JULIA_NUM_THREADS"
