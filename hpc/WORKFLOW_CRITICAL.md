@@ -35,8 +35,8 @@ julia --project=. -e 'using Pkg; Pkg.add("NewPackage")'
 ssh scholten@falcon
 cd ~/globtim_hpc
 
-# Submit SLURM jobs (required parameters)
-sbatch --account=mpi --partition=batch your_job.slurm
+# Submit SLURM jobs (simplified format - NO account/partition needed!)
+sbatch your_job.slurm
 
 # Monitor jobs
 squeue -u scholten
@@ -63,13 +63,16 @@ rsync -avz --progress scholten@mack:~/globtim_hpc/results/ ./local_results/
 - ❌ Install packages on falcon (1GB quota limit)
 - ❌ Run jobs from `/tmp` (forbidden)
 - ❌ Submit jobs from mack (no SLURM scheduler)
+- ❌ Use `--account=mpi` or `--partition=batch` (causes exit code 53)
+- ❌ Create SLURM scripts via SSH heredoc (causes shebang escaping)
 - ❌ Store large files in falcon home directory
 - ❌ Modify code directly on falcon
 
 ### ALWAYS DO THESE:
 - ✅ Upload code via mack
 - ✅ Submit jobs via falcon
-- ✅ Use `--account=mpi --partition=batch`
+- ✅ Use simplified SLURM parameter format (`-J`, `-t`, `-n`, `-c`, `-o`, `-e`)
+- ✅ Create scripts locally, copy via NFS to avoid SSH escaping
 - ✅ Work in `~/globtim_hpc` directory
 - ✅ Keep falcon home directory clean (only globtim_hpc)
 
@@ -135,10 +138,10 @@ ssh scholten@falcon 'cd ~ && rm -f *.out *.err *.log *.slurm'
 ```
 
 ### If jobs fail with exit code 0:53:
+- ✅ **SOLUTION FOUND**: Remove `--account=mpi` and `--partition=batch` from SLURM scripts
+- Use simplified parameter format: `-J`, `-t`, `-n`, `-c`, `--mem-per-cpu`, `-o`, `-e`
+- Create scripts locally and copy via NFS to avoid SSH escaping issues
 - Check falcon quota: `quota -u scholten`
-- Clean old files from falcon home
-- Ensure working in `~/globtim_hpc`
-- Verify `--account=mpi` in SLURM script
 
 ### If packages missing:
 - Install on mack: `ssh scholten@mack`
