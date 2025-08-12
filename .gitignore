@@ -90,3 +90,7 @@ __pycache__/
 
 # HPC test results (keep locally but don't commit)
 hpc/jobs/submission/collected_results/
+
+# Cleanup analysis files (temporary - archive when complete)
+*_CLEANUP_ANALYSIS.md
+*_WORKFLOW_ANALYSIS.md
