@@ -1,0 +1,12 @@
+# Julia depot and bundle files (too large for git)
+depot/
+globtim_hpc/
+*.tar.gz
+
+# Log files
+*.log
+
+# Temporary test scripts
+hpc/jobs/submission/test_*.slurm
+!hpc/jobs/submission/test_bundle_final.slurm
+!hpc/jobs/submission/test_home_bundle_compile.slurm
