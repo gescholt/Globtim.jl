@@ -167,3 +167,77 @@ To verify a file doesn't exist in github-release:
 git checkout github-release
 ls path/to/file  # Should show "No such file or directory"
 ```
+
+## Dependencies
+
+### Core Mathematical Dependencies
+
+#### DynamicPolynomials.jl
+**Version**: `0.6`
+**Purpose**: Multivariate polynomial manipulation and symbolic computation
+**Usage**: Critical for polynomial system construction and solving
+```julia
+# Used in solve_polynomial_system for defining polynomial variables
+@polyvar x[1:n]
+solutions = solve_polynomial_system(x, n, d, coeffs)
+```
+**Key Files**: `src/hom_solve.jl`, `src/Main_Gen.jl`
+
+#### HomotopyContinuation.jl
+**Version**: `2.15`
+**Purpose**: Numerical algebraic geometry and polynomial system solving
+**Usage**: Core solver for finding critical points of polynomial approximations
+```julia
+# Primary solver for critical point computation
+real_pts = solve_polynomial_system(x, n, d, coeffs; basis=:chebyshev)
+```
+**Key Files**: `src/hom_solve.jl`, `Examples/`, `test/`
+
+#### MultivariatePolynomials.jl
+**Version**: `0.5`
+**Purpose**: Abstract interface for multivariate polynomial systems
+**Usage**: Provides common interface for polynomial operations
+**Key Files**: `src/Main_Gen.jl`, `src/hom_solve.jl`
+
+### Data Processing Dependencies
+
+#### CSV.jl
+**Version**: `0.10`
+**Purpose**: Fast CSV file reading and writing
+**Usage**: Data import/export for benchmarks and results
+```julia
+# Reading benchmark data
+data = CSV.read("benchmark_results.csv", DataFrame)
+```
+**Key Files**: `Examples/`, `test/`, result processing scripts
+
+#### DataFrames.jl
+**Version**: `1.7`
+**Purpose**: Data manipulation and analysis
+**Usage**: Organizing and analyzing computational results
+```julia
+# Creating results dataframes
+results_df = DataFrame(
+    function_name = String[],
+    critical_points = Int[],
+    computation_time = Float64[]
+)
+```
+**Key Files**: `Examples/`, benchmarking scripts, result analysis
+
+### Development & Testing Dependencies
+
+#### Parameters.jl
+**Version**: `0.12`
+**Purpose**: Type-safe parameter handling with defaults
+**Usage**: Configuration management for HPC jobs and benchmarks
+```julia
+@with_kw struct BenchmarkConfig
+    degree::Int = 8
+    samples::Int = 1000
+    tolerance::Float64 = 1e-6
+end
+```
+**Key Files**: `hpc/config/parameters/`, `Examples/`
+
+For complete dependency documentation, see the archived `DEPENDENCIES.md` file.
