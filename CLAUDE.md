@@ -1,5 +1,29 @@
 # GlobTim Project Memory
 
+## HPC Compilation Status
+
+### ✅ SOLVED: Bundle Compilation Working
+**Date Verified:** August 12, 2025  
+**Status:** WORKING - Bundle approach successful
+
+The GlobTim HPC compilation is now **fully functional**. The issue was a path mismatch that has been resolved.
+
+**Working Configuration:**
+```bash
+# Extract bundle
+tar -xzf /home/scholten/globtim_hpc_bundle.tar.gz -C /tmp/globtim_${SLURM_JOB_ID}/
+
+# CRITICAL: Use correct paths (bundle extracts to globtim_bundle/ subdirectory)
+export JULIA_DEPOT_PATH="/tmp/globtim_${SLURM_JOB_ID}/globtim_bundle/depot"
+export JULIA_PROJECT="/tmp/globtim_${SLURM_JOB_ID}/globtim_bundle/globtim_hpc"
+export JULIA_NO_NETWORK="1"
+```
+
+**Verified Working:**
+- All dependencies load successfully (ForwardDiff, HomotopyContinuation, StaticArrays, etc.)
+- Precompilation completes in ~23 seconds
+- No version mismatches or architecture issues
+
 ## HPC Compilation Approaches
 
 ### ❌ UNSUITABLE: Standalone/Inline Code Approach
