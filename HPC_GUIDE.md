@@ -3,6 +3,30 @@
 
 ---
 
+## ⚠️ CURRENT STATUS
+
+### What Works ✅
+- **Bundle Creation**: Successfully created 284MB offline bundle
+- **Bundle Transfer**: Bundle deployed to `/home/scholten/globtim_hpc_bundle.tar.gz`
+- **Bundle Extraction**: Bundle extracts correctly in SLURM jobs
+- **Basic Julia**: Julia runs and basic packages load
+
+### What DOESN'T Work ❌
+- **GlobTim Compilation**: Package loading fails with "Package not found" errors
+- **Module Loading**: GlobTim modules fail to load even with correct paths
+- **Deuflhard Tests**: Test suite hangs during package loading
+- **Critical Issue**: Environment variables not properly connecting bundle to Julia
+
+### Latest Test Results (Aug 12, 2025)
+- Job 59788972: ❌ Failed - ForwardDiff package not found
+- Job 59788975: ❌ Failed - Same package loading issue  
+- Job 59788968: ❌ Cancelled - Hung during package loading (>4 minutes)
+- Job 59788803: ⚠️ Partial - Bundle extracted but no compilation tested
+
+**CRITICAL**: The bundle system is NOT yet working for actual GlobTim compilation
+
+---
+
 ## 📋 Table of Contents
 1. [Overview](#overview)
 2. [Bundle System](#bundle-system)
@@ -27,17 +51,17 @@ This guide consolidates all HPC-related documentation for running GlobTim on the
 1. ❌ **No internet access** on compute nodes
 2. ❌ **1GB home directory quota** on falcon
 3. ❌ **NFS not accessible** from compute nodes
-4. ✅ **Solution**: Offline bundle in home directory
+4. ⚠️ **Current Issue**: Bundle not properly loading packages
 
 ---
 
 ## Bundle System
 
-### Current Production Bundle
+### Current Bundle Status
 - **Location**: `/home/scholten/globtim_hpc_bundle.tar.gz`
 - **Size**: 284MB compressed (771MB uncompressed)
 - **Contents**: Complete Julia depot with all dependencies except plotting packages
-- **Status**: ✅ PRODUCTION READY
+- **Status**: ⚠️ **NOT WORKING** - Packages fail to load
 
 ### Why Bundle System?
 GlobTim requires many external packages that cannot be installed on air-gapped compute nodes:
@@ -134,6 +158,40 @@ ssh scholten@falcon "tail -f job_12345.out"
 # Cancel job
 ssh scholten@falcon "scancel 12345"
 ```
+
+---
+
+## 🔧 NEXT STEPS TO FIX
+
+The bundle exists but Julia cannot find the packages. Potential fixes to try:
+
+1. **Fix Environment Path Issue**:
+   ```bash
+   # The bundle extracts to globtim_bundle/ but we're setting paths wrong
+   # Current (WRONG):
+   export JULIA_DEPOT_PATH="$WORK_DIR/depot"
+   export JULIA_PROJECT="$WORK_DIR/globtim_hpc"
+   
+   # Should be (CORRECT):
+   export JULIA_DEPOT_PATH="$WORK_DIR/globtim_bundle/depot"
+   export JULIA_PROJECT="$WORK_DIR/globtim_bundle/globtim_hpc"
+   ```
+
+2. **Verify Bundle Structure**:
+   - Need to run test_bundle_verification.slurm to check structure
+   - Confirm packages are actually in depot/packages/
+
+3. **Test Direct Package Loading**:
+   ```julia
+   # Explicitly add depot to LOAD_PATH
+   push!(LOAD_PATH, ENV["JULIA_DEPOT_PATH"])
+   push!(DEPOT_PATH, ENV["JULIA_DEPOT_PATH"])
+   ```
+
+4. **Consider Alternative Approaches**:
+   - Use Pkg.activate() instead of --project flag
+   - Try using full paths in Julia code
+   - Test with simpler package first (just ForwardDiff)
 
 ---
 
