@@ -5,9 +5,56 @@
 ### Problem Setup
 
 - **`test_input`** - Create test input specification for optimization problems
-- **`Constructor`** - Build polynomial approximation with automatic grid support
-  - Accepts pre-generated grids via `grid` parameter
-  - Automatically detects and handles anisotropic grids
+
+#### `Constructor`
+Build polynomial approximation with comprehensive precision control and grid support.
+
+**Syntax:**
+```julia
+Constructor(T::test_input, degree;
+           verbose=0, basis=:chebyshev, precision=RationalPrecision,
+           normalized=false, power_of_two_denom=false, grid=nothing)
+```
+
+**Parameters:**
+- `T::test_input`: Problem specification created with `test_input`
+- `degree::Int`: Polynomial degree (ignored if `grid` is provided)
+- `verbose::Int`: Verbosity level (0=quiet, 1=basic, 2=detailed)
+- `basis::Symbol`: Polynomial basis (`:chebyshev` or `:legendre`)
+- `precision::PrecisionType`: Numerical precision type (see Precision Parameters below)
+- `normalized::Bool`: Whether to use normalized basis functions
+- `power_of_two_denom::Bool`: Force power-of-2 denominators for rationals
+- `grid::Union{Nothing, Matrix{Float64}}`: Pre-generated sampling grid
+
+**Precision Parameters:**
+- `Float64Precision`: Standard double precision (fastest, ~15 digits accuracy)
+- `AdaptivePrecision`: Hybrid Float64/BigFloat approach (recommended, excellent accuracy/performance balance)
+- `RationalPrecision`: Exact rational arithmetic (exact but slow)
+- `BigFloatPrecision`: Extended precision throughout (slowest, maximum accuracy)
+
+**Examples:**
+```julia
+# Basic usage with AdaptivePrecision (recommended)
+TR = test_input(Deuflhard, dim=2, center=[0.0, 0.0], sample_range=1.2)
+pol = Constructor(TR, 8, precision=AdaptivePrecision)
+
+# High-performance batch processing
+pol_fast = Constructor(TR, 6, precision=Float64Precision, verbose=0)
+
+# Exact arithmetic for research
+pol_exact = Constructor(TR, 4, precision=RationalPrecision)
+
+# Custom grid with precision control
+grid = generate_anisotropic_grid([10, 8], basis=:chebyshev)
+grid_matrix = convert_to_matrix_grid(vec(grid))
+pol_custom = Constructor(TR, 0, grid=grid_matrix, precision=AdaptivePrecision)
+```
+
+**Returns:** `ApproxPoly` object with fields:
+- `coeffs`: Polynomial coefficients (type depends on precision parameter)
+- `nrm`: L²-norm approximation error
+- `precision`: Precision type used
+- Additional metadata fields
 - **`MainGenerate`** - Core polynomial approximation engine
   - Supports degree-based or grid-based input
   - Automatic anisotropic grid detection
@@ -58,10 +105,48 @@
 - **`refine_with_enhanced_bfgs`** - Apply BFGS refinement to DataFrame
 - **`determine_convergence_reason`** - Analyze optimization convergence
 
+## Precision Control and Extended Arithmetic
+
+### Precision Types
+- **`PrecisionType`** - Enum defining available precision types:
+  - `Float64Precision`: Standard IEEE 754 double precision
+  - `AdaptivePrecision`: Hybrid Float64/BigFloat for optimal balance
+  - `RationalPrecision`: Exact rational arithmetic with `Rational{BigInt}`
+  - `BigFloatPrecision`: Extended precision with configurable bit count
+
+### Precision-Aware Functions
+- **`_convert_value`** - Convert numeric values between precision types
+- **`_convert_value_adaptive`** - Adaptive precision conversion with magnitude-based selection
+
+### Extended Precision Analysis
+- **`analyze_coefficient_distribution`** - Analyze polynomial coefficient distribution for truncation guidance
+- **`truncate_polynomial_adaptive`** - Smart truncation preserving extended precision
+- **`precision_from_type`** - Determine appropriate PrecisionType from numeric type
+
+**Example: Precision-aware workflow**
+```julia
+# Create polynomial with AdaptivePrecision
+pol = Constructor(TR, 10, precision=AdaptivePrecision)
+
+# Convert to extended precision monomial basis
+@polyvar x[1:2]
+mono_poly = to_exact_monomial_basis(pol, variables=x)
+
+# Analyze coefficient distribution
+analysis = analyze_coefficient_distribution(mono_poly)
+println("Dynamic range: $(analysis.dynamic_range)")
+println("Suggested thresholds: $(analysis.suggested_thresholds)")
+
+# Apply adaptive truncation
+threshold = analysis.suggested_thresholds[1]
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+println("Sparsity achieved: $(round(stats.sparsity_ratio*100, digits=1))%")
+```
+
 ## Exact Arithmetic and Sparsification
 
 ### Exact Conversion
-- **`to_exact_monomial_basis`** - Convert polynomial from orthogonal to monomial basis
+- **`to_exact_monomial_basis`** - Convert polynomial from orthogonal to monomial basis with precision preservation
 - **`exact_polynomial_coefficients`** - Get exact monomial coefficients from function
 
 ### L²-Norm Analysis
@@ -154,10 +239,40 @@ Available when CairoMakie or GLMakie are loaded:
 
 ## Types and Structures
 
-- **`test_input`** - Input specification type
+### Core Types
+- **`test_input`** - Input specification type for optimization problems
+- **`ApproxPoly`** - Polynomial approximation type with precision information
+  - Fields include `coeffs`, `nrm`, `precision`, and metadata
+  - Coefficient type depends on precision parameter used in Constructor
+
+### Precision Types
+- **`PrecisionType`** - Enum for numerical precision control
+  - Exported values: `Float64Precision`, `AdaptivePrecision`, `RationalPrecision`, `BigFloatPrecision`
+  - Used in `Constructor` and related functions
+
+### Analysis Types
 - **`BFGSConfig`** - BFGS configuration parameters
 - **`BFGSResult`** - BFGS optimization results
-- **`ApproxPoly`** - Polynomial approximation type
+- **`BoxDomain{T}`** - Domain specification for L²-norm computation
+
+### Precision-Aware Type Examples
+```julia
+# Different coefficient types based on precision
+pol_f64 = Constructor(TR, 6, precision=Float64Precision)
+typeof(pol_f64.coeffs[1])  # Float64
+
+pol_adaptive = Constructor(TR, 6, precision=AdaptivePrecision)
+typeof(pol_adaptive.coeffs[1])  # Float64 (raw coefficients)
+
+# Extended precision in monomial expansion
+@polyvar x[1:2]
+mono_poly = to_exact_monomial_basis(pol_adaptive, variables=x)
+coeffs = [coefficient(t) for t in terms(mono_poly)]
+typeof(coeffs[1])  # BigFloat (extended precision)
+
+pol_rational = Constructor(TR, 6, precision=RationalPrecision)
+typeof(pol_rational.coeffs[1])  # Rational{BigInt}
+```
 
 ---
 
