@@ -69,6 +69,42 @@ squeue -u scholten
 ls -la ~/globtim_hpc/results/
 ```
 
+## 🚀 Quick Start - Precision-Aware Optimization
+
+### Basic Usage with Precision Control
+
+```julia
+using Globtim, DynamicPolynomials
+
+# Define optimization problem
+f = Deuflhard  # Built-in test function
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+
+# Create polynomial with AdaptivePrecision (recommended)
+pol = Constructor(TR, 8, precision=AdaptivePrecision)
+println("L2-norm approximation error: $(pol.nrm)")
+
+# Find critical points
+@polyvar x[1:2]
+solutions = solve_polynomial_system(x, pol)
+df = process_crit_pts(solutions, f, TR)
+
+# Enhanced analysis with sparsification
+df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+println("Found $(nrow(df_min)) unique local minima")
+```
+
+### Precision Comparison Example
+
+```julia
+# Compare different precision types
+precisions = [Float64Precision, AdaptivePrecision, RationalPrecision]
+for prec in precisions
+    pol = Constructor(TR, 6, precision=prec)
+    println("$(prec): L2-norm = $(pol.nrm), type = $(eltype(pol.coeffs))")
+end
+```
+
 ## 📁 Repository Structure
 
 ```
@@ -147,7 +183,28 @@ python automated_job_monitor.py --job-id [JOB_ID] --test-id [TEST_ID]
 - **Resource Management**: Full access to all cluster partitions
 - **Results**: Persistent storage on fileserver
 
-## 📊 Production Features
+## 🎯 Key Features
+
+### 🔢 Advanced Precision Control
+Globtim provides flexible precision parameter options for optimal performance vs accuracy trade-offs:
+
+- **Float64Precision**: Standard double precision for fast computation
+- **AdaptivePrecision** ⭐: Hybrid approach using Float64 for evaluation, BigFloat for coefficients (recommended)
+- **RationalPrecision**: Exact rational arithmetic for symbolic computation
+- **BigFloatPrecision**: Maximum precision for research applications
+
+```julia
+# Example: High-accuracy polynomial approximation
+pol = Constructor(TR, 8, precision=AdaptivePrecision)
+
+# Integrate with sparsification for complexity reduction
+@polyvar x[1:2]
+mono_poly = to_exact_monomial_basis(pol, variables=x)
+analysis = analyze_coefficient_distribution(mono_poly)
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, analysis.suggested_thresholds[1])
+```
+
+### 📊 Production Features
 
 - **Automated Job Submission**: Python-based SLURM integration
 - **Real-time Monitoring**: 30-second update intervals
@@ -158,6 +215,13 @@ python automated_job_monitor.py --job-id [JOB_ID] --test-id [TEST_ID]
 
 ## 📚 Documentation
 
+### Core Documentation
+- **[Getting Started](docs/src/getting_started.md)**: Installation, basic usage, and precision parameters
+- **[Precision Parameters](docs/src/precision_parameters.md)**: Comprehensive guide to precision types and performance trade-offs
+- **[API Reference](docs/src/api_reference.md)**: Complete function reference with precision options
+- **[Examples](docs/src/examples.md)**: Practical usage examples with different precision types
+
+### Development & HPC
 - **Main Guide**: `DEVELOPMENT_GUIDE.md` (consolidated setup instructions)
 - **HPC Guide**: `hpc/README.md` (cluster-specific documentation)
 - **Quota Solution**: `hpc/docs/TMP_FOLDER_PACKAGE_STRATEGY.md`

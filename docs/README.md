@@ -5,8 +5,9 @@ Welcome to the comprehensive documentation for Globtim.jl - a Julia package for 
 ## 🚀 Quick Navigation
 
 ### For Users
-- **[Getting Started](src/getting_started.md)** - Installation and first steps
-- **[API Reference](src/api_reference.md)** - Complete function reference
+- **[Getting Started](src/getting_started.md)** - Installation, first steps, and precision parameters
+- **[Precision Parameters](src/precision_parameters.md)** - Comprehensive guide to precision types and performance trade-offs
+- **[API Reference](src/api_reference.md)** - Complete function reference with precision options
 - **[Examples](src/examples.md)** - Practical usage examples
 - **[Core Algorithm](src/core_algorithm.md)** - Understanding the mathematical approach
 
@@ -25,9 +26,10 @@ Welcome to the comprehensive documentation for Globtim.jl - a Julia package for 
 ### Core Documentation (`src/`)
 The main user-facing documentation built with Documenter.jl:
 
-- **[Getting Started](src/getting_started.md)** - Installation, setup, and basic usage
+- **[Getting Started](src/getting_started.md)** - Installation, setup, basic usage, and precision parameters
+- **[Precision Parameters](src/precision_parameters.md)** - Detailed guide to precision types, performance trade-offs, and advanced usage
 - **[Core Algorithm](src/core_algorithm.md)** - Mathematical foundations and approach
-- **[API Reference](src/api_reference.md)** - Complete function and type reference
+- **[API Reference](src/api_reference.md)** - Complete function and type reference with precision options
 - **[Examples](src/examples.md)** - Practical examples and tutorials
 - **[Polynomial Approximation](src/polynomial_approximation.md)** - Approximation theory details
 - **[Critical Point Analysis](src/critical_point_analysis.md)** - Critical point finding and classification
@@ -61,6 +63,11 @@ Workflow, processes, and project organization:
 - **[Sprint Process](project-management/sprint-process.md)** - Agile development process
 - **[Task Management](project-management/task-management.md)** - Issue tracking and epic management
 
+### HPC Documentation (`hpc/`)
+High-performance computing specific guides:
+
+- **[HPC Precision Optimization](hpc/precision_optimization_guide.md)** - Precision parameter recommendations for cluster usage
+
 ### User Guides (`user_guides/`)
 Specialized guides for advanced usage:
 
@@ -79,9 +86,10 @@ Historical documentation preserved for reference:
 
 #### **Use Globtim.jl in my research**
 1. Start with [Getting Started](src/getting_started.md)
-2. Review [Examples](src/examples.md) for your use case
-3. Check [API Reference](src/api_reference.md) for specific functions
-4. Understand the [Core Algorithm](src/core_algorithm.md)
+2. Learn about [Precision Parameters](src/precision_parameters.md) for optimal accuracy/performance
+3. Review [Examples](src/examples.md) for your use case
+4. Check [API Reference](src/api_reference.md) for specific functions
+5. Understand the [Core Algorithm](src/core_algorithm.md)
 
 #### **Contribute to Globtim.jl development**
 1. Read the [Development Guide](../DEVELOPMENT_GUIDE.md)
@@ -106,9 +114,10 @@ Historical documentation preserved for reference:
 3. Study [Examples](src/examples.md) for plotting code
 
 #### **Optimize performance**
-1. Review [Sparsification](src/sparsification.md) techniques
-2. Check [Feature Roadmap](features/roadmap.md) for AdaptivePrecision
-3. Study performance examples in [Examples](src/examples.md)
+1. Learn [Precision Parameters](src/precision_parameters.md) for performance tuning
+2. Review [Sparsification](src/sparsification.md) techniques
+3. Check [HPC Precision Optimization](hpc/precision_optimization_guide.md) for cluster usage
+4. Study performance examples in [Examples](src/examples.md)
 
 ## 🔧 Building Documentation
 
