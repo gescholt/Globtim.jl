@@ -80,3 +80,17 @@ settings.ini
 # Node.js dependencies
 docs/node_modules/
 docs/package-lock.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# HPC test results (keep locally but don't commit)
+hpc/jobs/submission/collected_results/
+
+# Cleanup analysis files (temporary - archive when complete)
+*_CLEANUP_ANALYSIS.md
+*_WORKFLOW_ANALYSIS.md

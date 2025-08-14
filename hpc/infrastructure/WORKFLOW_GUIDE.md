@@ -91,8 +91,8 @@ julia create_json_tracked_job.jl deuflhard thorough
 # Copy job script to cluster
 scp path/to/job_script.slurm scholten@falcon:~/globtim_hpc/
 
-# Submit job
-ssh scholten@falcon 'cd ~/globtim_hpc && sbatch job_script.slurm'
+# Submit job (with required parameters)
+ssh scholten@falcon 'cd ~/globtim_hpc && sbatch --account=mpi --partition=batch job_script.slurm'
 
 # Monitor job
 python hpc/monitoring/python/slurm_monitor.py --analyze [JOB_ID]

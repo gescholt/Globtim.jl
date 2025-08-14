@@ -1,0 +1,10 @@
+{
+  "job_id": "59780279",
+  "test_id": "6c60c590",
+  "collection_timestamp": "2025-08-09T13:11:04.898017",
+  "local_directory": "collected_results/job_59780279_20250809_131100",
+  "collected_files": {
+    "deuflhard_6c60c590_59780279.out": "collected_results/job_59780279_20250809_131100/deuflhard_6c60c590_59780279.out"
+  },
+  "total_files": 1
+}

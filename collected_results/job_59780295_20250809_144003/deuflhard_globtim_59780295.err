@@ -1,0 +1,94 @@
+  Activating project at `~/globtim_hpc`
+┌ Warning: The project dependencies or compat requirements have changed since the manifest was last resolved.
+│ It is recommended to `Pkg.resolve()` or consider `Pkg.update()` if necessary.
+└ @ Pkg.API /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Pkg/src/API.jl:1200
+Precompiling project...
+
+  2 dependencies had output during precompilation:
+┌ LinearSolve
+│  Downloading artifact: MKL
+└  
+┌ VectorizationBase
+│  ERROR: failed to emit output file Disk quota exceeded
+└  
+Precompiling LinearSolve...
+    LinearSolve Being precompiled by an async task in this process (pidfile: /home/scholten/.julia/compiled/v1.11/LinearSolve/WR6RC_gO8Qi.ji.pidfile)
+           ✗ LinearSolve
+Info Given LinearSolve was explicitly requested, output will be shown live [0K
+[0K Downloading artifact: MKL
+[0K     Failure artifact: MKL
+[0K Downloading artifact: MKL
+[0K     Failure artifact: MKL
+[0KERROR: LoadError: InitError: Unable to automatically download/install artifact 'MKL' from sources listed in '/home/scholten/.julia/packages/MKL_jll/A29wq/Artifacts.toml'.
+[0KSources attempted:
+[0K- https://pkg.julialang.org/artifact/27edf95310a71d47422663c3aea849f56efb1360
+[0K    Error: SystemError: close: Disk quota exceeded
+[0K- https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2025.2.0+0/MKL.v2025.2.0.x86_64-linux-gnu.tar.gz
+[0K    Error: RequestError: Failed to connect to github.com port 443 after 0 ms: Couldn't connect to server while requesting https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2025.2.0+0/MKL.v2025.2.0.x86_64-linux-gnu.tar.gz
+[0K
+[0KStacktrace:
+[0K  [1] error(s::String)
+[0K    @ Base ./error.jl:35
+[0K  [2] ensure_artifact_installed(name::String, meta::Dict{String, Any}, artifacts_toml::String; platform::Base.BinaryPlatforms.Platform, verbose::Bool, quiet_download::Bool, io::IOContext{IO})
+[0K    @ Pkg.Artifacts /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Pkg/src/Artifacts.jl:467
+[0K  [3] _artifact_str(__module__::Module, artifacts_toml::String, name::SubString{String}, path_tail::String, artifact_dict::Dict{String, Any}, hash::Base.SHA1, platform::Base.BinaryPlatforms.Platform, lazyartifacts::Any)
+[0K    @ Artifacts /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Artifacts/src/Artifacts.jl:570
+[0K  [4] invokelatest(::Any, ::Any, ::Vararg{Any}; kwargs::@Kwargs{})
+[0K    @ Base ./essentials.jl:1055
+[0K  [5] invokelatest(::Any, ::Any, ::Vararg{Any})
+[0K    @ Base ./essentials.jl:1052
+[0K  [6] macro expansion
+[0K    @ /lustre/sw/apps/julia/1.11.2/share/julia/stdlib/v1.11/Artifacts/src/Artifacts.jl:717 [inlined]
+[0K  [7] find_artifact_dir()
+[0K    @ MKL_jll ~/.julia/packages/JLLWrappers/m2Pjh/src/wrapper_generators.jl:17
+[0K  [8] __init__()
+[0K    @ MKL_jll ~/.julia/packages/MKL_jll/A29wq/src/wrappers/x86_64-linux-gnu.jl:10
+[0K  [9] run_module_init(mod::Module, i::Int64)
+[0K    @ Base ./loading.jl:1378
+[0K [10] register_restored_modules(sv::Core.SimpleVector, pkg::Base.PkgId, path::String)
+[0K    @ Base ./loading.jl:1366
+[0K [11] _include_from_serialized(pkg::Base.PkgId, path::String, ocachepath::String, depmods::Vector{Any}, ignore_native::Nothing; register::Bool)
+[0K    @ Base ./loading.jl:1254
+[0K [12] _include_from_serialized (repeats 2 times)
+[0K    @ ./loading.jl:1210 [inlined]
+[0K [13] _require_search_from_serialized(pkg::Base.PkgId, sourcepath::String, build_id::UInt128, stalecheck::Bool; reasons::Dict{String, Int64}, DEPOT_PATH::Vector{String})
+[0K    @ Base ./loading.jl:2057
+[0K [14] _require(pkg::Base.PkgId, env::String)
+[0K    @ Base ./loading.jl:2527
+[0K [15] __require_prelocked(uuidkey::Base.PkgId, env::String)
+[0K    @ Base ./loading.jl:2388
+[0K [16] #invoke_in_world#3
+[0K    @ ./essentials.jl:1089 [inlined]
+[0K [17] invoke_in_world
+[0K    @ ./essentials.jl:1086 [inlined]
+[0K [18] _require_prelocked(uuidkey::Base.PkgId, env::String)
+[0K    @ Base ./loading.jl:2375
+[0K [19] macro expansion
+[0K    @ ./loading.jl:2314 [inlined]
+[0K [20] macro expansion
+[0K    @ ./lock.jl:273 [inlined]
+[0K [21] __require(into::Module, mod::Symbol)
+[0K    @ Base ./loading.jl:2271
+[0K [22] #invoke_in_world#3
+[0K    @ ./essentials.jl:1089 [inlined]
+[0K [23] invoke_in_world
+[0K    @ ./essentials.jl:1086 [inlined]
+[0K [24] require(into::Module, mod::Symbol)
+[0K    @ Base ./loading.jl:2260
+[0K [25] top-level scope
+[0K    @ ~/.julia/packages/LinearSolve/wu92d/src/LinearSolve.jl:49
+[0K [26] include
+[0K    @ ./Base.jl:557 [inlined]
+[0K [27] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::Nothing)
+[0K    @ Base ./loading.jl:2881
+[0K [28] top-level scope
+[0K    @ stdin:6
+[0Kduring initialization of module MKL_jll
+[0Kin expression starting at /home/scholten/.julia/packages/LinearSolve/wu92d/src/LinearSolve.jl:1
+[0Kin expression starting at stdin:6
+           ✗ LinearSolve
+           ✗ LinearSolve → LinearSolveSparseArraysExt
+  0 dependencies successfully precompiled in 81 seconds. 112 already precompiled.
+
+┌ Warning: Assignment to `successful_evaluations` in soft scope is ambiguous because a global variable by the same name exists: `successful_evaluations` will be treated as a new local. Disambiguate by using `local successful_evaluations` to suppress this warning or `global successful_evaluations` to assign to the existing global variable.
+└ @ ~/globtim_hpc/test_deuflhard_globtim.jl:109

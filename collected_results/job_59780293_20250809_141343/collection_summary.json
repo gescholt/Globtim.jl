@@ -1,0 +1,11 @@
+{
+  "job_id": "59780293",
+  "test_id": "monitor_test",
+  "collection_timestamp": "2025-08-09T14:13:49.435148",
+  "local_directory": "collected_results/job_59780293_20250809_141343",
+  "collected_files": {
+    "monitoring_test_59780293.err": "collected_results/job_59780293_20250809_141343/monitoring_test_59780293.err",
+    "monitoring_test_59780293.out": "collected_results/job_59780293_20250809_141343/monitoring_test_59780293.out"
+  },
+  "total_files": 2
+}

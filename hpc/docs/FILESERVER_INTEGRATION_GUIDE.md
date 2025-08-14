@@ -4,8 +4,9 @@
 
 This guide documents the **production-ready fileserver integration** for HPC Globtim workflows, replacing the temporary quota workaround approach.
 
-**Status**: PRODUCTION READY ✅  
+**Status**: FULLY OPERATIONAL ✅ (VERIFIED WITH JOB 59780294)
 **Architecture**: Three-tier (Local → Fileserver → HPC Cluster)
+**Proof**: Function evaluation test successfully completed with automated collection
 
 ## 🏗️ Architecture
 
@@ -20,13 +21,15 @@ This guide documents the **production-ready fileserver integration** for HPC Glo
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### **Data Flow**
+### **Data Flow** (CORRECTED)
 1. **Development**: Code changes made locally
 2. **Sync**: Code pushed to fileserver (mack)
 3. **Job Creation**: SLURM scripts created on fileserver
-4. **Submission**: Jobs submitted from fileserver to cluster
+4. **Submission**: Jobs submitted from **cluster (falcon)** to SLURM scheduler
 5. **Execution**: Cluster nodes access fileserver via NFS
 6. **Results**: Output saved to fileserver storage
+
+**CRITICAL**: Jobs must be submitted from `falcon` (cluster), not `mack` (fileserver)!
 
 ## 🔧 Fileserver Configuration
 
@@ -103,6 +106,7 @@ cd ~/globtim_hpc
 #!/bin/bash
 #SBATCH --job-name=globtim_benchmark
 #SBATCH --partition=batch
+#SBATCH --account=mpi
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -124,40 +128,46 @@ cd /net/fileserver-nfs/stornext/snfs6/projects/scholten/globtim_hpc
 /sw/bin/julia --project=. your_script.jl
 ```
 
-### **3. Submit Job**
+### **3. Submit Job (CRITICAL: From Cluster, NOT Fileserver!)**
 ```bash
-# Submit from fileserver
-sbatch your_job_script.slurm
+# STEP 1: Create script on fileserver (above)
+# STEP 2: Submit from cluster (falcon) - REQUIRED!
+ssh scholten@falcon
+cd ~/globtim_hpc
+sbatch --account=mpi --partition=batch your_job_script.slurm
 
-# Monitor job
+# Monitor job (from falcon)
 squeue -u scholten
 
-# View results
+# View results (accessible from both mack and falcon)
 tail -f results/job_12345.out
 ```
 
-## 🔄 Migration from Quota Workaround
+**⚠️ CRITICAL**: Jobs MUST be submitted from falcon (cluster), not mack (fileserver)!
 
-### **Old Approach (Deprecated)**
-```bash
-# OLD: Temporary quota workaround
-export JULIA_DEPOT_PATH="/tmp/julia_depot_globtim_persistent:$JULIA_DEPOT_PATH"
-python working_quota_workaround.py --install-all
-```
+## 🚀 Production Workflow
 
-### **New Approach (Production)**
+### **Current Architecture**
 ```bash
-# NEW: Fileserver integration
+# Step 1: Prepare on fileserver (mack)
 ssh scholten@mack
 cd ~/globtim_hpc
-sbatch your_job_script.slurm
+# (Upload code, create SLURM scripts, prepare data)
+
+# Step 2: Submit from cluster (falcon)
+ssh scholten@falcon
+cd ~/globtim_hpc
+sbatch --account=mpi --partition=batch your_job_script.slurm
+
+# Step 3: Monitor and collect results
+python3 hpc/jobs/submission/automated_job_monitor.py --job-id <job_id>
 ```
 
-### **Migration Steps**
-1. **Stop using `/tmp` depot** - packages are now on fileserver
-2. **Update SLURM scripts** - use NFS paths for depot and working directory
-3. **Submit from fileserver** - use `mack` instead of direct cluster access
-4. **Update monitoring** - results stored persistently on fileserver
+### **Key Workflow Principles**
+1. **Code Management**: Always use fileserver (mack) for file operations
+2. **Job Submission**: Always submit from cluster (falcon) using SLURM
+3. **Package Access**: Automatic via NFS - no manual setup required
+4. **Result Collection**: Automated monitoring and local collection
 
 ## 📊 Performance Benefits
 
