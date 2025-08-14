@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=globtim_minimal
-#SBATCH --partition=batch          # Default partition: 24h max, 3120 cores, 256GB max
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24         # Max 24 cores per node on batch partition
-#SBATCH --time=00:30:00            # 30 minutes (well under 24h limit)
-#SBATCH --mem=32G                  # 32GB (well under 256GB limit)
-#SBATCH --output=globtim_minimal_%j.out
-#SBATCH --error=globtim_minimal_%j.err
+#SBATCH -J globtim_minimal
+#SBATCH -t 00:30:00                # 30 minutes
+#SBATCH -n 1                       # 1 task
+#SBATCH -c 4                       # 4 CPUs per task
+#SBATCH --mem-per-cpu=4000         # 4GB per CPU (16GB total)
+#SBATCH -o globtim_minimal_%j.out
+#SBATCH -e globtim_minimal_%j.err
 
 # Minimal Globtim Test - Downloads and runs from scratch
 # Avoids home directory disk quota issues

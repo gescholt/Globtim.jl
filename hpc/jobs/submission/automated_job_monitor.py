@@ -74,23 +74,56 @@ class AutomatedJobMonitor:
     def find_job_files(self, job_id, test_id=None):
         """Find all files related to a job"""
         files = {}
-        
-        # Common patterns for job files
-        patterns = [
-            f"*{job_id}*",
-            f"*{test_id}*" if test_id else None
-        ]
-        
-        for pattern in patterns:
-            if pattern:
-                command = f"find {self.remote_dir} -name '{pattern}' -type f 2>/dev/null"
+
+        # Search patterns for different file types
+        search_locations = []
+
+        # 1. Results directory (primary location for outputs)
+        if test_id:
+            search_locations.append(f"{self.remote_dir}/results/critical_points_{test_id}")
+            search_locations.append(f"{self.remote_dir}/results/*{test_id}*")
+
+        # 2. SLURM output files (in main directory)
+        search_locations.extend([
+            f"{self.remote_dir}/slurm_{job_id}.out",
+            f"{self.remote_dir}/slurm_{job_id}.err",
+            f"{self.remote_dir}/*{job_id}*.slurm"
+        ])
+
+        # 3. General patterns (fallback)
+        search_locations.extend([
+            f"{self.remote_dir}/*{job_id}*",
+            f"{self.remote_dir}/*{test_id}*" if test_id else None
+        ])
+
+        # Execute searches
+        for location in search_locations:
+            if location:
+                # Handle directory vs file patterns differently
+                if location.endswith(f"critical_points_{test_id}"):
+                    # Search within results directory
+                    command = f"find {location} -type f 2>/dev/null"
+                else:
+                    # Search for specific files or patterns
+                    command = f"ls -la {location} 2>/dev/null"
+
                 output = self.run_ssh_command(command)
                 if output:
-                    for file_path in output.split('\n'):
-                        if file_path.strip():
-                            file_name = os.path.basename(file_path)
-                            files[file_name] = file_path
-        
+                    for line in output.split('\n'):
+                        line = line.strip()
+                        if line and not line.startswith('total'):
+                            # Extract file path from ls output or find output
+                            if line.startswith('-'):  # ls -la format
+                                parts = line.split()
+                                if len(parts) >= 9:
+                                    file_name = parts[-1]
+                                    file_path = location.replace('*', file_name) if '*' in location else location
+                                    files[file_name] = file_path
+                            else:  # find output format
+                                file_path = line
+                                file_name = os.path.basename(file_path)
+                                files[file_name] = file_path
+
         return files
     
     def collect_job_outputs(self, job_id, test_id=None):
@@ -243,28 +276,73 @@ class AutomatedJobMonitor:
         print(f"✅ Quick collection complete: {local_dir}")
         return local_dir
 
+def test_file_finding():
+    """Test the file finding logic without requiring actual jobs"""
+    print("🧪 Testing automated job monitor file finding logic...")
+
+    monitor = AutomatedJobMonitor()
+
+    # Test with mock job ID and test ID
+    mock_job_id = "12345"
+    mock_test_id = "a1b2c3d4"
+
+    print(f"🔍 Testing file search for job_id={mock_job_id}, test_id={mock_test_id}")
+
+    # Test the search patterns (this will fail gracefully if files don't exist)
+    files = monitor.find_job_files(mock_job_id, mock_test_id)
+
+    print(f"📁 File search patterns tested:")
+    print(f"  - Results directory: ~/globtim_hpc/results/critical_points_{mock_test_id}")
+    print(f"  - SLURM outputs: ~/globtim_hpc/slurm_{mock_job_id}.out/err")
+    print(f"  - General patterns: *{mock_job_id}*, *{mock_test_id}*")
+
+    if files:
+        print(f"📄 Found {len(files)} files:")
+        for name, path in files.items():
+            print(f"  - {name}: {path}")
+    else:
+        print("📄 No files found (expected for test)")
+
+    print("✅ File finding logic test complete")
+    return True
+
 def main():
     parser = argparse.ArgumentParser(description="Automated job monitoring and output collection")
-    parser.add_argument("--job-id", required=True, help="SLURM job ID to monitor")
+    parser.add_argument("--job-id", required=False, help="SLURM job ID to monitor")
     parser.add_argument("--test-id", help="Test ID for better file identification")
     parser.add_argument("--interval", type=int, default=15, help="Check interval in seconds (default: 15)")
     parser.add_argument("--max-wait", type=int, default=3600, help="Maximum wait time in seconds (default: 3600)")
     parser.add_argument("--quick", action="store_true", help="Quick collection without monitoring")
-    
+    parser.add_argument("--test", action="store_true", help="Test file finding logic without real jobs")
+
     args = parser.parse_args()
-    
+
+    if args.test:
+        # Test mode - validate file finding logic
+        test_file_finding()
+        return
+
+    if not args.job_id and not args.test_id:
+        print("❌ Error: Must provide either --job-id or --test-id")
+        sys.exit(1)
+
     monitor = AutomatedJobMonitor()
-    
+
     if args.quick:
-        local_dir = monitor.quick_collect(args.job_id, args.test_id)
+        # Just collect outputs without monitoring
+        if args.job_id:
+            monitor.quick_collect(args.job_id, args.test_id)
+        else:
+            print("❌ Error: --quick requires --job-id")
+            sys.exit(1)
     else:
-        local_dir, status = monitor.monitor_job(
-            args.job_id, 
-            args.test_id, 
-            args.interval, 
-            args.max_wait
-        )
-    
+        # Full monitoring workflow
+        if args.job_id:
+            monitor.monitor_job(args.job_id, args.test_id, args.interval, args.max_wait)
+        else:
+            print("❌ Error: Monitoring requires --job-id")
+            sys.exit(1)
+
     if local_dir:
         print(f"\n📁 Results available in: {local_dir}")
     else:

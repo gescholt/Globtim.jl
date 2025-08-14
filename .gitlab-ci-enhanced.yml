@@ -114,8 +114,8 @@ test:integration:
     - docker
   script:
     - |
-      # Run integration tests
-      julia --project=@. test/integration/run_integration_tests.jl
+      # Run integration tests using main test runner
+      julia --project=@. -e 'using Pkg; Pkg.test()'
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -177,7 +177,7 @@ analyze:performance:
   script:
     - |
       # Compare performance with baseline
-      julia --project=@. scripts/analyze_performance.jl
+      julia --project=@. scripts/performance-regression-check.jl
   artifacts:
     reports:
       performance: performance_report.json

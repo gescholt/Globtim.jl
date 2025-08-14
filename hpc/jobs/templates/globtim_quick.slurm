@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=globtim_quick
-#SBATCH --partition=batch
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4          # Request fewer CPUs for faster scheduling
-#SBATCH --time=00:10:00            # Short 10-minute job
-#SBATCH --mem=8G                   # Less memory
-#SBATCH --output=globtim_quick_%j.out
-#SBATCH --error=globtim_quick_%j.err
+#SBATCH -J globtim_quick
+#SBATCH -t 00:10:00                # 10 minutes
+#SBATCH -n 1                       # 1 task
+#SBATCH -c 2                       # 2 CPUs per task (faster scheduling)
+#SBATCH --mem-per-cpu=2000         # 2GB per CPU (4GB total)
+#SBATCH -o globtim_quick_%j.out
+#SBATCH -e globtim_quick_%j.err
 
 # Quick Globtim Test - Minimal resources for faster scheduling
 
@@ -18,14 +16,15 @@ echo "CPUs: $SLURM_CPUS_PER_TASK"
 echo "Start time: $(date)"
 echo ""
 
-# Set Julia environment
+# ⚠️ WARNING: /tmp usage is forbidden on this cluster!
+# Using NFS workspace instead
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export JULIA_DEPOT_PATH="/tmp/julia_depot_${USER}_${SLURM_JOB_ID}"
-export TMPDIR="/tmp/globtim_${SLURM_JOB_ID}"
+export JULIA_DEPOT_PATH="/stornext/snfs3/home/scholten/julia_depot_nfs"
+export TMPDIR="/stornext/snfs3/home/scholten/tmp_nfs"
 
-# Create temporary working directory
+# Create NFS working directory
 mkdir -p $TMPDIR
-cd $TMPDIR
+cd ~/globtim_hpc
 
 echo "=== Environment ==="
 echo "Julia threads: $JULIA_NUM_THREADS"

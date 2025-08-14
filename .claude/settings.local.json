@@ -62,7 +62,20 @@
       "Bash(./scripts/add-to-sprint.sh:*)",
       "Bash(./scripts/format-julia.sh:*)",
       "Bash(git rebase:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(ssh:*)",
+      "Bash(python:*)",
+      "Bash(scp:*)",
+      "Bash(./hpc/jobs/submission/quick_compile_test.sh:*)",
+      "Bash(./hpc/jobs/submission/submit_globtim_with_deps.sh:*)",
+      "Bash(./hpc/jobs/submission/fix_json3_dependency.sh:*)",
+      "Bash(./hpc/jobs/submission/bypass_pkg_system.sh:*)",
+      "Bash(./quick_compile_test.sh:*)",
+      "Bash(./submit_globtim_with_deps.sh:*)",
+      "Bash(export JULIA_DEPOT_PATH=\"$HOME/globtim/julia_offline_prep_hpc/depot\")",
+      "Bash(rsync:*)",
+      "Bash(/Users/ghscholt/globtim/julia_offline_prep_hpc/cleanup_failed_attempts.sh)",
+      "Bash(./hpc/monitoring/monitor.sh:*)"
     ]
   },
   "enableAllProjectMcpServers": false
