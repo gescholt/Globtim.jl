@@ -449,7 +449,12 @@ function make_error_distance(
 end
 
 # using CairoMakie
-using GLMakie
+try
+    using GLMakie
+catch e
+    @warn "There has been an error in `using GLMakie`"
+end
+
 using StaticArrays
 using ModelingToolkit
 
