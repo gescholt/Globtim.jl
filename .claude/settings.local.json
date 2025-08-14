@@ -76,7 +76,8 @@
       "Bash(rsync:*)",
       "Bash(/Users/ghscholt/globtim/julia_offline_prep_hpc/cleanup_failed_attempts.sh)",
       "Bash(./hpc/monitoring/monitor.sh:*)"
-    ]
+    ],
+    "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": false
 }
