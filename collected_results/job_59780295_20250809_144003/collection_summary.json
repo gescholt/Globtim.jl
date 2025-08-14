@@ -1,0 +1,12 @@
+{
+  "job_id": "59780295",
+  "test_id": "deuflhard_globtim",
+  "collection_timestamp": "2025-08-09T14:40:10.281834",
+  "local_directory": "collected_results/job_59780295_20250809_144003",
+  "collected_files": {
+    "deuflhard_globtim_59780295.err": "collected_results/job_59780295_20250809_144003/deuflhard_globtim_59780295.err",
+    "deuflhard_globtim_59780295.out": "collected_results/job_59780295_20250809_144003/deuflhard_globtim_59780295.out",
+    "test_deuflhard_globtim.jl": "collected_results/job_59780295_20250809_144003/test_deuflhard_globtim.jl"
+  },
+  "total_files": 3
+}

@@ -24,7 +24,7 @@ class BasicTestSubmitter:
     def __init__(self):
         self.cluster_host = "scholten@falcon"
         self.remote_dir = "~/globtim_hpc"
-        self.depot_path = "/tmp/julia_depot_globtim_persistent"
+        self.depot_path = "NFS_CONFIGURED"  # Will be set by setup_nfs_julia.sh
         
     def create_input_config(self, test_id):
         """Create a simple input configuration"""
@@ -82,9 +82,20 @@ echo "Memory: $SLURM_MEM_PER_NODE MB"
 echo "Start time: $(date)"
 echo ""
 
-# Environment setup with quota workaround
+# Environment setup with NFS Julia configuration
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export JULIA_DEPOT_PATH="/tmp/julia_depot_globtim_persistent:$JULIA_DEPOT_PATH"
+
+# Source NFS Julia configuration script
+echo "=== Configuring Julia for NFS ==="
+source ./setup_nfs_julia.sh
+
+# Verify NFS depot is accessible
+if [ -d "$JULIA_DEPOT_PATH" ]; then
+    echo "✅ NFS Julia depot configured: $JULIA_DEPOT_PATH"
+else
+    echo "❌ NFS Julia depot not accessible: $JULIA_DEPOT_PATH"
+    exit 1
+fi
 
 # Change to working directory
 cd $HOME/globtim_hpc
@@ -295,7 +306,16 @@ rm {remote_script}
         output_dir = f"/tmp/basic_test_results_{test_id}"
 
         julia_test = f"""
-export JULIA_DEPOT_PATH="{self.depot_path}:$JULIA_DEPOT_PATH"
+# Source NFS Julia configuration
+source ./setup_nfs_julia.sh
+
+# Verify NFS depot is accessible
+if [ -d "$JULIA_DEPOT_PATH" ]; then
+    echo "✅ NFS Julia depot configured: $JULIA_DEPOT_PATH"
+else
+    echo "❌ NFS Julia depot not accessible: $JULIA_DEPOT_PATH"
+    exit 1
+fi
 cd {self.remote_dir}
 
 echo "🧮 Direct Basic Julia Test with Output Collection - {test_id}"

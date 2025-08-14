@@ -1,0 +1,1 @@
+- it is forbidden to use `/tmp` on the cluster -- for any and all purposes

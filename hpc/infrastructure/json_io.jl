@@ -489,8 +489,188 @@ function create_symlinks(computation_dir::String, computation_id::String,
     end
 end
 
+"""
+    create_parameter_sweep_config(base_config::Dict, parameter_ranges::Dict) -> Vector{Dict}
+
+Generate parameter sweep configurations for systematic testing.
+"""
+function create_parameter_sweep_config(base_config::Dict, parameter_ranges::Dict)
+    configs = Dict[]
+
+    # Get all parameter combinations
+    param_names = collect(keys(parameter_ranges))
+    param_values = [parameter_ranges[name] for name in param_names]
+
+    # Generate all combinations
+    for combination in Iterators.product(param_values...)
+        config = deepcopy(base_config)
+
+        # Update configuration with parameter values
+        for (i, param_name) in enumerate(param_names)
+            value = combination[i]
+
+            # Handle nested parameter paths (e.g., "polynomial_construction.degree")
+            if contains(param_name, ".")
+                parts = split(param_name, ".")
+                current = config
+                for part in parts[1:end-1]
+                    if !haskey(current, part)
+                        current[part] = Dict()
+                    end
+                    current = current[part]
+                end
+                current[parts[end]] = value
+            else
+                config[param_name] = value
+            end
+        end
+
+        # Generate unique computation ID for this configuration
+        config["metadata"]["computation_id"] = generate_computation_id()
+        config["metadata"]["parameter_sweep"] = Dict(
+            "is_sweep" => true,
+            "parameters" => Dict(zip(param_names, combination)),
+            "parameter_hash" => compute_parameter_hash(config)
+        )
+
+        push!(configs, config)
+    end
+
+    return configs
+end
+
+"""
+    save_parameter_sweep_manifest(configs::Vector{Dict}, base_dir::String) -> String
+
+Save parameter sweep manifest for tracking and analysis.
+"""
+function save_parameter_sweep_manifest(configs::Vector{Dict}, base_dir::String)
+    manifest = Dict(
+        "sweep_metadata" => Dict(
+            "sweep_id" => generate_computation_id(),
+            "timestamp" => string(now()),
+            "total_configurations" => length(configs),
+            "base_directory" => base_dir
+        ),
+        "configurations" => [
+            Dict(
+                "computation_id" => config["metadata"]["computation_id"],
+                "parameters" => get(get(config["metadata"], "parameter_sweep", Dict()), "parameters", Dict()),
+                "parameter_hash" => get(get(config["metadata"], "parameter_sweep", Dict()), "parameter_hash", compute_parameter_hash(config)),
+                "description" => get(config["metadata"], "description", ""),
+                "tags" => get(config["metadata"], "tags", String[])
+            ) for config in configs
+        ]
+    )
+
+    manifest_path = joinpath(base_dir, "parameter_sweep_manifest.json")
+    mkpath(dirname(manifest_path))
+
+    open(manifest_path, "w") do f
+        JSON3.pretty(f, manifest)
+    end
+
+    println("✅ Parameter sweep manifest saved: $manifest_path")
+    return manifest_path
+end
+
+"""
+    aggregate_sweep_results(results_dir::String) -> Dict
+
+Aggregate results from a parameter sweep for analysis.
+"""
+function aggregate_sweep_results(results_dir::String)
+    # Find all result files in the directory
+    result_files = []
+    for (root, dirs, files) in walkdir(results_dir)
+        for file in files
+            if endswith(file, "_results.json")
+                push!(result_files, joinpath(root, file))
+            end
+        end
+    end
+
+    if isempty(result_files)
+        @warn "No result files found in $results_dir"
+        return Dict()
+    end
+
+    # Load and aggregate results
+    aggregated = Dict(
+        "sweep_summary" => Dict(
+            "total_computations" => length(result_files),
+            "aggregation_timestamp" => string(now()),
+            "results_directory" => results_dir
+        ),
+        "parameter_analysis" => Dict(),
+        "performance_analysis" => Dict(),
+        "quality_analysis" => Dict(),
+        "individual_results" => []
+    )
+
+    # Collect data from all results
+    l2_errors = Float64[]
+    construction_times = Float64[]
+    solving_times = Float64[]
+    n_critical_points = Int[]
+
+    for result_file in result_files
+        try
+            result = load_output_results(result_file)
+
+            # Extract key metrics
+            push!(l2_errors, result["polynomial_results"]["l2_error"])
+            push!(construction_times, result["polynomial_results"]["construction_time"])
+            push!(solving_times, result["critical_point_results"]["solving_time"])
+            push!(n_critical_points, result["critical_point_results"]["n_valid_critical_points"])
+
+            # Store individual result summary
+            push!(aggregated["individual_results"], Dict(
+                "computation_id" => result["metadata"]["computation_id"],
+                "l2_error" => result["polynomial_results"]["l2_error"],
+                "n_critical_points" => result["critical_point_results"]["n_valid_critical_points"],
+                "total_time" => result["metadata"]["total_runtime"]
+            ))
+
+        catch e
+            @warn "Failed to process result file: $result_file" exception=e
+        end
+    end
+
+    # Compute aggregate statistics
+    if !isempty(l2_errors)
+        aggregated["performance_analysis"] = Dict(
+            "l2_error_stats" => Dict(
+                "mean" => mean(l2_errors),
+                "std" => std(l2_errors),
+                "min" => minimum(l2_errors),
+                "max" => maximum(l2_errors)
+            ),
+            "timing_stats" => Dict(
+                "construction_time" => Dict(
+                    "mean" => mean(construction_times),
+                    "std" => std(construction_times)
+                ),
+                "solving_time" => Dict(
+                    "mean" => mean(solving_times),
+                    "std" => std(solving_times)
+                )
+            ),
+            "critical_points_stats" => Dict(
+                "mean" => mean(n_critical_points),
+                "std" => std(n_critical_points),
+                "min" => minimum(n_critical_points),
+                "max" => maximum(n_critical_points)
+            )
+        )
+    end
+
+    return aggregated
+end
+
 # Export main functions
 export generate_computation_id, serialize_test_input, create_input_config, save_input_config
 export create_output_results, save_output_results, save_detailed_outputs
 export compute_parameter_hash, load_input_config, load_output_results
 export create_computation_directory, validate_input_config, create_symlinks
+export create_parameter_sweep_config, save_parameter_sweep_manifest, aggregate_sweep_results

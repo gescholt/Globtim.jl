@@ -1,0 +1,20 @@
+{
+  "monitoring_summary": {
+    "job_id": "59780278",
+    "test_id": "304de3ba",
+    "final_state": "FAILED",
+    "exit_code": "0:53",
+    "elapsed_time": "00:00:00",
+    "monitoring_duration": "0.0s",
+    "collection_directory": "collected_results/job_59780278_20250809_130824"
+  },
+  "job_details": {
+    "job_id": "59780278",
+    "name": "deuflhard_quick",
+    "state": "FAILED",
+    "exit_code": "0:53",
+    "start_time": "2025-08-09T13:08:18",
+    "end_time": "2025-08-09T13:08:18",
+    "elapsed": "00:00:00"
+  }
+}

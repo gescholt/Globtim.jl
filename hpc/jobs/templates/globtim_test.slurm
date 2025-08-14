@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=globtim_test
-#SBATCH --partition=batch
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
-#SBATCH --time=00:30:00
-#SBATCH --mem=32G
-#SBATCH --output=globtim_test_%j.out
-#SBATCH --error=globtim_test_%j.err
+#SBATCH -J globtim_test
+#SBATCH -t 00:30:00              # 30 minutes
+#SBATCH -n 1                     # 1 task
+#SBATCH -c 8                     # 8 CPUs per task
+#SBATCH --mem-per-cpu=4000       # 4GB per CPU (32GB total)
+#SBATCH -o globtim_test_%j.out
+#SBATCH -e globtim_test_%j.err
 
 # Globtim Test Job
 # Basic test of Julia and Globtim functionality on HPC cluster
@@ -20,11 +18,14 @@ echo "Memory: $SLURM_MEM_PER_NODE MB"
 echo "Start time: $(date)"
 echo ""
 
-# Set Julia threading
+# Set Julia threading and NFS environment
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export JULIA_DEPOT_PATH="/stornext/snfs3/home/scholten/julia_depot_nfs"
+export TMPDIR="/stornext/snfs3/home/scholten/tmp_nfs"
 
-# Change to project directory
-cd $SLURM_SUBMIT_DIR
+# Create NFS temp directory and change to project
+mkdir -p "$TMPDIR"
+cd ~/globtim_hpc
 
 echo "=== System Information ==="
 hostname

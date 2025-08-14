@@ -2,6 +2,29 @@
 
 This directory contains all HPC-related functionality for Globtim benchmarking and testing on SLURM clusters.
 
+> 🚨 **CRITICAL: HPC Workflow - MUST READ BEFORE USING** 🚨
+>
+> **GOLDEN RULE**: Code management via mack (fileserver), job submission via falcon (cluster)
+>
+> **Step 1: Code Management (ONLY via fileserver mack)**
+> - Upload/modify code: `ssh scholten@mack`, work in `~/globtim_hpc`
+> - Install packages: Use fileserver's Julia depot `~/.julia` (302 packages)
+> - Prepare data: ALL file operations through mack (falcon has 1GB quota limit!)
+> - Never install packages or modify code on falcon
+>
+> **Step 2: Job Submission (ONLY via cluster falcon)**
+> - Submit SLURM jobs: `ssh scholten@falcon`, submit from `~/globtim_hpc`
+> - Required: `--account=mpi --partition=batch`
+> - Jobs access fileserver code/data via NFS automatically
+> - Results written to `~/globtim_hpc/results/`
+>
+> **Step 3: Monitor and Collect**
+> - Monitor: `ssh scholten@falcon 'squeue -u scholten'`
+> - Collect: Results accessible from both mack and falcon (same NFS filesystem)
+>
+> **⚠️ QUOTA WARNING**: falcon home has 1GB limit. Keep only globtim_hpc directory there!
+
+
 ## 🚀 Current Working Examples (Tested & Verified)
 
 ### ✅ Basic Julia Testing
@@ -95,15 +118,23 @@ Local Development → Fileserver (mack) → HPC Cluster (falcon)
   Development         Storage & Jobs       Computation
 ```
 
-### **✅ PRODUCTION SOLUTION:**
+### **✅ VERIFIED PRODUCTION SOLUTION:**
 ```bash
-# Access fileserver for job management
+# Step 1: Upload/manage code on fileserver
 ssh scholten@mack
-
-# Submit jobs from fileserver to cluster
 cd ~/globtim_hpc
-sbatch your_job_script.slurm
+# (Upload code, install packages, prepare data here)
+
+# Step 2: Submit jobs from cluster (VERIFIED WORKING!)
+ssh scholten@falcon
+cd ~/globtim_hpc
+sbatch your_job_script.slurm  # Simplified format - no account/partition needed!
+
+# Step 3: Automated monitoring and collection (VERIFIED!)
+python3 hpc/jobs/submission/automated_job_monitor.py --job-id <job_id> --test-id <test_id>
 ```
+
+**PROOF**: Job 59780294 successfully evaluated 10 function points, generated CSV/summary files, and collected all outputs to local machine.
 
 ### **Storage Strategy:**
 1. **Fileserver (mack)**: `~/globtim_hpc/` - Source code, SLURM scripts, results
@@ -118,16 +149,30 @@ sbatch your_job_script.slurm
 - ✅ **Artifacts and registries** - Full package infrastructure
 
 ### **SLURM Job Integration:**
-Jobs access fileserver packages automatically via NFS:
+Jobs submitted from falcon access fileserver packages automatically via NFS:
 ```bash
 #!/bin/bash
-#SBATCH --job-name=globtim_job
-#SBATCH --partition=batch
+#SBATCH -J globtim_job
+#SBATCH -t 01:00:00
+#SBATCH -n 1
+#SBATCH -c 4
+#SBATCH --mem-per-cpu=4000
+#SBATCH -o globtim_%j.out
+#SBATCH -e globtim_%j.err
 
-# Fileserver depot accessible via NFS
+# Fileserver depot accessible via NFS (automatic)
 export JULIA_DEPOT_PATH="/net/fileserver-nfs/stornext/snfs6/projects/scholten/.julia:$JULIA_DEPOT_PATH"
+export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
 cd ~/globtim_hpc
 /sw/bin/julia --project=. your_script.jl
+```
+
+**CRITICAL**: Create script locally, copy via NFS, then submit from falcon:
+```bash
+# Create script locally (avoids SSH escaping issues)
+scp job_script.slurm falcon:~/job_script.slurm
+ssh scholten@falcon 'cd ~/globtim_hpc && sbatch job_script.slurm'
 ```
 
 ## 🎯 HPC Workflow - FILESERVER INTEGRATION ✅
@@ -166,22 +211,18 @@ ls -la ~/globtim_hpc/results/
 Current status with fileserver integration:
 - **Fileserver Access**: ✅ `ssh scholten@mack` working
 - **Julia Packages**: ✅ Complete ecosystem (302 packages) on mack
-- **SLURM Scripts**: ✅ Created and submitted from fileserver
+- **SLURM Scripts**: ✅ Created on fileserver, submitted from cluster (falcon)
 - **NFS Integration**: ✅ Cluster nodes access fileserver packages
 - **Storage**: ✅ Persistent results on fileserver
 
-## 🚀 Migration from Quota Workaround
+## 🚀 Current Production Architecture
 
-**Old Approach (Deprecated):**
-- Used `/tmp` storage to bypass quota limits
-- Temporary package installations
-- Manual result collection
-
-**New Approach (Production):**
-- Use fileserver (mack) for all storage
-- Persistent Julia packages and results
-- Proper SLURM job management
-- NFS integration for cluster access
+**Production Approach:**
+- Use fileserver (mack) for all storage and code management
+- Persistent Julia packages and results via NFS
+- Automated SLURM job management with Python scripts
+- Comprehensive monitoring and result collection
+- Three-tier architecture: Local → Fileserver → Cluster
 
 ## 📞 Support
 
