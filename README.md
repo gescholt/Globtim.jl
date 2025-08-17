@@ -1,8 +1,10 @@
 # Globtim.jl
 
 [![Run Tests](https://github.com/gescholt/Globtim.jl/actions/workflows/test.yml/badge.svg)](https://github.com/gescholt/Globtim.jl/actions/workflows/test.yml)
-[![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
+[![codecov](https://codecov.io/gh/gescholt/Globtim.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/gescholt/Globtim.jl)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
 [![GitHub release](https://img.shields.io/github/v/release/gescholt/Globtim.jl.svg)](https://github.com/gescholt/Globtim.jl/releases/latest)
 
 **Global optimization of continuous functions via polynomial approximation**
@@ -228,6 +230,13 @@ fig8 = plot_raw_vs_refined_eigenvalues(f, df_raw, df_enhanced, sort_by=:function
 
 ## 📖 Documentation
 
+### 📖 Complete Documentation
+- **[Full Documentation](https://gescholt.github.io/Globtim.jl/stable/)** - Comprehensive guides and API reference
+- **[Getting Started](https://gescholt.github.io/Globtim.jl/stable/getting_started/)** - Quick introduction and basic workflow
+- **[Examples](https://gescholt.github.io/Globtim.jl/stable/examples/)** - Complete examples with explanations
+- **[API Reference](https://gescholt.github.io/Globtim.jl/stable/api_reference/)** - Detailed function documentation
+
+### Example Notebooks
 - **Examples**: [Examples/Notebooks/](Examples/Notebooks/) - Jupyter notebook demonstrations
 - **API Documentation**: Available via `?` in Julia REPL
 - **Source Code**: [GitHub Repository](https://github.com/gescholt/Globtim.jl)
