@@ -13,6 +13,7 @@ Welcome to the comprehensive documentation for Globtim.jl - a Julia package for 
 
 ### For Developers
 - **[Development Guide](../DEVELOPMENT_GUIDE.md)** - Setup and contribution workflow
+- **[Package Dependencies](../PACKAGE_DEPENDENCIES.md)** - Complete dependency architecture and extension system
 - **[Test Documentation](src/test_documentation.md)** - Running and writing tests
 - **[Project Management](project-management/)** - GitLab workflow and sprint process
 

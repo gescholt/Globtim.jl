@@ -71,6 +71,8 @@ ls -la ~/globtim_hpc/results/
 
 ## 🚀 Quick Start - Precision-Aware Optimization
 
+> 📦 **Package Dependencies**: For complete information about GlobTim's modern dependency architecture with weak dependencies and extensions, see **[`PACKAGE_DEPENDENCIES.md`](PACKAGE_DEPENDENCIES.md)**
+
 ### Basic Usage with Precision Control
 
 ```julia
@@ -220,6 +222,9 @@ truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, analysis.suggest
 - **[Precision Parameters](docs/src/precision_parameters.md)**: Comprehensive guide to precision types and performance trade-offs
 - **[API Reference](docs/src/api_reference.md)**: Complete function reference with precision options
 - **[Examples](docs/src/examples.md)**: Practical usage examples with different precision types
+
+### Package Architecture
+- **[Package Dependencies](PACKAGE_DEPENDENCIES.md)**: **📦 COMPLETE DEPENDENCY GUIDE** - Modern weak dependency system, extensions, HPC compatibility
 
 ### Development & HPC
 - **Main Guide**: `DEVELOPMENT_GUIDE.md` (consolidated setup instructions)

@@ -1,20 +1,24 @@
 module Globtim
 
-using CSV
-using StaticArrays
-using DataFrames
+# CORE DEPENDENCIES - Always loaded for fundamental operations
 using DynamicPolynomials
-using MultivariatePolynomials
-using LinearSolve
-using LinearAlgebra
-using Distributions
-using Random
-using Parameters
-using TOML
-using TimerOutputs
 using ForwardDiff
-using Clustering
+using LinearAlgebra
+using MultivariatePolynomials
+using Random
+using StaticArrays
+using Statistics
+using SpecialFunctions
+using TimerOutputs
+using DataFrames
 using Optim
+using Parameters
+using Dates
+using LinearSolve
+using DataStructures
+using IterTools
+using ProgressLogging
+using PolyChaos
 
 @enum PrecisionType begin
     Float64Precision
@@ -26,6 +30,7 @@ end
 
 import HomotopyContinuation: solve, real_solutions, System
 
+# TimerOutputs for performance tracking
 const _TO = TimerOutputs.TimerOutput()
 
 # Exported functions and variables
@@ -198,6 +203,8 @@ include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("error_handling.jl") #Comprehensive error handling framework
 include("safe_wrappers.jl") #Safe wrapper functions with error handling
+# include("valley_detection.jl") #Valley detection and manifold following algorithms
+# include("conservative_valley_walking.jl") #Conservative valley walking with function value validation
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
@@ -280,6 +287,16 @@ export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergenc
 
 # Additional refine.jl functions
 export compute_gradients, analyze_basins
+
+# Valley detection and manifold following functions
+export ValleyDetectionConfig, ValleyInfo
+export detect_valley_at_point, follow_valley_manifold, project_to_critical_manifold
+export analyze_valleys_in_critical_points
+export create_valley_test_function, create_ridge_test_function
+
+# Conservative valley walking functions
+export ConservativeValleyConfig, ConservativeValleyStep
+export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
 
 # Function value error analysis
 export FunctionValueError,
