@@ -1,5 +1,20 @@
 # Globtim.jl Development Guide
 
+**Date**: August 21, 2025
+
+## Package Architecture (UPDATED)
+
+**✅ RESOLVED**: The dependency architecture has been completely restructured using Julia's modern weak dependency system.
+
+**Current Status**: 
+- Core dependencies (18 packages) load automatically with `using Globtim`
+- Optional dependencies (8 packages) load on demand via package extensions
+- Plotting, data I/O, and analysis tools are now modular
+- HPC compatibility achieved through conditional loading
+
+**For complete dependency documentation**, see `PACKAGE_DEPENDENCIES.md`. 
+
+
 ## Repository Structure
 
 This project uses a dual-repository approach:
@@ -168,76 +183,40 @@ git checkout github-release
 ls path/to/file  # Should show "No such file or directory"
 ```
 
-## Dependencies
+## Package Dependencies
 
-### Core Mathematical Dependencies
+**Current Architecture**: Core + Weak Dependencies with Package Extensions
 
-#### DynamicPolynomials.jl
-**Version**: `0.6`
-**Purpose**: Multivariate polynomial manipulation and symbolic computation
-**Usage**: Critical for polynomial system construction and solving
+GlobTim now uses Julia's modern weak dependency system for optimal performance and HPC compatibility:
+
+### Quick Reference
+- **Core Dependencies**: 18 packages (mathematical core, data processing, optimization)  
+- **Weak Dependencies**: 8 packages (plotting, advanced analysis, development tools)
+- **Package Extensions**: 5 extension modules for conditional functionality
+
+### Key Benefits
+- ⚡ **Faster Startup**: Core loads quickly without heavy optional packages
+- 🖥️ **HPC Compatibility**: Works on clusters without GUI libraries
+- 🧩 **Modular**: Load only the features you need
+- 🔧 **Maintainable**: Clear separation between core and optional functionality
+
+### Usage Examples
 ```julia
-# Used in solve_polynomial_system for defining polynomial variables
-@polyvar x[1:n]
-solutions = solve_polynomial_system(x, n, d, coeffs)
+# Core functionality (always available)
+using Globtim
+pol = Constructor(test_input(camel), 8)
+
+# Optional plotting (loads on demand)  
+using CairoMakie
+plot_convergence_analysis(results)  # Available via extension
+
+# Optional data export (loads on demand)
+using CSV  
+export_results_csv(results)  # Available via extension
 ```
-**Key Files**: `src/hom_solve.jl`, `src/Main_Gen.jl`
 
-#### HomotopyContinuation.jl
-**Version**: `2.15`
-**Purpose**: Numerical algebraic geometry and polynomial system solving
-**Usage**: Core solver for finding critical points of polynomial approximations
-```julia
-# Primary solver for critical point computation
-real_pts = solve_polynomial_system(x, n, d, coeffs; basis=:chebyshev)
-```
-**Key Files**: `src/hom_solve.jl`, `Examples/`, `test/`
-
-#### MultivariatePolynomials.jl
-**Version**: `0.5`
-**Purpose**: Abstract interface for multivariate polynomial systems
-**Usage**: Provides common interface for polynomial operations
-**Key Files**: `src/Main_Gen.jl`, `src/hom_solve.jl`
-
-### Data Processing Dependencies
-
-#### CSV.jl
-**Version**: `0.10`
-**Purpose**: Fast CSV file reading and writing
-**Usage**: Data import/export for benchmarks and results
-```julia
-# Reading benchmark data
-data = CSV.read("benchmark_results.csv", DataFrame)
-```
-**Key Files**: `Examples/`, `test/`, result processing scripts
-
-#### DataFrames.jl
-**Version**: `1.7`
-**Purpose**: Data manipulation and analysis
-**Usage**: Organizing and analyzing computational results
-```julia
-# Creating results dataframes
-results_df = DataFrame(
-    function_name = String[],
-    critical_points = Int[],
-    computation_time = Float64[]
-)
-```
-**Key Files**: `Examples/`, benchmarking scripts, result analysis
-
-### Development & Testing Dependencies
-
-#### Parameters.jl
-**Version**: `0.12`
-**Purpose**: Type-safe parameter handling with defaults
-**Usage**: Configuration management for HPC jobs and benchmarks
-```julia
-@with_kw struct BenchmarkConfig
-    degree::Int = 8
-    samples::Int = 1000
-    tolerance::Float64 = 1e-6
-end
-```
-**Key Files**: `hpc/config/parameters/`, `Examples/`
-
-For complete dependency documentation, see the archived `DEPENDENCIES.md` file.
+**📚 For complete documentation**, see `PACKAGE_DEPENDENCIES.md` which includes:
+- Detailed dependency lists with versions and purposes
+- Package extension architecture and usage
+- HPC deployment considerations
+- Migration history and troubleshooting guide
