@@ -11,6 +11,7 @@ include("table_rendering.jl")
 """
     analyze_critical_points_with_tables(f, df, TR; 
                                        enable_hessian=true,
+                                       enable_valley_detection=false,
                                        show_tables=true,
                                        table_format=:console,
                                        table_detail=:comprehensive,
@@ -29,7 +30,8 @@ comprehensive statistical tables for detailed critical point analysis.
 - `f`: Objective function
 - `df`: Critical points DataFrame from process_crit_pts
 - `TR`: test_input structure
-- `enable_hessian::Bool=true`: Enable Phase 2 Hessian analysis
+- `enable_hessian::Bool=true`: Enable Phase 2 Hessian analysis  
+- `enable_valley_detection::Bool=false`: Enable valley detection analysis
 - `show_tables::Bool=true`: Display statistical tables
 - `table_format::Symbol=:console`: Table output format (:console, :html, :latex, :markdown)
 - `table_detail::Symbol=:comprehensive`: Detail level (:basic, :comprehensive, :publication)
@@ -71,6 +73,7 @@ function analyze_critical_points_with_tables(
     df,
     TR;
     enable_hessian = true,
+    enable_valley_detection = false,
     show_tables = true,
     table_format = :console,
     table_types = [:minimum, :maximum, :saddle, :degenerate],
@@ -85,6 +88,13 @@ function analyze_critical_points_with_tables(
     df_enhanced, df_minima =
         analyze_critical_points(f, df, TR, enable_hessian = enable_hessian, kwargs...)
     @debug "analyze_critical_points completed. DataFrame columns: $(names(df_enhanced))"
+    
+    # Perform valley detection analysis if requested
+    if enable_valley_detection
+        @info "Performing valley detection analysis..."
+        df_enhanced = analyze_valleys_in_critical_points(f, df_enhanced)
+        @debug "Valley detection completed. Added columns: is_valley, valley_dimension, manifold_score"
+    end
 
     # Initialize return containers
     rendered_tables = Dict{Symbol, String}()

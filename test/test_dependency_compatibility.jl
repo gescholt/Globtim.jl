@@ -200,7 +200,7 @@ end
         if isempty(missing_compat)
             println("✅ All dependencies have version bounds")
         else
-            println("❌ Missing version bounds for: $(join(missing_compat, \", \"))")
+            println("❌")
         end
         
         # Check Julia version bound
