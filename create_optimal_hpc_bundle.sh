@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Optimal Julia Package Bundling Script for HPC Deployment
+# Optimal Julia Package Bundling Script for HPC Deployment  
 # Based on best practices from Julia community and PackageCompiler.jl
+# UPDATED: Core dependencies only (18 packages) - NO PLOTTING LIBRARIES
+# Compatible with new weak dependency architecture (August 2025)
 
 echo "======================================================================"
-echo "Optimal GlobTim HPC Bundle Creator"
-echo "Using best practices for offline Julia deployment"
+echo "GlobTim HPC Core Bundle Creator - Phase 1"
+echo "Core mathematical packages only - HPC optimized (no plotting)"
+echo "Using weak dependency architecture with 18 core packages"
 echo "======================================================================"
 
 # Configuration
@@ -38,25 +41,37 @@ echo "Step 2: Setting up project environment..."
 
 cat > Project.toml << 'TOML'
 name = "GlobtimHPC"
-uuid = "12345678-1234-1234-1234-123456789abc"
-version = "1.0.0"
+uuid = "00da9514-6261-47e9-8848-33640cb1e528"
+version = "1.1.2"
 
 [deps]
-CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+# CORE MATHEMATICAL - Always loaded for polynomial systems and optimization
 DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+HomotopyContinuation = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
-ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
+MultivariatePolynomials = "102ac46a-7ee4-5c85-9060-abc95bfdeaa3"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+# CORE UTILITIES - Essential for all operations
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
+# ESSENTIAL DATA - Used throughout core functionality  
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+PolyChaos = "8d666b04-775d-5f6e-b778-5ac7c70f65a3"
+LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
+ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
+
 [compat]
-julia = "1.6"
+julia = "1.10"
 TOML
 
 # Step 3: Install all packages with proper precompilation
@@ -69,16 +84,23 @@ using Pkg
 println("Installing packages in offline-ready depot...")
 Pkg.instantiate()
 
-# Add packages explicitly to ensure all dependencies
+# Add core packages only (NO PLOTTING) - HPC compatible
 packages = [
-    "CSV",
-    "DataFrames",
-    "StaticArrays",
-    "ForwardDiff",
-    "Parameters",
     "DynamicPolynomials",
-    "ProgressLogging",
-    "TimerOutputs"
+    "ForwardDiff", 
+    "HomotopyContinuation",
+    "MultivariatePolynomials",
+    "StaticArrays",
+    "SpecialFunctions",
+    "TimerOutputs",
+    "DataFrames",
+    "Optim",
+    "Parameters",
+    "PolyChaos",
+    "LinearSolve", 
+    "DataStructures",
+    "IterTools",
+    "ProgressLogging"
 ]
 
 for pkg in packages
@@ -94,10 +116,12 @@ end
 println("\nPrecompiling all packages...")
 Pkg.precompile()
 
-# Verify packages work
-println("\nVerifying package loading...")
-using CSV, DataFrames, StaticArrays, ForwardDiff, Parameters
-println("✅ Core packages verified")
+# Verify core packages work (NO PLOTTING)
+println("\nVerifying core package loading...")
+using DynamicPolynomials, ForwardDiff, HomotopyContinuation
+using MultivariatePolynomials, StaticArrays, SpecialFunctions
+using DataFrames, Optim, Parameters, LinearSolve
+println("✅ All core mathematical packages verified - HPC ready")
 
 # Generate precompile statements
 println("\nGenerating precompile statements...")
@@ -120,8 +144,9 @@ try
     
     println("Creating custom sysimage...")
     
-    # Packages to include in sysimage
-    packages = [:CSV, :DataFrames, :StaticArrays, :ForwardDiff, :Parameters]
+    # Core packages only for HPC sysimage (NO PLOTTING)
+    packages = [:DynamicPolynomials, :ForwardDiff, :HomotopyContinuation, 
+                :StaticArrays, :DataFrames, :Optim, :Parameters, :LinearSolve]
     
     # Create sysimage
     create_sysimage(
@@ -142,25 +167,36 @@ echo ""
 echo "Step 6: Creating precompile script..."
 
 cat > precompile_script.jl << 'PRECOMPILE'
-# Precompile common GlobTim operations
-using CSV, DataFrames, StaticArrays, ForwardDiff, Parameters
+# Precompile core GlobTim operations (HPC compatible - NO PLOTTING)
+using DynamicPolynomials, ForwardDiff, HomotopyContinuation
+using MultivariatePolynomials, StaticArrays, SpecialFunctions
+using DataFrames, Optim, Parameters, LinearSolve
 
-# Load GlobTim
+# Load GlobTim core functionality
 include("src/Globtim.jl")
 using .Globtim
 
-# Precompile common function calls
-Globtim.Sphere([0.0, 0.0])
-Globtim.Rosenbrock([1.0, 1.0])
-Globtim.test_input(Globtim.Sphere, dim=2, GN=10)
+# Precompile mathematical operations
+@polyvar x[1:4]
+sphere(x) = sum(x.^2)
+rosenbrock(x) = sum(100 * (x[2:end] - x[1:end-1].^2).^2 + (1 .- x[1:end-1]).^2)
 
-# Precompile DataFrame operations
-df = DataFrame(x=1:10, y=rand(10))
-CSV.write("temp.csv", df)
-CSV.read("temp.csv", DataFrame)
-rm("temp.csv")
+# Precompile ForwardDiff operations
+ForwardDiff.gradient(sphere, [1.0, 2.0, 3.0, 4.0])
+ForwardDiff.hessian(sphere, [1.0, 2.0, 3.0, 4.0])
 
-println("Precompilation complete")
+# Precompile polynomial operations
+poly = x[1]^2 + x[2]^2 + x[3]^2 + x[4]^2
+coefficients(poly)
+
+# Precompile DataFrame operations (no CSV for HPC)
+df = DataFrame(x=1:10, y=rand(10), z=rand(10))
+nrow(df)
+
+# Precompile optimization
+opt_result = optimize(sphere, zeros(4), BFGS())
+
+println("✅ Core precompilation complete - ready for HPC")
 PRECOMPILE
 
 # Step 7: Create offline loader script
@@ -193,17 +229,20 @@ else
     println("ℹ️  Using standard precompiled packages")
 end
 
-# Load packages
+# Load core packages (HPC compatible - NO PLOTTING)
 try
-    using CSV, DataFrames, StaticArrays, ForwardDiff, Parameters
-    println("✅ All packages loaded successfully")
+    using DynamicPolynomials, ForwardDiff, HomotopyContinuation
+    using MultivariatePolynomials, StaticArrays, SpecialFunctions
+    using DataFrames, Optim, Parameters, LinearSolve
+    using DataStructures, IterTools, ProgressLogging, TimerOutputs
+    println("✅ All core packages loaded successfully")
     
     # Load GlobTim
     include("src/Globtim.jl")
     using .Globtim
-    println("✅ GlobTim loaded with full features")
+    println("✅ GlobTim loaded with core mathematical features")
     
-    const GLOBTIM_MODE = :full
+    const GLOBTIM_MODE = :core
     
 catch e
     println("⚠️  Full package loading failed: ", e)
@@ -276,28 +315,25 @@ include("load_globtim_offline.jl")
 # Your computation code here
 println("\nRunning computation...")
 
-if GLOBTIM_MODE == :full
-    # Full version with all features
-    using CSV, DataFrames
+if GLOBTIM_MODE == :core
+    # Core mathematical version - HPC compatible
+    using DataFrames
     
-    # Run optimization
-    result = Globtim.globtim(
-        Globtim.Rosenbrock,
-        dim=10,
-        GN=5000,
-        degree=6
-    )
+    # Run test with GlobTim core functionality  
+    TR = Globtim.test_input(Globtim.shubert_4d, dim=4, center=[0.0,0.0,0.0,0.0], GN=100)
+    pol = Globtim.Constructor(TR, 6, basis=:chebyshev, precision=Float64, verbose=1)
     
-    # Save results to CSV
+    # Save results to DataFrame (no CSV needed for core test)
     df = DataFrame(
-        dimension = [10],
-        samples = [5000],
+        dimension = [4],
+        samples = [100],
         degree = [6],
-        error = [result.error],
-        condition = [result.condition_number]
+        l2_error = [pol.nrm],
+        n_coeffs = [length(pol.coeffs)]
     )
-    CSV.write("results.csv", df)
-    println("Results saved to results.csv")
+    println("Results: ", df)
+    println("L2 error: ", pol.nrm)
+    println("Coefficients: ", length(pol.coeffs))
     
 else
     # Standalone version
@@ -332,9 +368,16 @@ cat > bundle_info.json << JSON
     "depot_size": "$(du -sh depot | cut -f1)",
     "includes_sysimage": $([ -f "GlobtimSysimage.so" ] && echo "true" || echo "false"),
     "packages": [
-        "CSV", "DataFrames", "StaticArrays", "ForwardDiff",
-        "Parameters", "DynamicPolynomials", "ProgressLogging", "TimerOutputs"
+        "DynamicPolynomials", "ForwardDiff", "HomotopyContinuation",
+        "MultivariatePolynomials", "StaticArrays", "SpecialFunctions", 
+        "TimerOutputs", "DataFrames", "Optim", "Parameters",
+        "PolyChaos", "LinearSolve", "DataStructures", "IterTools", "ProgressLogging"
     ],
+    "excluded_packages": [
+        "CairoMakie", "GLMakie", "Makie", "Colors", "CSV", 
+        "Clustering", "Distributions", "JuliaFormatter"
+    ],
+    "hpc_optimized": true,
     "offline_ready": true
 }
 JSON

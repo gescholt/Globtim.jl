@@ -175,3 +175,6 @@ include("test_convenience_methods.jl")
 
 # Include Aqua.jl quality assurance tests
 include("test_aqua.jl")
+
+# Include Parameter Tracking Infrastructure Configuration Tests
+include("test_parameter_tracking_config.jl")
