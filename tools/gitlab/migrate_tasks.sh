@@ -1,10 +1,8 @@
 #!/bin/bash
-"""
-GitLab Task Migration Script
-
-Complete workflow for migrating local tasks to GitLab issues.
-Handles extraction, conversion, and bulk creation with proper error handling.
-"""
+# GitLab Task Migration Script
+#
+# Complete workflow for migrating local tasks to GitLab issues.
+# Handles extraction, conversion, and bulk creation with proper error handling.
 
 set -e  # Exit on any error
 
