@@ -9,6 +9,7 @@ Supports bulk operations and rate limiting for large migrations.
 import requests
 import json
 import time
+import os
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import argparse
@@ -253,6 +254,21 @@ def get_gitlab_token() -> str:
     token = os.environ.get('GITLAB_PRIVATE_TOKEN')
     if token:
         return token
+
+    # Try loading from secure environment file
+    try:
+        script_dir = Path(__file__).parent
+        repo_root = script_dir.parent.parent
+        env_file = repo_root / '.env.gitlab.local'
+        if env_file.exists():
+            with open(env_file, 'r') as f:
+                for line in f:
+                    if line.strip().startswith('export GITLAB_PRIVATE_TOKEN='):
+                        token_value = line.strip().split('=', 1)[1]
+                        # Remove quotes if present
+                        return token_value.strip('"').strip("'")
+    except Exception:
+        pass
 
     # Try Git credential helper via get-token.sh script
     try:
