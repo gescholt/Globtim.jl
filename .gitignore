@@ -45,6 +45,11 @@ data/figures/
 
 # Environment files with secrets
 .env.gitlab
+.env.gitlab.local
+tools/gitlab/config.json
+tools/gitlab/.gitlab-token
+.gitlab-token
+gitlab-token.txt
 
 # SSH and server configuration - NEVER COMMIT THESE
 *.pem
