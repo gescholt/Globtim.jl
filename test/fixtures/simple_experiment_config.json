@@ -1,0 +1,17 @@
+{
+    "function_config": {
+        "name": "camel_2d",
+        "dimension": 2
+    },
+    "test_input_params": {
+        "center": [0.0, 0.0],
+        "degree": 3
+    },
+    "constructor_params": {
+        "precision": "Float64Precision", 
+        "basis": "chebyshev"
+    },
+    "analysis_params": {
+        "enable_hessian": true
+    }
+}

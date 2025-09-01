@@ -96,6 +96,32 @@ __pycache__/
 # HPC test results (keep locally but don't commit)
 hpc/jobs/submission/collected_results/
 
+# Build artifacts and temporary directories
+build_*/
+bundle_*/
+*_bundle/
+*.tar.gz
+*.zip
+
+# Log files and job outputs
+*.out
+*.err
+*.log
+globtim_*_tests_*.out
+globtim_*_tests_*.err
+
+# Temporary Julia scripts
+analyze_*.jl
+create_*.jl
+extract_*.jl
+fix_*.jl
+test_*.jl
+verify_*.jl
+
+# SLURM job files
+*.slurm
+slurm-jobs/
+
 # Cleanup analysis files (temporary - archive when complete)
 *_CLEANUP_ANALYSIS.md
 *_WORKFLOW_ANALYSIS.md
