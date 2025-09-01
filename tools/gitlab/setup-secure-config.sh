@@ -1,10 +1,8 @@
 #!/bin/bash
-"""
-Secure GitLab Configuration Setup
-
-Sets up secure GitLab API access using Git credential helper and environment variables.
-Implements security best practices to prevent token exposure.
-"""
+# Secure GitLab Configuration Setup
+#
+# Sets up secure GitLab API access using Git credential helper and environment variables.
+# Implements security best practices to prevent token exposure.
 
 set -e
 
