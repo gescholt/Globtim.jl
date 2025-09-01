@@ -1,5 +1,6 @@
 using Test
 using Globtim
+
 # Add this diagnostic code near the top of your test file
 println("Checking if Constructor is defined: ", isdefined(Globtim, :Constructor))
 println("Checking if test_input is defined: ", isdefined(Globtim, :test_input))
@@ -11,7 +12,17 @@ println(
     filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim))
 )
 
-using CSV
+# Handle CSV as weak dependency - try loading but provide fallback
+try
+    # Import CSV to trigger the GlobtimDataExt extension
+    import CSV
+    println("✅ CSV loaded successfully (weak dependency activated)")
+    global CSV_AVAILABLE = true
+catch e
+    println("⚠️ CSV not available, skipping CSV-dependent tests: $e")
+    global CSV_AVAILABLE = false
+end
+
 using DataFrames
 using DynamicPolynomials
 # using HomotopyContinuation
@@ -102,7 +113,7 @@ using ProgressLogging
     @testset "Comparison with MATLAB results" begin
         # Load the pre-computed critical points from MATLAB if the file exists
         matlab_file_path = "../data/matlab_critical_points/valid_points_deuflhard.csv"
-        if isfile(matlab_file_path)
+        if CSV_AVAILABLE && isfile(matlab_file_path)
             matlab_df = DataFrame(CSV.File(matlab_file_path))
 
             # Make sure df_cheb exists and has rows
@@ -120,6 +131,8 @@ using ProgressLogging
             else
                 @info "DataFrame from Chebyshev test is empty or undefined, skipping comparison"
             end
+        elseif !CSV_AVAILABLE
+            @info "CSV not available (weak dependency), skipping MATLAB comparison tests"
         else
             @info "MATLAB comparison file not found, skipping comparison tests"
         end

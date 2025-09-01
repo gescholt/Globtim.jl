@@ -98,7 +98,14 @@
       "Bash(./create_x86_homotopy_bundle.sh:*)",
       "Bash(docker:*)",
       "Bash(./deploy_homotopy_to_falcon.sh:*)",
-      "Bash(./deploy_fixed_homotopy.sh:*)"
+      "Bash(./deploy_fixed_homotopy.sh:*)",
+      "Read(/Users/ghscholt/.ssh/**)",
+      "Bash(./tools/gitlab/migrate_tasks.sh:*)",
+      "Bash(pip install:*)",
+      "Bash(/opt/homebrew/bin/pip3 install pyyaml)",
+      "Bash(/opt/homebrew/bin/pip3 install --break-system-packages --user pyyaml)",
+      "Bash(./tools/gitlab/setup-boards.sh:*)",
+      "Bash(pip3 install:*)"
     ],
     "defaultMode": "acceptEdits"
   },
