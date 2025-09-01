@@ -2,10 +2,22 @@
 # Enhanced Project Status Report Generator
 # Generates comprehensive project status including features, epics, and roadmap progress
 
-source .env.gitlab 2>/dev/null || {
-    echo "Error: .env.gitlab not found. Please set up GitLab environment variables."
+# Source secure environment configuration
+if [[ -f .env.gitlab.local ]]; then
+    source .env.gitlab.local
+elif [[ -f .env.gitlab ]]; then
+    source .env.gitlab
+else
+    echo "Error: No GitLab configuration found. Run tools/gitlab/setup-secure-config.sh"
     exit 1
-}
+fi
+
+# Use secure API wrapper
+GITLAB_API="./tools/gitlab/gitlab-api.sh"
+if [[ ! -f "$GITLAB_API" ]]; then
+    echo "Error: Secure API wrapper not found. Run tools/gitlab/setup-secure-config.sh"
+    exit 1
+fi
 
 # ANSI color codes
 GREEN='\033[0;32m'
@@ -35,12 +47,10 @@ echo -e "${BOLD}${BLUE}🎯 Project Overview${NC}"
 echo "─────────────────────"
 
 # Get total issues and recent activity
-TOTAL_ISSUES=$(curl -s -H "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" \
-    "$GITLAB_API_URL/projects/$GITLAB_PROJECT_ID/issues?per_page=1" -I | \
+TOTAL_ISSUES=$($GITLAB_API GET "/projects/$GITLAB_PROJECT_ID/issues?per_page=1" -I | \
     grep -i x-total | cut -d' ' -f2 | tr -d '\r')
 
-OPEN_ISSUES=$(curl -s -H "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" \
-    "$GITLAB_API_URL/projects/$GITLAB_PROJECT_ID/issues?state=opened&per_page=1" -I | \
+OPEN_ISSUES=$($GITLAB_API GET "/projects/$GITLAB_PROJECT_ID/issues?state=opened&per_page=1" -I | \
     grep -i x-total | cut -d' ' -f2 | tr -d '\r')
 
 CLOSED_ISSUES=$((TOTAL_ISSUES - OPEN_ISSUES))

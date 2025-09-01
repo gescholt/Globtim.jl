@@ -1,15 +1,16 @@
 ## Bug Description
-<!-- Provide a clear and concise description of the bug -->
+<!-- Clear and concise description of the bug -->
 
 ## Environment
-- **Julia Version**: 
-- **Globtim Version**: 
-- **Operating System**: 
+- **Julia Version**:
+- **Globtim Version**:
+- **Operating System**:
+- **Environment**: [local/HPC/CI]
 
 ## Steps to Reproduce
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Expected Behavior
 <!-- What should happen? -->
@@ -19,13 +20,19 @@
 
 ## Error Messages
 ```julia
-# Paste any error messages here
+# Paste any error messages, stack traces, or logs here
 ```
 
+## Impact Assessment
+- **Severity**: [Critical/High/Medium/Low]
+- **Affected Users**: [All/Specific workflow/Edge case]
+- **Workaround Available**: [Yes/No - describe if yes]
+
 ## Additional Context
-<!-- Add any other context about the problem here -->
+<!-- Screenshots, data files, configuration, or other relevant information -->
 
 ## Possible Solution
 <!-- If you have suggestions on how to fix the bug -->
 
-/label ~"type::bug" ~"status::backlog"
+/label ~"status::backlog" ~"Type::Bug" ~"Priority::" ~"component::"
+/assign @

@@ -1,28 +1,42 @@
-## Epic Overview
-<!-- High-level description of the epic -->
+## Epic: [Name]
+
+**Goal**: [Clear, measurable objective statement]
+**Status**: 🟡 In Progress (X/Y features complete)
+**Timeline**: [Start Date] - [Target Completion]
 
 ## Business Value
-<!-- Why is this epic important? -->
+<!-- Why is this epic important? What value does it deliver? -->
 
-## Success Metrics
-<!-- How will we measure success? -->
-- [ ]
-- [ ]
+## Key Features
+- [x] ✅ Completed feature with brief description
+- [/] 🔄 In progress feature with current status
+- [ ] 📋 Planned feature with acceptance criteria
 
-## Features/User Stories
-<!-- List of features that make up this epic -->
-1.
-2.
-3.
+## Success Criteria
+- [ ] Measurable outcome 1
+- [ ] Measurable outcome 2
+- [ ] Performance or quality targets
 
 ## Dependencies
-<!-- Other epics or external dependencies -->
+<!-- List any blocking epics, external factors, or prerequisites -->
 
-## Timeline
-- Start Date:
-- Target Completion:
-- Actual Completion:
+## Progress Tracking
+- **Completed**: X issues
+- **In Progress**: Y issues
+- **Remaining**: Z issues
+- **Completion**: XX%
 
-## Labels
-/label ~"epic::" ~"priority::high"
-/milestone %"Epic Planning"
+## Timeline Milestones
+- **Phase 1** (Date): Milestone description
+- **Phase 2** (Date): Milestone description
+- **Phase 3** (Date): Milestone description
+
+## Risk Assessment
+<!-- Identify potential risks and mitigation strategies -->
+
+## Resources Required
+<!-- Team members, tools, or external resources needed -->
+
+/label ~"Type::Epic" ~"Priority::" ~"epic::"
+/assign @
+/milestone

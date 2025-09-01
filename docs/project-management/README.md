@@ -2,18 +2,31 @@
 
 This directory contains all project management documentation for Globtim.jl development.
 
-## 📋 Quick Reference
+## 🚀 GitLab Workflow (Current System)
+
+### Quick Start
+```bash
+# 1. Setup GitLab integration
+cp tools/gitlab/config.json.template tools/gitlab/config.json
+# Edit with your GitLab project ID and access token
+
+# 2. Install automation hooks
+./tools/gitlab/install_hooks.sh install
+
+# 3. Migrate existing tasks
+./tools/gitlab/migrate_tasks.sh full
+```
 
 ### Daily Commands
 ```bash
-# View current sprint status
-./scripts/sprint-dashboard.sh
+# Start work on issue
+python3 tools/gitlab/task_sync.py create-branch 123
 
-# Check epic progress  
-./scripts/epic-progress.sh
+# Commit work (auto-syncs with GitLab)
+git commit -m "Fix bug, closes #123"
 
-# Quick project overview
-./scripts/gitlab-explore.sh
+# Check status
+./tools/gitlab/install_hooks.sh status
 ```
 
 ### Issue Management Workflow
@@ -22,29 +35,29 @@ backlog → ready → in-progress → review → testing → done
 ```
 
 **Required Labels:**
-- **Status**: `status::*` (always required)
-- **Priority**: `Priority::Critical|High|Medium|Low` 
+- **Status**: `status::backlog|ready|in-progress|review|testing|done`
+- **Priority**: `Priority::Critical|High|Medium|Low`
 - **Type**: `Type::Bug|Feature|Enhancement|Documentation|Test`
 
 ## 📚 Documentation Structure
 
-### [GitLab Workflow](gitlab-workflow.md)
-Complete guide to GitLab setup, branch strategy, and development workflow including:
-- Dual repository structure (GitLab private + GitHub public)
-- Branch management and merge request process
-- CI/CD setup recommendations
+### GitLab Workflow (Current System)
+- **[GitLab Workflow Guide](gitlab-workflow-guide.md)** - Complete workflow documentation
+- **[GitLab Quick Reference](gitlab-quick-reference.md)** - Daily commands and shortcuts
+- **[GitLab Issue Structure](gitlab-issue-structure.md)** - Labels, templates, and standards
+- **[Task Landscape Analysis](task-landscape-analysis.md)** - Migration planning analysis
 
-### [Sprint Process](sprint-process.md) 
-Detailed sprint management including:
-- 2-week sprint cadence and ceremonies
-- Issue workflow and definition of done
-- Metrics tracking and GitLab board setup
+### Migration Tools
+- **[Migration Tools README](../../tools/gitlab/README.md)** - Tool documentation
+- **Task Extractor**: `tools/gitlab/task_extractor.py` - Extract tasks from repository
+- **GitLab Manager**: `tools/gitlab/gitlab_manager.py` - Create/manage GitLab issues
+- **Task Sync**: `tools/gitlab/task_sync.py` - Sync development work with issues
+- **Migration Script**: `tools/gitlab/migrate_tasks.sh` - Complete migration workflow
 
-### [Task Management](task-management.md)
-Consolidated task and issue management workflows including:
-- Issue creation templates and formats
-- Epic management and progress tracking
-- Troubleshooting common problems
+### Legacy Documentation
+- **[GitLab Workflow](gitlab-workflow.md)** - Original GitLab setup guide
+- **[Sprint Process](sprint-process.md)** - Sprint planning procedures
+- **[Task Management](task-management.md)** - Original issue management guide
 
 ## 🚀 Getting Started
 
