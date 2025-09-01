@@ -29,6 +29,11 @@ git commit -m "Fix bug, closes #123"
 ./tools/gitlab/install_hooks.sh status
 ```
 
+### 📋 Project Boards
+- **[Development Workflow](https://git.mpi-cbg.de/scholten/globtim/-/boards)** - Daily task management
+- **[Epic Progress](https://git.mpi-cbg.de/scholten/globtim/-/boards)** - Strategic project tracking
+- **[Priority Focus](https://git.mpi-cbg.de/scholten/globtim/-/boards)** - Urgency-based prioritization
+
 ### Issue Management Workflow
 ```
 backlog → ready → in-progress → review → testing → done
@@ -45,6 +50,8 @@ backlog → ready → in-progress → review → testing → done
 - **[GitLab Workflow Guide](gitlab-workflow-guide.md)** - Complete workflow documentation
 - **[GitLab Quick Reference](gitlab-quick-reference.md)** - Daily commands and shortcuts
 - **[GitLab Issue Structure](gitlab-issue-structure.md)** - Labels, templates, and standards
+- **[GitLab Boards Guide](gitlab-boards-guide.md)** - Project boards usage and management
+- **[Boards Quick Reference](boards-quick-reference.md)** - Board links and quick actions
 - **[Task Landscape Analysis](task-landscape-analysis.md)** - Migration planning analysis
 
 ### Migration Tools
