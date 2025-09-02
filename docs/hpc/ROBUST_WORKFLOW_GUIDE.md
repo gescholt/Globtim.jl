@@ -6,9 +6,9 @@ Since you're the sole user of r04n02 and don't need SLURM's scheduling capabilit
 
 ## Recommended Approaches
 
-### 1. **GNU Screen (BEST FOR YOUR USE CASE)** ⭐
+### 1. **tmux (BEST FOR YOUR USE CASE)** ⭐
 
-Screen provides persistent terminal sessions that survive disconnections.
+tmux provides persistent terminal sessions that survive disconnections.
 
 #### Basic Usage:
 
@@ -17,20 +17,20 @@ Screen provides persistent terminal sessions that survive disconnections.
 ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Start a new screen session for your experiment
-screen -S globtim_experiment
+# Start a new tmux session for your experiment
+tmux new -s globtim_experiment
 
-# Run your Julia experiment
-/sw/bin/julia --project=. hpc/experiments/run_4d_experiment.jl
+# Run your Julia experiment (Julia 1.11.6 via juliaup)
+julia --project=. hpc/experiments/run_4d_experiment.jl
 
-# Detach from screen (experiment continues running)
-# Press: Ctrl+A, then D
+# Detach from tmux (experiment continues running)
+# Press: Ctrl+B, then D
 
 # Later, reattach to check progress
-screen -r globtim_experiment
+tmux attach -t globtim_experiment
 
-# List all screen sessions
-screen -ls
+# List all tmux sessions
+tmux ls
 ```
 
 #### Using the Robust Experiment Runner:
@@ -49,20 +49,20 @@ screen -ls
 ./hpc/experiments/robust_experiment_runner.sh attach
 ```
 
-### 2. **Tmux (Alternative to Screen)**
+### 2. **GNU Screen (Alternative to tmux)**
 
-Similar to screen but with more features:
+Similar to tmux but older and slightly different key bindings:
 
 ```bash
-# Start new tmux session
-tmux new -s globtim
+# Start new screen session
+screen -S globtim
 
-# Run experiment
-/sw/bin/julia --project=. experiment.jl
+# Run experiment (Julia 1.11.6 via juliaup)
+julia --project=. experiment.jl
 
-# Detach: Ctrl+B, then D
-# Reattach: tmux attach -t globtim
-# List: tmux ls
+# Detach: Ctrl+A, then D
+# Reattach: screen -r globtim
+# List: screen -ls
 ```
 
 ### 3. **Nohup with Logging (Simple but Limited)**
@@ -70,7 +70,7 @@ tmux new -s globtim
 For simple fire-and-forget jobs:
 
 ```bash
-nohup /sw/bin/julia --project=. experiment.jl \
+nohup julia --project=. experiment.jl \
     > results/experiment_$(date +%Y%m%d_%H%M%S).log 2>&1 &
 
 # Check process
@@ -118,8 +118,8 @@ If disconnected, the experiment automatically resumes from the last checkpoint w
 
 | Method | Persistent | Monitoring | Recovery | Parallel | Complexity |
 |--------|------------|------------|----------|----------|------------|
+| tmux | ✅ | ✅ Live | Manual | ✅ Panes | Low |
 | Screen | ✅ | ✅ Live | Manual | ❌ | Low |
-| Tmux | ✅ | ✅ Live | Manual | ✅ Panes | Low |
 | Nohup | ✅ | 📄 Logs | ❌ | ✅ | Very Low |
 | Julia Manager | ✅ | 📄 Logs | ✅ Auto | ✅ | Medium |
 | SLURM | ✅ | ✅ | ✅ | ✅ | High |
@@ -134,7 +134,7 @@ Given that you:
 
 **Recommended Setup:**
 
-1. **Use Screen for session management** (simple, reliable, allows monitoring)
+1. **Use tmux for session management** (simple, reliable, allows monitoring)
 2. **Implement checkpointing in Julia** (for long-running experiments)
 3. **Use the robust_experiment_runner.sh** (combines both approaches)
 
@@ -147,9 +147,9 @@ ssh scholten@r04n02
 # 2. Navigate to repository
 cd /home/scholten/globtim
 
-# 3. Start experiment in screen with logging
-screen -S exp_4d_$(date +%Y%m%d)
-/sw/bin/julia --project=. << 'EOF'
+# 3. Start experiment in tmux with logging
+tmux new -s exp_4d_$(date +%Y%m%d)
+julia --project=. << 'EOF'
     include("hpc/experiments/experiment_manager.jl")
     
     # Your 4D experiment with checkpointing
@@ -164,10 +164,10 @@ screen -S exp_4d_$(date +%Y%m%d)
     run_with_checkpointing(manager, run_4d_iteration, 1000)
 EOF
 
-# 4. Detach (Ctrl+A, D) and let it run
+# 4. Detach (Ctrl+B, D) and let it run
 
 # 5. Check progress anytime
-screen -r exp_4d_*
+tmux attach -t exp_4d_*
 # or check logs
 tail -f hpc_results/exp_*/checkpoint_summary.txt
 ```
@@ -188,9 +188,9 @@ while true; do
     echo "Time: $(date)"
     echo ""
     
-    # Check screen sessions
-    echo "Screen Sessions:"
-    screen -ls | grep globtim
+    # Check tmux sessions
+    echo "tmux Sessions:"
+    tmux ls | grep globtim
     
     # Check Julia processes
     echo ""
@@ -213,12 +213,12 @@ done
 
 ## Best Practices
 
-1. **Always use screen/tmux** for long-running experiments
+1. **Always use tmux/screen** for long-running experiments
 2. **Implement checkpointing** for experiments > 1 hour
 3. **Log everything** with timestamps
 4. **Name sessions descriptively** (e.g., `4d_degree12_$(date +%Y%m%d)`)
-5. **Clean up old screen sessions** regularly: `screen -ls | grep Dead | awk '{print $1}' | xargs -I {} screen -wipe {}`
-6. **Monitor resource usage**: `htop` or `top` in a separate screen window
+5. **Clean up old tmux sessions** regularly: `tmux ls | grep -v attached | cut -d: -f1 | xargs -I {} tmux kill-session -t {}`
+6. **Monitor resource usage**: `htop` or `top` in a separate tmux window
 7. **Set up email notifications** for completion (optional):
 
 ```julia
@@ -246,7 +246,7 @@ run(`echo "Experiment completed" | mail -s "GlobTim Done" your.email@domain.com`
 
 ## Conclusion
 
-For your use case (sole user of r04n02), **GNU Screen + Julia checkpointing** provides the optimal balance of:
+For your use case (sole user of r04n02), **tmux + Julia checkpointing** provides the optimal balance of:
 - ✅ Persistence (survives disconnection)
 - ✅ Simplicity (easy to learn and use)
 - ✅ Monitoring (attach anytime to check)
