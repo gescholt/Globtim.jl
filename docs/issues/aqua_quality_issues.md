@@ -3,10 +3,15 @@
 ## Summary
 While core functionality tests pass, several Aqua.jl code quality checks are failing. These are non-critical but should be addressed for better code maintainability.
 
+**UPDATE (September 2, 2025)**: 2 of 3 issues have been resolved in commit 8ab8ccb.
+
 ## Current Failures
 
-### 1. Undefined Exports (13 symbols)
-The following symbols are exported but not properly defined in the codebase:
+### 1. ✅ RESOLVED - Undefined Exports (13 symbols)
+**Status**: Fixed in commit 8ab8ccb  
+**Resolution**: Commented out undefined exports in src/Globtim.jl
+
+The following symbols were exported but not properly defined in the codebase:
 - `Globtim.ConservativeValleyConfig`
 - `Globtim.ConservativeValleyStep`
 - `Globtim.ValleyDetectionConfig`
@@ -21,17 +26,18 @@ The following symbols are exported but not properly defined in the codebase:
 - `Globtim.project_to_critical_manifold`
 - `Globtim.validate_valley_point`
 
-**Action Required**: Either implement these functions or remove them from exports.
+These exports have been commented out and can be uncommented once the functions are implemented.
 
-### 2. Stale Dependencies
-Aqua.jl is currently listed in the main Project.toml dependencies but should only be in test dependencies.
+### 2. ✅ RESOLVED - Stale Dependencies
+**Status**: Fixed in commit 8ab8ccb  
+**Resolution**: Removed Aqua from main Project.toml dependencies
 
-**Action Required**: 
-- Remove Aqua from Project.toml [deps] section
-- Ensure it's only in test/Project.toml
+Aqua.jl was listed in the main Project.toml dependencies but should only be in test dependencies.
+- ✅ Removed Aqua from Project.toml [deps] section
+- ✅ Aqua remains available in test/Project.toml for quality checks
 
-### 3. Excessive Exports
-The package currently exports 258 symbols, which the test considers excessive (limit is 200).
+### 3. ⚠️ REMAINING - Excessive Exports
+The package currently exports 245 symbols (down from 258), which the test considers excessive (limit is 200).
 
 **Action Required**: Review exports and consider:
 - Using submodules for logical grouping
@@ -56,9 +62,12 @@ Export Consistency: Test Failed at test_aqua.jl:152
 **Low** - These are code quality issues that don't affect functionality.
 
 ## Acceptance Criteria
-- [ ] All undefined exports are either implemented or removed
-- [ ] Aqua is moved to test-only dependencies
+- [x] All undefined exports are either implemented or removed ✅ COMPLETED
+- [x] Aqua is moved to test-only dependencies ✅ COMPLETED
 - [ ] Number of exports reduced to < 200 or test limit adjusted with justification
+
+## Status
+**PARTIALLY RESOLVED** - 2 of 3 issues fixed as of September 2, 2025
 
 ## Related Issues
 - #18 - Fix test_aqua.jl syntax errors (RESOLVED)
