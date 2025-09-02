@@ -5,7 +5,6 @@ authors = ["Georgy Scholten <scholtengeorgy@gmail.com>"]
 version = "1.1.2"
 
 [deps]
-Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -47,7 +46,6 @@ GlobtimDevExt = ["JuliaFormatter"]
 GlobtimGLMakieExt = "GLMakie"
 
 [compat]
-Aqua = "0.8.14"
 CSV = "0.10"
 CairoMakie = "0.11"
 Clustering = "0.15"
