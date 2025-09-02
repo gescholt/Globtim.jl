@@ -64,11 +64,15 @@ function collect_results() {
     
     print_header "Collecting Results for Job $job_id"
     
+    # Get the GlobTim directory from environment or use default
+    GLOBTIM_DIR="${GLOBTIM_DIR:-/globtim}"
+    
     # Standard locations to check
     RESULT_DIRS=(
-        "/tmp/globtim_results/4d_exp_*_job${job_id}"
-        "/tmp/globtim_${job_id}/results_*"
-        "/home/scholten/globtim_results/4d_exp_*_job${job_id}"
+        "$GLOBTIM_DIR/hpc_results/*_job${job_id}"
+        "$GLOBTIM_DIR/hpc_results/test_2d_*_job${job_id}"
+        "$GLOBTIM_DIR/hpc_results/4d_exp_*_job${job_id}"
+        "/home/scholten/globtim/hpc_results/*_job${job_id}"
     )
     
     FOUND=false
