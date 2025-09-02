@@ -1,10 +1,10 @@
-# Screen-Based HPC Execution Framework Migration
+# Tmux-Based HPC Execution Framework Migration
 
 ## Overview
 **Date Implemented:** September 2, 2025  
 **Status:** ✅ PRODUCTION READY
 
-This document summarizes the migration from SLURM-based job scheduling to a Screen-based persistent execution framework, optimized for single-user access to the r04n02 compute node.
+This document summarizes the migration from SLURM-based job scheduling to a tmux-based persistent execution framework, optimized for single-user access to the r04n02 compute node.
 
 ## Key Changes
 
@@ -15,11 +15,11 @@ This document summarizes the migration from SLURM-based job scheduling to a Scre
 - Bundle extraction and environment setup complexity
 - Job ID tracking and status monitoring via sacct/squeue
 
-### After: Screen-Based Execution
+### After: Tmux-Based Execution
 - Direct execution on r04n02 compute node
 - No scheduling overhead - immediate execution
 - Persistent sessions survive SSH disconnection
-- Simple session management with Screen commands
+- Simple session management with tmux commands
 - Integrated checkpointing for recovery
 - Real-time monitoring and attachment
 
@@ -27,14 +27,14 @@ This document summarizes the migration from SLURM-based job scheduling to a Scre
 
 ### 1. Core Infrastructure
 - **Location:** `/home/scholten/globtim` (permanent storage, NOT /tmp)
-- **Julia Module:** `module load julia/1.11.2` (REQUIRED)
-- **Framework:** GNU Screen for session persistence
+- **Julia:** `julia` (v1.11.6 via juliaup, no module system)
+- **Framework:** tmux for session persistence
 - **Automation:** `robust_experiment_runner.sh` for session management
 
 ### 2. Key Scripts Created
 
 #### `hpc/experiments/robust_experiment_runner.sh`
-- Automated Screen session creation and management
+- Automated tmux session creation and management
 - Handles experiment naming and timestamps
 - Provides status checking and attachment commands
 - Supports both 2D test and 4D model configurations
@@ -45,9 +45,9 @@ This document summarizes the migration from SLURM-based job scheduling to a Scre
 - Recovery from last checkpoint on restart
 - Progress tracking and logging
 
-#### `hpc/monitoring/live_monitor.sh`
+#### `hpc/monitoring/tmux_monitor.sh`
 - Real-time monitoring dashboard
-- Tracks active Screen sessions
+- Tracks active tmux sessions
 - Shows Julia process status
 - Monitors resource usage and output files
 
@@ -59,30 +59,29 @@ This document summarizes the migration from SLURM-based job scheduling to a Scre
 ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Load Julia module (REQUIRED)
-module load julia/1.11.2
+# Julia is in PATH (via juliaup, no module needed)
 
 # Start 4D model experiment
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
 # Monitor progress
-./hpc/monitoring/live_monitor.sh
+./hpc/monitoring/tmux_monitor.sh
 
 # Attach to session
-screen -r globtim_*
+tmux attach -t globtim_*
 ```
 
-### Manual Screen Usage
+### Manual Tmux Usage
 ```bash
 # Start new session
-screen -S my_experiment
+tmux new -s my_experiment
 
 # Run Julia experiment
 julia --project=. hpc/experiments/run_4d_experiment.jl
 
-# Detach (Ctrl+A, then D)
+# Detach (Ctrl+B, then D)
 # Reattach later
-screen -r my_experiment
+tmux attach -t my_experiment
 ```
 
 ## Advantages
@@ -112,25 +111,25 @@ screen -r my_experiment
 
 ## Best Practices
 
-1. **Always load Julia module**: `module load julia/1.11.2` before starting
+1. **Julia is in PATH**: No module loading needed (using juliaup)
 2. **Use descriptive session names**: Include experiment type and date
 3. **Implement checkpointing**: For experiments longer than 1 hour
-4. **Monitor resources**: Use `htop` in separate Screen window
-5. **Clean up old sessions**: `screen -wipe` removes dead sessions
+4. **Monitor resources**: Use `htop` in separate tmux window
+5. **Clean up old sessions**: `tmux kill-server` removes all sessions
 6. **Log everything**: Redirect output to timestamped log files
 
 ## Fallback Options
 
-While Screen is the primary method, alternatives remain available:
-- **Tmux**: More features but similar concept
+While tmux is the primary method, alternatives remain available:
+- **Screen**: Similar concept (but not installed on r04n02)
 - **Nohup**: Simple background execution (no interactivity)
 - **SLURM**: Still available via falcon if multi-user scheduling needed
 
 ## Conclusion
 
-The Screen-based framework provides an optimal solution for single-user HPC operations on r04n02, eliminating unnecessary complexity while maintaining all required functionality for persistent, monitored experiment execution.
+The tmux-based framework provides an optimal solution for single-user HPC operations on r04n02, eliminating unnecessary complexity while maintaining all required functionality for persistent, monitored experiment execution.
 
 ## References
-- [GNU Screen Manual](https://www.gnu.org/software/screen/manual/screen.html)
+- [Tmux Manual](https://man.openbsd.org/tmux)
 - `docs/hpc/ROBUST_WORKFLOW_GUIDE.md` - Detailed usage guide
 - `hpc/experiments/README.md` - Script documentation
