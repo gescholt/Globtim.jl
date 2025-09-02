@@ -1,5 +1,8 @@
 # API Reference
 
+> **Note:** As of v1.1.2, the public API has been streamlined to include only essential functions. 
+> Many internal helper functions are no longer exported but can still be accessed via `Globtim.function_name` if needed.
+
 ## Main Functions
 
 ### Problem Setup

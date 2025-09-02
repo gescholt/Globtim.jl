@@ -37,7 +37,7 @@ Aqua.jl was listed in the main Project.toml dependencies but should only be in t
 - ✅ Aqua remains available in test/Project.toml for quality checks
 
 ### 3. ✅ RESOLVED - Excessive Exports
-**Status**: Fixed in commit [pending]  
+**Status**: Fixed in commit 8906736  
 **Resolution**: Reduced exports from 245 to 164 by making internal functions non-public
 
 The following categories of functions were made internal:
