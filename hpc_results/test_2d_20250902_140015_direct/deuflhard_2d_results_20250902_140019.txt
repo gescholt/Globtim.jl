@@ -1,0 +1,55 @@
+2D DEUFLHARD TEST RESULTS
+============================================================
+Configuration:
+  num_samples: 100
+  sample_range: 2.0
+  degrees: [5, 7, 9]
+  basis_types: ["chebyshev", "legendre"]
+  dimension: 2
+  tolerance: 1.0e-10
+
+Results:
+
+chebyshev basis, degree 5:
+  Conditioning: 27334.65438148129
+  Max error: 9.25805238718634e6
+  Avg error: 315570.4719605235
+  Critical points: 0
+  Time: 0.11637187004089355 seconds
+
+chebyshev basis, degree 7:
+  Conditioning: 6.865977965499677e6
+  Max error: 6.457257677895625e6
+  Avg error: 177591.95001310678
+  Critical points: 0
+  Time: 0.0024051666259765625 seconds
+
+chebyshev basis, degree 9:
+  Conditioning: 1.003187001016741e13
+  Max error: 8.957319349385731e8
+  Avg error: 2.0411694852135926e7
+  Critical points: 0
+  Time: 0.003401041030883789 seconds
+
+legendre basis, degree 5:
+  Conditioning: 11755.607251266476
+  Max error: 9.25805238718628e6
+  Avg error: 315570.47196052177
+  Critical points: 0
+  Time: 0.0019559860229492188 seconds
+
+legendre basis, degree 7:
+  Conditioning: 2.694961799707225e6
+  Max error: 6.457257677894608e6
+  Avg error: 177591.9500130913
+  Critical points: 0
+  Time: 0.002650022506713867 seconds
+
+legendre basis, degree 9:
+  Conditioning: 2.2104763686100215e12
+  Max error: 8.957319309855239e8
+  Avg error: 2.041169476920296e7
+  Critical points: 0
+  Time: 0.0038781166076660156 seconds
+
+Total elapsed time: 0.564 seconds
