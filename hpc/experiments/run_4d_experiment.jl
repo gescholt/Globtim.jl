@@ -3,7 +3,7 @@
 # This script runs the complete GlobTim pipeline and saves critical points
 
 using Pkg
-Pkg.activate(dirname(@__DIR__))
+Pkg.activate(dirname(dirname(@__DIR__)))
 
 using Globtim
 using DynamicPolynomials
