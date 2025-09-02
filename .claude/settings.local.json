@@ -111,7 +111,9 @@
       "Bash([ -n \"$GITLAB_TOKEN\" ])",
       "Bash([ -f /Users/ghscholt/globtim/.env.gitlab ])",
       "Bash([ -f ~/.gitlab-token ])",
-      "Bash(./tools/gitlab/gitlab-api.sh:*)"
+      "Bash(./tools/gitlab/gitlab-api.sh:*)",
+      "Bash(conda:*)",
+      "Bash(ps:*)"
     ],
     "defaultMode": "acceptEdits"
   },
