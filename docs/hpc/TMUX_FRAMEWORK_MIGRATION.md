@@ -96,11 +96,11 @@ tmux attach -t my_experiment
 ## Migration Impact
 
 ### Documentation Updated
-- ✅ `CLAUDE.md` - Updated with Screen framework details
+- ✅ `CLAUDE.md` - Updated with tmux framework details
 - ✅ `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md` - Reflects current infrastructure
-- ✅ `docs/hpc/ROBUST_WORKFLOW_GUIDE.md` - Complete Screen workflow guide
-- ✅ `docs/project-management/issues/HPC_4D_MODEL_WORKFLOW_ISSUE.md` - Updated for Screen approach
-- ✅ `.claude/agents/hpc-cluster-operator.md` - Agent updated for Screen operations
+- ✅ `docs/hpc/ROBUST_WORKFLOW_GUIDE.md` - Complete tmux workflow guide
+- ✅ `docs/project-management/issues/HPC_4D_MODEL_WORKFLOW_ISSUE.md` - Updated for tmux approach
+- ✅ `.claude/agents/hpc-cluster-operator.md` - Agent updated for tmux operations
 - ✅ `docs/project-management/PHASE1_IMPLEMENTATION_SUMMARY.md` - References updated
 
 ### Deprecated Components

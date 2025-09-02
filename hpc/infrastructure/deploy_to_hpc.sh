@@ -79,12 +79,12 @@ sync_to_remote "${CLUSTER_HOST}" "${CLUSTER_PATH}" "HPC cluster"
 case "$1" in
     "--setup")
         echo -e "${YELLOW}Setting up Julia environment on HPC cluster...${NC}"
-        ssh -i "${SSH_KEY_PATH}" "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && module load julia 2>/dev/null || echo 'No module system found, checking for Julia...' && which julia || echo 'Julia not found in PATH'"
+        ssh -i "${SSH_KEY_PATH}" "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && echo 'Julia 1.11.6 available via juliaup' && which julia || echo 'Julia not found in PATH'"
         ssh -i "${SSH_KEY_PATH}" "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && JULIA_NUM_THREADS=${JULIA_THREADS} julia --project=${JULIA_PROJECT} -e 'using Pkg; Pkg.instantiate()'"
         ;;
     "--test")
         echo -e "${YELLOW}Running tests on HPC cluster (using ${JULIA_THREADS} threads)...${NC}"
-        ssh -i "${SSH_KEY_PATH}" "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && module load julia 2>/dev/null || true && JULIA_NUM_THREADS=${JULIA_THREADS} julia --project=${JULIA_PROJECT} -e 'using Pkg; Pkg.instantiate(); Pkg.test()'"
+        ssh -i "${SSH_KEY_PATH}" "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && JULIA_NUM_THREADS=${JULIA_THREADS} julia --project=${JULIA_PROJECT} -e 'using Pkg; Pkg.instantiate(); Pkg.test()'"
         ;;
     "--interactive")
         echo -e "${YELLOW}Starting interactive session on HPC cluster...${NC}"
@@ -92,7 +92,7 @@ case "$1" in
         ;;
     "--julia")
         echo -e "${YELLOW}Starting Julia on HPC cluster...${NC}"
-        ssh -i "${SSH_KEY_PATH}" -t "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && module load julia 2>/dev/null || true && JULIA_NUM_THREADS=${JULIA_THREADS} julia --project=${JULIA_PROJECT}"
+        ssh -i "${SSH_KEY_PATH}" -t "${CLUSTER_HOST}" "cd ${CLUSTER_PATH} && JULIA_NUM_THREADS=${JULIA_THREADS} julia --project=${JULIA_PROJECT}"
         ;;
 esac
 

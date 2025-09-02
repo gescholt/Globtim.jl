@@ -198,7 +198,7 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - ✅ **Live Monitoring**: Integrated `live_monitor.sh` for real-time experiment tracking
 - ✅ **Checkpointing**: `experiment_manager.jl` enables robust experiment state management
 - ✅ **4D Model Workflow**: Seamless execution and monitoring on r04n02
-- ✅ **Screen-Based Framework**: Replaces legacy SLURM job submission
+- ✅ **tmux-Based Framework**: Replaces legacy SLURM job submission
 - ✅ **Workflow Flexibility**: Supports single-user and multi-experiment scenarios
 
 **Key Capabilities:**

@@ -27,7 +27,7 @@ Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 - Direct GitLab connectivity
 - Native Julia package management  
 - Simplified deployment workflow
-- Screen-based persistent execution (no SLURM needed for single-user node)
+- tmux-based persistent execution (no SLURM needed for single-user node)
 - Repository at /home/scholten/globtim (permanent storage)
 ```
 
@@ -38,7 +38,7 @@ Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 3. **Native Package Management**: Use Julia Pkg.add() without bundling
 4. **Simplified Deployment**: No complex file transfer procedures
 5. **Enhanced Development**: Work directly on target architecture
-6. **Execution Freedom**: Use Screen for persistent execution without SLURM overhead
+6. **Execution Freedom**: Use tmux for persistent execution without SLURM overhead
 
 ## 📋 Implementation Tasks
 
@@ -148,7 +148,7 @@ Pkg.add("ForwardDiff")          # ✅ No more cross-platform issues
 ### Phase 5: Advanced Infrastructure & Example Architecture 📋 **LOWER PRIORITY**
 
 #### 5.1 Execution Framework Enhancement **COMPLETED**
-**Status**: ✅ Screen-based persistent execution framework implemented (September 2, 2025)
+**Status**: ✅ tmux-based persistent execution framework implemented (September 2, 2025)
 **Achievement**: Eliminated need for SLURM on single-user r04n02 node
 **Features**: Automated session management, checkpointing, live monitoring
 
@@ -181,9 +181,9 @@ sbatch --nodelist=r04n02 script.slurm
 # Direct single-hop workflow
 ssh scholten@r04n02
 cd /home/scholten/globtim  # Repository already cloned
-module load julia/1.11.2  # Load Julia module
+# Julia 1.11.6 is available via juliaup (no module system)
 
-# Use Screen for persistent execution
+# Use tmux for persistent execution
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 ```
 
@@ -206,19 +206,19 @@ sbatch --nodelist=r04n02 script.slurm
 # Wait for scheduling, handle job dependencies
 ```
 
-**New Approach (Screen-Based)**:
+**New Approach (tmux-Based)**:
 ```bash
 # Simple direct execution with persistence
 cd /home/scholten/globtim
-module load julia/1.11.2
+# Julia 1.11.6 is available via juliaup (no module system)
 
-# Automated Screen session management
+# Automated tmux session management
 ./hpc/experiments/robust_experiment_runner.sh 4d-model
 
-# Or manual Screen usage
-screen -S experiment_name
+# Or manual tmux usage
+tmux new -s experiment_name
 julia --project=. experiment.jl
-# Ctrl+A, D to detach
+# Ctrl+B, D to detach
 ```
 
 ## 🎯 Expected Outcomes
@@ -275,11 +275,11 @@ julia --project=. experiment.jl
 ✅ **COMPLETED**: Classified remaining issues - infrastructure complete, mathematical focus identified
 ✅ **COMPLETED**: Updated documentation to reflect completed infrastructure and cleanup work
 
-### 📈 Week 4 COMPLETED: Screen-Based Execution Framework **IMPLEMENTED**
-- [x] **COMPLETED**: Implemented Screen-based persistent execution framework
+### 📈 Week 4 COMPLETED: tmux-Based Execution Framework **IMPLEMENTED**
+- [x] **COMPLETED**: Implemented tmux-based persistent execution framework
 - [x] **COMPLETED**: Created robust_experiment_runner.sh for automated session management
 - [x] **COMPLETED**: Developed experiment_manager.jl for Julia checkpointing
-- [x] **COMPLETED**: Updated monitoring tools for Screen sessions
+- [x] **COMPLETED**: Updated monitoring tools for tmux sessions
 - [x] **COMPLETED**: Documented new workflow in ROBUST_WORKFLOW_GUIDE.md
 
 ### 📋 Week 5+ CURRENT: Mathematical Refinement **ACTIVE**

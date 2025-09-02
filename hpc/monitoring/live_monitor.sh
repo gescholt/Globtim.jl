@@ -1,6 +1,6 @@
 #!/bin/bash
 # Live Monitoring Script for GlobTim HPC Experiments
-# Monitors both SLURM jobs and Screen sessions
+# Monitors both SLURM jobs and tmux sessions
 
 set -e
 
@@ -120,23 +120,23 @@ function monitor_job() {
     done
 }
 
-# Function to monitor Screen sessions
-function monitor_screen() {
+# Function to monitor tmux sessions
+function monitor_tmux() {
     local session_name=$1
     
     if [ -z "$session_name" ]; then
-        echo "Active GlobTim Screen sessions:"
-        screen -ls | grep globtim || echo "No sessions found"
+        echo "Active GlobTim tmux sessions:"
+        tmux ls | grep globtim || echo "No sessions found"
         return
     fi
     
-    echo -e "${GREEN}▶ SCREEN SESSION: $session_name${NC}"
+    echo -e "${GREEN}▶ TMUX SESSION: $session_name${NC}"
     echo "─────────────────────────────────────────────────"
     
     # Check if session exists
-    if screen -ls | grep -q "$session_name"; then
+    if tmux ls | grep -q "$session_name"; then
         echo "Status: RUNNING"
-        echo "To attach: screen -r $session_name"
+        echo "To attach: tmux attach -t $session_name"
         
         # Check for log files
         LOG_DIR="$GLOBTIM_DIR/hpc_results/${session_name}"
@@ -152,16 +152,16 @@ function monitor_screen() {
     fi
 }
 
-# Function to monitor all experiments (Screen + SLURM)
+# Function to monitor all experiments (tmux + SLURM)
 function monitor_all() {
     while true; do
         clear
         print_header
         echo -e "${BLUE}Timestamp:${NC} $(date '+%Y-%m-%d %H:%M:%S')\n"
         
-        echo -e "${BLUE}ACTIVE SCREEN SESSIONS:${NC}"
+        echo -e "${BLUE}ACTIVE TMUX SESSIONS:${NC}"
         echo "─────────────────────────────────────────────────"
-        screen -ls | grep globtim || echo "No active Screen sessions"
+        tmux ls | grep globtim || echo "No active tmux sessions"
         
         echo ""
         echo -e "${BLUE}JULIA PROCESSES:${NC}"
@@ -181,7 +181,7 @@ function monitor_all() {
         # Wait for input with timeout
         read -t $REFRESH_INTERVAL -p "Session name: " session_input
         if [ ! -z "$session_input" ]; then
-            monitor_screen $session_input
+            monitor_tmux $session_input
             read -p "Press Enter to continue..."
         fi
     done

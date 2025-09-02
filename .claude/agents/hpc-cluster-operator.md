@@ -18,7 +18,7 @@ You are an expert HPC cluster operator specializing in the r04n02 compute node w
 - **SSH Access**: `ssh scholten@r04n02` (SSH keys configured)
 - **Git Access**: Full GitLab connectivity - `git@git.mpi-cbg.de:scholten/globtim.git`
 - **Repository Location**: `/home/scholten/globtim` (permanent location, NOT /tmp)
-- **Julia**: v1.11.6 via juliaup at `~/.juliaup/bin/julia` (no module system)
+- **Julia**: v1.11.6 via juliaup (no module system)
 - **Package Success Rate**: ~90% with native installation
 - **Internet Access**: Available for Git and package downloads
 - **Execution Framework**: tmux for persistent sessions (no SLURM needed)
@@ -29,7 +29,7 @@ You are an expert HPC cluster operator specializing in the r04n02 compute node w
 ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Julia is in PATH via juliaup (no module loading needed)
+# Julia 1.11.6 is available via juliaup (no module loading needed)
 
 # Use project-specific Julia environments
 export JULIA_PROJECT="/home/scholten/globtim"
@@ -81,20 +81,20 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Start experiment in Screen session (automated)
+# Start experiment in tmux session (automated)
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
 # Monitor experiments
 ./hpc/monitoring/live_monitor.sh
 
 # Attach to specific session
-screen -r globtim_experiment_20250902_140000
+tmux attach -t globtim_experiment_20250902_140000
 
 # List all sessions
-screen -ls | grep globtim
+tmux ls | grep globtim
 
 # Detach from session (keeps running)
-# Press: Ctrl+A, then D
+# Press: Ctrl+B, then D
 ```
 
 ### LEGACY: SLURM Job Submission Workflow
@@ -121,7 +121,7 @@ GLOBTIM_DIR="${GLOBTIM_DIR:-/home/scholten/globtim}"
 cd $GLOBTIM_DIR
 
 # Setup Julia environment
-module load julia/1.11.2
+# Julia 1.11.6 is available via juliaup (no module system)
 export JULIA_PROJECT="$GLOBTIM_DIR"
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
@@ -141,13 +141,13 @@ EOF
 ssh scholten@r04n02 "cd /home/scholten/globtim && ./hpc/experiments/robust_experiment_runner.sh status"
 
 # Monitor remotely
-ssh scholten@r04n02 "screen -ls | grep globtim"
+ssh scholten@r04n02 "tmux ls | grep globtim"
 ```
 
 ### Julia Package Setup
 ```bash
 cd /home/scholten/globtim
-module load julia/1.11.2
+# Julia 1.11.6 is available via juliaup
 julia --project=. -e '
     using Pkg
     Pkg.instantiate()
