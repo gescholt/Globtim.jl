@@ -48,8 +48,8 @@ using ProgressLogging
         dim = n,
         center = [0.0, 0.0],
         GN = SMPL,
-        sample_range = scale_factor,
-        tolerance = nothing
+        sample_range = scale_factor
+        # tolerance will use default value of 2e-3
     )
 
     # Define df_cheb at this scope level so both nested testsets can access it
