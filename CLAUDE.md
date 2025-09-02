@@ -1,5 +1,26 @@
 # GlobTim Project Memory
 
+## 🚨 CRITICAL HPC EXECUTION ISSUES - MUST READ FIRST
+
+### Memory Management for Large Polynomial Problems (CRITICAL - September 3, 2025)
+**Problem**: OutOfMemoryError when running high-degree polynomial approximations in 4D+
+**Solution**: Always use `--heap-size-hint=50G` flag for Julia execution
+**Implementation**: Updated in `robust_experiment_runner.sh` line 62
+```bash
+julia --project=. --heap-size-hint=50G $experiment_script
+```
+**Why**: Degree 12 in 4D creates 28,561 basis functions → 2.3GB Vandermonde matrix
+
+### Common 4D Experiment Pitfalls (RESOLVED September 3, 2025)
+1. **Package Activation Path**: Use `Pkg.activate(dirname(dirname(@__DIR__)))` not `dirname(@__DIR__)`
+2. **Missing Dependencies**: Always ensure CSV, JSON, Statistics are in Project.toml
+3. **Field Access**: test_input has `.GN` not `.sample_pts` 
+4. **Git Sync**: ALWAYS pull on node after local changes
+5. **File Permissions**: Run `chmod +x` on scripts after git pull
+6. **Never use /tmp**: Use `$GLOBTIM_DIR/hpc/experiments/temp/` instead
+
+**Full Documentation**: See `docs/hpc/4D_EXPERIMENT_LESSONS_LEARNED.md`
+
 ## 🚨 CRITICAL TEST ENVIRONMENT ISSUES - MUST READ FIRST
 
 ### Julia Test Environment Configuration (RESOLVED September 2, 2025)
