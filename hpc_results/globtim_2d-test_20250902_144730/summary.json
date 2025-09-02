@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-02T14:48:31.357",
+  "julia_version": "1.11.6",
+  "threads": 1,
+  "samples": 25,
+  "degree": 8,
+  "dimension": 2,
+  "chebyshev_critical_points": 15,
+  "legendre_critical_points": 15,
+  "chebyshev_condition": 4.000000000000007,
+  "legendre_condition": 4.689104932006221
+}
