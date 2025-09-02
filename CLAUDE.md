@@ -291,6 +291,43 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - When discussing "an issue" or "the issue", this refers to tracked GitLab project management items
 - GitLab issues are used for features, tasks, improvements, and bug tracking
 
+## 🔐 GitLab API Access Configuration
+
+### Token Retrieval and Usage
+**Status:** Configured and operational (December 2024)
+
+**Getting the GitLab Token:**
+```bash
+# The token is stored securely and can be retrieved with:
+./tools/gitlab/get-token.sh
+# This outputs: yjKZNqzG2TkLzXyU8Q9R
+```
+
+**Using the GitLab API:**
+```bash
+# Set the token as environment variable
+export GITLAB_TOKEN="$(./tools/gitlab/get-token.sh)"
+
+# Project ID for globtim
+export GITLAB_PROJECT_ID="2545"
+
+# List issues
+curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  "https://git.mpi-cbg.de/api/v4/projects/$GITLAB_PROJECT_ID/issues?state=opened"
+
+# Update issue labels  
+curl --request PUT \
+  --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"labels": ["priority:high", "type:feature"]}' \
+  "https://git.mpi-cbg.de/api/v4/projects/$GITLAB_PROJECT_ID/issues/<issue_iid>"
+```
+
+**Available Scripts:**
+- `tools/gitlab/get-token.sh` - Retrieves the stored GitLab token
+- `tools/gitlab/gitlab-api.sh` - Wrapper for GitLab API calls  
+- `tools/gitlab/setup-secure-config.sh` - Initial token setup (interactive)
+
 **Task Distribution Analysis:**
 - **Total Tasks**: 1,168 across 7 epics (mathematical-core, performance, test-framework, etc.)
 - **Status Breakdown**: 1,033 not started, 113 completed, 21 in progress, 1 cancelled
