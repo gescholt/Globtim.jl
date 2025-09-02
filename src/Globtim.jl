@@ -133,45 +133,51 @@ export symbolic_chebyshev,
 export symbolic_orthopoly,
     evaluate_orthopoly, get_orthopoly_coeffs, construct_orthopoly_polynomial
 
-# Grid utility functions
-export grid_to_matrix, ensure_matrix_format, matrix_to_grid, get_grid_info
+# Grid utility functions - internal use only
+# export grid_to_matrix, ensure_matrix_format, matrix_to_grid, get_grid_info
 
-# ApproxPoly accessor functions
-export get_basis, get_precision, is_normalized, has_power_of_two_denom, get_scale_factor
+# ApproxPoly accessor functions - internal use only
+# export get_basis, get_precision, is_normalized, has_power_of_two_denom, get_scale_factor
 
-# Scaling utilities
-export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
+# Scaling utilities - internal use only
+# export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
 
-# Exact conversion and sparsification functions
-export to_exact_monomial_basis, exact_polynomial_coefficients
-export compute_l2_norm_vandermonde, compute_l2_norm_coeffs, sparsify_polynomial
-export compute_approximation_error,
-    analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
-export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
-export truncate_polynomial_adaptive, analyze_coefficient_distribution
+# Exact conversion and sparsification functions - only export main functions
+export to_exact_monomial_basis, sparsify_polynomial, exact_polynomial_coefficients
+# Internal analysis helpers - not exported
+# export compute_l2_norm_vandermonde, compute_l2_norm_coeffs
+# export compute_approximation_error,
+#     analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
+# export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
+# export truncate_polynomial_adaptive, analyze_coefficient_distribution
 export BoxDomain,
     AbstractDomain, compute_l2_norm, verify_truncation_quality, integrate_monomial
 
 # Quadrature-based L2 norm
 export compute_l2_norm_quadrature
 
-# Anisotropic grid support
-export generate_anisotropic_grid, get_grid_dimensions, is_anisotropic
+# Anisotropic grid support - only export main function
+export generate_anisotropic_grid
+# Internal grid helpers - not exported
+# export get_grid_dimensions, is_anisotropic
 
 # Timer for performance tracking
-export _TO
+# export _TO  # Internal - users don't need direct access
 
-# Error handling framework
+# Error handling framework - only export main error types
 export GlobtimError, InputValidationError, NumericalError, ComputationError, ResourceError, ConvergenceError
-export validate_dimension, validate_polynomial_degree, validate_sample_count, validate_center_vector, validate_sample_range
-export validate_objective_function, check_matrix_conditioning, validate_polynomial_coefficients
-export check_memory_usage, estimate_computation_complexity, suggest_parameter_adjustments, safe_execute_with_fallback
-export ComputationProgress, update_progress!, with_progress_monitoring
-export validate_test_input_parameters, validate_constructor_parameters, create_error_context, log_error_details
+# Internal validation functions - not exported
+# export validate_dimension, validate_polynomial_degree, validate_sample_count, validate_center_vector, validate_sample_range
+# export validate_objective_function, check_matrix_conditioning, validate_polynomial_coefficients
+# export check_memory_usage, estimate_computation_complexity, suggest_parameter_adjustments, safe_execute_with_fallback
+# export ComputationProgress, update_progress!, with_progress_monitoring
+# export validate_test_input_parameters, validate_constructor_parameters, create_error_context, log_error_details
 
-# Safe wrapper functions
-export safe_test_input, safe_constructor, safe_solve_polynomial_system, safe_analyze_critical_points
-export safe_globtim_workflow, diagnose_globtim_setup
+# Safe wrapper functions - keep main workflow functions only
+export safe_test_input, safe_constructor, safe_globtim_workflow
+# Internal safe wrappers - not exported
+# export safe_solve_polynomial_system, safe_analyze_critical_points
+# export diagnose_globtim_setup
 
 include("config.jl")
 include("LibFunctions.jl") #list of test functions.
@@ -212,81 +218,87 @@ export points_in_hypercube, points_in_range
 # L2 norm functions (after l2_norm.jl is included)
 export discrete_l2_norm_riemann
 
-# Phase 2: Hessian analysis functions
-export compute_hessians,
-    classify_critical_points,
-    store_all_eigenvalues,
-    extract_critical_eigenvalues,
-    compute_hessian_norms,
-    compute_eigenvalue_stats,
-    extract_all_eigenvalues_for_visualization,
-    plot_hessian_norms,
-    plot_condition_numbers,
-    plot_critical_eigenvalues,
-    plot_all_eigenvalues
+# Phase 2: Hessian analysis functions - only export main functions
+export compute_hessians, classify_critical_points
+# Internal Hessian analysis helpers - not exported
+# export store_all_eigenvalues,
+#     extract_critical_eigenvalues,
+#     compute_hessian_norms,
+#     compute_eigenvalue_stats,
+#     extract_all_eigenvalues_for_visualization,
+#     plot_hessian_norms,
+#     plot_condition_numbers,
+#     plot_critical_eigenvalues,
+#     plot_all_eigenvalues
 
 # CairoMakie extension plotting functions (available when CairoMakie is loaded)
-export plot_convergence_analysis,
-    capture_histogram,
-    create_legend_figure,
-    plot_discrete_l2,
-    plot_convergence_captured,
-    plot_filtered_y_distances,
-    cairo_plot_polyapprox_levelset,
-    plot_distance_statistics,
-    histogram_enhanced,
-    histogram_minimizers_only
+# These are stub functions - actual implementations in extension
+# export plot_convergence_analysis,
+#     capture_histogram,
+#     create_legend_figure,
+#     plot_discrete_l2,
+#     plot_convergence_captured,
+#     plot_filtered_y_distances,
+#     cairo_plot_polyapprox_levelset,
+#     plot_distance_statistics,
+#     histogram_enhanced,
+#     histogram_minimizers_only
 
 # GLMakie extension plotting functions (available when GLMakie is loaded)
-export plot_polyapprox_3d,
-    plot_polyapprox_rotate,
-    plot_polyapprox_levelset,
-    plot_polyapprox_flyover,
-    plot_polyapprox_animate,
-    plot_polyapprox_animate2,
-    plot_level_set,
-    create_level_set_visualization,
-    create_level_set_animation,
-    LevelSetData,
-    VisualizationParameters,
-    prepare_level_set_data,
-    to_makie_format,
-    plot_raw_vs_refined_eigenvalues
+# These are stub functions - actual implementations in extension
+# export plot_polyapprox_3d,
+#     plot_polyapprox_rotate,
+#     plot_polyapprox_levelset,
+#     plot_polyapprox_flyover,
+#     plot_polyapprox_animate,
+#     plot_polyapprox_animate2,
+#     plot_level_set,
+#     create_level_set_visualization,
+#     create_level_set_animation,
+#     LevelSetData,
+#     VisualizationParameters,
+#     prepare_level_set_data,
+#     to_makie_format,
+#     plot_raw_vs_refined_eigenvalues
+# Note: LevelSetData and VisualizationParameters types are still defined below
 
-# Phase 3: Enhanced statistical tables and analysis
-export analyze_critical_points_with_tables,
-    display_statistical_table,
-    export_analysis_tables,
-    create_statistical_summary,
-    quick_table_preview,
-    compute_type_specific_statistics,
-    render_table,
-    render_console_table,
-    render_comparative_table
+# Phase 3: Enhanced statistical tables and analysis - only export main function
+export analyze_critical_points_with_tables
+# Internal table helpers - not exported
+# export display_statistical_table,
+#     export_analysis_tables,
+#     create_statistical_summary,
+#     quick_table_preview,
+#     compute_type_specific_statistics,
+#     render_table,
+#     render_console_table,
+#     render_comparative_table
 
 # Enhanced data structures
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
 
-# Subdomain management functions
-export generate_4d_orthant_centers,
-    create_orthant_test_inputs,
-    orthant_id_to_signs,
-    signs_to_orthant_id,
-    point_to_orthant_id,
-    filter_points_by_orthant,
-    merge_orthant_results,
-    analyze_orthant_coverage,
-    compute_orthant_statistics
+# Subdomain management functions - only export main functions
+export generate_4d_orthant_centers, create_orthant_test_inputs
+# Internal orthant helpers - not exported
+# export orthant_id_to_signs,
+#     signs_to_orthant_id,
+#     point_to_orthant_id,
+#     filter_points_by_orthant,
+#     merge_orthant_results,
+#     analyze_orthant_coverage,
+#     compute_orthant_statistics
 
 # Multi-tolerance analysis functions
 export execute_multi_tolerance_analysis,
     execute_single_tolerance_analysis, deuflhard_4d_composite
 
-# Enhanced BFGS functions
-export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
+# Enhanced BFGS functions - only export main refinement function
+export enhanced_bfgs_refinement
+# Internal BFGS helpers - not exported  
+# export refine_with_enhanced_bfgs, determine_convergence_reason
 
-# Additional refine.jl functions
-export compute_gradients, analyze_basins
+# Additional refine.jl functions - internal use only
+# export compute_gradients, analyze_basins
 
 # Valley detection and manifold following functions
 # TODO: These functions are not yet implemented - exports commented out
@@ -300,16 +312,15 @@ export compute_gradients, analyze_basins
 # export ConservativeValleyConfig, ConservativeValleyStep
 # export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
 
-# Function value error analysis
-export FunctionValueError,
-    ErrorMetrics,
-    evaluate_function_values,
-    compute_function_value_errors,
-    compute_error_metrics,
-    analyze_errors_by_type,
-    create_error_analysis_dataframe,
-    convergence_analysis,
-    integrate_with_bfgs_results
+# Function value error analysis - only export main types and functions
+export FunctionValueError, ErrorMetrics, compute_function_value_errors
+# Internal error analysis helpers - not exported
+# export evaluate_function_values,
+#     compute_error_metrics,
+#     analyze_errors_by_type,
+#     create_error_analysis_dataframe,
+#     convergence_analysis,
+#     integrate_with_bfgs_results
 
 # Stub functions for CairoMakie extension
 # These will be properly implemented when CairoMakie is loaded
