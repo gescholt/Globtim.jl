@@ -18,7 +18,7 @@ You are an expert HPC cluster operator specializing in the r04n02 compute node w
 - **SSH Access**: `ssh scholten@r04n02` (SSH keys configured)
 - **Git Access**: Full GitLab connectivity - `git@git.mpi-cbg.de:scholten/globtim.git`
 - **Repository Location**: `/home/scholten/globtim` (permanent location, NOT /tmp)
-- **Julia**: `/sw/bin/julia` (version 1.11.2, x86_64 Linux)
+- **Julia**: `julia` (module load julia/1.11.2 required, x86_64 Linux)
 - **Package Success Rate**: ~90% with native installation
 - **Internet Access**: Available for Git and package downloads
 - **SLURM Commands**: ❌ NOT available on r04n02 (use falcon for job submission)
@@ -56,12 +56,18 @@ sbatch --time=01:00:00 --mem=8G --cpus-per-task=4 script.slurm
 - Package precompilation and testing
 - Dependency resolution (~90% success rate)
 
-### 3. SLURM Job Operations
+### 3. Screen-Based Experiment Management (PRIMARY METHOD)
+- Start persistent Screen sessions for experiments
+- Direct execution on r04n02 without SLURM overhead
+- Monitor sessions with `screen -ls` and attach with `screen -r`
+- Use robust_experiment_runner.sh for automated management
+- Implement Julia checkpointing for long experiments
+
+### 3b. SLURM Job Operations (LEGACY/OPTIONAL)
 - Create job scripts for execution on compute nodes
 - Submit jobs FROM falcon head node (NOT from r04n02)
 - Monitor job status using falcon's SLURM commands
-- Optimize resource allocation
-- Handle job arrays and dependencies
+- Note: SLURM not needed for single-user r04n02 usage
 
 ### 4. Development Workflow
 - Interactive development on r04n02 compute node
@@ -72,18 +78,34 @@ sbatch --time=01:00:00 --mem=8G --cpus-per-task=4 script.slurm
 
 ## Standard Operating Procedures
 
-### SLURM Job Submission Workflow
+### PRIMARY: Screen-Based Experiment Workflow ⭐
 ```bash
-# IMPORTANT: Submit from falcon, NOT from r04n02
-ssh scholten@falcon
+# Connect to r04n02
+ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Submit job that will run on compute nodes
-sbatch hpc/jobs/submission/test_2d_deuflhard.slurm
+# Start experiment in Screen session (automated)
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
-# Monitor job status (on falcon)
-squeue -u scholten
-sacct -j <job_id>
+# Monitor experiments
+./hpc/monitoring/live_monitor.sh
+
+# Attach to specific session
+screen -r globtim_experiment_20250902_140000
+
+# List all sessions
+screen -ls | grep globtim
+
+# Detach from session (keeps running)
+# Press: Ctrl+A, then D
+```
+
+### LEGACY: SLURM Job Submission Workflow
+```bash
+# Only if SLURM scheduling is needed
+ssh scholten@falcon
+cd /home/scholten/globtim
+sbatch hpc/jobs/submission/test_2d_deuflhard.slurm
 ```
 
 ### SLURM Job Template
@@ -110,24 +132,26 @@ export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 julia --project=. script.jl
 ```
 
-### Direct Execution on r04n02 (Testing)
+### Automated Remote Experiment Initiation
 ```bash
-# For quick tests without SLURM
-ssh scholten@r04n02
+# I can start experiments remotely via SSH
+ssh scholten@r04n02 << 'EOF'
 cd /home/scholten/globtim
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+EOF
 
-# Run Julia directly
-/sw/bin/julia --project=. -e '
-    using Pkg
-    Pkg.instantiate()
-    include("hpc/experiments/test_2d_deuflhard.jl")
-'
+# Check status remotely
+ssh scholten@r04n02 "cd /home/scholten/globtim && ./hpc/experiments/robust_experiment_runner.sh status"
+
+# Monitor remotely
+ssh scholten@r04n02 "screen -ls | grep globtim"
 ```
 
 ### Julia Package Setup
 ```bash
 cd /home/scholten/globtim
-/sw/bin/julia --project=. -e '
+module load julia/1.11.2
+julia --project=. -e '
     using Pkg
     Pkg.instantiate()
     Pkg.add(["HomotopyContinuation", "ForwardDiff", "DynamicPolynomials"])

@@ -14,9 +14,10 @@ ssh scholten@r04n02
 - **Direct Git Access**: Clone repositories directly on compute node
 - **Native Julia Packages**: Use Pkg.add() without bundling complexity
 - **Internet Access**: Full connectivity for package downloads
-- **No Quota Constraints**: Work in `/tmp/` without home directory limits
-- **Julia version**: 1.11.2 at `/sw/bin/julia`
+- **Repository Location**: `/home/scholten/globtim` (permanent, NOT /tmp)
+- **Julia version**: 1.11.2 (requires `module load julia/1.11.2`)
 - **Architecture**: x86_64 Linux
+- **Execution Framework**: GNU Screen for persistent sessions (no SLURM needed)
 
 ### Package Loading Reality Check ✅ FINAL STATUS Aug 29, 2025
 - **Success rate**: ~90% of packages now work with native installation (improved from ~50%)
@@ -56,33 +57,38 @@ ssh scholten@r04n02
 
 **Documentation:** See `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md` for infrastructure details
 
-## HPC Compilation & Testing Status
+## HPC Execution Framework Status
 
-### ✅ FULLY OPERATIONAL: Bundle + Comprehensive Testing
-**Date Verified:** August 22, 2025  
-**Status:** PRODUCTION READY - Bundle approach with full testing capability
+### ✅ NEW FRAMEWORK: Screen-Based Persistent Execution (CURRENT)
+**Date Implemented:** September 2, 2025  
+**Status:** PRODUCTION READY - Optimized for single-user r04n02 node
 
-The GlobTim HPC deployment is now **fully operational with comprehensive testing**. The quota management and testing procedures have been established.
+The GlobTim HPC deployment now uses **GNU Screen for persistent execution** without SLURM overhead, perfectly suited for single-user compute node access.
 
 **Current Working Configuration:**
 ```bash
-# VERIFIED WORKING bundle and paths
-tar -xzf /home/scholten/globtim_optimal_bundle_20250821_152938.tar.gz -C /tmp/globtim_${SLURM_JOB_ID}/
+# Connect to r04n02
+ssh scholten@r04n02
+cd /home/scholten/globtim
 
-# CRITICAL: Updated paths for optimal bundle structure  
-export JULIA_DEPOT_PATH="/tmp/globtim_${SLURM_JOB_ID}/build_temp/depot"
-export JULIA_PROJECT="/tmp/globtim_${SLURM_JOB_ID}/build_temp"
-export JULIA_NO_NETWORK="1"
-export JULIA_PKG_OFFLINE="true"
+# Start experiment in Screen session (automated)
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+
+# Monitor progress
+./hpc/monitoring/live_monitor.sh
+
+# Attach to running session
+screen -r globtim_*
 ```
 
-**Verified Working (August 22, 2025 - Job ID 59809882):**
-- ✅ Bundle extraction and environment setup (256MB bundle)
-- ✅ Core mathematical functionality: LinearAlgebra, manual differentiation, optimization
-- ✅ Package loading: DataFrames, StaticArrays (50% success rate)
-- ✅ Embedded alternatives: Deuflhard functions, finite difference gradients
-- ✅ Comprehensive test suite: 3 test phases, ~1.5 minute execution time
-- ✅ Quota management: Home directory maintained under 1GB limit
+**Framework Features (September 2, 2025):**
+- ✅ **Persistent execution**: Survives SSH disconnection via GNU Screen
+- ✅ **Automated management**: robust_experiment_runner.sh handles sessions
+- ✅ **Checkpointing**: Julia-based experiment_manager.jl for recovery
+- ✅ **Live monitoring**: Updated monitoring tools for Screen sessions
+- ✅ **Remote initiation**: Can start experiments via hpc-cluster-operator agent
+- ✅ **No SLURM overhead**: Direct execution without scheduling delays
+- ✅ **Integrated monitoring**: live_monitor.sh tracks Screen sessions and Julia processes
 
 ## HPC Compilation Approaches
 
