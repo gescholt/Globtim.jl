@@ -1,6 +1,6 @@
 #!/bin/bash
-# Live Monitoring Script for GlobTim HPC Jobs
-# Provides real-time monitoring of SLURM job execution
+# Live Monitoring Script for GlobTim HPC Experiments
+# Monitors both SLURM jobs and Screen sessions
 
 set -e
 
@@ -120,43 +120,69 @@ function monitor_job() {
     done
 }
 
-# Function to monitor all GlobTim jobs
+# Function to monitor Screen sessions
+function monitor_screen() {
+    local session_name=$1
+    
+    if [ -z "$session_name" ]; then
+        echo "Active GlobTim Screen sessions:"
+        screen -ls | grep globtim || echo "No sessions found"
+        return
+    fi
+    
+    echo -e "${GREEN}▶ SCREEN SESSION: $session_name${NC}"
+    echo "─────────────────────────────────────────────────"
+    
+    # Check if session exists
+    if screen -ls | grep -q "$session_name"; then
+        echo "Status: RUNNING"
+        echo "To attach: screen -r $session_name"
+        
+        # Check for log files
+        LOG_DIR="$GLOBTIM_DIR/hpc_results/${session_name}"
+        if [ -d "$LOG_DIR" ]; then
+            echo ""
+            echo -e "${BLUE}LATEST OUTPUT:${NC}"
+            if [ -f "$LOG_DIR/output.log" ]; then
+                tail -n 20 "$LOG_DIR/output.log"
+            fi
+        fi
+    else
+        echo "Session not found or completed"
+    fi
+}
+
+# Function to monitor all experiments (Screen + SLURM)
 function monitor_all() {
     while true; do
         clear
         print_header
         echo -e "${BLUE}Timestamp:${NC} $(date '+%Y-%m-%d %H:%M:%S')\n"
         
-        echo -e "${BLUE}ACTIVE GLOBTIM JOBS:${NC}"
+        echo -e "${BLUE}ACTIVE SCREEN SESSIONS:${NC}"
         echo "─────────────────────────────────────────────────"
-        
-        # Check for running GlobTim jobs
-        JOBS=$(squeue -u $USER --name=test_2d_deuflhard,globtim_4d_model --noheader)
-        
-        if [ -z "$JOBS" ]; then
-            echo "No active GlobTim jobs found"
-        else
-            squeue -u $USER --name=test_2d_deuflhard,globtim_4d_model \
-                --format="%.18i %.9P %.30j %.8u %.2t %.10M %.6D %R"
-        fi
+        screen -ls | grep globtim || echo "No active Screen sessions"
         
         echo ""
-        echo -e "${BLUE}RECENT COMPLETED JOBS (last 24 hours):${NC}"
+        echo -e "${BLUE}JULIA PROCESSES:${NC}"
         echo "─────────────────────────────────────────────────"
-        sacct -S $(date -d '1 day ago' +%Y-%m-%d) \
-              --format=JobID,JobName,State,ExitCode,Elapsed,MaxRSS \
-              --name=test_2d_deuflhard,globtim_4d_model | head -10
+        ps aux | grep julia | grep -v grep | head -5 || echo "No Julia processes"
+        
+        echo ""
+        echo -e "${BLUE}LATEST RESULTS:${NC}"
+        echo "─────────────────────────────────────────────────"
+        ls -lt $GLOBTIM_DIR/hpc_results/ 2>/dev/null | head -6 | tail -5
         
         echo ""
         echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-        echo "Options: Enter job ID to monitor specific job, or Ctrl+C to exit"
+        echo "Options: Enter session name to monitor, or Ctrl+C to exit"
         echo -e "Refreshing in $REFRESH_INTERVAL seconds..."
         
         # Wait for input with timeout
-        read -t $REFRESH_INTERVAL -p "Job ID: " job_input
-        if [ ! -z "$job_input" ]; then
-            monitor_job $job_input
-            break
+        read -t $REFRESH_INTERVAL -p "Session name: " session_input
+        if [ ! -z "$session_input" ]; then
+            monitor_screen $session_input
+            read -p "Press Enter to continue..."
         fi
     done
 }
