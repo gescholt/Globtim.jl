@@ -107,7 +107,11 @@
       "Bash(./tools/gitlab/setup-boards.sh:*)",
       "Bash(pip3 install:*)",
       "Bash(./tools/gitlab/setup-secure-config.sh:*)",
-      "Bash(gh issue list:*)"
+      "Bash(gh issue list:*)",
+      "Bash([ -n \"$GITLAB_TOKEN\" ])",
+      "Bash([ -f /Users/ghscholt/globtim/.env.gitlab ])",
+      "Bash([ -f ~/.gitlab-token ])",
+      "Bash(./tools/gitlab/gitlab-api.sh:*)"
     ],
     "defaultMode": "acceptEdits"
   },
