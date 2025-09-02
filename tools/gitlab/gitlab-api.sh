@@ -1,13 +1,15 @@
 #!/bin/bash
-"""
-Secure GitLab API Wrapper
-
-Provides secure GitLab API access without exposing tokens in command line.
-Usage: ./gitlab-api.sh GET /projects/2545/issues
-"""
+# Secure GitLab API Wrapper
+#
+# Provides secure GitLab API access without exposing tokens in command line.
+# Usage: ./gitlab-api.sh GET /projects/2545/issues
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../.env.gitlab.local" 2>/dev/null || true
+
+# Set defaults if not in environment
+GITLAB_API_URL=${GITLAB_API_URL:-"https://git.mpi-cbg.de/api/v4"}
+GITLAB_PROJECT_ID=${GITLAB_PROJECT_ID:-"2545"}
 
 # Get token securely
 TOKEN=$("$SCRIPT_DIR/get-token.sh")
