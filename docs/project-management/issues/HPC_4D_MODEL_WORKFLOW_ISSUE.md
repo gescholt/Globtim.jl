@@ -1,7 +1,7 @@
 ## 4D Model Experiments: HPC Workflow Validation and Experimental Setup
 
 ### Overview
-This issue tracks the comprehensive setup and validation of our 4D model experiments on the r04n02 HPC compute node, with a focus on rigorous workflow development and systematic experimental infrastructure.
+This issue tracks the comprehensive setup and validation of our 4D model experiments on the r04n02 HPC compute node using the new Screen-based persistent execution framework for single-user compute node access.
 
 ### Objective
 Develop a robust, validated workflow for running 4D polynomial approximation experiments on the HPC cluster, ensuring computational reliability and establishing a reproducible experimental pipeline.
@@ -19,11 +19,11 @@ HPC 4D Model Experiments - Phase 1 Validation
 
 ### Phases and Detailed Tasks
 
-#### Phase 1: SLURM Workflow Validation
-- [x] Create base SLURM job submission script for Julia on r04n02
-  - [x] Validate Julia environment loading
-  - [x] Confirm compute node resource allocation
-  - [x] Test basic job submission and execution
+#### Phase 1: Screen-Based Workflow Implementation ✅ UPDATED
+- [x] Create Screen-based persistent execution framework
+  - [x] Validate Julia module loading (`module load julia/1.11.2`)
+  - [x] Confirm direct compute node execution
+  - [x] Test Screen session management and persistence
 
 - [x] Develop 2D Deuflhard example as workflow prototype
   - [x] Implement minimal working example from Deuflhard notebook
@@ -36,18 +36,18 @@ HPC 4D Model Experiments - Phase 1 Validation
   - [x] Implement basic performance metrics extraction
 
 ### Implementation Status
-- Phase 1: ✅ COMPLETE (September 2, 2025)
+- Phase 1: ✅ COMPLETE (September 2, 2025) - Screen-based framework operational
 - Phase 2: 🔄 READY TO TEST
 - All scripts created and documented
 - Ready for HPC deployment and testing
 
-### Files Created
-- `hpc/jobs/submission/test_2d_deuflhard.slurm`
-- `hpc/jobs/submission/run_4d_model.slurm`  
+### Files Created (Updated for Screen Framework)
+- `hpc/experiments/robust_experiment_runner.sh` - Automated Screen session management
+- `hpc/experiments/experiment_manager.jl` - Julia checkpointing system
 - `hpc/experiments/test_2d_deuflhard.jl`
 - `hpc/experiments/config_4d_model.jl`
-- `hpc/monitoring/collect_results.sh`
-- `docs/hpc/SLURM_WORKFLOW_GUIDE.md`
+- `hpc/monitoring/live_monitor.sh` - Real-time monitoring for Screen sessions
+- `docs/hpc/ROBUST_WORKFLOW_GUIDE.md` - Complete Screen-based workflow documentation
 
 #### Phase 2: 4D Model Experimental Setup
 - [ ] Parameter Configuration Framework
@@ -68,9 +68,9 @@ HPC 4D Model Experiments - Phase 1 Validation
   - Implement automated result aggregation
 
 ### Acceptance Criteria
-1. Successfully submit and complete a Julia job on r04n02 using SLURM
-2. Demonstrate 2D Deuflhard example working end-to-end
-3. Establish robust output collection and logging mechanism
+1. Successfully execute persistent Julia experiments on r04n02 using Screen framework
+2. Demonstrate 2D Deuflhard example working end-to-end with checkpoint recovery
+3. Establish robust output collection and real-time monitoring mechanism
 4. Develop flexible 4D parameter configuration system
 5. Create comparative framework for dense/sparse approximants
 6. Validate numerical stability tracking for matrix operations
@@ -83,7 +83,8 @@ HPC 4D Model Experiments - Phase 1 Validation
   - Fallback: Adaptive parameter adjustment mechanisms
 
 ### Documentation Requirements
-- Update `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md` with new SLURM job submission details
+- ✅ Updated `docs/hpc/ROBUST_WORKFLOW_GUIDE.md` with Screen-based execution framework
+- ✅ Updated `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md` with current infrastructure
 - Create new document `docs/hpc/4D_MODEL_WORKFLOW_VALIDATION.md` to track experimental methodology
 
 ### Expected Outcomes
@@ -93,11 +94,11 @@ HPC 4D Model Experiments - Phase 1 Validation
 
 ### Next Steps
 - [x] Review current HPC infrastructure readiness
-- [x] Validate Julia environment on compute node
-- [x] Develop initial SLURM job submission prototype
-- ✅ Prepare for comprehensive HPC cluster testing
-- 🔄 Initiate full 4D model experimental workflow on r04n02
-- 🎯 Begin detailed performance and stability analysis
+- [x] Validate Julia environment on compute node (module load julia/1.11.2)
+- [x] Implement Screen-based persistent execution framework
+- ✅ Framework ready for comprehensive HPC testing
+- 🔄 Initiate full 4D model experimental workflow using Screen sessions
+- 🎯 Begin detailed performance and stability analysis with live monitoring
 
 ### Estimated Timeline
 - Week 1-2: Infrastructure setup and 2D prototype
