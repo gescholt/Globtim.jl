@@ -289,14 +289,16 @@ export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergenc
 export compute_gradients, analyze_basins
 
 # Valley detection and manifold following functions
-export ValleyDetectionConfig, ValleyInfo
-export detect_valley_at_point, follow_valley_manifold, project_to_critical_manifold
-export analyze_valleys_in_critical_points
-export create_valley_test_function, create_ridge_test_function
+# TODO: These functions are not yet implemented - exports commented out
+# export ValleyDetectionConfig, ValleyInfo
+# export detect_valley_at_point, follow_valley_manifold, project_to_critical_manifold
+# export analyze_valleys_in_critical_points
+# export create_valley_test_function, create_ridge_test_function
 
 # Conservative valley walking functions
-export ConservativeValleyConfig, ConservativeValleyStep
-export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
+# TODO: These functions are not yet implemented - exports commented out
+# export ConservativeValleyConfig, ConservativeValleyStep
+# export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
 
 # Function value error analysis
 export FunctionValueError,
