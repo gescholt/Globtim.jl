@@ -54,7 +54,7 @@ ssh scholten@r04n02
 - No quota constraints when working in `/tmp/`
 - Simplified deployment without bundling complexity
 
-**Documentation:** See `HPC_DIRECT_NODE_MIGRATION_PLAN.md` for infrastructure details
+**Documentation:** See `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md` for infrastructure details
 
 ## HPC Compilation & Testing Status
 
@@ -152,7 +152,7 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - ✅ **PRODUCTION READY:** GlobTim package now fully operational on HPC cluster
 - ✅ **NATIVE INSTALLATION SUCCESS:** 203 packages with correct binary artifacts working on cluster
 - ✅ **COMPREHENSIVE CLEANUP:** Repository streamlined with 60+ obsolete files removed (Phase 3 complete)
-- ✅ **DOCUMENTATION COMPLETE:** HPC_BUNDLE_SOLUTIONS.md and HOMOTOPY_SOLUTION_SUMMARY.md created
+- ✅ **DOCUMENTATION COMPLETE:** docs/hpc/HPC_BUNDLE_SOLUTIONS.md and docs/hpc/HOMOTOPY_SOLUTION_SUMMARY.md created
 - ✅ **PACKAGE SUCCESS RATE:** Improved from ~50% to ~90% with native installation approach
 - ✅ **TEST SUITE EXCELLENCE:** All 64 convenience method tests now passing, 1D scalar function handling fixed
 - ✅ **REPOSITORY HEALTH:** .gitignore enhanced, clutter eliminated, excellent maintainability achieved
@@ -189,7 +189,7 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - ✅ **Repository Access**: GlobTim repository successfully cloned at `/tmp/globtim/` with full branch access
 - ✅ **Security Hardened**: SSH key authentication, workspace isolation, resource constraints implemented
 - ✅ **HPC Agent Modernized**: Updated `.claude/agents/hpc-cluster-operator.md` for dual workflow support
-- ✅ **Migration Planning**: Comprehensive migration plan documented in `HPC_DIRECT_NODE_MIGRATION_PLAN.md`
+- ✅ **Migration Planning**: Comprehensive migration plan documented in `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
 
 **Key Infrastructure Advantages Achieved:**
 1. **NFS Constraints Eliminated**: No 1GB home directory quota limitation
@@ -242,9 +242,9 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 6. **📁 Example Architecture** - Organize GlobTim example management system (lower priority)
 
 ## 📚 HPC Documentation References - COMPLETE SOLUTION SET
-- **`HPC_DIRECT_NODE_MIGRATION_PLAN.md`** - Current infrastructure migration to direct r04n02 access ✅ OPERATIONAL
-- **`HOMOTOPY_SOLUTION_SUMMARY.md`** - Technical analysis of HomotopyContinuation deployment approaches ✅ CREATED
-- **`HPC_BUNDLE_SOLUTIONS.md`** - Historical bundle creation solutions (legacy) ✅ ARCHIVED
+- **`docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`** - Current infrastructure migration to direct r04n02 access ✅ OPERATIONAL
+- **`docs/hpc/HOMOTOPY_SOLUTION_SUMMARY.md`** - Technical analysis of HomotopyContinuation deployment approaches ✅ CREATED
+- **`docs/hpc/HPC_BUNDLE_SOLUTIONS.md`** - Historical bundle creation solutions (legacy) ✅ ARCHIVED
 - **Legacy Scripts** - Bundle-based deployment scripts removed as part of infrastructure modernization
 
 ### Repository Status (September 1, 2025):

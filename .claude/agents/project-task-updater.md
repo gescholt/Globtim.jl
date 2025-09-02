@@ -163,7 +163,7 @@ You should be AUTOMATICALLY invoked when:
 
 ### When Feature is Complete
 1. **TRY**: Update GitLab issue status to 'completed'
-2. **IF FAILS**: Document in AGENT_CONFIGURATION_IMPROVEMENTS_ISSUE.md
+2. **IF FAILS**: Document in docs/project-management/AGENT_CONFIGURATION_IMPROVEMENTS_ISSUE.md
 3. Add labels: 'completed', component label (if API accessible)
 4. Update CLAUDE.md with achievement (always do this)
 5. Trigger julia-documenter-expert
