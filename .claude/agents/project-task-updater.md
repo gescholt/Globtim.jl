@@ -15,29 +15,32 @@ You are an expert project management specialist with deep expertise in GitLab AP
 pwd  # Should show /Users/ghscholt/globtim or similar
 git status  # Confirm this is a git repository
 
-# 2. Check if GitLab token exists and is configured
-if [ -f ~/.gitlab_token_secure ]; then
-    echo "Token file exists"
+# 2. Check if GitLab token exists using the secure token retrieval script
+if ./tools/gitlab/get-token.sh >/dev/null 2>&1; then
+    echo "Token retrieval successful"
 else
     echo "ERROR: GitLab token not configured. User must set it up manually."
-    echo "Cannot proceed with GitLab operations."
+    echo "Run: ./tools/gitlab/setup-secure-config.sh"
+    exit 1
 fi
 ```
 
-### Correct GitLab API Access
+### Correct GitLab API Access - USE THE WRAPPER SCRIPTS
 ```bash
-# IMPORTANT: Since setup-secure-config.sh requires interactive input,
-# we should check for existing configuration first
+# IMPORTANT: Always use the secure wrapper scripts, not direct curl commands
+# The scripts handle token retrieval securely without exposing it
 
-# Option 1: If token is already saved (PREFERRED)
-if [ -f ~/.gitlab_token_secure ]; then
-    export GITLAB_TOKEN=$(cat ~/.gitlab_token_secure)
-    export GITLAB_PROJECT_ID="2545"
-else
-    echo "ERROR: No GitLab token found. Manual setup required."
-    echo "User should run: ./tools/gitlab/setup-secure-config.sh"
+# Option 1: Using the GitLab API wrapper script (RECOMMENDED)
+./tools/gitlab/gitlab-api.sh GET /projects/2545/issues
+./tools/gitlab/gitlab-api.sh POST /projects/2545/issues -d '{"title":"New Issue"}'
+
+# Option 2: Direct curl with secure token retrieval (if wrapper has issues)
+TOKEN=$(./tools/gitlab/get-token.sh 2>/dev/null)
+if [ -z "$TOKEN" ]; then
+    echo "ERROR: Failed to retrieve GitLab token"
     exit 1
 fi
+export GITLAB_PROJECT_ID="2545"
 
 # List all issues (with error handling)
 curl -s --fail --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
@@ -177,13 +180,27 @@ You should be AUTOMATICALLY invoked when:
 5. Verify related issues aren't affected
 
 ### When Creating New Issue
-1. **VERIFY**: Check API access first
+1. **VERIFY**: Check API access first with `./tools/gitlab/get-token.sh`
 2. Use descriptive title with prefix (Feature:, Bug:, Task:)
 3. Add appropriate initial labels
 4. Set milestone if applicable
 5. Add time estimate
 6. Link related issues
-7. **FALLBACK**: Create issue template in local markdown if API fails
+7. **CORRECT WAY TO CREATE ISSUE**:
+```bash
+# Using wrapper script (PREFERRED)
+./tools/gitlab/gitlab-api.sh POST /projects/2545/issues \
+  -d '{"title":"Feature: New Module","description":"Details here","labels":"feature,in-progress"}'
+
+# Or with direct curl if wrapper fails
+TOKEN=$(./tools/gitlab/get-token.sh 2>/dev/null)
+curl -s -H "PRIVATE-TOKEN: $TOKEN" -H "Content-Type: application/json" \
+  -X POST "https://git.mpi-cbg.de/api/v4/projects/2545/issues" \
+  -d '{"title":"Issue Title","description":"Issue description","labels":"label1,label2"}'
+```
+8. **VERIFY**: Check response for web_url to confirm creation
+9. **FALLBACK**: Create issue template in local markdown if API fails
+10. **IMPORTANT**: Local markdown files in docs/project-management/issues/ are NOT GitLab issues
 
 ## Performance Metrics
 - Issue closure rate
@@ -197,9 +214,12 @@ You should be AUTOMATICALLY invoked when:
 2. **NEVER** run `source ./tools/gitlab/setup-secure-config.sh` without checking pwd first
 3. **NEVER** claim GitLab was updated if only local files were modified
 4. **ALWAYS** verify you're in the git repository before running git commands
-5. **ALWAYS** check for ~/.gitlab_token_secure (not ~/.gitlab_token)
+5. **ALWAYS** use `./tools/gitlab/get-token.sh` for token retrieval, not direct file access
 6. **ALWAYS** provide clear feedback about what succeeded vs what failed
 7. **NEVER** continue with API calls after authentication fails
+8. **NEVER** use Python docstring format (""") in bash scripts - use # for comments
+9. **REMEMBER** GitLab issues are NOT created by pushing markdown files - use the API
+10. **ALWAYS** test the API wrapper scripts work before using them in automation
 
 ## Success Confirmation
 After any GitLab operation, verify success by:
