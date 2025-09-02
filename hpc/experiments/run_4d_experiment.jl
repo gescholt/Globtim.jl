@@ -69,7 +69,7 @@ println("\nStep 1: Generating sample points and evaluating function...")
         sample_range = sample_range
     )
 end
-println("✓ Generated $(length(TR.sample_pts)) sample points")
+println("✓ Generated $(TR.GN) sample points")
 
 println("\nStep 2: Constructing polynomial approximation...")
 @timeit to "constructor" begin
