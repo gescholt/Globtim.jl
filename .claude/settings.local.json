@@ -113,7 +113,9 @@
       "Bash([ -f ~/.gitlab-token ])",
       "Bash(./tools/gitlab/gitlab-api.sh:*)",
       "Bash(conda:*)",
-      "Bash(ps:*)"
+      "Bash(ps:*)",
+      "Bash(gh auth:*)",
+      "Bash(./tools/gitlab/get-token.sh:*)"
     ],
     "defaultMode": "acceptEdits"
   },
