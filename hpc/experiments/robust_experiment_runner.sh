@@ -58,8 +58,8 @@ function start_experiment() {
         echo 'Session: $session_name'
         echo '========================================='
         
-        # Run the actual experiment
-        julia --project=. $experiment_script \$LOG_DIR
+        # Run the actual experiment with increased heap size
+        julia --project=. --heap-size-hint=50G $experiment_script \$LOG_DIR
         
         echo '========================================='
         echo 'Completed: \$(date)'
