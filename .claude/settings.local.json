@@ -106,7 +106,8 @@
       "Bash(/opt/homebrew/bin/pip3 install --break-system-packages --user pyyaml)",
       "Bash(./tools/gitlab/setup-boards.sh:*)",
       "Bash(pip3 install:*)",
-      "Bash(./tools/gitlab/setup-secure-config.sh:*)"
+      "Bash(./tools/gitlab/setup-secure-config.sh:*)",
+      "Bash(gh issue list:*)"
     ],
     "defaultMode": "acceptEdits"
   },
