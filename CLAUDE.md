@@ -2,34 +2,19 @@
 
 ## 🚨 CRITICAL HPC KNOWLEDGE - READ FIRST FOR ALL CLUSTER TASKS
 
-### NFS Fileserver Workflow (MANDATORY)
-**ALWAYS use NFS procedure for file transfers - there is a 1GB direct transfer limit otherwise**
+### Direct r04n02 Compute Node Access (CURRENT APPROACH)
+**Direct SSH access to r04n02 compute node with full capabilities**
 
-**File Transfer Path**: 
-```
-Local Development → NFS Fileserver (mack) → Shared /home/scholten/ → HPC Cluster (falcon)
-```
-
-**Key Facts**:
-- `/home/scholten/` is the SAME location on both mack and falcon (NFS mount)
-- Direct transfers to falcon are limited to 1GB
-- All large files (bundles, etc.) MUST go through mack first
-- Once on mack, files are immediately accessible on falcon
-
-**Commands**:
+**Connection**: 
 ```bash
-# Transfer bundle to cluster (via NFS)
-scp bundle.tar.gz scholten@mack:/home/scholten/
-
-# Access from cluster (same path)
-ssh scholten@falcon
-ls ~/bundle.tar.gz  # Available immediately
+ssh scholten@r04n02
 ```
 
-### Cluster Resource Constraints
-- **Home directory quota**: 1GB on falcon cluster  
-- **NFS shared space**: Unlimited via mack fileserver
-- **Compute nodes**: No internet access, air-gapped
+**Key Capabilities**:
+- **Direct Git Access**: Clone repositories directly on compute node
+- **Native Julia Packages**: Use Pkg.add() without bundling complexity
+- **Internet Access**: Full connectivity for package downloads
+- **No Quota Constraints**: Work in `/tmp/` without home directory limits
 - **Julia version**: 1.11.2 at `/sw/bin/julia`
 - **Architecture**: x86_64 Linux
 
@@ -60,19 +45,16 @@ ls ~/bundle.tar.gz  # Available immediately
 
 **Project Status Update:** Repository has been comprehensively cleaned up with 25+ obsolete scripts removed and all changes committed to GitLab (commit ad76b40).
 
-### Current Working HPC Solutions
+### Current HPC Solution
 
-**Primary (CURRENT):** Direct r04n02 Compute Node Access
+**Direct r04n02 Compute Node Access**
 - Native Julia package installation via Pkg.add()
-- Direct GitLab repository cloning on compute node
+- Direct GitLab repository cloning on compute node  
 - Full native environment (203+ packages working)
-- Eliminates NFS quota constraints and bundling complexity
+- No quota constraints when working in `/tmp/`
+- Simplified deployment without bundling complexity
 
-**Legacy:** Bundle-based approaches (superseded)
-- Historical bundle creation and deployment scripts removed
-- Replaced by modern direct node access infrastructure
-
-**Documentation:** See `HPC_DIRECT_NODE_MIGRATION_PLAN.md` for current infrastructure details
+**Documentation:** See `HPC_DIRECT_NODE_MIGRATION_PLAN.md` for infrastructure details
 
 ## HPC Compilation & Testing Status
 
@@ -180,9 +162,8 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - Test actual GlobTim functionality, not just basic Julia operations
 - Document dependency requirements clearly in Project.toml
 - Use proper package management even if it's more complex to set up initially
-- Always use the NFS procedure to send files to the cluster -- there is a 1GB limit otherwise
 - Native cluster installation eliminates cross-platform compilation issues
-- The NFS mount means `/home/scholten/` is the same location whether accessed from the fileserver or the cluster
+- Work in `/tmp/` on r04n02 for isolation and no quota constraints
 
 **PROJECT STATUS UPDATE (September 1, 2025):** All major HPC deployment and repository hygiene challenges have been resolved. The GlobTim package is production-ready for cluster deployment with 624 passing tests on r04n02. **Phase 4 visual project management implementation is now underway with 1,168 tasks extracted and classified.**
 
@@ -193,7 +174,7 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - Phase 4: Advanced Project Management & Mathematical Refinement 🔄 **ACTIVE PROGRESS** 
   - ✅ **Task Extraction Milestone**: 1,168 tasks extracted and classified (September 1, 2025)
   - 🔄 **GitLab Visual Tracking**: Integration with project boards and milestone system in progress
-  - 🆕 **Agent Configuration Review**: GitLab issue created for agent optimization improvements (September 1, 2025)
+  - ✅ **Agent Configuration Review**: GitLab issue completed - Agent optimization improvements implemented (September 2, 2025)
   - ⏳ **Mathematical Algorithm Review**: Deep analysis planned for mathematical correctness validation
 
 **FOCUS EVOLUTION:** Successfully transitioned from infrastructure foundation (COMPLETE) to advanced project management systems and mathematical excellence (ACTIVE DEVELOPMENT).
@@ -240,6 +221,11 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - ✅ **Production Ready Integration**: All GitLab operations now fully automated and secure
 - ✅ **Issue Tracking Active**: GitLab project boards ready for visual project management
 
+**📋 IMPORTANT: Project Terminology**
+- **"Issue"** = GitLab issue in the project management system (not a problem/bug)
+- When discussing "an issue" or "the issue", this refers to tracked GitLab project management items
+- GitLab issues are used for features, tasks, improvements, and bug tracking
+
 **Task Distribution Analysis:**
 - **Total Tasks**: 1,168 across 7 epics (mathematical-core, performance, test-framework, etc.)
 - **Status Breakdown**: 1,033 not started, 113 completed, 21 in progress, 1 cancelled
@@ -247,7 +233,8 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - **Epic Categories**: Comprehensive coverage across mathematical core, HPC deployment, performance, testing, and visualization
 
 **Active Priorities:**
-1. **📈 HIGH PRIORITY: GitLab Visual Project Management** - Deploy extracted tasks to GitLab boards and milestone system 🔄 IN PROGRESS
+1. **📈 HIGH PRIORITY: GitLab Visual Project Management** - Deploy extracted tasks to GitLab boards and milestone system ✅ COMPLETED
+2. **🔬 Mathematical Algorithm Review** - Deep dive into homotopy continuation mathematical correctness
 2. **🔬 Mathematical Algorithm Review** - Deep dive into homotopy continuation mathematical correctness
 3. **🎯 Optimization Algorithm Refinement** - Improve numerical stability and convergence properties  
 4. **📊 Performance Benchmarking** - Comprehensive performance analysis across different problem types
