@@ -17,7 +17,7 @@ ssh scholten@r04n02
 - **Repository Location**: `/home/scholten/globtim` (permanent, NOT /tmp)
 - **Julia version**: 1.11.2 (requires `module load julia/1.11.2`)
 - **Architecture**: x86_64 Linux
-- **Execution Framework**: GNU Screen for persistent sessions (no SLURM needed)
+- **Execution Framework**: GNU Screen for persistent sessions (no SLURM needed for single-user r04n02)
 
 ### Package Loading Reality Check ✅ FINAL STATUS Aug 29, 2025
 - **Success rate**: ~90% of packages now work with native installation (improved from ~50%)
@@ -52,10 +52,13 @@ ssh scholten@r04n02
 - Native Julia package installation via Pkg.add()
 - Direct GitLab repository cloning on compute node  
 - Full native environment (203+ packages working)
-- No quota constraints when working in `/tmp/`
+- Repository location: `/home/scholten/globtim` (permanent storage)
 - Simplified deployment without bundling complexity
+- Screen-based persistent execution framework (no SLURM needed)
 
-**Documentation:** See `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md` for infrastructure details
+**Documentation:** 
+- Infrastructure: `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
+- Execution Framework: `docs/hpc/ROBUST_WORKFLOW_GUIDE.md`
 
 ## HPC Execution Framework Status
 
@@ -70,6 +73,9 @@ The GlobTim HPC deployment now uses **GNU Screen for persistent execution** with
 # Connect to r04n02
 ssh scholten@r04n02
 cd /home/scholten/globtim
+
+# Load Julia module (REQUIRED)
+module load julia/1.11.2
 
 # Start experiment in Screen session (automated)
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
@@ -89,6 +95,7 @@ screen -r globtim_*
 - ✅ **Remote initiation**: Can start experiments via hpc-cluster-operator agent
 - ✅ **No SLURM overhead**: Direct execution without scheduling delays
 - ✅ **Integrated monitoring**: live_monitor.sh tracks Screen sessions and Julia processes
+- ✅ **Repository location**: `/home/scholten/globtim` (NOT /tmp, permanent storage)
 
 ## HPC Compilation Approaches
 
@@ -184,6 +191,23 @@ GlobTim must be compiled with its full dependency chain using one of these metho
   - ⏳ **Mathematical Algorithm Review**: Deep analysis planned for mathematical correctness validation
 
 **FOCUS EVOLUTION:** Successfully transitioned from infrastructure foundation (COMPLETE) to advanced project management systems and mathematical excellence (ACTIVE DEVELOPMENT).
+
+## 🚀 HPC Execution Framework - PRODUCTION READY
+
+### Comprehensive Remote Experiment Management
+- ✅ **Direct Node Execution**: Fully automated remote experiment start via SSH
+- ✅ **Live Monitoring**: Integrated `live_monitor.sh` for real-time experiment tracking
+- ✅ **Checkpointing**: `experiment_manager.jl` enables robust experiment state management
+- ✅ **4D Model Workflow**: Seamless execution and monitoring on r04n02
+- ✅ **Screen-Based Framework**: Replaces legacy SLURM job submission
+- ✅ **Workflow Flexibility**: Supports single-user and multi-experiment scenarios
+
+**Key Capabilities:**
+1. Start experiments remotely with single SSH command
+2. Real-time monitoring of computational progress
+3. Automatic checkpointing and state recovery
+4. Simplified workflow without complex job scheduling
+5. Full compatibility with native Julia package ecosystem
 
 ## 🚀 BREAKTHROUGH: HPC Infrastructure Modernization ✅ COMPLETED
 **Date Achieved:** September 1, 2025  
