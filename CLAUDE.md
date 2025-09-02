@@ -1,5 +1,41 @@
 # GlobTim Project Memory
 
+## 🚨 CRITICAL TEST ENVIRONMENT ISSUES - MUST READ FIRST
+
+### Julia Test Environment Configuration (RESOLVED September 2, 2025)
+**Problem**: `Pkg.test()` was using old registered Globtim v0.1.3 instead of local development version
+**Root Cause**: test/Project.toml included Globtim as a dependency, causing Julia to fetch from registry
+**Solution**: 
+1. Remove `Globtim = "00da9514-6261-47e9-8848-33640cb1e528"` from test/Project.toml
+2. Remove test/Manifest.toml to force regeneration
+3. Clear any cached packages: `rm -rf ~/.julia/packages/Globtim ~/.julia/compiled/v1.11/Globtim`
+4. Now `Pkg.test()` correctly uses local version: `Globtim v1.1.2 ~/globtim`
+
+### Conda Environment Interference (RESOLVED September 2, 2025)
+**Problem**: Conda environment causes binary incompatibilities with Julia packages
+**Symptoms**: 
+- LinearSolve/Sparspak precompilation errors
+- "TypeError: in new, expected Union{}, got a value of type SparseArrays.SparseMatrixCSC"
+**Solution**:
+1. Run Julia without conda: Use `julia-clean` or `julia-globtim` aliases
+2. Aliases added to both .zshrc and .bash_profile for shell compatibility
+3. Clear precompilation cache when switching environments
+4. Created start_julia.sh script for clean Julia execution
+
+### Test Syntax Fixes (RESOLVED September 2, 2025)
+**GitLab Issue #18**: test_aqua.jl had invalid @test macro syntax
+**Fixed**:
+- Removed string messages from @test macros (Julia's Test.jl doesn't support inline messages)
+- Fixed runtests.jl: Removed `tolerance = nothing` to use default value
+- Fixed test_aqua.jl: Removed call to non-existent `test_project_toml_formatting` function
+- Core tests now pass successfully
+
+### Remaining Aqua Quality Issues (TO BE ADDRESSED)
+**Non-critical failures in code quality checks**:
+1. **Undefined exports** - 13 valley-related symbols exported but not defined
+2. **Stale dependency** - Aqua should be in test dependencies only, not main deps
+3. **Export count** - 258 exports exceeds reasonable limit (test expects < 200)
+
 ## 🚨 CRITICAL HPC KNOWLEDGE - READ FIRST FOR ALL CLUSTER TASKS
 
 ### Direct r04n02 Compute Node Access (CURRENT APPROACH)
