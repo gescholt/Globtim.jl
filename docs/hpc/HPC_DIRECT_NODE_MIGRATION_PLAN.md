@@ -20,14 +20,15 @@ Local Dev → mack (NFS) → falcon (login) → r04n02 (compute)
 - Complex file transfer workflow
 ```
 
-### New Architecture (Target)
+### New Architecture (Current - IMPLEMENTED)
 ```
 Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 - Full compute node access
 - Direct GitLab connectivity
 - Native Julia package management  
 - Simplified deployment workflow
-- Direct SLURM submission capability
+- Screen-based persistent execution (no SLURM needed for single-user node)
+- Repository at /home/scholten/globtim (permanent storage)
 ```
 
 ## 🚨 Critical Advantages of Direct Node Access
@@ -37,7 +38,7 @@ Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 3. **Native Package Management**: Use Julia Pkg.add() without bundling
 4. **Simplified Deployment**: No complex file transfer procedures
 5. **Enhanced Development**: Work directly on target architecture
-6. **SLURM Freedom**: Submit jobs directly from the compute node
+6. **Execution Freedom**: Use Screen for persistent execution without SLURM overhead
 
 ## 📋 Implementation Tasks
 
@@ -144,12 +145,12 @@ Pkg.add("ForwardDiff")          # ✅ No more cross-platform issues
 - Error handling and edge case robustness
 - Performance benchmarking across various polynomial systems
 
-### Phase 5: SLURM Infrastructure & Example Architecture 📋 **LOWER PRIORITY**
+### Phase 5: Advanced Infrastructure & Example Architecture 📋 **LOWER PRIORITY**
 
-#### 4.1 Direct Node SLURM Configuration **DEFERRED**
-**Current**: Submit from falcon login node (working with existing infrastructure)
-**Future Target**: Submit directly from r04n02 compute node
-**Note**: Lower priority since HPC functionality is fully operational via current workflow
+#### 5.1 Execution Framework Enhancement **COMPLETED**
+**Status**: ✅ Screen-based persistent execution framework implemented (September 2, 2025)
+**Achievement**: Eliminated need for SLURM on single-user r04n02 node
+**Features**: Automated session management, checkpointing, live monitoring
 
 #### 4.2 Example Architecture Organization **FUTURE ENHANCEMENT**
 **Objective**: Create organized structure for GlobTim examples
@@ -179,9 +180,11 @@ sbatch --nodelist=r04n02 script.slurm
 ```bash
 # Direct single-hop workflow
 ssh scholten@r04n02
-git clone git@git.mpi-cbg.de:scholten/globtim.git
-cd globtim && julia --project=. -e 'using Pkg; Pkg.instantiate()'
-sbatch script.slurm  # Direct submission
+cd /home/scholten/globtim  # Repository already cloned
+module load julia/1.11.2  # Load Julia module
+
+# Use Screen for persistent execution
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 ```
 
 ### Julia Package Management Revolution
@@ -195,23 +198,27 @@ using Pkg
 Pkg.add("HomotopyContinuation")  # ✅ Works directly
 ```
 
-### SLURM Script Simplification
-**Old Template**:
+### Execution Framework Simplification
+**Old Approach**:
 ```bash
-# Complex bundle extraction and environment setup
-tar -xzf /home/scholten/bundle.tar.gz -C /tmp/project_${SLURM_JOB_ID}/
-export JULIA_DEPOT_PATH="/tmp/project_${SLURM_JOB_ID}/depot"
-export JULIA_PROJECT="/tmp/project_${SLURM_JOB_ID}/"
-export JULIA_NO_NETWORK="1"
-export JULIA_PKG_OFFLINE="true"
+# Complex SLURM submission with bundle extraction
+sbatch --nodelist=r04n02 script.slurm
+# Wait for scheduling, handle job dependencies
 ```
 
-**New Template**:
+**New Approach (Screen-Based)**:
 ```bash
-# Simple direct execution
+# Simple direct execution with persistence
 cd /home/scholten/globtim
-export JULIA_PROJECT="."
-/sw/bin/julia --project=. script.jl  # That's it!
+module load julia/1.11.2
+
+# Automated Screen session management
+./hpc/experiments/robust_experiment_runner.sh 4d-model
+
+# Or manual Screen usage
+screen -S experiment_name
+julia --project=. experiment.jl
+# Ctrl+A, D to detach
 ```
 
 ## 🎯 Expected Outcomes
@@ -268,16 +275,18 @@ export JULIA_PROJECT="."
 ✅ **COMPLETED**: Classified remaining issues - infrastructure complete, mathematical focus identified
 ✅ **COMPLETED**: Updated documentation to reflect completed infrastructure and cleanup work
 
-### 📈 Week 4 CURRENT: Advanced Project Management & Mathematical Refinement **PHASE 4**
-- [ ] **PRIORITY 1**: Research and implement GitLab visual issue tracking features (boards, milestones)
-- [ ] **PRIORITY 2**: Mathematical algorithm deep dive - homotopy continuation correctness validation  
-- [ ] **PRIORITY 3**: Performance benchmarking across different polynomial system types
-- [ ] Update project management workflow documentation
+### 📈 Week 4 COMPLETED: Screen-Based Execution Framework **IMPLEMENTED**
+- [x] **COMPLETED**: Implemented Screen-based persistent execution framework
+- [x] **COMPLETED**: Created robust_experiment_runner.sh for automated session management
+- [x] **COMPLETED**: Developed experiment_manager.jl for Julia checkpointing
+- [x] **COMPLETED**: Updated monitoring tools for Screen sessions
+- [x] **COMPLETED**: Documented new workflow in ROBUST_WORKFLOW_GUIDE.md
 
-### 📋 Week 5+ FUTURE: SLURM Infrastructure & Examples **LOWER PRIORITY**
-- [ ] Configure direct SLURM submission from r04n02 (deferred)
+### 📋 Week 5+ CURRENT: Mathematical Refinement **ACTIVE**
+- [ ] **PRIORITY 1**: Mathematical algorithm deep dive - homotopy continuation correctness validation
+- [ ] **PRIORITY 2**: Performance benchmarking across different polynomial system types
+- [ ] **PRIORITY 3**: Numerical stability analysis and optimization
 - [ ] Design organized example management system (future enhancement)
-- [ ] Advanced performance optimization (future work)
 
 ## 🎉 Success Criteria - STATUS UPDATE
 
