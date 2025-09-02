@@ -49,7 +49,7 @@
 - **Architecture Compatible:** Julia 1.11.6 matching HPC clusters
 - **Precompiled:** All packages precompiled for faster loading
 - **Fallback System:** Automatic standalone version if packages fail
-- **Execution Framework:** Screen-based persistent execution (no SLURM needed)
+- **Execution Framework:** tmux-based persistent execution (no SLURM needed)
 
 ### 4. Updated Deployment Scripts ✅
 - **Updated:** `deploy_working_bundle.sh` for Phase 1 core bundles
@@ -80,7 +80,7 @@ globtim_optimal_bundle_20250821_152938.tar.gz (256MB)
 ├── Project.toml              # Core dependencies only
 ├── Manifest.toml             # 55KB complete manifest
 ├── load_globtim_offline.jl   # Offline loader with fallback
-├── robust_experiment_runner.sh  # Screen-based execution (current)
+├── robust_experiment_runner.sh  # tmux-based execution (current)
 ├── bundle_info.json          # Metadata and verification
 └── README_BUNDLE.md          # Usage instructions
 ```
@@ -124,7 +124,7 @@ ssh scholten@falcon 'cat ~/globtim_hpc/build_temp/globtim_*.out'
 ### ✅ Leveraged Existing Infrastructure  
 - Updated existing scripts rather than creating new ones
 - Preserved proven deployment workflow
-- Implemented Screen-based framework for single-user r04n02 node
+- Implemented tmux-based framework for single-user r04n02 node
 
 ### ✅ Modern Architecture Integration
 - Uses August 2025 weak dependency migration
@@ -173,13 +173,13 @@ ssh scholten@falcon 'cat ~/globtim_hpc/build_temp/globtim_*.out'
 - ✅ **Two verified deployment approaches**: Native installation (primary) and Bundle (alternative)
 - ✅ **Comprehensive HPC documentation**: HPC_BUNDLE_SOLUTIONS.md, HOMOTOPY_SOLUTION_SUMMARY.md
 - ✅ **Complete repository cleanup**: 60+ obsolete files removed, .gitignore enhanced
-- ✅ **Production-ready execution framework**: Screen-based persistent sessions verified working
+- ✅ **Production-ready execution framework**: tmux-based persistent sessions verified working
 - ✅ **Test suite excellence**: All 64 convenience method tests passing (fixed 1D scalar function handling)
 - ✅ **Repository health**: Excellent maintainability with clutter eliminated
 - ✅ **All changes committed to GitLab**: Repository up-to-date with comprehensive cleanup
 
 ### Available Deployment Options:
-1. **Primary**: Native Installation with Screen-based execution (guaranteed compatibility)
+1. **Primary**: Native Installation with tmux-based execution (guaranteed compatibility)
 2. **Alternative**: Bundle Deployment via `globtim_optimal_bundle_20250821_152938.tar.gz` (256MB, faster)
 3. **Complete Documentation**: Step-by-step guides for both approaches
 
