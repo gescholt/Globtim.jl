@@ -15,9 +15,9 @@ ssh scholten@r04n02
 - **Native Julia Packages**: Use Pkg.add() without bundling complexity
 - **Internet Access**: Full connectivity for package downloads
 - **Repository Location**: `/home/scholten/globtim` (permanent, NOT /tmp)
-- **Julia version**: 1.11.2 (requires `module load julia/1.11.2`)
+- **Julia version**: 1.11.6 (via juliaup at ~/.juliaup/bin/julia, no module system)
 - **Architecture**: x86_64 Linux
-- **Execution Framework**: GNU Screen for persistent sessions (no SLURM needed for single-user r04n02)
+- **Execution Framework**: tmux for persistent sessions (no SLURM needed for single-user r04n02)
 
 ### Package Loading Reality Check ✅ FINAL STATUS Aug 29, 2025
 - **Success rate**: ~90% of packages now work with native installation (improved from ~50%)
@@ -54,7 +54,7 @@ ssh scholten@r04n02
 - Full native environment (203+ packages working)
 - Repository location: `/home/scholten/globtim` (permanent storage)
 - Simplified deployment without bundling complexity
-- Screen-based persistent execution framework (no SLURM needed)
+- Tmux-based persistent execution framework (no SLURM needed)
 
 **Documentation:** 
 - Infrastructure: `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
@@ -62,11 +62,11 @@ ssh scholten@r04n02
 
 ## HPC Execution Framework Status
 
-### ✅ NEW FRAMEWORK: Screen-Based Persistent Execution (CURRENT)
+### ✅ NEW FRAMEWORK: Tmux-Based Persistent Execution (CURRENT)
 **Date Implemented:** September 2, 2025  
 **Status:** PRODUCTION READY - Optimized for single-user r04n02 node
 
-The GlobTim HPC deployment now uses **GNU Screen for persistent execution** without SLURM overhead, perfectly suited for single-user compute node access.
+The GlobTim HPC deployment now uses **tmux for persistent execution** without SLURM overhead, perfectly suited for single-user compute node access.
 
 **Current Working Configuration:**
 ```bash
@@ -74,27 +74,26 @@ The GlobTim HPC deployment now uses **GNU Screen for persistent execution** with
 ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Load Julia module (REQUIRED)
-module load julia/1.11.2
+# Julia is in PATH via juliaup (no module needed)
 
-# Start experiment in Screen session (automated)
+# Start experiment in tmux session (automated)
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
 # Monitor progress
-./hpc/monitoring/live_monitor.sh
+./hpc/monitoring/tmux_monitor.sh
 
 # Attach to running session
-screen -r globtim_*
+tmux attach -t globtim_*
 ```
 
 **Framework Features (September 2, 2025):**
-- ✅ **Persistent execution**: Survives SSH disconnection via GNU Screen
+- ✅ **Persistent execution**: Survives SSH disconnection via tmux
 - ✅ **Automated management**: robust_experiment_runner.sh handles sessions
 - ✅ **Checkpointing**: Julia-based experiment_manager.jl for recovery
-- ✅ **Live monitoring**: Updated monitoring tools for Screen sessions
+- ✅ **Live monitoring**: tmux_monitor.sh tracks tmux sessions
 - ✅ **Remote initiation**: Can start experiments via hpc-cluster-operator agent
 - ✅ **No SLURM overhead**: Direct execution without scheduling delays
-- ✅ **Integrated monitoring**: live_monitor.sh tracks Screen sessions and Julia processes
+- ✅ **Integrated monitoring**: tmux_monitor.sh tracks sessions and Julia processes
 - ✅ **Repository location**: `/home/scholten/globtim` (NOT /tmp, permanent storage)
 
 ## HPC Compilation Approaches
