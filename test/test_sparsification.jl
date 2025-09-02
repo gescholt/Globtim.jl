@@ -75,7 +75,7 @@ using LinearAlgebra
         pol = Constructor(TR, 14, basis = :chebyshev)
 
         thresholds = [1e-2, 1e-3, 1e-4, 1e-5]
-        results = analyze_sparsification_tradeoff(pol, thresholds = thresholds)
+        results = Globtim.analyze_sparsification_tradeoff(pol, thresholds = thresholds)
 
         @test length(results) == length(thresholds)
 
@@ -95,7 +95,7 @@ using LinearAlgebra
         pol = Constructor(TR, 4, basis = :chebyshev)
 
         # Compute L2 norm using Vandermonde approach
-        l2_vand = compute_l2_norm_vandermonde(pol)
+        l2_vand = Globtim.compute_l2_norm_vandermonde(pol)
 
         @test isa(l2_vand, Real)
         @test l2_vand > 0
@@ -113,8 +113,8 @@ using LinearAlgebra
         modified_coeffs = copy(pol.coeffs)
         modified_coeffs[5:end] .= 0
 
-        l2_modified = compute_l2_norm_coeffs(pol, modified_coeffs)
-        l2_original = compute_l2_norm_vandermonde(pol)
+        l2_modified = Globtim.compute_l2_norm_coeffs(pol, modified_coeffs)
+        l2_original = Globtim.compute_l2_norm_vandermonde(pol)
 
         @test l2_modified < l2_original  # Should be smaller with zeroed coeffs
         @test l2_modified > 0
@@ -126,7 +126,7 @@ using LinearAlgebra
         pol = Constructor(TR, 14, basis = :chebyshev)
 
         # Compute approximation error
-        error = compute_approximation_error(f, pol, TR)
+        error = Globtim.compute_approximation_error(f, pol, TR)
 
         @test isa(error, Real)
         @test error >= 0
@@ -134,7 +134,7 @@ using LinearAlgebra
 
         # Test error after sparsification
         sparse_result = sparsify_polynomial(pol, 1e-4, mode = :relative)
-        error_sparse = compute_approximation_error(f, sparse_result.polynomial, TR)
+        error_sparse = Globtim.compute_approximation_error(f, sparse_result.polynomial, TR)
 
         @test error_sparse >= error - 1e-10  # Error should not decrease (within numerical tolerance)
         @test error_sparse < 0.2  # But should still be reasonable
@@ -145,7 +145,7 @@ using LinearAlgebra
         TR = test_input(f, dim = 1, center = [0.0], sample_range = 2.0, tolerance = nothing)
         pol = Constructor(TR, 12, basis = :chebyshev)
 
-        results = analyze_approximation_error_tradeoff(
+        results = Globtim.analyze_approximation_error_tradeoff(
             f,
             pol,
             TR,
