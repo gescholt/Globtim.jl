@@ -26,73 +26,77 @@ A Julia package for global optimization using polynomial approximation methods, 
 - **Performance**: Optimized for HPC environment with flexible deployment options
 
 
-> 🚀 **QUICK START: GlobTim is Ready to Use!** 🚀
+> 🚀 **QUICK START: GlobTim HPC Execution** 🚀
 >
-> **MODERN WORKFLOW (Preferred): Direct r04n02 Access**
+> **Direct r04n02 Access with tmux (No SLURM Required)**
 > ```bash
 > # 1. Connect directly to compute node
 > ssh scholten@r04n02
 >
-> # 2. Access the GlobTim repository (already cloned)
-> cd /tmp/globtim
+> # 2. Navigate to GlobTim repository
+> cd /home/scholten/globtim  # NOTE: Use /home/scholten, NOT /tmp
 >
-> # 3. Use native Julia package management
-> /sw/bin/julia --project=. -e 'using Pkg; Pkg.instantiate()'
+> # 3. Pull latest changes
+> git pull origin main
 >
-> # 4. Run tests or submit jobs directly
-> sbatch --time=01:00:00 --mem=8G script.slurm
+> # 4. Run 4D experiment with memory allocation
+> ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+> # This automatically uses: julia --heap-size-hint=50G
+>
+> # 5. Monitor in tmux
+> tmux attach -t globtim_*  # Ctrl+B then D to detach
 > ```
 >
-> **LEGACY WORKFLOW (Fallback): falcon+NFS Bundle**
-> ```bash
-> # 1. Connect to cluster login node
-> ssh scholten@falcon
->
-> # 2. Submit a job using the working bundle
-> sbatch test_nfs_bundle.slurm
->
-> # 3. Or create your own job (see CLUSTER_WORKFLOW.md)
-> ```
+> **⚠️ CRITICAL for Large Problems:**
+> - **Memory**: Always use `--heap-size-hint=50G` for 4D+ problems
+> - **Packages**: Ensure CSV, JSON are installed
+> - **Path**: Use `Pkg.activate(dirname(dirname(@__DIR__)))` in scripts
 >
 > **Key Resources:**
-> - **Modern**: Direct Git access, native Julia Pkg.add(), simplified deployment
-> - **Legacy**: `/home/scholten/globtim_optimal_bundle_20250821_152938.tar.gz` (ready to use)
-> - **Julia**: Version 1.11.2 at `/sw/bin/julia`
-> - **Packages**: ForwardDiff, StaticArrays, HomotopyContinuation, and all dependencies
-> - **Documentation**: See `HPC_DIRECT_NODE_MIGRATION_PLAN.md` for modern workflow details
+> - **Julia**: Version 1.11.6 via juliaup (no module system needed)
+> - **Memory Guide**: See formula in `docs/hpc/HPC_EXECUTION_GUIDE.md`
+> - **Troubleshooting**: `docs/hpc/4D_EXPERIMENT_LESSONS_LEARNED.md`
+> - **Repository**: `/home/scholten/globtim` (permanent storage)
 
-### 🚀 Quick Start - HPC Benchmarking
+### 🚀 Quick Start - HPC Execution with tmux
 
-#### Step 1: Prepare Code (Fileserver)
+#### Step 1: Connect and Prepare
 ```bash
-# Connect to fileserver for code management
-ssh scholten@mack
-cd ~/globtim_hpc
-# Upload code, install packages, prepare data
+# Connect directly to compute node (no login node needed)
+ssh scholten@r04n02
+cd /home/scholten/globtim
+git pull origin main
 ```
 
-#### Step 2: Submit Jobs (Cluster)
+#### Step 2: Run Experiments
 ```bash
-# Connect to cluster for job submission
-ssh scholten@falcon
-cd ~/globtim_hpc
+# Run 4D polynomial optimization (auto-handles memory)
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
-# Direct SLURM submission (recommended)
-sbatch --account=mpi --partition=batch your_job_script.slurm
-
-# Or use updated Python scripts
-python submit_deuflhard_fileserver.py --mode quick
-python submit_basic_test_fileserver.py --mode quick
+# For custom experiments requiring large memory:
+julia --project=. --heap-size-hint=100G your_script.jl
 ```
 
 #### Step 3: Monitor and Collect
 ```bash
-# Monitor jobs from anywhere
-squeue -u scholten
+# List active experiments
+tmux ls | grep globtim
 
-# Results automatically saved to fileserver
-ls -la ~/globtim_hpc/results/
+# Attach to monitor progress
+tmux attach -t globtim_4d-model_*
+
+# Results saved in:
+ls -la hpc_results/globtim_*/
+# Files: critical_points.csv, timing_report.txt, summary.txt
 ```
+
+#### Memory Requirements by Problem Size
+| Dims | Degree | Memory Needed | Heap Hint |
+|------|--------|--------------|----------|
+| 4    | 12     | 2.3 GB       | 50G      |
+| 4    | 15     | 5.2 GB       | 100G     |
+| 5    | 10     | 12.9 GB      | 100G     |
+| 5    | 12     | 29.7 GB      | 200G     |
 
 ## 🚀 Quick Start - Precision-Aware Optimization
 
@@ -158,36 +162,47 @@ globtim/
 └── environments/          # Dual environment support (local/HPC)
 ```
 
-## 🎯 HPC Workflow - PRODUCTION READY ✅
+## 🎯 HPC Workflow - tmux-Based Execution ✅
 
-### Step 1: Environment Setup
+### Prerequisites
 ```bash
-# One-time setup: Install dependencies with quota workaround
-cd hpc/jobs/submission
-python working_quota_workaround.py --install-all
+# Ensure packages are installed on r04n02
+ssh scholten@r04n02
+cd /home/scholten/globtim
+julia --project=. -e 'using Pkg; Pkg.add(["CSV", "JSON", "Statistics"])'
 ```
 
-### Step 2: Run Benchmarks
+### Running Experiments
 ```bash
-# Standard HPC Deuflhard benchmark
-python submit_deuflhard_hpc.py --mode quick --auto-collect
+# Standard 4D optimization experiment
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
-# Fileserver-based Deuflhard benchmark
-python submit_deuflhard_fileserver.py --mode quick --auto-collect
+# Custom parameters (samples_per_dim, degree)
+./hpc/experiments/robust_experiment_runner.sh 4d-model 8 15
 
-# Basic functionality test
-python submit_basic_test_fileserver.py --mode quick --auto-collect
-
-# Custom benchmark functions
-python submit_globtim_compilation_test.py --mode quick --function [FUNCTION_NAME]
+# Check status
+./hpc/experiments/robust_experiment_runner.sh status
 ```
 
-### Step 3: Monitor and Collect Results
+### Monitoring
 ```bash
-# Automated monitoring with result collection
-python automated_job_monitor.py --job-id [JOB_ID] --test-id [TEST_ID]
+# Real-time output monitoring
+tail -f hpc_results/globtim_*/output.log
 
-# Results automatically saved in: hpc/jobs/submission/collected_results/
+# Check for errors
+cat hpc_results/globtim_*/error.log
+
+# Memory usage
+htop -u scholten
+```
+
+### Results Collection
+```bash
+# Results are automatically saved as:
+# - critical_points.csv: DataFrame of optimized critical points
+# - critical_points.json: JSON format for parsing
+# - timing_report.txt: Performance breakdown
+# - summary.txt: Human-readable summary
 ```
 
 ## 🔧 Key Technical Solutions - BREAKTHROUGH ACHIEVED
@@ -214,12 +229,12 @@ python automated_job_monitor.py --job-id [JOB_ID] --test-id [TEST_ID]
 - **Access**: Automatic via NFS from cluster nodes or native installation
 - **Persistence**: Permanent storage, no reinstallation needed
 
-### ✅ SLURM Integration (PRODUCTION STANDARD)
-- **Job Submission**: Standard `sbatch` workflow from fileserver
-- **Script Creation**: Proper SLURM scripts with NFS paths
-- **Resource Management**: Full access to all cluster partitions
-- **Results**: Persistent storage on fileserver
-- **Verified Scripts**: Both native installation and bundle deployment working
+### ✅ tmux-Based Execution Framework (PRODUCTION STANDARD)
+- **Direct Execution**: No scheduling delays, immediate start on r04n02
+- **Persistent Sessions**: Survives SSH disconnection via tmux
+- **Memory Management**: Automatic `--heap-size-hint` for large problems
+- **Results Storage**: Persistent at `/home/scholten/globtim/hpc_results/`
+- **Interactive Monitoring**: Attach/detach to running experiments at will
 
 ## 🎯 Key Features
 
