@@ -115,7 +115,11 @@
       "Bash(conda:*)",
       "Bash(ps:*)",
       "Bash(gh auth:*)",
-      "Bash(./tools/gitlab/get-token.sh:*)"
+      "Bash(./tools/gitlab/get-token.sh:*)",
+      "Bash(/Users/ghscholt/globtim/node_experiments/runners/experiment_runner.sh verify:*)",
+      "Read(/private/tmp/test_2d_results/**)",
+      "Bash(/Users/ghscholt/globtim/node_experiments/runners/experiment_runner.sh test-2d:*)",
+      "Bash(/dev/null)"
     ],
     "defaultMode": "acceptEdits"
   },
