@@ -3,7 +3,7 @@
 # This script estimates parameters (α, β, γ, δ) of the Lotka-Volterra system using GlobTim
 
 using Pkg
-Pkg.activate(dirname(@__DIR__))  # Activate main globtim project
+Pkg.activate(get(ENV, "JULIA_PROJECT", "/home/scholten/globtim"))  # Activate main globtim project
 
 using Globtim
 using DynamicPolynomials
