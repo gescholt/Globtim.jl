@@ -197,7 +197,8 @@ Before running any HPC experiment:
   - [ ] Common missing packages: CSV, JSON, Statistics
 
 - [ ] **Script Configuration**
-  - [ ] Correct `Pkg.activate` path (usually `dirname(dirname(@__DIR__))`)
+  - [ ] **FIXED Sept 3**: Use `get(ENV, "JULIA_PROJECT", "/home/scholten/globtim")` NOT `dirname(@__DIR__)`
+  - [ ] **FIXED Sept 3**: Never access `TR.objective` as data - it's a Function type
   - [ ] No references to non-existent fields (e.g., `sample_pts`)
   - [ ] Proper error handling for large memory allocations
 
@@ -209,11 +210,13 @@ Before running any HPC experiment:
 
 ## Common Pitfalls to Avoid
 
-1. **Don't assume field names** - Always check with `fieldnames(typeof(object))`
-2. **Don't use /tmp for anything** - Use `$GLOBTIM_DIR/hpc/experiments/temp/` or similar
-3. **Don't forget heap size** - Large polynomial problems need explicit memory allocation
-4. **Don't skip git pull** - Always synchronize before running
-5. **Don't ignore permissions** - Shell scripts need execute permissions after git operations
+1. **CRITICAL (Sept 3)**: Never access `TR.objective` as data - it's a Function, let Constructor handle sampling
+2. **CRITICAL (Sept 3)**: Never use `dirname(@__DIR__)` in temp scripts - use environment variables
+3. **Don't assume field names** - Always check with `fieldnames(typeof(object))`
+4. **Don't use /tmp for anything** - Use `$GLOBTIM_DIR/hpc/experiments/temp/` or similar
+5. **Don't forget heap size** - Large polynomial problems need explicit memory allocation
+6. **Don't skip git pull** - Always synchronize before running
+7. **Don't ignore permissions** - Shell scripts need execute permissions after git operations
 
 ## Debugging Commands
 
