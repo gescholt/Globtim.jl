@@ -36,83 +36,13 @@ include("aqua_config.jl")
     # Print configuration info
     print_aqua_config()
     
-    @testset "Method Ambiguities" begin
-        @info "Testing for method ambiguities..."
+    @testset "Aqua.jl Tests" begin
+        @info "Running configured Aqua.jl quality tests..."
         
-        # Test for ambiguities in the main module
-        # We'll be more lenient initially and exclude some known issues
-        Aqua.test_ambiguities(
-            Globtim;
-            # Exclude ambiguities from dependencies that we can't control
-            exclude=[
-                # Add specific method signatures here if needed
-                # Example: Base.show
-            ]
-        )
+        # Use the configured Aqua tests that handle false positives and exclusions
+        run_configured_aqua_tests(Globtim)
         
-        @info "✅ No problematic method ambiguities found"
-    end
-    
-    @testset "Undefined Exports" begin
-        @info "Testing for undefined exports..."
-        
-        # This checks that all exported symbols are actually defined
-        Aqua.test_undefined_exports(Globtim)
-        
-        @info "✅ All exports are properly defined"
-    end
-    
-    @testset "Unbound Type Parameters" begin
-        @info "Testing for unbound type parameters..."
-        
-        # This catches type parameters that aren't used in the function signature
-        Aqua.test_unbound_args(Globtim)
-        
-        @info "✅ No unbound type parameters found"
-    end
-    
-    @testset "Persistent Tasks" begin
-        @info "Testing for persistent tasks..."
-        
-        # This checks for tasks that might not be properly cleaned up
-        Aqua.test_persistent_tasks(Globtim)
-        
-        @info "✅ No persistent tasks found"
-    end
-    
-    @testset "Project Structure" begin
-        @info "Testing project structure..."
-        
-        # Test that Project.toml is well-formed
-        # Note: test_project_toml_formatting doesn't exist in Aqua.jl
-        # We'll just verify the Project.toml exists and is valid
-        project_file = joinpath(dirname(dirname(pathof(Globtim))), "Project.toml")
-        @test isfile(project_file)
-        
-        @info "✅ Project.toml exists and is valid"
-    end
-    
-    @testset "Dependency Analysis" begin
-        @info "Testing dependency hygiene..."
-        
-        # Check for unused dependencies and other dependency issues
-        # Note: This might be strict, so we'll make it informational initially
-        try
-            Aqua.test_deps_compat(Globtim)
-            @info "✅ Dependency compatibility checks passed"
-        catch e
-            @warn "Dependency compatibility issues detected" exception=e
-            # Don't fail the test initially, just warn
-        end
-        
-        # Test for stale dependencies
-        try
-            Aqua.test_stale_deps(Globtim)
-            @info "✅ No stale dependencies found"
-        catch e
-            @warn "Stale dependency issues detected" exception=e
-            # Don't fail the test initially, just warn
-        end
+        @info "✅ All Aqua.jl tests passed (with configured exclusions)"
     end
     
     @testset "Package Structure Validation" begin
