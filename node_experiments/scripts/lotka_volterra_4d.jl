@@ -119,7 +119,7 @@ println("\nStep 1: Sampling parameter space and evaluating objective function...
     )
 end
 println("✓ Generated $(TR.GN) parameter samples")
-println("  Objective function evaluation range: [$(minimum(TR.objective)), $(maximum(TR.objective))]")
+println("  Objective function ready for polynomial approximation")
 
 println("\nStep 2: Constructing polynomial approximation of objective function...")
 @timeit to "constructor" begin
