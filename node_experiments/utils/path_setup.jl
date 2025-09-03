@@ -28,13 +28,13 @@ required_dirs = [
 println("\n" * "="^50)
 println("Directory Structure Validation:")
 
-all_valid = true
+global all_valid = true
 for dir in required_dirs
     if isdir(dir)
         println("✓ $dir")
     else
         println("❌ $dir (missing)")
-        all_valid = false
+        global all_valid = false
     end
 end
 
@@ -54,7 +54,7 @@ for file in critical_files
         println("✓ $file")
     else
         println("❌ $file (missing)")
-        all_valid = false
+        global all_valid = false
     end
 end
 
@@ -73,7 +73,7 @@ try
         println("✓ Globtim package loaded successfully")
     catch e
         println("❌ Failed to load Globtim: $e")
-        all_valid = false
+        global all_valid = false
     end
 catch e
     println("❌ Failed to activate project: $e") 

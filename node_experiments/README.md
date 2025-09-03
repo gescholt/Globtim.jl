@@ -31,8 +31,8 @@ node_experiments/
 ### Weak Dependencies (require explicit activation)
 - **CSV** ⚠️ (weak dependency, needs `using CSV` to activate extension)
 
-### Missing Dependencies (need manual installation)
-- **JSON** ❌ (not in Project.toml, requires `Pkg.add("JSON")` on node)
+### Recently Added Dependencies 
+- **JSON** ✅ (now in Project.toml, automatically available)
 
 ## Quick Start on r04n02
 
@@ -43,9 +43,13 @@ cd /home/scholten/globtim
 git pull origin main
 ```
 
-### 2. Install Missing Packages (one-time setup)
+### 2. Verify Package Setup (optional)
 ```bash
-julia --project=. -e 'using Pkg; Pkg.add("JSON")'
+# Run package verification
+./node_experiments/runners/experiment_runner.sh verify
+
+# Or use automated setup utility
+julia node_experiments/utils/package_setup.jl
 ```
 
 ### 3. Run Experiments

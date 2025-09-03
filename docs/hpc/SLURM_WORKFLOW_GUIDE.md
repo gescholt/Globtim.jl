@@ -1,10 +1,19 @@
 # SLURM Workflow Guide for GlobTim HPC Experiments
 
 **Created:** September 2, 2025  
-**Status:** ✅ OPERATIONAL - Complete workflow for HPC job submission  
-**Node:** r04n02 compute node with direct SSH access
+**Status:** ⚠️ ARCHIVED - SLURM workflow superseded by tmux-based execution  
+**Migration Date:** September 3, 2025  
+**Current Solution:** See `COMPUTATION_PROCEDURES.md` for tmux-based workflow
 
-## Overview
+## ⚠️ MIGRATION NOTICE
+
+**This SLURM workflow has been superseded by a direct tmux-based execution framework.**
+
+**New Documentation:** `COMPUTATION_PROCEDURES.md`  
+**Reason for Change:** Single-user compute node access eliminates need for job scheduling  
+**Benefits:** Simpler workflow, immediate execution, better monitoring
+
+## Overview (HISTORICAL)
 
 This guide documents the complete workflow for running GlobTim experiments on the HPC cluster using SLURM job submission. The workflow has been validated with both 2D test cases and 4D production experiments.
 
