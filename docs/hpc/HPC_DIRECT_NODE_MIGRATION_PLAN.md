@@ -27,7 +27,7 @@ Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 - Direct GitLab connectivity
 - Native Julia package management  
 - Simplified deployment workflow
-- tmux-based persistent execution (no SLURM needed for single-user node)
+- tmux-based persistent execution (SLURM superseded for single-user node)
 - Repository at /home/scholten/globtim (permanent storage)
 ```
 
@@ -38,7 +38,7 @@ Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 3. **Native Package Management**: Use Julia Pkg.add() without bundling
 4. **Simplified Deployment**: No complex file transfer procedures
 5. **Enhanced Development**: Work directly on target architecture
-6. **Execution Freedom**: Use tmux for persistent execution without SLURM overhead
+6. **Execution Freedom**: Use tmux for persistent execution, SLURM superseded for single-user node
 
 ## 📋 Implementation Tasks
 
@@ -50,7 +50,7 @@ Local Dev → r04n02 (direct SSH) → Direct Git clone + Julia Pkg.add()
 - ✅ Updated connection logic for direct r04n02 access
 - ✅ Added direct Git operations capability documentation
 - ✅ Implemented native Julia package management procedures
-- ✅ Updated SLURM submission logic for direct node operations
+- ✅ Migrated from SLURM to tmux-based execution for direct node operations
 - ✅ Added security-hardened operations and best practices
 - ✅ Maintained fallback support for legacy NFS workflow
 
@@ -104,7 +104,7 @@ Pkg.add("ForwardDiff")          # ✅ No more cross-platform issues
 #### 3.1 Critical Repository Cleanup ✅ **COMPLETED**
 **Achievement**: Repository contains excellent maintainability with clutter eliminated
 **Completed Actions**:
-✅ Removed 60+ obsolete SLURM job files and experimental scripts
+✅ Removed 60+ obsolete SLURM job files (superseded by tmux framework)
 ✅ Enhanced .gitignore to prevent future clutter accumulation  
 ✅ Consolidated documentation into proper integrated structure
 ✅ Cleaned up temporary/experimental scripts and floating files
@@ -149,7 +149,7 @@ Pkg.add("ForwardDiff")          # ✅ No more cross-platform issues
 
 #### 5.1 Execution Framework Enhancement **COMPLETED**
 **Status**: ✅ tmux-based persistent execution framework implemented (September 2, 2025)
-**Achievement**: Eliminated need for SLURM on single-user r04n02 node
+**Achievement**: Superseded SLURM with tmux-based execution on single-user r04n02 node
 **Features**: Automated session management, checkpointing, live monitoring
 
 #### 4.2 Example Architecture Organization **FUTURE ENHANCEMENT**
@@ -201,7 +201,7 @@ Pkg.add("HomotopyContinuation")  # ✅ Works directly
 ### Execution Framework Simplification
 **Old Approach**:
 ```bash
-# Complex SLURM submission with bundle extraction
+# Legacy SLURM submission (superseded)
 sbatch --nodelist=r04n02 script.slurm
 # Wait for scheduling, handle job dependencies
 ```
@@ -245,7 +245,7 @@ julia --project=. experiment.jl
 
 ### Potential Challenges
 1. **Network Access**: Verify r04n02 has GitLab connectivity
-2. **SLURM Configuration**: Ensure job submission works from compute node
+2. **Legacy SLURM**: Historical job submission capability (superseded by tmux)
 3. **Resource Management**: Monitor compute node resource usage
 4. **Backup Strategy**: Ensure important work is version controlled
 
@@ -307,7 +307,7 @@ julia --project=. experiment.jl
 - [ ] Mathematical core algorithm optimization and numerical stability improvements
 
 **📋 LOWER PRIORITY OBJECTIVES (Future Work):**
-- [ ] SLURM jobs can be submitted directly from r04n02 (DEFERRED)
+- [⚠️] SLURM workflow superseded by tmux-based execution (ARCHIVED)
 - [ ] Example management system is operational (FUTURE ENHANCEMENT)
 - [ ] Performance benchmarking completed (FUTURE OPTIMIZATION)
 
