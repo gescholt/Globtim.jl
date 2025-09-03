@@ -90,10 +90,10 @@ function run_configured_aqua_tests(module_to_test)
     
     if config.project_toml_formatting && :test_project_toml_formatting ∉ config.skip_tests
         # Check if this function exists in the current Aqua version
-        if hasmethod(Aqua.test_project_toml_formatting, (typeof(module_to_test),))
+        if isdefined(Aqua, :test_project_toml_formatting)
             Aqua.test_project_toml_formatting(module_to_test)
         else
-            @warn "test_project_toml_formatting not available in this Aqua version"
+            @warn "test_project_toml_formatting not available in this Aqua version - skipping"
         end
     end
     
@@ -110,7 +110,7 @@ function run_configured_aqua_tests(module_to_test)
         end
     end
     
-    if config.stale_deps_check
+    if config.stale_deps_check && :test_stale_deps ∉ config.skip_tests
         try
             # Check if Aqua supports ignoring specific dependencies
             if hasmethod(Aqua.test_stale_deps, (typeof(module_to_test), Dict))
