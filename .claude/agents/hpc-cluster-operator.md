@@ -35,8 +35,8 @@ cd /home/scholten/globtim
 export JULIA_PROJECT="/home/scholten/globtim"
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
-# Start persistent experiment with tmux
-./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+# Start persistent experiment with tmux (PRIMARY METHOD)
+./node_experiments/runners/experiment_runner.sh lotka-volterra-4d 8 10
 ```
 
 ## Primary Responsibilities
@@ -82,16 +82,16 @@ ssh scholten@r04n02
 cd /home/scholten/globtim
 
 # Start experiment in tmux session (automated)
-./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+./node_experiments/runners/experiment_runner.sh lotka-volterra-4d 8 10
 
 # Monitor experiments
-./hpc/monitoring/live_monitor.sh
+./node_experiments/runners/experiment_runner.sh status
 
-# Attach to specific session
-tmux attach -t globtim_experiment_20250902_140000
+# Attach to current running experiment
+./node_experiments/runners/experiment_runner.sh attach
 
 # List all sessions
-tmux ls | grep globtim
+./node_experiments/runners/experiment_runner.sh list
 
 # Detach from session (keeps running)
 # Press: Ctrl+B, then D
@@ -134,14 +134,14 @@ julia --project=. script.jl
 # I can start experiments remotely via SSH
 ssh scholten@r04n02 << 'EOF'
 cd /home/scholten/globtim
-./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+./node_experiments/runners/experiment_runner.sh lotka-volterra-4d 8 10
 EOF
 
 # Check status remotely
-ssh scholten@r04n02 "cd /home/scholten/globtim && ./hpc/experiments/robust_experiment_runner.sh status"
+ssh scholten@r04n02 "cd /home/scholten/globtim && ./node_experiments/runners/experiment_runner.sh status"
 
 # Monitor remotely
-ssh scholten@r04n02 "tmux ls | grep globtim"
+ssh scholten@r04n02 "cd /home/scholten/globtim && ./node_experiments/runners/experiment_runner.sh list"
 ```
 
 ### Julia Package Setup
@@ -178,22 +178,28 @@ julia --project=. -e '
    - Always SSH to falcon for job submission
 
 2. **Repository Location**:
-   - Primary: `/home/scholten/globtim`
-   - NEVER use `/tmp/globtim` (user preference)
+   - Primary: `/home/scholten/globtim` (ALWAYS use this location)
+   - **FORBIDDEN**: NEVER use `/tmp/globtim` or any /tmp path (strict user requirement)
    - Ensure repository is accessible from both falcon and compute nodes
 
 3. **Execution Options**:
    - **Production**: Submit SLURM jobs from falcon
    - **Testing**: Run directly on r04n02 without SLURM
    - **Monitoring**: Use falcon for squeue/sacct commands
+   - **CRITICAL**: NEVER use /tmp directory anywhere (user requirement)
 
 4. **Directory Structure**:
    ```bash
    /home/scholten/globtim/
-   ├── hpc_results/       # Experiment results
-   ├── slurm_logs/        # SLURM output/error logs
-   ├── hpc/experiments/   # Julia experiment scripts
-   └── hpc/jobs/submission/  # SLURM job scripts
+   ├── node_experiments/
+   │   ├── outputs/           # Primary experiment results location
+   │   │   └── globtim_*_YYYYMMDD_HHMMSS/  # Timestamped experiment folders
+   │   ├── runners/           # Experiment execution scripts
+   │   │   └── experiment_runner.sh  # Main experiment launcher
+   │   └── scripts/           # Individual experiment scripts
+   │       └── lotka_volterra_4d.jl  # 4D parameter estimation
+   ├── hpc/experiments/       # Legacy experiment scripts
+   └── hpc/jobs/submission/   # Legacy SLURM job scripts (archived)
    ```
 
 ## Quality Assurance
