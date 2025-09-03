@@ -17,6 +17,9 @@ This document captures all issues encountered while setting up and running 4D po
 Pkg.activate(dirname(dirname(@__DIR__)))
 ```
 
+**Georgy** Reorganize the folder structure with a dedicated folder for experiments we run on the node. make a documentation specific to that folder and accessible to the hpc agent. 
+Specify the path for all the Julia scripts stored in that folder. That `node_experiments` folder should be also have a sub-folder for the outputs of experiments. 
+
 **Location**: Line 6 of `run_4d_experiment.jl`
 
 ### 2. ❌ Missing Package Dependencies
@@ -31,6 +34,8 @@ ERROR: LoadError: ArgumentError: Package CSV not found in current path
 ```bash
 julia --project=. -e 'using Pkg; Pkg.add(["CSV", "JSON"])'
 ```
+
+**Georgy** Are those packages weak dependencies of the project? If so, make sure they are also installed on the node. 
 
 ### 3. ❌ Field Access Error in test_input
 **Problem**: Script tried to access `TR.sample_pts` which doesn't exist
@@ -88,6 +93,12 @@ julia --project=. --heap-size-hint=50G $experiment_script \$LOG_DIR
 1. Commit and push locally: `git add -f hpc/experiments/run_4d_experiment.jl && git commit && git push`
 2. SSH to node and pull: `ssh scholten@r04n02 "cd /home/scholten/globtim && git pull origin main"`
 3. Handle local modifications: `git stash && git pull origin main`
+
+**Georgy** A carefull re-organization with a specific folder to run on the node should help. 
+I think the workflow going through pushing to gitlab should be the way to go? 
+We need to make a list of specific actions that need to be taken to properly run the examples on the cluster. 
+Use the 2d test example as a template and build from there --> the 4d example is heavier to run. 
+Verify that all the files with the setup of the 4d example are properly specified. 
 
 ### 6. ❌ File Permission Issues
 **Problem**: Script not executable after git pull
@@ -201,12 +212,103 @@ julia --project=/home/scholten/globtim -e 'using Pkg; Pkg.status()'
 julia --heap-size-hint=50G -e 'println("Allocated")'
 ```
 
-## Successful 4D Experiment Configuration
+## Implementation Plan Based on Lessons Learned
 
-After all fixes, the working configuration is:
+### PRIORITY 1: Lotka-Volterra 4D Parameter Estimation (TODAY'S MAIN GOAL)
+**Target**: Parameter estimation problem for Lotka-Volterra system in 4D running properly on node
+
+**Tasks**:
+- [ ] **Create Lotka-Volterra 4D experiment script** (`node_experiments/lotka_volterra_4d.jl`)
+- [ ] **Implement parameter estimation objective function** (minimize residual between ODE solution and synthetic data)  
+- [ ] **Configure proper 4D parameter space** (e.g., α, β, γ, δ parameters)
+- [ ] **Test and validate on node** with proper memory allocation and output collection
+- [ ] **Generate parameter estimation results** with uncertainty bounds and timing analysis
+
+### PRIORITY 2: Node Experiments Infrastructure Reorganization
+
+#### 2.1 Folder Structure Reorganization
+**Problem**: Current experiments scattered in `hpc/experiments/`, path issues, poor organization
+
+**Solution**: Create dedicated `node_experiments/` structure:
+```
+node_experiments/
+├── README.md                    # Documentation specific to node experiments
+├── scripts/                     # All Julia experiment scripts
+│   ├── lotka_volterra_4d.jl    # Priority: Parameter estimation
+│   ├── rosenbrock_4d.jl        # Test case from previous session
+│   └── test_2d_template.jl     # Template based on working 2D case
+├── runners/                     # Bash execution scripts
+│   └── experiment_runner.sh    # Updated with proper paths
+├── outputs/                     # All experiment outputs
+│   ├── lotka_volterra_*/       # LV parameter estimation results
+│   └── test_*/                 # Test experiment results
+└── utils/                      # Helper scripts and utilities
+    ├── package_setup.jl        # Dependency installation helper
+    └── path_setup.jl           # Path configuration helper
+```
+
+#### 2.2 Weak Dependencies Investigation
+**Action**: Verify CSV, JSON, Statistics status in GlobTim Project.toml
+- [ ] **Check Project.toml** for weak dependencies vs standard dependencies
+- [ ] **Ensure proper installation on node** via `Pkg.add()` or weak dependency activation
+- [ ] **Create package setup script** for consistent node environment preparation
+- [ ] **Document dependency requirements** in node_experiments/README.md
+
+#### 2.3 Workflow Standardization  
+**Problem**: Ad-hoc deployment process, inconsistent procedures
+
+**Solution**: Create standardized GitLab-based workflow:
+- [ ] **Document step-by-step deployment checklist** based on 2D working template
+- [ ] **Create pre-flight verification script** (check packages, paths, permissions)  
+- [ ] **Establish GitLab issue workflow** for experiment tracking
+- [ ] **Create experiment validation protocol** (verify setup before heavy computation)
+
+### PRIORITY 3: Testing and Validation Framework
+
+#### 3.1 Progressive Testing Strategy
+- [ ] **Start with 2D Lotka-Volterra** (fast validation of parameter estimation approach)
+- [ ] **Scale to 3D version** (intermediate complexity)  
+- [ ] **Full 4D implementation** (production target)
+- [ ] **Performance benchmarking** across different parameter estimation problems
+
+#### 3.2 Robustness Testing
+- [ ] **Memory requirement validation** for different problem sizes
+- [ ] **Error recovery testing** (interrupted experiments, package failures)
+- [ ] **Git synchronization testing** (ensure deployment consistency)
+- [ ] **Long-running experiment monitoring** (overnight execution validation)
+
+### PRIORITY 4: GitLab Issues Creation Plan
+
+Based on this analysis, create these GitLab issues:
+
+1. **HIGH PRIORITY**: "Lotka-Volterra 4D Parameter Estimation Implementation" 
+   - Main goal for today
+   - All infrastructure needed for LV parameter estimation
+   
+2. **MEDIUM PRIORITY**: "Node Experiments Infrastructure Reorganization"
+   - Folder structure, documentation, path fixes
+   - Addresses Issues 1, 2, 5 feedback
+   
+3. **MEDIUM PRIORITY**: "Standardized HPC Workflow and Validation Framework"  
+   - Testing protocols, deployment checklists
+   - Based on 2D template approach
+
+4. **LOW PRIORITY**: "Weak Dependencies and Package Management Optimization"
+   - CSV/JSON dependency investigation and optimization
+
+## Successful 4D Experiment Configuration (Previous Session)
+
+After all fixes, the working configuration was:
 - **Dimension**: 4
 - **Degree**: 12 (requires 50GB heap hint)
 - **Samples per dimension**: 10 (10,000 total)
 - **Function**: Rosenbrock-like with oscillations
 - **Memory**: `--heap-size-hint=50G`
 - **Output**: DataFrame with critical points in CSV and JSON formats
+
+## Next Immediate Actions
+
+1. **TODAY**: Focus on Lotka-Volterra 4D parameter estimation implementation
+2. **Create node_experiments/ structure** with proper documentation
+3. **Generate GitLab issues** for systematic tracking
+4. **Validate complete workflow** from development to node execution
