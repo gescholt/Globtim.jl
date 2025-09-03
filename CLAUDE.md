@@ -2,6 +2,26 @@
 
 ## 🚨 CRITICAL HPC EXECUTION ISSUES - MUST READ FIRST
 
+### 4D Experiment Package Activation Error (RESOLVED - September 3, 2025)
+**Problem**: `Package Globtim not found in current path` when running 4D experiments
+**Root Cause**: Temp scripts created by experiment runner use wrong directory for package activation
+**Original Code**: `Pkg.activate(dirname(dirname(@__DIR__)))` from temp script location resolves incorrectly
+**Solution**: Use environment variable instead: `Pkg.activate(get(ENV, "JULIA_PROJECT", "/home/scholten/globtim"))`
+**Prevention**: 
+- Always use JULIA_PROJECT environment variable for package activation in HPC scripts
+- Never use relative paths like `dirname(@__DIR__)` in dynamically generated temp scripts
+- Test package activation immediately after script generation
+
+### 4D Experiment Objective Function Access Error (RESOLVED - September 3, 2025)
+**Problem**: `MethodError: no method matching iterate(::typeof(parameter_estimation_objective))`
+**Root Cause**: Attempting to access `TR.objective` as if it contains evaluated values
+**Issue**: `TR.objective` contains the function itself, not function evaluations
+**Solution**: Remove attempts to access function values before Constructor processes them
+**Prevention**:
+- `TR.objective` is a Function, not data - never try to iterate or get min/max
+- Let Constructor handle all sampling and evaluation internally
+- Only access function values after Constructor creates polynomial approximation
+
 ### Memory Management for Large Polynomial Problems (CRITICAL - September 3, 2025)
 **Problem**: OutOfMemoryError when running high-degree polynomial approximations in 4D+
 **Solution**: Always use `--heap-size-hint=50G` flag for Julia execution
@@ -17,9 +37,32 @@ julia --project=. --heap-size-hint=50G $experiment_script
 3. **Field Access**: test_input has `.GN` not `.sample_pts` 
 4. **Git Sync**: ALWAYS pull on node after local changes
 5. **File Permissions**: Run `chmod +x` on scripts after git pull
-6. **Never use /tmp**: Use `$GLOBTIM_DIR/hpc/experiments/temp/` instead
+6. **CRITICAL: Never use /tmp anywhere**: Use `$GLOBTIM_DIR/hpc/experiments/temp/` instead (user requirement)
 
 **Full Documentation**: See `docs/hpc/4D_EXPERIMENT_LESSONS_LEARNED.md`
+
+### 4D Experiment Session Analysis (September 3, 2025)
+**Context**: Attempted to run 4D Lotka-Volterra parameter estimation experiments on r04n02
+**Result**: Successfully identified and resolved two critical bugs preventing experiment execution
+
+#### Bugs Discovered and Resolved:
+1. **Package Activation Bug**: 
+   - **Symptom**: "Package Globtim not found in current path"
+   - **Root Cause**: `dirname(dirname(@__DIR__))` from temp script resolved to wrong directory
+   - **Fix**: Use `get(ENV, "JULIA_PROJECT", "/home/scholten/globtim")`
+   - **Prevention**: Always use environment variables for package paths in generated scripts
+
+2. **Objective Function Access Bug**:
+   - **Symptom**: "MethodError: no method matching iterate(::typeof(parameter_estimation_objective))"
+   - **Root Cause**: Tried to access `TR.objective` as data instead of function
+   - **Fix**: Remove premature access, let Constructor handle sampling
+   - **Prevention**: Never try to iterate/min/max `TR.objective` - it's a Function type
+
+#### Experiment Output Analysis:
+- **5 experiment attempts** from 11:56 AM to 12:05 PM today
+- **All failed** due to package activation error
+- **First successful run** at 4:42 PM after fixes
+- **Current status**: 4D experiment running successfully with proper package management
 
 ## 🚨 CRITICAL TEST ENVIRONMENT ISSUES - MUST READ FIRST
 
@@ -232,7 +275,7 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 - Document dependency requirements clearly in Project.toml
 - Use proper package management even if it's more complex to set up initially
 - Native cluster installation eliminates cross-platform compilation issues
-- Work in `/tmp/` on r04n02 for isolation and no quota constraints
+- **NEVER use /tmp**: Work in `$GLOBTIM_DIR/hpc/experiments/temp/` for temp files (user requirement)
 
 **PROJECT STATUS UPDATE (September 1, 2025):** All major HPC deployment and repository hygiene challenges have been resolved. The GlobTim package is production-ready for cluster deployment with 624 passing tests on r04n02. **Phase 4 visual project management implementation is now underway with 1,168 tasks extracted and classified.**
 
@@ -272,7 +315,7 @@ GlobTim must be compiled with its full dependency chain using one of these metho
 ### Infrastructure Migration Success - PRODUCTION READY  
 - ✅ **Direct SSH Access**: r04n02 compute node connection established and verified
 - ✅ **GitLab Integration**: SSH keys configured, full Git operations working on compute node
-- ✅ **Repository Access**: GlobTim repository successfully cloned at `/tmp/globtim/` with full branch access
+- ✅ **Repository Access**: GlobTim repository successfully cloned at `/home/scholten/globtim/` with full branch access
 - ✅ **Security Hardened**: SSH key authentication, workspace isolation, resource constraints implemented
 - ✅ **HPC Agent Modernized**: Updated `.claude/agents/hpc-cluster-operator.md` for dual workflow support
 - ✅ **Migration Planning**: Comprehensive migration plan documented in `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
