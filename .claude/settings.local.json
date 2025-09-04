@@ -145,7 +145,11 @@
       "Bash(/Users/ghscholt/globtim/tools/hpc/monitoring/test_monitoring_system.sh:*)",
       "Bash(/Users/ghscholt/globtim/tools/gitlab/get-token-noninteractive.sh:*)",
       "Bash(/Users/ghscholt/globtim/tools/gitlab/claude-agent-gitlab.sh test:*)",
-      "Bash(/Users/ghscholt/globtim/tools/gitlab/claude-agent-gitlab.sh:*)"
+      "Bash(/Users/ghscholt/globtim/tools/gitlab/claude-agent-gitlab.sh:*)",
+      "Bash(./tools/hpc/validation/script_discovery.sh list:*)",
+      "Bash(./tools/hpc/validation/script_discovery.sh:*)",
+      "Bash(./hpc/experiments/robust_experiment_runner.sh:*)",
+      "Bash(./tools/gitlab/claude-agent-gitlab.sh:*)"
     ],
     "defaultMode": "acceptEdits"
   },
