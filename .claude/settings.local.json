@@ -135,7 +135,17 @@
       "Bash(CLAUDE_CONTEXT=\"Test HPC monitoring deployment\" ./tools/hpc/node-security-hook.sh)",
       "Bash(./tools/hpc/ssh-security-hook.sh:*)",
       "Bash(git remote get-url:*)",
-      "Bash(git remote set-url:*)"
+      "Bash(git remote set-url:*)",
+      "Read(//Users/ghscholt/.claude/**)",
+      "Bash(/Users/ghscholt/.claude/hooks/hpc-resource-monitor.sh:*)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/monitoring/memory_predictor.sh:*)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/monitoring/agent_integration.sh:*)",
+      "Bash(CLAUDE_CONTEXT=\"Test HPC monitoring deployment\" /Users/ghscholt/.claude/hooks/hpc-resource-monitor.sh status)",
+      "Bash(CLAUDE_CONTEXT=\"Test HPC monitoring deployment\" /Users/ghscholt/.claude/hooks/hpc-resource-monitor.sh collect)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/monitoring/test_monitoring_system.sh:*)",
+      "Bash(/Users/ghscholt/globtim/tools/gitlab/get-token-noninteractive.sh:*)",
+      "Bash(/Users/ghscholt/globtim/tools/gitlab/claude-agent-gitlab.sh test:*)",
+      "Bash(/Users/ghscholt/globtim/tools/gitlab/claude-agent-gitlab.sh:*)"
     ],
     "defaultMode": "acceptEdits"
   },
