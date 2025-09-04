@@ -1,0 +1,9 @@
+{"session_id":49889,"host":"r04n02","command":"hostname && uptime","start_time":"2025-09-04T16:47:38+02:00","status":"started"}
+{"session_id":50447,"host":"r04n02","command":"echo test","start_time":"2025-09-04T16:47:50+02:00","status":"started"}
+{"session_id":50521,"host":"r04n02","command":"rm -rf /","start_time":"2025-09-04T16:47:51+02:00","status":"started"}
+{"session_id":50555,"host":"r04n02","command":"dd if=/dev/zero of=/dev/sda","start_time":"2025-09-04T16:47:52+02:00","status":"started"}
+{"session_id":50590,"host":"r04n02","command":"mkfs.ext4 /dev/sda1","start_time":"2025-09-04T16:47:52+02:00","status":"started"}
+{"session_id":50632,"host":"r04n02","command":"fdisk /dev/sda","start_time":"2025-09-04T16:47:53+02:00","status":"started"}
+{"session_id":50676,"host":"r04n02","command":"echo test","start_time":"2025-09-04T16:47:53+02:00","status":"started"}
+{"session_id":50819,"host":"r04n02","command":"cd /home/scholten/globtim && ls Examples/hpc*2d* | head -2","start_time":"2025-09-04T16:48:05+02:00","status":"started"}
+{"session_id":50940,"host":"r04n02","command":"rm -rf /some/dangerous/path","start_time":"2025-09-04T16:48:13+02:00","status":"started"}

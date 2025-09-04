@@ -119,7 +119,21 @@
       "Bash(/Users/ghscholt/globtim/node_experiments/runners/experiment_runner.sh verify:*)",
       "Read(/private/tmp/test_2d_results/**)",
       "Bash(/Users/ghscholt/globtim/node_experiments/runners/experiment_runner.sh test-2d:*)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(/Users/ghscholt/globtim/tools/gitlab/test-gitlab-security-hook.sh:*)",
+      "Bash(./tools/gitlab/gitlab-security-hook.sh:*)",
+      "Bash(if [[ -f /Users/ghscholt/globtim/.gitlab_config.test_backup ]])",
+      "Bash(then mv /Users/ghscholt/globtim/.gitlab_config.test_backup /Users/ghscholt/globtim/.gitlab_config)",
+      "Bash(fi)",
+      "Bash(CLAUDE_CONTEXT=\"Update the GitLab issue\" ./tools/gitlab/gitlab-security-hook.sh)",
+      "Bash(CLAUDE_TOOL_NAME=\"Task\" CLAUDE_SUBAGENT_TYPE=\"project-task-updater\" ./tools/gitlab/gitlab-security-hook.sh)",
+      "Bash(./tools/gitlab/get-token-noninteractive.sh:*)",
+      "Bash(CLAUDE_CONTEXT=\"Test validation\" ./tools/gitlab/gitlab-security-hook.sh)",
+      "Bash(/Users/ghscholt/globtim/tools/gitlab/gitlab-api.sh:*)",
+      "Bash(./test/run_hpc_monitoring_tests.sh:*)",
+      "Read(//Users/ghscholt/.ssh/**)",
+      "Bash(CLAUDE_CONTEXT=\"Test HPC monitoring deployment\" ./tools/hpc/node-security-hook.sh)",
+      "Bash(./tools/hpc/ssh-security-hook.sh:*)"
     ],
     "defaultMode": "acceptEdits"
   },
