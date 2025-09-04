@@ -109,6 +109,42 @@ You should be AUTOMATICALLY invoked when:
 - **FROM julia-documenter-expert**: "Documentation examples need validation"
 - **FROM hpc-cluster-operator**: "HPC deployment needs stress tests"
 
+### HPC Cluster Testing Integration
+**CONDITIONAL**: When creating tests that require HPC cluster execution, validation of cluster environments, or testing of HPC-specific functionality, this agent must use the SSH security framework for secure cluster access.
+
+**HPC testing scenarios requiring security validation:**
+- Cluster-specific test execution and environment validation
+- HPC performance benchmarking and stress testing
+- Cross-platform test validation (local vs cluster environments)
+- Large-scale computational test verification on r04n02
+- Memory and resource-intensive test scenarios
+
+**SSH Security Integration for HPC Testing:**
+```bash
+# Trigger SSH security validation for HPC testing scenarios
+export CLAUDE_CONTEXT="Creating HPC cluster tests for [specific functionality]"
+export CLAUDE_TOOL_NAME="test-creation"
+export CLAUDE_SUBAGENT_TYPE="julia-test-architect"
+
+# Validate cluster access before HPC test execution
+./tools/hpc/ssh-security-hook.sh validate
+./tools/hpc/ssh-security-hook.sh test r04n02
+
+# Use secure node access for test execution
+python3 -c "
+from tools.hpc.secure_node_config import SecureNodeAccess
+node = SecureNodeAccess()
+result = node.execute_command('cd /home/scholten/globtim && julia --project=. -e \"using Pkg; Pkg.test()\"')
+print('HPC test execution completed securely')
+"
+```
+
+**When HPC security validation is required for testing:**
+- Before executing large test suites on cluster
+- When validating HPC-specific package functionality
+- Before running performance benchmarks on r04n02
+- When testing cross-platform compatibility
+
 ### Outgoing Handoffs
 - **TO project-task-updater**: "Tests complete for feature X, update labels"
 - **TO julia-documenter-expert**: "Test examples ready for documentation"

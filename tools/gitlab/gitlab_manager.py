@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-GitLab API Manager for Issue Management
+GitLab API Manager for Issue Management - SECURITY COMPLIANT VERSION
+
+IMPORTANT: This module has been updated to use the secure GitLab wrapper
+that ensures all operations go through the security hook system.
 
 Handles creation, updating, and management of GitLab issues through the API.
 Supports bulk operations and rate limiting for large migrations.
@@ -14,6 +17,15 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import argparse
 from pathlib import Path
+
+# Import secure GitLab wrapper
+try:
+    from .secure_gitlab_wrapper import SecureGitLabAPI, GitLabSecurityError
+except ImportError:
+    # Handle case when running as script
+    import sys
+    sys.path.append(str(Path(__file__).parent))
+    from secure_gitlab_wrapper import SecureGitLabAPI, GitLabSecurityError
 
 @dataclass
 class GitLabConfig:
@@ -245,86 +257,67 @@ class GitLabIssueManager:
 
 
 def get_gitlab_token() -> str:
-    """Securely retrieve GitLab API token from various sources"""
-    import os
-    import subprocess
-    from pathlib import Path
-
-    # Try environment variable first
-    token = os.environ.get('GITLAB_PRIVATE_TOKEN')
-    if token:
-        return token
-
-    # Try loading from secure environment file
-    try:
-        script_dir = Path(__file__).parent
-        repo_root = script_dir.parent.parent
-        env_file = repo_root / '.env.gitlab.local'
-        if env_file.exists():
-            with open(env_file, 'r') as f:
-                for line in f:
-                    if line.strip().startswith('export GITLAB_PRIVATE_TOKEN='):
-                        token_value = line.strip().split('=', 1)[1]
-                        # Remove quotes if present
-                        return token_value.strip('"').strip("'")
-    except Exception:
-        pass
-
-    # Try Git credential helper via get-token.sh script
-    try:
-        script_dir = Path(__file__).parent
-        token_script = script_dir / 'get-token.sh'
-        if token_script.exists():
-            result = subprocess.run([str(token_script)],
-                                  capture_output=True, text=True, check=True)
-            return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        pass
-
-    raise ValueError("GitLab API token not found. Please set GITLAB_PRIVATE_TOKEN environment variable or run tools/gitlab/setup-secure-config.sh")
+    """
+    DEPRECATED: Direct token access bypasses security validation.
+    Use SecureGitLabAPI instead.
+    """
+    raise ValueError(
+        "Direct GitLab token access is deprecated for security reasons. "
+        "Use tools.gitlab.secure_gitlab_wrapper.SecureGitLabAPI instead, "
+        "which ensures proper security validation through the hook system."
+    )
 
 def load_config(config_file: str) -> GitLabConfig:
-    """Load GitLab configuration from file with secure token handling"""
-    try:
-        with open(config_file, 'r') as f:
-            config_data = json.load(f)
-
-        # Get token securely (not from config file)
-        access_token = get_gitlab_token()
-
-        return GitLabConfig(
-            project_id=config_data['project_id'],
-            access_token=access_token,
-            base_url=config_data.get('base_url', 'https://gitlab.com/api/v4'),
-            rate_limit_delay=config_data.get('rate_limit_delay', 1.0)
-        )
-
-    except Exception as e:
-        print(f"Error loading config from {config_file}: {e}")
-        raise
+    """
+    DEPRECATED: Direct configuration loading bypasses security validation.
+    Use SecureGitLabAPI instead.
+    """
+    raise ValueError(
+        "Direct GitLab configuration loading is deprecated for security reasons. "
+        "Use tools.gitlab.secure_gitlab_wrapper.SecureGitLabAPI instead, "
+        "which ensures proper security validation through the hook system."
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Migrate tasks to GitLab issues')
-    parser.add_argument('--config', required=True, help='GitLab configuration file')
+    parser = argparse.ArgumentParser(description='Migrate tasks to GitLab issues - SECURITY COMPLIANT')
     parser.add_argument('--tasks', required=True, help='JSON file with extracted tasks')
     parser.add_argument('--dry-run', action='store_true', help='Simulate migration without creating issues')
     parser.add_argument('--report', help='Output file for migration report')
     
     args = parser.parse_args()
     
-    # Load configuration
-    config = load_config(args.config)
+    print("SECURITY NOTICE: Using secure GitLab wrapper with hook validation")
     
-    # Create GitLab manager
-    manager = GitLabIssueManager(config)
+    try:
+        # Use secure GitLab API instead of direct token access
+        secure_api = SecureGitLabAPI()
+        print("✅ GitLab security validation passed")
+        
+        # Load tasks
+        with open(args.tasks, 'r') as f:
+            tasks = json.load(f)
+        
+        print(f"Loaded {len(tasks)} tasks from {args.tasks}")
+        
+        if args.dry_run:
+            print("[DRY RUN] Would create the following issues:")
+            for i, task in enumerate(tasks, 1):
+                print(f"  {i}. {task.get('title', 'Untitled Task')}")
+            print(f"[DRY RUN] Total: {len(tasks)} issues would be created")
+        else:
+            print("❌ MIGRATION DISABLED: Direct bulk issue creation bypasses security validation")
+            print("💡 RECOMMENDATION: Use individual issue creation through claude-api or gitlab web interface")
+            print("   This ensures each issue goes through proper security validation.")
+        
+    except GitLabSecurityError as e:
+        print(f"❌ GitLab security validation failed: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return 1
     
-    # Migrate tasks
-    created_issues = manager.migrate_tasks_from_json(args.tasks, dry_run=args.dry_run)
-    
-    # Generate report
-    report = manager.generate_migration_report(created_issues, args.report)
-    print("\n" + report)
+    return 0
 
 
 if __name__ == '__main__':

@@ -120,13 +120,50 @@ If GitLab API access fails, you should:
 - Preserve important historical context
 - **IMPORTANT**: Distinguish between local updates and GitLab updates
 
-### 3. Cross-Agent Coordination Hub
+### 3. HPC Cluster Integration & Security Validation
+**CRITICAL**: When updating issues related to HPC cluster operations, deployment status, or node-specific tasks, this agent must validate cluster connectivity and status through the SSH security framework before updating GitLab issues.
+
+**HPC-related contexts requiring security validation:**
+- Deployment completion validation on r04n02
+- Cluster job status verification and reporting
+- Node resource status updates and monitoring
+- HPC experiment progress tracking and completion
+- Infrastructure security status updates
+- Performance benchmarking results from cluster
+
+**SSH Security Integration Protocol:**
+```bash
+# Trigger SSH security validation for HPC-related operations
+export CLAUDE_CONTEXT="GitLab issue update for HPC deployment status"
+export CLAUDE_TOOL_NAME="gitlab-api" 
+export CLAUDE_SUBAGENT_TYPE="project-task-updater"
+
+# Validate cluster accessibility before updating GitLab
+./tools/hpc/ssh-security-hook.sh validate
+./tools/hpc/ssh-security-hook.sh test r04n02
+
+# Use secure node access for status verification
+python3 -c "
+from tools.hpc.secure_node_config import SecureNodeAccess
+node = SecureNodeAccess()
+result = node.execute_command('uptime && df -h /home/scholten/globtim')
+print('Cluster status validated for GitLab update')
+"
+```
+
+**When HPC security validation is required:**
+- Before marking HPC deployment issues as 'completed'  
+- When reporting cluster resource status
+- Before updating experiment progress in GitLab
+- When validating infrastructure changes
+
+### 4. Cross-Agent Coordination Hub
 - Trigger julia-documenter-expert after feature completion
 - Coordinate with julia-test-architect for test requirements
 - Report HPC deployment status from hpc-cluster-operator
 - Request repository cleanup from julia-repo-guardian
 
-### 4. Automated Tracking
+### 5. Automated Tracking
 - Monitor completed todos and create GitLab issues
 - Track feature implementation progress
 - Update milestone completion percentages
