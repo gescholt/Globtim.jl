@@ -141,6 +141,18 @@
   },
   "enableAllProjectMcpServers": false,
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "git",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\nif [[ \"$CLAUDE_TOOL_NAME\" != *\"git\"* ]] && [[ \"$CLAUDE_COMMAND\" != *\"git\"* ]]; then exit 0; fi\nif ! git rev-parse --git-dir > /dev/null 2>&1; then exit 0; fi\nif [ -f .env.gitlab.local ]; then\n  source .env.gitlab.local\n  current_url=$(git remote get-url origin 2>/dev/null)\n  if [[ \"$current_url\" != *\"oauth2:\"* ]]; then\n    echo \"🔧 Enforcing OAuth2 token authentication for git remote\"\n    git remote set-url origin \"https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/scholten/globtim.git\"\n    echo \"✅ Git remote URL updated to use token authentication\"\n  fi\nfi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "git",
