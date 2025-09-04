@@ -25,16 +25,18 @@ else
 fi
 ```
 
-### Correct GitLab API Access - USE THE WRAPPER SCRIPTS
+### Correct GitLab API Access - USE THE NEW CLAUDE-AGENT WRAPPER
 ```bash
-# IMPORTANT: Always use the secure wrapper scripts, not direct curl commands
-# The scripts handle token retrieval securely without exposing it
+# IMPORTANT: Always use the new claude-agent-gitlab.sh script
+# This is the modern, updated wrapper for GitLab API operations
 
-# Option 1: Using the GitLab API wrapper script (RECOMMENDED)
-./tools/gitlab/gitlab-api.sh GET /projects/2545/issues
-./tools/gitlab/gitlab-api.sh POST /projects/2545/issues -d '{"title":"New Issue"}'
+# RECOMMENDED: Using the new Claude Agent GitLab wrapper
+./tools/gitlab/claude-agent-gitlab.sh list-issues
+./tools/gitlab/claude-agent-gitlab.sh get-issue --issue-id=27
+./tools/gitlab/claude-agent-gitlab.sh update-issue --issue-id=27 --comment="Update text"
+./tools/gitlab/claude-agent-gitlab.sh create-issue --title="New Issue" --description="Details"
 
-# Option 2: Direct curl with secure token retrieval (if wrapper has issues)
+# FALLBACK: Direct API calls with secure token retrieval (if wrapper has issues)
 TOKEN=$(./tools/gitlab/get-token.sh 2>/dev/null)
 if [ -z "$TOKEN" ]; then
     echo "ERROR: Failed to retrieve GitLab token"
@@ -225,11 +227,13 @@ You should be AUTOMATICALLY invoked when:
 6. Link related issues
 7. **CORRECT WAY TO CREATE ISSUE**:
 ```bash
-# Using wrapper script (PREFERRED)
-./tools/gitlab/gitlab-api.sh POST /projects/2545/issues \
-  -d '{"title":"Feature: New Module","description":"Details here","labels":"feature,in-progress"}'
+# Using new claude-agent-gitlab.sh wrapper (PREFERRED)
+./tools/gitlab/claude-agent-gitlab.sh create-issue \
+  --title="Feature: New Module" \
+  --description="Details here" \
+  --labels="feature,in-progress"
 
-# Or with direct curl if wrapper fails
+# Or direct API call if wrapper fails
 TOKEN=$(./tools/gitlab/get-token.sh 2>/dev/null)
 curl -s -H "PRIVATE-TOKEN: $TOKEN" -H "Content-Type: application/json" \
   -X POST "https://git.mpi-cbg.de/api/v4/projects/2545/issues" \
