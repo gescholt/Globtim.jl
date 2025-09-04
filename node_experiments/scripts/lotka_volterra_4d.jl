@@ -148,7 +148,7 @@ approx_info = Dict(
     "parameter_center" => θ_center,
     "parameter_range" => θ_range,
     "true_parameters" => θ_true,
-    "objective_range" => [minimum(TR.objective), maximum(TR.objective)]
+    # "objective_range" removed - TR.objective is a Function, not data
 )
 
 open(joinpath(results_dir, "approximation_info.json"), "w") do io
