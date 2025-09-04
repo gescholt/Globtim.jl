@@ -84,13 +84,16 @@ function validate_package(pkg_name::String)
         try
             if pkg_name == "Globtim"
                 # Special handling for main package
-                eval(:(using Globtim))
+                Base.eval(Main, :(using Globtim))
                 result["version"] = string(Pkg.project().version)
             else
-                eval(Meta.parse("using $pkg_name"))
+                # Use Base.eval to avoid top-level using restriction
+                using_expr = Meta.parse("using $pkg_name")
+                Base.eval(Main, using_expr)
+                
                 # Try to get version if possible
                 try
-                    mod = eval(Symbol(pkg_name))
+                    mod = Base.eval(Main, Symbol(pkg_name))
                     if hasfield(typeof(mod), :VERSION)
                         result["version"] = string(mod.VERSION)
                     end
@@ -210,7 +213,7 @@ function validate_julia_environment(mode::String = "quick")
         # Test basic mathematical operations
         print("  Basic Math Operations... ")
         try
-            using LinearAlgebra
+            Base.eval(Main, :(using LinearAlgebra))
             A = rand(10, 10)
             b = rand(10)
             x = A \ b
@@ -226,9 +229,10 @@ function validate_julia_environment(mode::String = "quick")
             print("  Globtim Basic Test... ")
             try
                 # Test basic Globtim functionality
-                using Globtim
+                Base.eval(Main, :(using Globtim))
                 # Simple test - check if basic functions are accessible
-                if isdefined(Globtim, :test_input) && isdefined(Globtim, :Constructor)
+                globtim_mod = Base.eval(Main, :Globtim)
+                if isdefined(globtim_mod, :test_input) && isdefined(globtim_mod, :Constructor)
                     println("✅")
                 else
                     println("⚠️")
