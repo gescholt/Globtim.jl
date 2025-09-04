@@ -133,9 +133,25 @@
       "Bash(./test/run_hpc_monitoring_tests.sh:*)",
       "Read(//Users/ghscholt/.ssh/**)",
       "Bash(CLAUDE_CONTEXT=\"Test HPC monitoring deployment\" ./tools/hpc/node-security-hook.sh)",
-      "Bash(./tools/hpc/ssh-security-hook.sh:*)"
+      "Bash(./tools/hpc/ssh-security-hook.sh:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(git remote set-url:*)"
     ],
     "defaultMode": "acceptEdits"
   },
-  "enableAllProjectMcpServers": false
+  "enableAllProjectMcpServers": false,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "git",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\nif ! git rev-parse --git-dir > /dev/null 2>&1; then exit 0; fi\ngit_status=$(git status --porcelain)\nif [ -z \"$git_status\" ]; then exit 0; fi\nfile_count=$(echo \"$git_status\" | wc -l | tr -d ' ')\nif [ \"$file_count\" -ge 5 ] || [[ \"$CLAUDE_CONTEXT\" == *\"commit\"* ]] || [[ \"$CLAUDE_CONTEXT\" == *\"push\"* ]]; then\n  if [ -f .env.gitlab.local ]; then\n    source .env.gitlab.local\n    if [[ \"$(git remote get-url origin)\" != *\"oauth2:\"* ]]; then\n      git remote set-url origin \"https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/scholten/globtim.git\"\n    fi\n  fi\n  git add .\n  commit_msg=\"feat: Auto-commit of development progress\n\n🔄 Changes Summary:\n- $file_count files modified/added\n- Context: $CLAUDE_CONTEXT\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"\n  git commit -m \"$commit_msg\"\n  git push\n  echo \"✅ Auto-committed and pushed $file_count files\"\nfi",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
 }
