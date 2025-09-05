@@ -208,7 +208,7 @@ function run_single_experiment(GN, degree, sparsification_threshold=nothing; exp
         @polyvar(x[1:4])
         real_pts, (system, nsols) = solve_polynomial_system(
             x, 4, (:one_d_for_all, degree), coeffs_to_use;
-            basis = :chebyshev, precision = Float64Precision, return_system = true
+            basis = :chebyshev, precision = RationalPrecision, return_system = true
         )
     end
     println("✓ Root finding: $nsols total, $(length(real_pts)) real solutions")
