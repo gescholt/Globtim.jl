@@ -110,8 +110,8 @@ if working_packages >= 2  # Need at least DynamicPolynomials and HomotopyContinu
     println("   Total experiments: $(results["study_config"]["total_experiments"])")
     println()
     
-    experiment_count = 0
-    total_experiments = results["study_config"]["total_experiments"]
+    global experiment_count = 0
+    global total_experiments = results["study_config"]["total_experiments"]
     
     for degree in degrees
         println("🔬 Testing degree $degree")
@@ -120,7 +120,7 @@ if working_packages >= 2  # Need at least DynamicPolynomials and HomotopyContinu
         system = create_lotka_volterra_4d()
         
         # Baseline experiment (no sparsification)
-        experiment_count += 1
+        global experiment_count += 1
         println("   Experiment $experiment_count/$total_experiments: Baseline (degree=$degree)")
         
         baseline_result = Dict(
@@ -137,7 +137,7 @@ if working_packages >= 2  # Need at least DynamicPolynomials and HomotopyContinu
         
         # Sparsification experiments
         for threshold in sparsification_thresholds
-            experiment_count += 1
+            global experiment_count += 1
             println("   Experiment $experiment_count/$total_experiments: Sparsified (threshold=$threshold)")
             
             sparsified_result = Dict(
