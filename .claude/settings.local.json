@@ -149,7 +149,22 @@
       "Bash(./tools/hpc/validation/script_discovery.sh list:*)",
       "Bash(./tools/hpc/validation/script_discovery.sh:*)",
       "Bash(./hpc/experiments/robust_experiment_runner.sh:*)",
-      "Bash(./tools/gitlab/claude-agent-gitlab.sh:*)"
+      "Bash(./tools/gitlab/claude-agent-gitlab.sh:*)",
+      "Bash(CLAUDE_CONTEXT=\"Test HPC monitoring system completion\" /Users/ghscholt/.claude/hooks/hpc-resource-monitor.sh scan)",
+      "Bash(CLAUDE_CONTEXT=\"Create GitLab issue for project-task-updater fix\" CLAUDE_TOOL_NAME=\"Task\" CLAUDE_SUBAGENT_TYPE=\"project-task-updater\" ./tools/gitlab/gitlab-security-hook.sh)",
+      "Bash(./create_gitlab_issue.sh:*)",
+      "Read(//private/tmp/test_results/**)",
+      "Read(//Users/ghscholt/**)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/validation/resource_validator.sh memory-check:*)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/validation/git_sync_validator.sh status-check --allow-dirty)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/validation/script_discovery.sh discover:*)",
+      "Bash(CLAUDE_CONTEXT=\"test 2d experiment validation\" /Users/ghscholt/.claude/hooks/pre-execution-validation.sh)",
+      "Bash(/Users/ghscholt/globtim/tools/hpc/validation/resource_validator.sh validate:*)",
+      "Bash(./tools/hpc/validation/validation_error_reporter.sh:*)",
+      "Bash(/Users/ghscholt/.claude/hooks/pre-execution-validation.sh \"CLAUDE_CONTEXT=Test validation pipeline\" hpc_minimal_2d_example.jl)",
+      "Bash(./tools/hpc/hooks/hook_orchestrator.sh:*)",
+      "Bash(./tools/hpc/hooks/lifecycle_manager.sh:*)",
+      "Bash(./tools/hpc/hooks/recovery_engine.sh:*)"
     ],
     "defaultMode": "acceptEdits"
   },
