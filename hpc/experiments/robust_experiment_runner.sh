@@ -324,8 +324,8 @@ function start_tmux_session() {
             '$HPC_MONITOR' start-monitoring '$session_name' || true
         fi
         
-        # Run the actual experiment with increased heap size
-        julia --project=. --heap-size-hint=50G $resolved_script \$LOG_DIR
+        # Run the actual experiment with maximum memory configuration
+        julia --project=. --heap-size-hint=100G --max-gc-memory=80G $resolved_script \$LOG_DIR
         
         echo '========================================='
         echo 'Completed: \$(date)'
