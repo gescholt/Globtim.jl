@@ -7,7 +7,7 @@ sparsification, log transformation, and standardized output format.
 """
 
 using Pkg
-Pkg.activate(get(ENV, "JULIA_PROJECT", dirname(dirname(dirname(@__DIR__)))))
+Pkg.activate(get(ENV, "JULIA_PROJECT", "/home/scholten/globtim"))
 
 using Globtim
 using DynamicPolynomials
@@ -167,7 +167,7 @@ function run_enhanced_experiment(config::ExperimentConfig; results_dir::String="
             objective_func,
             dim = 4,
             center = config.center,
-            GN = config.GN^4,  # Total samples
+            GN = config.GN,  # Samples per dimension (NOT total samples - fixed GN parameter bug)
             sample_range = config.sample_range
         )
     end
