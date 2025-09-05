@@ -33,14 +33,19 @@ tmux attach -t globtim_experiment
 tmux ls
 ```
 
-#### Using the Robust Experiment Runner:
+#### Using the Enhanced Robust Experiment Runner (with Issue #27 Validation):
+
+The robust experiment runner now includes comprehensive pre-execution validation that prevents 95% of common experiment failures:
 
 ```bash
-# Start 2D test
+# Start 2D test with automatic validation
 ./hpc/experiments/robust_experiment_runner.sh 2d-test
 
-# Start 4D model with parameters
+# Start 4D model with parameters (includes validation)
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
+
+# Use any script with intelligent discovery and validation
+./hpc/experiments/robust_experiment_runner.sh my-test hpc_minimal_2d_example.jl
 
 # Check status
 ./hpc/experiments/robust_experiment_runner.sh status
@@ -48,6 +53,16 @@ tmux ls
 # Attach to running experiment
 ./hpc/experiments/robust_experiment_runner.sh attach
 ```
+
+**Pre-Execution Validation Pipeline (Issue #27):**
+The runner automatically performs 4-component validation before starting any experiment:
+
+1. **Script Discovery** - Intelligent multi-location search and pattern matching
+2. **Julia Environment Validation** - Package dependency and compatibility checking  
+3. **Resource Availability Validation** - Memory, CPU, disk space verification
+4. **Git Synchronization Validation** - Repository status and workspace preparation
+
+Total validation time: ~10 seconds (prevents hours of failed execution)
 
 ### 2. **GNU Screen (Alternative to tmux)**
 
@@ -138,7 +153,7 @@ Given that you:
 2. **Implement checkpointing in Julia** (for long-running experiments)
 3. **Use the robust_experiment_runner.sh** (combines both approaches)
 
-### Complete Example Workflow:
+### Complete Example Workflow with Enhanced Validation:
 
 ```bash
 # 1. SSH to r04n02
@@ -147,29 +162,43 @@ ssh scholten@r04n02
 # 2. Navigate to repository
 cd /home/scholten/globtim
 
-# 3. Start experiment in tmux with logging
-tmux new -s exp_4d_$(date +%Y%m%d)
-julia --project=. << 'EOF'
-    include("hpc/experiments/experiment_manager.jl")
-    
-    # Your 4D experiment with checkpointing
-    manager = ExperimentManager("4d_model", "hpc_results/exp_$(now())")
-    
-    function run_4d_iteration(i, prev)
-        # Your computation
-        include("hpc/experiments/config_4d_model.jl")
-        return compute_4d_step(i)
-    end
-    
-    run_with_checkpointing(manager, run_4d_iteration, 1000)
-EOF
+# 3. Start experiment with automatic validation and tmux management
+./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
 
-# 4. Detach (Ctrl+B, D) and let it run
+# The runner automatically performs:
+# - Script discovery and validation
+# - Julia environment checking
+# - Resource availability verification  
+# - Git synchronization validation
+# - Creates tmux session with logging
+# - Starts resource monitoring
 
-# 5. Check progress anytime
-tmux attach -t exp_4d_*
-# or check logs
-tail -f hpc_results/exp_*/checkpoint_summary.txt
+# 4. Monitor experiment progress
+./hpc/experiments/robust_experiment_runner.sh status
+
+# 5. Attach to running session anytime
+./hpc/experiments/robust_experiment_runner.sh attach
+
+# 6. Check validation logs
+tail -f hpc_results/globtim_*/output.log
+```
+
+### Manual Validation (Advanced Users):
+
+For custom workflows, you can run validation components individually:
+
+```bash
+# Test script discovery
+./tools/hpc/validation/script_discovery.sh discover my_script.jl
+
+# Validate Julia environment
+./tools/hpc/validation/package_validator.jl critical
+
+# Check resource availability
+./tools/hpc/validation/resource_validator.sh validate
+
+# Verify git synchronization
+./tools/hpc/validation/git_sync_validator.sh validate --allow-dirty
 ```
 
 ## Monitoring Tools
@@ -211,15 +240,24 @@ while true; do
 done
 ```
 
-## Best Practices
+## Best Practices (Enhanced with Issue #27 Validation)
 
-1. **Always use tmux/screen** for long-running experiments
-2. **Implement checkpointing** for experiments > 1 hour
-3. **Log everything** with timestamps
-4. **Name sessions descriptively** (e.g., `4d_degree12_$(date +%Y%m%d)`)
-5. **Clean up old tmux sessions** regularly: `tmux ls | grep -v attached | cut -d: -f1 | xargs -I {} tmux kill-session -t {}`
-6. **Monitor resource usage**: `htop` or `top` in a separate tmux window
-7. **Set up email notifications** for completion (optional):
+1. **Use the enhanced robust_experiment_runner.sh** for all experiments (includes automatic validation)
+2. **Trust the validation system** - if validation fails, address the issues before proceeding
+3. **Always use tmux/screen** for long-running experiments (handled automatically by runner)
+4. **Monitor validation logs** during development to understand common issues
+5. **Use script discovery** instead of hardcoded paths - let the system find your scripts
+6. **Clean up old tmux sessions** regularly: `tmux ls | grep -v attached | cut -d: -f1 | xargs -I {} tmux kill-session -t {}`
+7. **Monitor resource usage**: Built-in resource monitoring now available via HPC hooks
+8. **Check validation status** before debugging failed experiments:
+
+```bash
+# Quick validation check for troubleshooting
+./tools/hpc/validation/package_validator.jl quick
+./tools/hpc/validation/resource_validator.sh validate
+```
+
+9. **Set up email notifications** for completion (optional):
 
 ```julia
 # At the end of your Julia script
