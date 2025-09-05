@@ -19,9 +19,18 @@ fi
 EXPERIMENT_NAME="${1:-experiment}"
 SESSION_NAME="globtim_${EXPERIMENT_NAME}_$(date +%Y%m%d_%H%M%S)"
 
-# Pre-Execution Validation Integration
+# Issue #41: Strategic Hook Integration - Unified Hook Orchestrator
+HOOK_ORCHESTRATOR="$GLOBTIM_DIR/tools/hpc/hooks/hook_orchestrator.sh"
+LIFECYCLE_MANAGER="$GLOBTIM_DIR/tools/hpc/hooks/lifecycle_manager.sh"
+RECOVERY_ENGINE="$GLOBTIM_DIR/tools/hpc/hooks/recovery_engine.sh"
+
+# Legacy components (deprecated - now handled by orchestrator)
 SCRIPT_DISCOVERY="$GLOBTIM_DIR/tools/hpc/validation/script_discovery.sh"
 PACKAGE_VALIDATOR="$GLOBTIM_DIR/tools/hpc/validation/package_validator.jl"
+RESOURCE_VALIDATOR="$GLOBTIM_DIR/tools/hpc/validation/resource_validator.sh"
+GIT_VALIDATOR="$GLOBTIM_DIR/tools/hpc/validation/git_sync_validator.sh"
+PRE_EXEC_HOOK="/Users/ghscholt/.claude/hooks/pre-execution-validation.sh"
+HPC_MONITOR="$GLOBTIM_DIR/tools/hpc/monitoring/hpc_resource_monitor_hook.sh"
 
 function print_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -69,29 +78,182 @@ function resolve_script() {
     fi
 }
 
-# Function to validate Julia environment
-function validate_environment() {
-    print_info "🔍 Validating Julia environment..."
+# Issue #41: Orchestrated Validation - Strategic Hook Integration
+function validate_environment_orchestrated() {
+    local context="$1"
     
-    if [[ -x "$PACKAGE_VALIDATOR" ]]; then
-        if julia --project="$GLOBTIM_DIR" "$PACKAGE_VALIDATOR" quick; then
-            print_info "✅ Environment validation PASSED"
+    print_info "🚀 Starting orchestrated validation pipeline (Issue #41)"
+    
+    if [[ -x "$HOOK_ORCHESTRATOR" ]]; then
+        print_info "Using Strategic Hook Orchestrator for comprehensive validation"
+        
+        # Execute validation phase through orchestrator
+        if "$HOOK_ORCHESTRATOR" phase validation "$context"; then
+            print_info "✅ Orchestrated validation completed successfully"
             return 0
         else
-            print_error "❌ Environment validation FAILED"
-            print_error "Please check package dependencies and environment setup"
+            print_error "❌ Orchestrated validation failed"
             return 1
         fi
     else
-        print_warning "⚠️  Package validator not found, skipping environment validation"
-        return 0
+        print_warning "Hook orchestrator not available - falling back to legacy validation"
+        validate_environment_legacy "$context"
+        return $?
     fi
 }
 
-# Function to start experiment in tmux
+# Legacy comprehensive validation function - Issue #27 (Fallback Only)
+function validate_environment_legacy() {
+    local context="${1:-experiment}"
+    print_info "🔍 Starting legacy pre-execution validation..."
+    
+    # Extract experiment parameters for resource prediction
+    local degree=""
+    local dimension=""
+    
+    # Try to extract from session name or script name
+    if [[ "$SESSION_NAME" =~ 4d ]]; then
+        dimension="4"
+    elif [[ "$SESSION_NAME" =~ 2d ]]; then
+        dimension="2"
+    fi
+    
+    local validation_start=$(date +%s)
+    local validation_success=true
+    
+    echo "🔧 PRE-EXECUTION VALIDATION SYSTEM (Issue #27 - Legacy Mode)"
+    echo "============================================================"
+    
+    # Component 1: Julia Environment Validation (Enhanced)
+    print_info "📦 Component 1/4: Julia Environment Validation"
+    if [[ -x "$PACKAGE_VALIDATOR" ]]; then
+        if julia --project="$GLOBTIM_DIR" "$PACKAGE_VALIDATOR" critical 2>/dev/null; then
+            print_info "✅ Julia environment PASSED"
+        else
+            print_error "❌ Julia environment FAILED"
+            validation_success=false
+        fi
+    else
+        print_warning "⚠️  Package validator not found"
+    fi
+    
+    # Component 2: Resource Availability Validation (NEW)
+    print_info "💾 Component 2/4: Resource Availability Validation"
+    if [[ -x "$RESOURCE_VALIDATOR" ]]; then
+        if "$RESOURCE_VALIDATOR" validate "$degree" "$dimension" >/dev/null 2>&1; then
+            print_info "✅ Resource availability PASSED"
+        else
+            print_error "❌ Resource availability FAILED"
+            print_error "Run '$RESOURCE_VALIDATOR validate $degree $dimension' for details"
+            validation_success=false
+        fi
+    else
+        print_warning "⚠️  Resource validator not found"
+    fi
+    
+    # Component 3: Git Synchronization Validation (NEW)
+    print_info "🔄 Component 3/4: Git Synchronization Validation"
+    if [[ -x "$GIT_VALIDATOR" ]]; then
+        if "$GIT_VALIDATOR" validate --allow-dirty >/dev/null 2>&1; then
+            print_info "✅ Git synchronization PASSED"
+        else
+            print_warning "⚠️  Git synchronization has warnings (non-blocking)"
+        fi
+    else
+        print_warning "⚠️  Git validator not found"
+    fi
+    
+    # Component 4: Workspace Preparation (NEW)
+    print_info "📁 Component 4/4: Workspace Preparation"
+    if [[ -x "$GIT_VALIDATOR" ]]; then
+        if "$GIT_VALIDATOR" prepare-workspace >/dev/null 2>&1; then
+            print_info "✅ Workspace preparation PASSED"
+        else
+            print_warning "⚠️  Workspace preparation had issues"
+        fi
+    fi
+    
+    local validation_end=$(date +%s)
+    local validation_time=$((validation_end - validation_start))
+    
+    echo "=============================================="
+    if [[ "$validation_success" == "true" ]]; then
+        print_info "🎉 PRE-EXECUTION VALIDATION COMPLETED SUCCESSFULLY (${validation_time}s)"
+        print_info "Ready for experiment execution with enhanced reliability"
+        return 0
+    else
+        print_error "❌ PRE-EXECUTION VALIDATION FAILED (${validation_time}s)"
+        print_error "Address critical validation failures before proceeding"
+        return 1
+    fi
+}
+
+# Issue #41: Orchestrated Experiment Execution
 function start_experiment() {
     local experiment_script=$1
     local session_name=$2
+    
+    # Create experiment context for orchestrator
+    local context="experiment:$session_name:$experiment_script"
+    
+    print_info "🚀 Starting orchestrated experiment execution (Issue #41)"
+    print_info "Experiment: $EXPERIMENT_NAME"
+    print_info "Session: $session_name"
+    print_info "Script: $experiment_script"
+    
+    # Check if orchestrator is available
+    if [[ -x "$HOOK_ORCHESTRATOR" ]]; then
+        return start_experiment_orchestrated "$experiment_script" "$session_name" "$context"
+    else
+        print_warning "Hook orchestrator not available - using legacy execution"
+        return start_experiment_legacy "$experiment_script" "$session_name"
+    fi
+}
+
+# Orchestrated experiment execution using strategic hook integration
+function start_experiment_orchestrated() {
+    local experiment_script=$1
+    local session_name=$2
+    local context="$3"
+    
+    print_info "🎯 Using Strategic Hook Orchestrator for full pipeline execution"
+    
+    # Execute the full pipeline through the orchestrator
+    if "$HOOK_ORCHESTRATOR" orchestrate "$context"; then
+        print_info "✅ Orchestrated pipeline completed successfully!"
+        
+        # Extract resolved script from orchestrator state if available
+        local resolved_script
+        if ! resolved_script=$(resolve_script "$experiment_script"); then
+            print_error "Script resolution failed even after orchestrated validation"
+            return 1
+        fi
+        
+        # Start the actual tmux execution (this is now the execution phase)
+        start_tmux_session "$resolved_script" "$session_name"
+        
+        print_info "🎉 Orchestrated experiment started successfully!"
+        return 0
+    else
+        print_error "❌ Orchestrated pipeline failed"
+        
+        # Check if lifecycle manager can provide recovery information
+        if [[ -x "$LIFECYCLE_MANAGER" ]]; then
+            local exp_id=$(echo "$context" | cut -d: -f2)
+            print_info "📊 Experiment lifecycle status:"
+            "$LIFECYCLE_MANAGER" report "$exp_id" || true
+        fi
+        
+        return 1
+    fi
+}
+
+# Legacy experiment execution (fallback)
+function start_experiment_legacy() {
+    local experiment_script=$1
+    local session_name=$2
+    
+    print_info "🔧 Legacy experiment execution mode"
     
     # Pre-execution validation phase
     print_info "🚀 Starting pre-execution validation..."
@@ -103,16 +265,34 @@ function start_experiment() {
         return 1
     fi
     
-    # Step 2: Validate Julia environment
-    if ! validate_environment; then
+    # Step 2: Validate Julia environment using legacy validation
+    if ! validate_environment_legacy; then
         print_error "Pre-execution validation failed - aborting experiment"
         return 1
     fi
     
     print_info "✅ Pre-execution validation completed successfully"
     
-    print_info "Starting experiment in tmux session: $session_name"
+    # Start tmux session for legacy mode
+    start_tmux_session "$resolved_script" "$session_name"
+    
+    print_info "✅ Legacy experiment started successfully!"
+}
+
+# Shared tmux session creation function
+function start_tmux_session() {
+    local resolved_script=$1
+    local session_name=$2
+    
+    print_info "Starting tmux session: $session_name"
     print_info "Script: $resolved_script"
+    
+    # Step 3: Initialize monitoring system
+    if [[ -x "$HPC_MONITOR" ]]; then
+        print_info "🔧 Initializing HPC resource monitoring..."
+        "$HPC_MONITOR" collect >/dev/null 2>&1 || true  # Initialize metrics collection
+        print_info "✅ Monitoring initialized"
+    fi
     
     # Create a tmux session and run the experiment
     tmux new-session -d -s "$session_name" bash -c "
@@ -138,18 +318,39 @@ function start_experiment() {
         echo 'Session: $session_name'
         echo '========================================='
         
+        # Start background monitoring for this experiment
+        if [[ -x '$HPC_MONITOR' ]]; then
+            echo 'Starting resource monitoring...'
+            '$HPC_MONITOR' start-monitoring '$session_name' || true
+        fi
+        
         # Run the actual experiment with increased heap size
         julia --project=. --heap-size-hint=50G $resolved_script \$LOG_DIR
         
         echo '========================================='
         echo 'Completed: \$(date)'
         echo '========================================='
+        
+        # Stop monitoring and generate final report
+        if [[ -x '$HPC_MONITOR' ]]; then
+            echo 'Stopping resource monitoring and generating report...'
+            '$HPC_MONITOR' stop-monitoring '$session_name' || true
+            '$HPC_MONITOR' performance-check || true
+            '$HPC_MONITOR' dashboard || true
+        fi
     "
     
     print_info "Experiment started successfully!"
     print_info "To monitor: tmux attach -t $session_name"
     print_info "To detach: Ctrl+B then D"
     print_info "To list sessions: tmux ls"
+    
+    # Show monitoring dashboard information
+    if [[ -x "$HPC_MONITOR" ]]; then
+        print_info "📊 Resource monitoring is active"
+        print_info "Monitor resources: $HPC_MONITOR status"
+        print_info "View dashboard: $HPC_MONITOR dashboard"
+    fi
     
     # Save session info for later reference
     echo "$session_name" > "$GLOBTIM_DIR/.current_experiment_session"

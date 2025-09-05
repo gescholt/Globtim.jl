@@ -120,6 +120,7 @@ try
     # Add main project to load path
     push!(LOAD_PATH, project_root)
     using Globtim
+    using DynamicPolynomials: @polyvar
     using DynamicPolynomials, DataFrames
     using ProgressLogging
 

@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Configuration
 GLOBTIM_PROJECT_DIR="/Users/ghscholt/globtim"
-SECURE_TOKEN_SCRIPT="$GLOBTIM_PROJECT_DIR/tools/gitlab/get-token.sh"
+SECURE_TOKEN_SCRIPT="$GLOBTIM_PROJECT_DIR/tools/gitlab/get-token-noninteractive.sh"
 HOOK_LOG_FILE="$GLOBTIM_PROJECT_DIR/.gitlab_hook.log"
 REQUIRED_VARS=("GITLAB_URL" "GITLAB_TOKEN" "GITLAB_PROJECT_PATH")
 

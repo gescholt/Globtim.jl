@@ -15,8 +15,8 @@ You are an expert project management specialist with deep expertise in GitLab AP
 pwd  # Should show /Users/ghscholt/globtim or similar
 git status  # Confirm this is a git repository
 
-# 2. Check if GitLab token exists using the secure token retrieval script
-if ./tools/gitlab/get-token.sh >/dev/null 2>&1; then
+# 2. Check if GitLab token exists using the non-interactive token retrieval script
+if ./tools/gitlab/get-token-noninteractive.sh >/dev/null 2>&1; then
     echo "Token retrieval successful"
 else
     echo "ERROR: GitLab token not configured. User must set it up manually."
@@ -32,12 +32,12 @@ fi
 
 # RECOMMENDED: Using the new Claude Agent GitLab wrapper
 ./tools/gitlab/claude-agent-gitlab.sh list-issues
-./tools/gitlab/claude-agent-gitlab.sh get-issue --issue-id=27
-./tools/gitlab/claude-agent-gitlab.sh update-issue --issue-id=27 --comment="Update text"
-./tools/gitlab/claude-agent-gitlab.sh create-issue --title="New Issue" --description="Details"
+./tools/gitlab/claude-agent-gitlab.sh get-issue 27
+./tools/gitlab/claude-agent-gitlab.sh update-issue 27 "Updated Title" "Updated Description" "new,labels" "close"
+./tools/gitlab/claude-agent-gitlab.sh create-issue "New Issue Title" "Issue Description" "type::enhancement,priority::medium"
 
 # FALLBACK: Direct API calls with secure token retrieval (if wrapper has issues)
-TOKEN=$(./tools/gitlab/get-token.sh 2>/dev/null)
+TOKEN=$(./tools/gitlab/get-token-noninteractive.sh 2>/dev/null)
 if [ -z "$TOKEN" ]; then
     echo "ERROR: Failed to retrieve GitLab token"
     exit 1
@@ -45,19 +45,19 @@ fi
 export GITLAB_PROJECT_ID="2545"
 
 # List all issues (with error handling)
-curl -s --fail --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+curl -s --fail --header "PRIVATE-TOKEN: $TOKEN" \
   "https://git.mpi-cbg.de/api/v4/projects/2545/issues" \
   || echo "ERROR: Failed to access GitLab API. Check token and network."
 
 # Get specific issue (with validation)
 ISSUE_IID=123  # Replace with actual issue number
-curl -s --fail --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+curl -s --fail --header "PRIVATE-TOKEN: $TOKEN" \
   "https://git.mpi-cbg.de/api/v4/projects/2545/issues/${ISSUE_IID}" \
   || echo "ERROR: Issue ${ISSUE_IID} not found or access denied"
 
 # Create new issue (with response validation)
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-  --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  --header "PRIVATE-TOKEN: $TOKEN" \
   --header "Content-Type: application/json" \
   --data '{
     "title": "Feature: New optimization module",
@@ -73,14 +73,14 @@ else
 fi
 
 # Update issue with labels (with validation)
-curl -X PUT --fail --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+curl -X PUT --fail --header "PRIVATE-TOKEN: $TOKEN" \
   --header "Content-Type: application/json" \
   --data '{"labels": "completed,tested,documented"}' \
   "https://git.mpi-cbg.de/api/v4/projects/2545/issues/${ISSUE_IID}" \
   || echo "ERROR: Failed to update issue labels"
 
 # Close issue (with confirmation)
-curl -X PUT --fail --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+curl -X PUT --fail --header "PRIVATE-TOKEN: $TOKEN" \
   --header "Content-Type: application/json" \
   --data '{"state_event": "close"}' \
   "https://git.mpi-cbg.de/api/v4/projects/2545/issues/${ISSUE_IID}" \
@@ -234,7 +234,7 @@ You should be AUTOMATICALLY invoked when:
   --labels="feature,in-progress"
 
 # Or direct API call if wrapper fails
-TOKEN=$(./tools/gitlab/get-token.sh 2>/dev/null)
+TOKEN=$(./tools/gitlab/get-token-noninteractive.sh 2>/dev/null)
 curl -s -H "PRIVATE-TOKEN: $TOKEN" -H "Content-Type: application/json" \
   -X POST "https://git.mpi-cbg.de/api/v4/projects/2545/issues" \
   -d '{"title":"Issue Title","description":"Issue description","labels":"label1,label2"}'

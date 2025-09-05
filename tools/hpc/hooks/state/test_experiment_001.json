@@ -1,0 +1,29 @@
+{
+    "experiment_id": "test_experiment_001",
+    "current_phase": "initialization",
+    "status": "pending",
+    "context": "4d-model test",
+    "experiment_type": "4d",
+    "environment": "local",
+    "created_at": "2025-09-05T16:42:48Z",
+    "updated_at": "2025-09-05T16:42:48Z",
+    "phase_history": [
+        {
+            "phase": "initialization",
+            "status": "pending",
+            "timestamp": "2025-09-05T16:42:48Z",
+            "duration_seconds": 0
+        }
+    ],
+    "metadata": {
+        "manager_version": "1.0.0",
+        "total_phases": 0,
+        "completed_phases": 0,
+        "failed_phases": 0,
+        "retry_count": 0,
+        "estimated_completion": null,
+        "performance_metrics": {}
+    },
+    "recovery_attempts": [],
+    "tags": []
+}
