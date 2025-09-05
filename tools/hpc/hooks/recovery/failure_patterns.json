@@ -1,0 +1,132 @@
+{
+    "version": "1.0.0",
+    "description": "Failure patterns and automated recovery strategies",
+    "patterns": {
+        "package_not_found": {
+            "signatures": [
+                "Package .* not found in current path",
+                "LoadError.*not found",
+                "ArgumentError: Package .* not found"
+            ],
+            "phase": "validation",
+            "severity": "critical",
+            "recovery_actions": [
+                "check_julia_environment",
+                "reinstall_packages",
+                "update_manifest"
+            ],
+            "max_retries": 2,
+            "backoff_seconds": 30
+        },
+        "memory_exhaustion": {
+            "signatures": [
+                "OutOfMemoryError",
+                "cannot allocate memory",
+                "Julia: OutOfMemoryError"
+            ],
+            "phase": "execution",
+            "severity": "critical",
+            "recovery_actions": [
+                "increase_memory_limit",
+                "reduce_problem_size",
+                "cleanup_memory"
+            ],
+            "max_retries": 1,
+            "backoff_seconds": 60
+        },
+        "disk_space_full": {
+            "signatures": [
+                "No space left on device",
+                "Disk quota exceeded",
+                "OSError.*No space left"
+            ],
+            "phase": "execution",
+            "severity": "critical",
+            "recovery_actions": [
+                "cleanup_temp_files",
+                "archive_old_results",
+                "alert_administrator"
+            ],
+            "max_retries": 1,
+            "backoff_seconds": 0
+        },
+        "network_timeout": {
+            "signatures": [
+                "Connection timed out",
+                "Network is unreachable",
+                "DNS resolution failed"
+            ],
+            "phase": "preparation",
+            "severity": "medium",
+            "recovery_actions": [
+                "retry_with_backoff",
+                "check_network_connectivity",
+                "use_cached_resources"
+            ],
+            "max_retries": 3,
+            "backoff_seconds": 15
+        },
+        "permission_denied": {
+            "signatures": [
+                "Permission denied",
+                "Operation not permitted",
+                "Access is denied"
+            ],
+            "phase": "preparation",
+            "severity": "medium",
+            "recovery_actions": [
+                "fix_file_permissions",
+                "check_user_privileges",
+                "create_alternative_path"
+            ],
+            "max_retries": 2,
+            "backoff_seconds": 5
+        },
+        "ssh_connection_failed": {
+            "signatures": [
+                "ssh: connect to host .* port .* Connection refused",
+                "Host key verification failed",
+                "Permission denied (publickey)"
+            ],
+            "phase": "preparation",
+            "severity": "high",
+            "recovery_actions": [
+                "check_ssh_keys",
+                "test_ssh_connectivity",
+                "fallback_authentication"
+            ],
+            "max_retries": 3,
+            "backoff_seconds": 10
+        },
+        "tmux_session_exists": {
+            "signatures": [
+                "duplicate session",
+                "session already exists"
+            ],
+            "phase": "preparation",
+            "severity": "low",
+            "recovery_actions": [
+                "cleanup_old_sessions",
+                "generate_unique_session_name"
+            ],
+            "max_retries": 1,
+            "backoff_seconds": 5
+        },
+        "julia_compilation_failed": {
+            "signatures": [
+                "Compilation failed",
+                "ERROR: LoadError: UndefVarError",
+                "BoundsError"
+            ],
+            "phase": "execution",
+            "severity": "high",
+            "recovery_actions": [
+                "clear_julia_cache",
+                "reinstall_problematic_package",
+                "fallback_to_safe_mode"
+            ],
+            "max_retries": 2,
+            "backoff_seconds": 45
+        }
+    }
+}

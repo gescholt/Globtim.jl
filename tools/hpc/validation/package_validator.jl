@@ -361,6 +361,11 @@ if abspath(PROGRAM_FILE) == @__FILE__
     mode = length(ARGS) > 0 ? ARGS[1] : "quick"
     output_dir = length(ARGS) > 1 ? ARGS[2] : "."
     
+    # Handle alternative argument names for compatibility
+    if mode == "critical"
+        mode = "critical-only"
+    end
+    
     if !(mode in VALIDATION_MODES)
         println("❌ Invalid mode: $mode")
         println("Valid modes: $(join(VALIDATION_MODES, ", "))")

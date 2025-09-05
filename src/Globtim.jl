@@ -1,6 +1,7 @@
 module Globtim
 
 # CORE DEPENDENCIES - Always loaded for fundamental operations
+using DynamicPolynomials: @polyvar  # Explicit import to avoid macro issues
 using DynamicPolynomials
 using ForwardDiff
 using LinearAlgebra
@@ -101,6 +102,7 @@ export test_input,
     create_test_input,
     Constructor,
     solve_polynomial_system,
+    solve_polynomial_with_defaults,
     msolve_polynomial_system,
     msolve_parser,
     generate_grid,
@@ -418,5 +420,15 @@ function plot_error_function_2D_with_critical_points end
 function plot_polyapprox_levelset_2D end
 function plot_error_function_1D_with_critical_points end
 function plot_error_function_2D_with_critical_points_with_outputs end
+
+# Include PolynomialImports module for robust @polyvar support
+include("PolynomialImports.jl")
+using .PolynomialImports
+
+# Re-export @polyvar macro for direct access
+export @polyvar
+
+# Export polynomial import utilities
+export setup_polyvar, ensure_polyvar, create_polynomial_vars, test_polyvar_availability
 
 end

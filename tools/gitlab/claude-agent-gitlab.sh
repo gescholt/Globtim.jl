@@ -157,6 +157,19 @@ list_labels() {
     gitlab_api "GET" "projects/$GITLAB_PROJECT_ID/labels"
 }
 
+# Get specific GitLab issue
+get_issue() {
+    local issue_iid="$1"
+    
+    if [ -z "$issue_iid" ]; then
+        error "Issue ID is required"
+        return 1
+    fi
+    
+    log "Getting GitLab issue #$issue_iid"
+    gitlab_api "GET" "projects/$GITLAB_PROJECT_ID/issues/$issue_iid"
+}
+
 # Test GitLab API connectivity
 test_connection() {
     log "Testing GitLab API connection..."
@@ -183,6 +196,7 @@ Usage: $0 <command> [options]
 
 Commands:
   test                          - Test GitLab API connection
+  get-issue <iid>               - Get specific issue by ID
   list-issues [state] [labels]  - List issues (state: opened|closed|all)
   list-milestones [state]       - List milestones (state: active|closed|all)  
   list-labels                   - List project labels
@@ -191,6 +205,7 @@ Commands:
 
 Examples:
   $0 test
+  $0 get-issue 15
   $0 list-issues opened
   $0 create-issue "Fix authentication" "Resolve GitLab auth issues" "type::bug,priority::high"
   $0 update-issue 30 "" "" "" "close"
@@ -208,6 +223,13 @@ EOF
 case "${1:-help}" in
     test)
         test_connection
+        ;;
+    get-issue)
+        if [ $# -lt 2 ]; then
+            error "Usage: $0 get-issue <issue_iid>"
+            exit 1
+        fi
+        get_issue "$2"
         ;;
     list-issues)
         list_issues "$2" "$3"

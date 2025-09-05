@@ -255,3 +255,121 @@ function convert_to_float_poly(p)
     end
     return sum(float_terms)
 end
+
+"""
+    solve_polynomial_with_defaults(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}}
+
+Utility wrapper for solve_polynomial_system with sensible default precision parameters.
+This prevents common bugs where precision parameters are omitted, particularly the 
+RationalPrecision issues that can cause unexpected behavior.
+
+This function provides safe defaults for the most common polynomial system solving
+use cases while still allowing customization through keyword arguments.
+
+# Arguments
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `n::Int`: Number of variables (dimension)
+- `d::Int`: Polynomial degree
+- `coeffs`: Coefficient matrix from polynomial approximation
+
+# Keyword Arguments (with safe defaults)
+- `basis::Symbol=:chebyshev`: Basis type (`:chebyshev` or `:legendre`)
+- `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
+- `normalized::Bool=true`: Whether to use normalized basis polynomials
+- `power_of_two_denom::Bool=false`: For rational precision, ensures denominators are powers of 2
+- `return_system::Bool=false`: If true, also return the polynomial system information
+
+# Returns
+Same as `solve_polynomial_system`: Vector of real solutions within [-1,1]ⁿ, or tuple with system info.
+
+# Examples
+```julia
+using DynamicPolynomials
+@polyvar x[1:2]
+
+# Basic usage with safe defaults
+solutions = solve_polynomial_with_defaults(x, 2, 8, coeffs)
+
+# Customize basis while keeping other defaults
+solutions = solve_polynomial_with_defaults(x, 2, 8, coeffs, basis=:legendre)
+
+# Use Float64 precision for better performance
+solutions = solve_polynomial_with_defaults(x, 2, 8, coeffs, precision=Float64Precision)
+```
+
+# Notes
+- Eliminates the most common source of precision-related bugs
+- Safe defaults prevent unexpected RationalPrecision issues
+- Still allows full customization when needed
+- Drop-in replacement for solve_polynomial_system calls with manual parameters
+"""
+function solve_polynomial_with_defaults(
+    x,
+    n,
+    d,
+    coeffs;
+    basis::Symbol = :chebyshev,
+    precision::PrecisionType = RationalPrecision,
+    normalized::Bool = true,
+    power_of_two_denom::Bool = false,
+    return_system::Bool = false
+)
+    return solve_polynomial_system(
+        x, n, d, coeffs;
+        basis = basis,
+        precision = precision,
+        normalized = normalized,
+        power_of_two_denom = power_of_two_denom,
+        return_system = return_system
+    )
+end
+
+"""
+    solve_polynomial_with_defaults(x, pol::ApproxPoly; kwargs...) -> Vector{Vector{Float64}}
+
+Convenience method for ApproxPoly objects with safe defaults.
+Automatically extracts dimension and degree while providing safe precision defaults.
+
+This method is particularly useful for preventing precision bugs when working with
+ApproxPoly objects, as it ensures consistent parameter handling.
+
+# Arguments
+- `x`: Polynomial variables (from DynamicPolynomials)
+- `pol::ApproxPoly`: Polynomial approximation object
+- `kwargs...`: Additional keyword arguments (same as the main method)
+
+# Examples
+```julia
+f = x -> sin(x[1]^2 + x[2]^2)
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+pol = Constructor(TR, 8)
+@polyvar x[1:2]
+
+# Safe solving with automatic parameter extraction
+solutions = solve_polynomial_with_defaults(x, pol)
+
+# Customize precision while keeping other defaults
+solutions = solve_polynomial_with_defaults(x, pol, precision=Float64Precision)
+```
+
+# Notes
+- Combines the convenience of ApproxPoly parameter extraction with safe defaults
+- Prevents common precision parameter omission bugs
+- Maintains compatibility with existing ApproxPoly workflows
+"""
+function solve_polynomial_with_defaults(x, pol::ApproxPoly; kwargs...)
+    # Use the existing ApproxPoly method but ensure we pass through our safe defaults
+    # The kwargs will override the defaults when explicitly provided
+    default_kwargs = Dict{Symbol,Any}(
+        :basis => :chebyshev,
+        :precision => RationalPrecision,
+        :normalized => true,
+        :power_of_two_denom => false,
+        :return_system => false
+    )
+    
+    # Merge user-provided kwargs with defaults (user kwargs take precedence)
+    merged_kwargs = merge(default_kwargs, Dict{Symbol,Any}(kwargs))
+    
+    return solve_polynomial_system(x, pol; merged_kwargs...)
+end
