@@ -214,6 +214,12 @@ include("safe_wrappers.jl") #Safe wrapper functions with error handling
 # include("valley_detection.jl") #Valley detection and manifold following algorithms
 # include("conservative_valley_walking.jl") #Conservative valley walking with function value validation
 
+# Advanced Interactive Visualization (Issue #50) - Core functionality
+include("InteractiveVizCore.jl") #Core analysis functions (no GLMakie dependency)
+# Full visualization features available in GLMakie extension:
+# - InteractiveViz.jl: Full interactive visualization framework  
+# - AlgorithmViz.jl: Algorithm-specific visualization integrations
+
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
 
@@ -430,5 +436,15 @@ export @polyvar
 
 # Export polynomial import utilities
 export setup_polyvar, ensure_polyvar, create_polynomial_vars, test_polyvar_availability
+
+# Advanced Interactive Visualization Functions (Issue #50) - Core analysis
+export InteractiveVizConfig, AlgorithmTracker, ConvergenceMetrics
+export analyze_convergence, hessian_eigenvalue_analysis, momentum_enhanced_tracking
+export algorithm_performance_comparison, update_algorithm_tracker!
+export create_gradient_field_data
+# Full interactive visualization functions available when GLMakie is loaded:
+# create_interactive_viz, update_visualization, gradient_field_viz, hessian_eigenvalue_viz, 
+# momentum_vector_viz, multi_algorithm_comparison, parameter_exploration_interface
+# ValleyWalkingViz, BFGSViz, GradientDescentViz, integrate_valley_walking!, etc.
 
 end
