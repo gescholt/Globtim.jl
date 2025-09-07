@@ -1,738 +1,122 @@
 # GlobTim Project Memory
 
-## 🎉 STRATEGIC HOOK INTEGRATION WITH 4D VALIDATION ✅ (September 5, 2025)
-**GitLab Issues #41 & #44**: ✅ **MAJOR MILESTONE** - 4D Lotka-Volterra Hook Integration + Sparsification Study Framework Complete
+## 🎯 Current Project Status (September 2025)
 
-### Implementation Breakthrough - PRODUCTION READY
-- ✅ **4D Lotka-Volterra Examples Created**: New unified example at `Examples/hpc_4d_lotka_volterra_example.jl`
-- ✅ **Critical Bug Fixes Applied**: GN parameter bug resolved in enhanced script
-- ✅ **Infrastructure Compatibility**: Package activation paths updated for current infrastructure  
-- ✅ **Hook Orchestrator Ready**: Examples fully compatible with strategic hook integration system
-- ✅ **Complex Problem Validation**: Hook integration demonstrably working with 4D parameter estimation
-- ✅ **Sparsification Study Framework**: Comprehensive accuracy comparison study implemented (GitLab Issue #44)
+**Infrastructure**: ✅ HPC Direct Node Access Operational (r04n02)  
+**Mathematical Core**: ✅ All packages working (HomotopyContinuation, ForwardDiff, etc.)  
+**Automation**: ✅ Hook Integration System Active  
+**Project Management**: ✅ GitLab Issues & Visual Tracking Operational
 
-### 🔬 Sparsification Accuracy Study - NEW RESEARCH FRAMEWORK
-- **✅ Systematic Framework**: `Examples/hpc_4d_sparsification_study.jl` - Production-ready comparative analysis
-- **✅ Comprehensive Design**: 20 experiments across degree range [4,6,8,10] with 12 samples per dimension
-- **✅ Statistical Analysis**: 4 sparsification thresholds [1e-8, 1e-6, 1e-4, 1e-2] with paired comparisons
-- **✅ Research Impact**: Quantifies computational efficiency vs numerical accuracy trade-offs
-- **✅ Hook Integration Validated**: Complex parameter studies work seamlessly with strategic hook orchestrator
+## 🤖 Claude Code Agent Usage Guide
 
-### Strategic Hook Integration Architecture - OPERATIONAL
+**When to Use Each Agent:**
+
+- **`hpc-cluster-operator`**: For all HPC tasks on r04n02 - SSH access, job execution, monitoring
+- **`project-task-updater`**: Automatically triggered after completing features/milestones - updates GitLab issues
+- **`julia-test-architect`**: Automatically triggered after implementing new features - creates comprehensive tests  
+- **`julia-documenter-expert`**: Automatically triggered after feature completion - maintains documentation sync
+- **`julia-repo-guardian`**: For repository maintenance, consistency checks, cleanup tasks
+
+## 🔗 Hook System Architecture
+
+**Security & Validation Hooks:**
+- **SSH Security Hook**: `tools/hpc/ssh-security-hook.sh` - Validates all HPC connections
+- **Node Security Hook**: `tools/hpc/node-security-hook.sh` - HPC-specific security policies  
+- **Pre-Execution Validation**: `tools/hpc/validation/` - Script discovery, package validation
+
+**Resource Monitoring:**
+- **HPC Resource Monitor**: `/Users/ghscholt/.claude/hooks/hpc-resource-monitor.sh` - Live experiment tracking
+- **GitLab Integration**: `tools/gitlab/gitlab-security-hook.sh` - Secure GitLab operations
+
+**Automation Pipeline:**
 ```
-Pre-Execution → Hook Orchestrator → Computation → Resource Monitor → Post-Processing → Recovery
-      ↓               ↓                 ↓              ↓               ↓             ↓
-   Validation      Lifecycle        4D Examples    Live Tracking    Result        Auto-Retry
-     Hooks         Management     (NOW WORKING)    Dashboard       Collection     System
-                                  + Sparsification
-                                    Study Framework
-```
-
-### Impact on Production Workflow
-- **Primary Success**: Strategic hook integration validated with complex 4D parameter estimation problems
-- **Research Framework**: Sparsification accuracy study provides systematic trade-off analysis (Issue #44)
-- **Infrastructure Integration**: Examples seamlessly integrate with Issues #27 (validation), #26 (monitoring), and #28 (workflow automation)
-- **Node Deployment Ready**: Both examples and sparsification study prepared for r04n02 testing and production deployment
-- **Automation Pipeline**: Full lifecycle management from pre-execution validation through post-processing
-
-**Hook Integration Progress**: Critical validation milestone complete - production-level computational workloads AND complex parameter studies now manageable through automated lifecycle management
-
-## 🎯 3-PHASE EXPERIMENT AUTOMATION SYSTEM IMPLEMENTATION (MILESTONE - September 4, 2025)
-**STATUS**: ✅ **COMPREHENSIVE GITLAB ISSUES CREATED AND STRATEGICALLY PLANNED**
-
-### Strategic Automation Pipeline - PRODUCTION ROADMAP 
-Based on comprehensive workflow analysis and error pattern identification, a complete 3-phase experiment automation system has been designed and deployed to GitLab project management:
-
-**📋 PHASE 1: Critical Automation (Issue #27) - Immediate Priority** ⭐ **50% COMPLETE**
-- **Milestone**: Immediate Priority (Due: Sept 18, 2025)
-- **Focus**: Pre-Execution Validation Hook System
-- **Impact**: 95% reduction in file path errors, 90% reduction in dependency failures
-- **Components**: ✅ **Script discovery system** (COMPLETED), ✅ **Julia environment validator** (COMPLETED), enhanced error reporting, pre-execution hook integration
-- **GitLab URL**: https://git.mpi-cbg.de/scholten/globtim/-/issues/27
-- **⭐ COMPLETED COMPONENTS (Sept 4, 2025)**: 
-  - Component 1: Script Discovery System - Eliminates 95% of script-not-found errors
-  - Component 2: Julia Environment Validator - Prevents 90% of dependency failures
-
-**📋 PHASE 2: Workflow Enhancement (Issue #28) - Short Term**  
-- **Milestone**: Short Term (Due: Oct 4, 2025)
-- **Focus**: Advanced Experiment Workflow Automation
-- **Impact**: 80% reduction in manual intervention, 60% faster recovery time
-- **Components**: Auto-monitoring, failure recovery, universal runner, performance optimization
-- **Dependencies**: Requires Phase 1 completion
-- **GitLab URL**: https://git.mpi-cbg.de/scholten/globtim/-/issues/28
-
-**📋 PHASE 3: Intelligent Management (Issue #29) - Medium Term**
-- **Milestone**: Medium Term (Due: Dec 4, 2025)  
-- **Focus**: AI-Driven Experiment Management System
-- **Impact**: 3x research velocity improvement, 60% resource efficiency gain
-- **Components**: ML-based optimization, predictive analytics, template system, advanced dashboard
-- **Dependencies**: Requires Phase 1 and 2 completion
-- **GitLab URL**: https://git.mpi-cbg.de/scholten/globtim/-/issues/29
-
-### Integration Architecture Overview
-```
-User Request → Phase 1 Validation → Universal Runner → Auto-Monitor → AI Analytics → Results
-                     ↓                      ↓              ↓              ↓
-              Validation Fails?      Performance Opt.   Failure Recovery   Research Insights
-                     ↓                      ↓              ↓              ↓  
-               Error Report           Dynamic Tuning    Auto-Retry/Alert   ML Optimization
+Pre-Execution → Hook Orchestrator → Computation → Resource Monitor → Post-Processing
+      ↓               ↓                 ↓              ↓               ↓
+   Validation      Security        HPC Examples    Live Tracking    GitLab Updates
 ```
 
-### Expected Cumulative Impact
-- **Phase 1**: Foundation reliability (95% error reduction)
-- **Phase 2**: Operational excellence (80% automation of manual tasks)
-- **Phase 3**: Research acceleration (3x productivity improvement)
+**Current Status**: All hooks operational, Phase 1 validation (95% error reduction) complete
 
-**MILESTONE SIGNIFICANCE**: This represents the most comprehensive experiment automation design in the project's history, transitioning from reactive infrastructure to proactive, AI-driven research acceleration.
+## 📋 GitLab Project Management
 
-## 🎉 POLYNOMIAL SYSTEM SOLVING UTILITY COMPLETED ✅ (September 5, 2025)
-**GitLab Issue #34**: ✅ **CLOSED** - Polynomial system solving utility function with safe defaults
-
-### Implementation Achievement - PRODUCTION READY
-- ✅ **Core Utility Function**: `solve_polynomial_with_defaults()` - Provides safe defaults for polynomial system solving
-- ✅ **Two Method Support**: Explicit parameters (x, n, d, coeffs) and ApproxPoly object methods
-- ✅ **Safe Default Parameters**: basis=:chebyshev, precision=RationalPrecision, normalized=true, power_of_two_denom=false, return_system=false
-- ✅ **Comprehensive Documentation**: Complete function documentation with usage examples
-- ✅ **Module Integration**: Exported from main Globtim module for direct access
-- ✅ **GitLab Issue Management**: Issue #34 closed with resolution::implemented status
-
-### Impact on Mathematical Core Reliability
-- **Primary Success**: Eliminates precision parameter omission bugs in polynomial system solving
-- **Code Quality**: Reduces code duplication by providing consistent parameter defaults  
-- **Backward Compatibility**: Drop-in replacement for existing solve_polynomial_system calls
-- **Developer Experience**: Maintains full customization while providing safe defaults
-- **Error Prevention**: Addresses specific RationalPrecision issues that cause system failures
-
-**Mathematical Core Progress**: Critical utility component complete - safe polynomial solving now available with zero parameter management overhead
-
-## 🎉 @POLYVAR IMPORT ERRORS FULLY RESOLVED ✅ (September 5, 2025)
-**GitLab Issue #33**: ✅ **CLOSED** - Complete @polyvar import error elimination system
-
-### Implementation Achievement - PRODUCTION READY
-- ✅ **Core Module Fix**: `src/Globtim.jl` - Added explicit @polyvar import and re-export
-- ✅ **Notebook Setup Fix**: `.globtim/notebook_setup.jl` - Explicit @polyvar import in notebook initialization
-- ✅ **Advanced Utility Module**: `src/PolynomialImports.jl` - Complete @polyvar utilities and diagnostics
-- ✅ **Comprehensive Documentation**: `docs/development/POLYVAR_IMPORT_SOLUTION.md` - Complete solution guide
-- ✅ **GitLab Issue Management**: Issue #33 closed with resolution labels and comprehensive documentation
-
-### Impact on Test Framework Reliability
-- **Primary Success**: Eliminates `UndefVarError: @polyvar not defined in Main` across 150+ files
-- **Foundation Component**: Provides solid base for test framework enhancement (GitLab Issue #13)
-- **User Experience**: @polyvar now available directly after `using Globtim` - zero additional imports needed
-- **Error Prevention**: Comprehensive 4-layer solution covers all usage scenarios
-
-**Test Framework Progress**: Critical foundation component complete - @polyvar availability now guaranteed across entire codebase
-
-## 🚀 SCRIPT DISCOVERY SYSTEM BREAKTHROUGH ✅ (September 4, 2025) 
-**GitLab Issue #27 - Phase 1 Component**: ⭐ **FIRST MAJOR COMPONENT COMPLETE**
-
-### Implementation Achievement - PRODUCTION READY
-- ✅ **Core System Deployed**: `tools/hpc/validation/script_discovery.sh` - Complete multi-location search engine
-- ✅ **Seamless Integration**: Enhanced `hpc/experiments/robust_experiment_runner.sh` with zero breaking changes
-- ✅ **Comprehensive Testing**: All search patterns, error handling, and integration verified working
-- ✅ **Immediate Impact**: 95% reduction in script-not-found errors through intelligent search
-
-### Key Features Operational
-1. **Multi-Location Search Engine**: Searches 6 standard directories (Examples/, hpc/experiments/, test/, docs/, benchmark/, .)
-2. **Intelligent Pattern Matching**: Finds scripts with partial names (e.g., "4d" automatically finds all 4D-related experiments)
-3. **Absolute Path Resolution**: Converts any input format to validated absolute paths
-4. **Comprehensive Error Handling**: Clear error messages showing all searched locations when script not found
-5. **Seamless Integration**: Works with existing experiment runner without any workflow disruption
-
-### Usage Examples Now Operational
+**API Access:**
 ```bash
-# Exact match - works perfectly with full paths
-./hpc/experiments/robust_experiment_runner.sh test hpc_minimal_2d_example.jl
+# Get GitLab token
+export GITLAB_TOKEN="$(./tools/gitlab/get-token.sh)"
+export GITLAB_PROJECT_ID="2545"
 
-# Pattern matching - automatically finds related experiments  
-./hpc/experiments/robust_experiment_runner.sh benchmark 4d
-
-# Discovery system - list all available scripts across project
-./tools/hpc/validation/script_discovery.sh list
+# Use GitLab API
+./tools/gitlab/gitlab-api.sh list-issues
+./tools/gitlab/gitlab-api.sh update-issue <issue_id> --labels "priority:high,type:feature"
 ```
 
-### Impact on Experiment Reliability
-- **Primary Success**: Eliminates the most common experiment failure mode (script not found)
-- **Foundation Component**: Provides solid base for remaining Phase 1 validation components
-- **User Experience**: No additional complexity - works transparently with existing commands
-- **Error Prevention**: Catches file path issues in <1 second vs 30+ seconds of failed execution
+**Issue Management:**
+- **Project URL**: https://git.mpi-cbg.de/scholten/globtim/-/issues
+- **Visual Boards**: GitLab project boards with milestone tracking
+- **Automation**: project-task-updater agent handles automatic issue updates
 
-**Phase 1 Progress**: 50% complete - Two critical foundation components operational, remaining components: Enhanced Error Reporting, Pre-Execution Hook Integration
+**Key Issues:**
+- **#27**: Pre-Execution Validation System (50% complete)
+- **#28**: Advanced Workflow Automation (planned)
+- **#29**: AI-Driven Experiment Management (planned)
+- **#41**: Strategic Hook Integration (complete)
+- **#44**: Sparsification Study Framework (complete)
+- **#45**: GLMakie Extension Loading Failures (✅ CLOSED - All plotting functionality operational, valley walking validation complete)
+- **#47**: Momentum-Enhanced Valley Walking Algorithm (✅ NEW - Advanced Nesterov-style momentum optimization)
+- **#48**: Valley Walking Educational Materials (✅ NEW - Interactive notebooks and comprehensive examples)
+- **#49**: Valley Walking Performance Comparison (✅ NEW - Systematic algorithm benchmarking study)
+- **#50**: Advanced Interactive Visualization Features (✅ NEW - Enhanced GLMakie capabilities for mathematical algorithms)
 
-## 🔧 JULIA ENVIRONMENT VALIDATOR BREAKTHROUGH ✅ (September 4, 2025) 
-**GitLab Issue #27 - Phase 1 Component**: ⭐ **SECOND MAJOR COMPONENT COMPLETE**
+## 🔧 Git Configuration
 
-### Implementation Achievement - PRODUCTION READY
-- ✅ **Core System Deployed**: `tools/hpc/validation/package_validator.jl` - Comprehensive Julia package validation system
-- ✅ **Seamless Integration**: Enhanced `hpc/experiments/robust_experiment_runner.sh` with automatic package validation
-- ✅ **Comprehensive Testing**: All validation modes tested and verified working on r04n02
-- ✅ **Immediate Impact**: 90% reduction in dependency failures through pre-execution validation
+**SSH Key Setup:**
+- **HPC Access**: SSH keys configured for r04n02 compute node
+- **GitLab Integration**: SSH authentication for git.mpi-cbg.de
+- **Security**: Ed25519 keys with security hook validation
 
-### Key Features Operational
-1. **Multi-Mode Validation**: Quick, Full, and Critical-only validation modes for flexible depth control
-2. **8 Critical Packages Validated**: All core GlobTim dependencies (LinearAlgebra, DataFrames, StaticArrays, ForwardDiff, HomotopyContinuation, DynamicPolynomials, Optimization, CSV)
-3. **Detailed Error Reporting**: Clear diagnostic messages for dependency failures with actionable resolution guidance
-4. **Environment Health Checks**: Julia version, depot configuration, and package compatibility validation
-5. **Zero Breaking Changes**: Seamless integration with existing experiment workflow
-
-### Usage Examples Now Operational
+**Repository Access:**
 ```bash
-# Critical packages only - fastest validation (8 packages)
-./tools/hpc/validation/package_validator.jl --critical
-
-# Quick validation - essential packages with basic checks
-./tools/hpc/validation/package_validator.jl --quick
-
-# Full validation - comprehensive package and environment analysis
-./tools/hpc/validation/package_validator.jl --full
-
-# Integrated with experiment runner - automatic pre-execution validation
-./hpc/experiments/robust_experiment_runner.sh test Examples/hpc_minimal_2d_example.jl
-```
-
-### Impact on Experiment Reliability
-- **Primary Success**: Eliminates the second most common experiment failure mode (dependency issues)
-- **Combined Impact**: Together with Script Discovery System, prevents 95% of script errors + 90% of dependency failures
-- **User Experience**: Transparent validation with clear error messages when issues detected
-- **Error Prevention**: Catches package issues in <5 seconds vs 2-5 minutes of failed execution
-
-**Phase 1 Progress**: 50% complete (2/4 components) - Critical validation infrastructure operational, providing foundation for enhanced error reporting and hook integration
-
-## 🎉 HPC RESOURCE MONITOR HOOK COMPLETED ✅ (September 4, 2025)
-**GitLab Issue #26**: ✅ **FULLY IMPLEMENTED AND PRODUCTION READY**
-
-### Implementation Status - COMPLETED
-- ✅ **Core monitoring infrastructure**: `hpc_resource_monitor_hook.sh` deployed and operational
-- ✅ **Real-time dashboard**: Integrated with tmux for live experiment monitoring
-- ✅ **Resource collector**: Memory/CPU/disk monitoring confirmed working
-- ✅ **Experiment lifecycle tracking**: Complete experiment state management
-- ✅ **Claude Code hooks integration**: All agent integrations operational
-
-### Testing Results - VALIDATED
-- ✅ **2D test experiment**: Successfully completed using the monitoring system
-- ✅ **Monitoring dashboard**: Real-time updates confirmed functional on r04n02
-- ✅ **Resource tracking**: Memory, CPU, and disk monitoring operational
-- ✅ **Lifecycle management**: Experiment start/completion tracking validated
-
-**Production Status**: The HPC Resource Monitor Hook is now production-ready and operational, providing comprehensive monitoring infrastructure for all experiment management tasks.
-
-## 🚨 CRITICAL HPC EXECUTION ISSUES - MUST READ FIRST
-
-### 4D Experiment Package Activation Error (RESOLVED - September 3, 2025)
-**Problem**: `Package Globtim not found in current path` when running 4D experiments
-**Root Cause**: Temp scripts created by experiment runner use wrong directory for package activation
-**Original Code**: `Pkg.activate(dirname(dirname(@__DIR__)))` from temp script location resolves incorrectly
-**Solution**: Use environment variable instead: `Pkg.activate(get(ENV, "JULIA_PROJECT", "/home/scholten/globtim"))`
-**Prevention**: 
-- Always use JULIA_PROJECT environment variable for package activation in HPC scripts
-- Never use relative paths like `dirname(@__DIR__)` in dynamically generated temp scripts
-- Test package activation immediately after script generation
-
-### 4D Experiment Objective Function Access Error (RESOLVED - September 3, 2025)
-**Problem**: `MethodError: no method matching iterate(::typeof(parameter_estimation_objective))`
-**Root Cause**: Attempting to access `TR.objective` as if it contains evaluated values
-**Issue**: `TR.objective` contains the function itself, not function evaluations
-**Solution**: Remove attempts to access function values before Constructor processes them
-**Prevention**:
-- `TR.objective` is a Function, not data - never try to iterate or get min/max
-- Let Constructor handle all sampling and evaluation internally
-- Only access function values after Constructor creates polynomial approximation
-
-### Memory Management for Large Polynomial Problems (CRITICAL - September 3, 2025)
-**Problem**: OutOfMemoryError when running high-degree polynomial approximations in 4D+
-**Solution**: Always use `--heap-size-hint=50G` flag for Julia execution
-**Implementation**: Updated in `robust_experiment_runner.sh` line 62
-```bash
-julia --project=. --heap-size-hint=50G $experiment_script
-```
-**Why**: Degree 12 in 4D creates 28,561 basis functions → 2.3GB Vandermonde matrix
-
-### Common 4D Experiment Pitfalls (RESOLVED September 3, 2025)
-1. **Package Activation Path**: Use `Pkg.activate(dirname(dirname(@__DIR__)))` not `dirname(@__DIR__)`
-2. **Missing Dependencies**: Always ensure CSV, JSON, Statistics are in Project.toml
-3. **Field Access**: test_input has `.GN` not `.sample_pts` 
-4. **Git Sync**: ALWAYS pull on node after local changes
-5. **File Permissions**: Run `chmod +x` on scripts after git pull
-6. **CRITICAL: Never use /tmp anywhere**: Use `$GLOBTIM_DIR/hpc/experiments/temp/` instead (user requirement)
-
-**Full Documentation**: See `docs/hpc/4D_EXPERIMENT_LESSONS_LEARNED.md`
-
-### 4D Experiment Session Analysis (September 3, 2025)
-**Context**: Attempted to run 4D Lotka-Volterra parameter estimation experiments on r04n02
-**Result**: Successfully identified and resolved two critical bugs preventing experiment execution
-
-#### Bugs Discovered and Resolved:
-1. **Package Activation Bug**: 
-   - **Symptom**: "Package Globtim not found in current path"
-   - **Root Cause**: `dirname(dirname(@__DIR__))` from temp script resolved to wrong directory
-   - **Fix**: Use `get(ENV, "JULIA_PROJECT", "/home/scholten/globtim")`
-   - **Prevention**: Always use environment variables for package paths in generated scripts
-
-2. **Objective Function Access Bug**:
-   - **Symptom**: "MethodError: no method matching iterate(::typeof(parameter_estimation_objective))"
-   - **Root Cause**: Tried to access `TR.objective` as data instead of function
-   - **Fix**: Remove premature access, let Constructor handle sampling
-   - **Prevention**: Never try to iterate/min/max `TR.objective` - it's a Function type
-
-#### Experiment Output Analysis:
-- **5 experiment attempts** from 11:56 AM to 12:05 PM today
-- **All failed** due to package activation error
-- **First successful run** at 4:42 PM after fixes
-- **Current status**: 4D experiment running successfully with proper package management
-
-### 4D Experiment Bug Analysis (September 4, 2025)
-**Comprehensive Analysis**: Detailed review of 13 failed experiments revealed critical bug patterns:
-
-1. **Function Type Misunderstanding**: 
-   - Error: `iterate(::typeof(parameter_estimation_objective))`
-   - Pattern: Treating Function as data container
-   - Fix: Remove premature value access, let Constructor handle evaluation
-
-2. **Resource Monitoring Need Validated**: 
-   - 5+ hours lost to repeated failures
-   - GitLab Issue #26 (HPC Resource Monitor) priority elevated
-   - Real-world evidence for monitoring system necessity
-
-3. **Infrastructure Resilience Confirmed**:
-   - tmux framework handled all 13 submissions correctly  
-   - Julia environment stable throughout testing
-   - Package management and memory allocation working properly
-
-**Status**: Bug resolved, infrastructure validated, monitoring system justified through real-world evidence.
-
-## 🔒 SSH Security Framework Completion (September 4, 2025)
-**MILESTONE ACHIEVED**: Comprehensive SSH Security Hook System deployed and operational
-
-### Security System Components ✅ PRODUCTION READY
-- **✅ SSH Security Hook**: `tools/hpc/ssh-security-hook.sh` - Complete security validation and execution engine
-- **✅ Node Security Hook**: `tools/hpc/node-security-hook.sh` - HPC-specific security policies
-- **✅ Secure Node Access**: `tools/hpc/secure_node_config.py` - Python integration wrapper
-- **✅ Security Monitoring**: `tools/hpc/node_monitor.py` - Advanced monitoring with security integration
-
-### Security Validations Completed (8/8)
-1. **✅ SSH Protocol Security**: OpenSSH_9.9p2 with Ed25519 authentication validated
-2. **✅ Connection Testing**: Successful r04n02 connectivity with <1s response time
-3. **✅ Command Execution**: Secure remote command execution verified with audit trail
-4. **✅ Threat Detection**: Dangerous command patterns detected and blocked correctly
-5. **✅ Host Authorization**: Unauthorized hosts properly blocked with security logging
-6. **✅ Session Monitoring**: Complete audit trail operational with JSON logging
-7. **✅ Dashboard Integration**: Real-time monitoring dashboard functional
-8. **✅ Agent Integration**: All Claude Code agents configured for secure framework use
-
-### Performance Metrics Validated
-- **Security Validation Time**: <1 second for complete security check
-- **Connection Overhead**: ~100ms additional latency for security validation
-- **Monitoring Efficiency**: Real-time dashboard with historical tracking
-- **Audit Completeness**: 100% of SSH sessions logged with structured metadata
-
-### Claude Code Agent Integration Status
-- **✅ hpc-cluster-operator**: Production ready - All cluster operations secured
-- **🔧 project-task-updater**: Integration required for HPC status validation
-- **🧪 julia-test-architect**: Conditional integration for HPC-based testing
-- **📚 julia-documenter-expert**: Optional integration for HPC documentation builds
-- **🔍 julia-repo-guardian**: Minimal integration for cross-environment validation
-
-**Documentation**: Complete security framework documentation in `docs/hpc/SSH_SECURITY_SYSTEM_DOCUMENTATION.md` and agent integration guide in `tools/gitlab/agent_ssh_security_integration_guide.md`
-
-**Next Phase**: HPC Resource Monitor Hook implementation using secure SSH foundation (GitLab Issue #26)
-
-## 📋 GitLab Visual Project Management Implementation Complete (September 4, 2025)
-**MILESTONE ACHIEVED**: Phase 2 GitLab Visual Project Management Infrastructure Deployed and Operational
-
-### Strategic Project Management Framework ✅ PRODUCTION READY
-- **✅ 8 Strategic Issues Created**: All high-level issues from ESSENTIAL_GITLAB_ISSUES.md deployed to GitLab
-- **✅ Comprehensive Label System**: 95 labels across priority, type, epic, and status dimensions 
-- **✅ Timeline-Based Milestones**: 4 strategic milestones with clear due dates and issue assignments
-- **✅ Project Board Infrastructure**: Development board operational for visual workflow management
-- **✅ GitLab API Integration**: Complete CRUD operations tested and validated
-
-### Strategic Issue Assignment Status (8/8 Complete)
-1. **✅ Agent Configuration Review (#8)**: Assigned to Immediate Priority milestone (Due: Sept 18, 2025)
-2. **✅ GitLab Visual Project Management (#9)**: Assigned to Immediate Priority milestone - Phase 2 COMPLETE
-3. **✅ Mathematical Algorithm Review (#10)**: Assigned to Short Term milestone (Due: Oct 4, 2025) 
-4. **✅ HPC Performance Optimization (#11)**: Assigned to Short Term milestone (Due: Oct 4, 2025)
-5. **✅ Parameter Tracking Infrastructure (#12)**: Assigned to Medium Term milestone (Due: Dec 4, 2025)
-6. **✅ Test Suite Enhancement (#13)**: Assigned to Medium Term milestone (Due: Dec 4, 2025)
-7. **✅ Documentation Modernization (#14)**: Assigned to Long Term milestone (Ongoing)
-8. **✅ Repository Maintenance (#15)**: Assigned to Long Term milestone (Ongoing)
-
-### Implementation Metrics Achieved
-- **Strategic Framework**: 8/8 strategic issues created and properly categorized
-- **Label System**: 95 comprehensive labels operational (priority, type, epic, status)
-- **Milestone System**: 4 timeline-based milestones with balanced workload distribution
-- **Project Boards**: 1 operational development board with GitLab web interface integration
-- **API Integration**: Complete GitLab API access configured and validated
-
-**Project Access**: https://git.mpi-cbg.de/scholten/globtim/-/issues
-**Documentation**: Complete implementation status in `docs/project-management/GITLAB_VISUAL_MANAGEMENT_STATUS.md`
-
-**Next Phase**: Agent Configuration Review validation and Mathematical Algorithm Correctness Review initiation
-
-## 🚨 CRITICAL TEST ENVIRONMENT ISSUES - MUST READ FIRST
-
-### Julia Test Environment Configuration (RESOLVED September 2, 2025)
-**Problem**: `Pkg.test()` was using old registered Globtim v0.1.3 instead of local development version
-**Root Cause**: test/Project.toml included Globtim as a dependency, causing Julia to fetch from registry
-**Solution**: 
-1. Remove `Globtim = "00da9514-6261-47e9-8848-33640cb1e528"` from test/Project.toml
-2. Remove test/Manifest.toml to force regeneration
-3. Clear any cached packages: `rm -rf ~/.julia/packages/Globtim ~/.julia/compiled/v1.11/Globtim`
-4. Now `Pkg.test()` correctly uses local version: `Globtim v1.1.2 ~/globtim`
-
-### Conda Environment Interference (RESOLVED September 2, 2025)
-**Problem**: Conda environment causes binary incompatibilities with Julia packages
-**Symptoms**: 
-- LinearSolve/Sparspak precompilation errors
-- "TypeError: in new, expected Union{}, got a value of type SparseArrays.SparseMatrixCSC"
-**Solution**:
-1. Run Julia without conda: Use `julia-clean` or `julia-globtim` aliases
-2. Aliases added to both .zshrc and .bash_profile for shell compatibility
-3. Clear precompilation cache when switching environments
-4. Created start_julia.sh script for clean Julia execution
-
-### Test Syntax Fixes ✅ FULLY RESOLVED (September 4, 2025)
-**GitLab Issue #18**: test_aqua.jl had invalid @test macro syntax - **CLOSED**
-**Status**: ✅ **PRODUCTION READY** - All syntax issues resolved and validated
-**Fixed**:
-- Removed string messages from @test macros (Julia's Test.jl doesn't support inline messages)
-- Fixed runtests.jl: Removed `tolerance = nothing` to use default value
-- Fixed test_aqua.jl: Removed call to non-existent `test_project_toml_formatting` function
-- Core tests now pass successfully
-**Validation Results (September 4, 2025)**:
-- ✅ All 55 Aqua.jl tests pass successfully
-- ✅ Test environment properly configured with Aqua.jl v0.8.14
-- ✅ No syntax errors detected in current test_aqua.jl file
-- ✅ Comprehensive quality assurance validation operational
-
-### Aqua Quality Issues (FULLY RESOLVED - September 2, 2025)
-**All code quality issues resolved**:
-1. ✅ **Undefined exports** - 13 valley-related symbols commented out (commit 8ab8ccb)
-2. ✅ **Stale dependency** - Aqua removed from main deps, kept in test deps (commit 8ab8ccb)
-3. ✅ **Export count** - Reduced from 258 to 164 exports by making internal functions non-public
-
-## 🚨 CRITICAL HPC KNOWLEDGE - READ FIRST FOR ALL CLUSTER TASKS
-
-### Direct r04n02 Compute Node Access (CURRENT APPROACH)
-**Direct SSH access to r04n02 compute node with full capabilities**
-
-**Connection**: 
-```bash
-ssh scholten@r04n02
-```
-
-**Key Capabilities**:
-- **Direct Git Access**: Clone repositories directly on compute node
-- **Native Julia Packages**: Use Pkg.add() without bundling complexity
-- **Internet Access**: Full connectivity for package downloads
-- **Repository Location**: `/home/scholten/globtim` (permanent, NOT /tmp)
-- **Julia version**: 1.11.6 (via juliaup at ~/.juliaup/bin/julia, no module system)
-- **Architecture**: x86_64 Linux
-- **Execution Framework**: tmux for persistent sessions (no SLURM needed for single-user r04n02)
-
-### Package Loading Reality Check ✅ FINAL STATUS Aug 29, 2025
-- **Success rate**: ~90% of packages now work with native installation (improved from ~50%)
-- **Always working**: LinearAlgebra, DataFrames, StaticArrays, Test
-- **NOW WORKING**: ✅ **ForwardDiff, HomotopyContinuation, DynamicPolynomials** (via native installation)
-- **All 11 critical packages verified**: Complete GlobTim dependency chain operational
-- **Sometimes failing**: CSV (depending on bundle approach)
-- **Strategies**: Native installation (primary and recommended) or Bundle approach with Manifest.toml (fallback)
-
-**MILESTONE ACHIEVED:** Architecture compatibility challenges between macOS development and x86_64 Linux cluster deployment have been completely resolved.
-
-## 🎉 BREAKTHROUGH: HomotopyContinuation FULLY WORKING ✅ COMPLETED
-**Date Achieved:** August 29, 2025 - Job ID 59816729  
-**Status:** ✅ **ARCHITECTURE COMPATIBILITY ISSUES FULLY RESOLVED**
-
-### Native Installation Success - PRODUCTION READY
-- ✅ **HomotopyContinuation v2.15.0** installed and functional on x86_64 Linux cluster
-- ✅ **ForwardDiff v0.10.38** installed and functional  
-- ✅ **203 packages** successfully installed with correct x86_64 artifacts
-- ✅ **All binary artifacts** (OpenBLAS32_jll, OpenSpecFun_jll) working correctly
-- ✅ **Polynomial system solving** verified and tested on cluster
-- ✅ **11 critical packages** confirmed working on cluster (August 29, 2025)
-- ✅ **GlobTim package** now production-ready for HPC deployment
-
-**Key Breakthrough:** Native installation on cluster eliminates all cross-platform issues between macOS development and Linux deployment.
-
-**Project Status Update:** Repository has been comprehensively cleaned up with 25+ obsolete scripts removed and all changes committed to GitLab (commit ad76b40).
-
-### Current HPC Solution
-
-**Direct r04n02 Compute Node Access**
-- Native Julia package installation via Pkg.add()
-- Direct GitLab repository cloning on compute node  
-- Full native environment (203+ packages working)
-- Repository location: `/home/scholten/globtim` (permanent storage)
-- Simplified deployment without bundling complexity
-- Tmux-based persistent execution framework (no SLURM needed)
-
-**Documentation:** 
-- Infrastructure: `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
-- Execution Framework: `docs/hpc/ROBUST_WORKFLOW_GUIDE.md`
-
-## HPC Execution Framework Status
-
-### ✅ NEW FRAMEWORK: Tmux-Based Persistent Execution (CURRENT)
-**Date Implemented:** September 2, 2025  
-**Status:** PRODUCTION READY - Optimized for single-user r04n02 node
-
-The GlobTim HPC deployment now uses **tmux for persistent execution** without SLURM overhead, perfectly suited for single-user compute node access.
-
-**Current Working Configuration:**
-```bash
-# Connect to r04n02
+# HPC repository location (permanent)
 ssh scholten@r04n02
 cd /home/scholten/globtim
 
-# Julia is in PATH via juliaup (no module needed)
-
-# Start experiment in tmux session (automated)
-./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12
-
-# Monitor progress
-./hpc/monitoring/tmux_monitor.sh
-
-# Attach to running session
-tmux attach -t globtim_*
+# Local development
+git remote get-url origin  # git.mpi-cbg.de/scholten/globtim.git
 ```
 
-**Framework Features (September 2, 2025):**
-- ✅ **Persistent execution**: Survives SSH disconnection via tmux
-- ✅ **Automated management**: robust_experiment_runner.sh handles sessions
-- ✅ **Checkpointing**: Julia-based experiment_manager.jl for recovery
-- ✅ **Live monitoring**: tmux_monitor.sh tracks tmux sessions
-- ✅ **Remote initiation**: Can start experiments via hpc-cluster-operator agent
-- ✅ **No SLURM overhead**: Direct execution without scheduling delays
-- ✅ **Integrated monitoring**: tmux_monitor.sh tracks sessions and Julia processes
-- ✅ **Repository location**: `/home/scholten/globtim` (NOT /tmp, permanent storage)
+**Branch Management:**
+- **Main Branch**: `main` (development)
+- **Clean Version**: `clean-version` (for PRs)
+- **SSH Authentication**: Automatic via configured keys
 
-## HPC Compilation Approaches
+## 🔥 Critical HPC Knowledge
 
-## Current Test Execution Status
-
-### ⚠️ PARTIAL: Original @test Suite Execution  
-**Status:** Limited due to package dependency failures
-
-**What's Currently Running:**
-- ✅ Embedded test suite (comprehensive mathematical functionality)
-- ✅ Core package tests (LinearAlgebra, DataFrames, StaticArrays)
-- ✅ Manual implementations (finite differences, polynomial evaluation)
-- ❌ Original `/test/runtests.jl` suite (fails due to ForwardDiff/HomotopyContinuation dependencies)
-
-**Package Dependency Status (Updated Aug 29, 2025):**
-- ForwardDiff: ✅ **NOW WORKING** (via native installation)
-- HomotopyContinuation: ✅ **NOW WORKING** (via native installation)  
-- DynamicPolynomials: ✅ **NOW WORKING** (via native installation)
-- CSV: ⚠️ Sometimes fails (bundle-dependent)
-
-**Updated Recommendation:** The native installation approach resolves most package compatibility issues. Original test suite execution is now achievable with the correct installation method.
-
-### 🎯 CURRENT APPROACH: Native Installation + Full Package Support
-**Date Updated:** August 29, 2025  
-**Status:** ✅ **Full external package support achieved**
-
-**Why Native Installation is Superior:**
-1. **Complete Compatibility**: All packages work with correct architecture
-2. **No Workarounds Needed**: Original test suites can run unmodified  
-3. **Maintainability**: Standard Julia package ecosystem, no custom fallbacks
-4. **Performance**: Optimized precompilation for target architecture
-5. **Future-Proof**: Handles new package dependencies automatically
-
-**Fallback**: Embedded alternatives available if needed, but no longer required for most packages.
-
-**Coverage Comparison:**
-| Test Category | Original @test | Current Embedded | Status |
-|---------------|----------------|------------------|---------|
-| Linear Algebra | ✅ | ✅ | Equivalent |
-| Differentiation | ForwardDiff | Manual finite diff | ✅ Functional |
-| Optimization | External packages | Manual gradient descent | ✅ Functional |
-| Polynomials | DynamicPolynomials | Manual evaluation | ✅ Functional |
-| Benchmark Functions | External deps | Embedded functions | ✅ Equivalent |
-
-### ✅ CORRECT APPROACH: Proper Package Management
-
-GlobTim must be compiled with its full dependency chain using one of these methods:
-
-1. **Offline Bundle Creation** (for air-gapped clusters):
-   - Create a complete Julia depot locally with all dependencies
-   - Transfer the depot bundle to the HPC cluster
-   - Use the offline depot for compilation
-
-2. **Direct Package Installation** (if cluster has internet):
-   - Use `Pkg.instantiate()` to install all dependencies
-   - Ensure proper JULIA_DEPOT_PATH configuration
-   - Handle precompilation appropriately
-
-3. **Container-Based Deployment**:
-   - Use Singularity/Apptainer containers with pre-installed dependencies
-   - Ensures reproducible environment across different HPC systems
-
-## Key Lessons Learned & Major Accomplishments
-
-### Technical Breakthroughs Achieved:
-- ✅ **FULLY RESOLVED:** Architecture compatibility issues between macOS development and x86_64 Linux cluster
-- ✅ **PRODUCTION READY:** GlobTim package now fully operational on HPC cluster
-- ✅ **NATIVE INSTALLATION SUCCESS:** 203 packages with correct binary artifacts working on cluster
-- ✅ **COMPREHENSIVE CLEANUP:** Repository streamlined with 60+ obsolete files removed (Phase 3 complete)
-- ✅ **DOCUMENTATION COMPLETE:** docs/hpc/HPC_BUNDLE_SOLUTIONS.md and docs/hpc/HOMOTOPY_SOLUTION_SUMMARY.md created
-- ✅ **PACKAGE SUCCESS RATE:** Improved from ~50% to ~90% with native installation approach
-- ✅ **TEST SUITE EXCELLENCE:** All 64 convenience method tests now passing, 1D scalar function handling fixed
-- ✅ **REPOSITORY HEALTH:** .gitignore enhanced, clutter eliminated, excellent maintainability achieved
-
-### Core Technical Principles:
-- Always verify that external dependencies are available and loadable
-- Test actual GlobTim functionality, not just basic Julia operations
-- Document dependency requirements clearly in Project.toml
-- Use proper package management even if it's more complex to set up initially
-- Native cluster installation eliminates cross-platform compilation issues
-- **NEVER use /tmp**: Work in `$GLOBTIM_DIR/hpc/experiments/temp/` for temp files (user requirement)
-
-**PROJECT STATUS UPDATE (September 1, 2025):** All major HPC deployment and repository hygiene challenges have been resolved. The GlobTim package is production-ready for cluster deployment with 624 passing tests on r04n02. **Phase 4 visual project management implementation is now underway with 1,168 tasks extracted and classified.**
-
-**PHASE COMPLETION STATUS:**
-- Phase 1: HPC Infrastructure ✅ COMPLETED
-- Phase 2: Julia Environment ✅ COMPLETED  
-- Phase 3: Repository Hygiene ✅ COMPLETED
-- Phase 4: Advanced Project Management & Mathematical Refinement 🔄 **ACTIVE PROGRESS** 
-  - ✅ **Task Extraction Milestone**: 1,168 tasks extracted and classified (September 1, 2025)
-  - 🔄 **GitLab Visual Tracking**: Integration with project boards and milestone system in progress
-  - ✅ **Agent Configuration Review**: GitLab issue FULLY COMPLETED - Comprehensive agent optimization with 5 agents refactored (September 2, 2025)
-  - ⏳ **Mathematical Algorithm Review**: Deep analysis planned for mathematical correctness validation
-
-**FOCUS EVOLUTION:** Successfully transitioned from infrastructure foundation (COMPLETE) to advanced project management systems and mathematical excellence (ACTIVE DEVELOPMENT).
-
-## 🚀 HPC Execution Framework - PRODUCTION READY
-
-### Comprehensive Remote Experiment Management
-- ✅ **Direct Node Execution**: Fully automated remote experiment start via SSH
-- ✅ **Live Monitoring**: Integrated `live_monitor.sh` for real-time experiment tracking
-- ✅ **Checkpointing**: `experiment_manager.jl` enables robust experiment state management
-- ✅ **4D Model Workflow**: Seamless execution and monitoring on r04n02
-- ✅ **tmux-Based Framework**: Replaces legacy SLURM job submission
-- ✅ **Workflow Flexibility**: Supports single-user and multi-experiment scenarios
-
-**Key Capabilities:**
-1. Start experiments remotely with single SSH command
-2. Real-time monitoring of computational progress
-3. Automatic checkpointing and state recovery
-4. Simplified workflow without complex job scheduling
-5. Full compatibility with native Julia package ecosystem
-
-## 🚀 BREAKTHROUGH: HPC Infrastructure Modernization ✅ COMPLETED
-**Date Achieved:** September 1, 2025  
-**Status:** ✅ **DIRECT r04n02 COMPUTE NODE ACCESS OPERATIONAL**
-
-### Infrastructure Migration Success - PRODUCTION READY  
-- ✅ **Direct SSH Access**: r04n02 compute node connection established and verified
-- ✅ **GitLab Integration**: SSH keys configured, full Git operations working on compute node
-- ✅ **Repository Access**: GlobTim repository successfully cloned at `/home/scholten/globtim/` with full branch access
-- ✅ **Security Hardened**: SSH key authentication, workspace isolation, resource constraints implemented
-- ✅ **HPC Agent Modernized**: Updated `.claude/agents/hpc-cluster-operator.md` for dual workflow support
-- ✅ **Migration Planning**: Comprehensive migration plan documented in `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
-
-**Key Infrastructure Advantages Achieved:**
-1. **NFS Constraints Eliminated**: No 1GB home directory quota limitation
-2. **Direct Git Operations**: Clone repositories directly on compute node
-3. **Native Package Management**: Use Julia Pkg.add() without complex bundling
-4. **Simplified Deployment**: Streamlined workflow replacing complex file transfers
-5. **Enhanced Security**: Modern security practices with SSH keys and workspace isolation
-
-**Project Status Update:** Legacy NFS-constrained workflow superseded by modern direct node access approach.
-
-**Phase 2 Complete - Major Validation Success (September 1, 2025):**
-- ✅ **GlobTim Compilation**: Successfully compiled with native package management
-- ✅ **Native Julia Environment**: 203+ packages installed including HomotopyContinuation v2.15.0
-- ✅ **Test Suite Validation**: 624 passing tests across core mathematical operations
-- ✅ **HomotopyContinuation**: Fully operational for polynomial system solving
-- ✅ **ForwardDiff**: Complete automatic differentiation functionality (30/30 tests passed)
-- ✅ **UUIDs Version Fix**: Resolved compatibility issue with Julia 1.11.6 sysimage
-
-**Phase 3 Complete - Repository Hygiene Success (September 1, 2025):**
-✅ **REPOSITORY CLEANUP COMPLETED** - 60+ obsolete files removed, repository health excellent
-✅ **TEST SUITE FIXED** - All 64 convenience method tests now pass (fixed 1D scalar function handling)
-✅ **ISSUE CLASSIFICATION COMPLETE** - Infrastructure work complete, focus on mathematical core
-
-**CURRENT PRIORITY TASKS (Phase 4 - Advanced Project Management & Mathematical Refinement):**
-
-**🎉 RECENT MILESTONE: GitLab Integration Complete (September 1, 2025)**
-- ✅ **Secure GitLab API Configuration**: Automated token management without manual copy/pasting
-- ✅ **8 Strategic Issues Created**: High-level project tracking instead of 1,168 granular tasks
-- ✅ **Production Ready Integration**: All GitLab operations now fully automated and secure
-- ✅ **Issue Tracking Active**: GitLab project boards ready for visual project management
-
-**📋 IMPORTANT: Project Terminology**
-- **"Issue"** = GitLab issue in the project management system (not a problem/bug)
-- When discussing "an issue" or "the issue", this refers to tracked GitLab project management items
-- GitLab issues are used for features, tasks, improvements, and bug tracking
-
-## 🔐 GitLab API Access Configuration
-
-### Token Retrieval and Usage
-**Status:** Configured and operational (December 2024)
-
-**Getting the GitLab Token:**
+**r04n02 Direct Access:**
 ```bash
-# The token is stored securely and can be retrieved with:
-./tools/gitlab/get-token.sh
-# This outputs: yjKZNqzG2TkLzXyU8Q9R
+# Connect to compute node
+ssh scholten@r04n02
+cd /home/scholten/globtim
+
+# Julia available via juliaup (no modules needed)
+julia --project=. --heap-size-hint=50G
 ```
 
-**Using the GitLab API:**
-```bash
-# Set the token as environment variable
-export GITLAB_TOKEN="$(./tools/gitlab/get-token.sh)"
+**Package Management:**
+- **Native Installation**: All 203+ packages working via Pkg.add()
+- **Critical Packages**: HomotopyContinuation, ForwardDiff, DynamicPolynomials all operational
+- **Architecture**: x86_64 Linux with correct binary artifacts
 
-# Project ID for globtim
-export GITLAB_PROJECT_ID="2545"
+**Execution Framework:**
+- **tmux Sessions**: Persistent execution via robust_experiment_runner.sh
+- **Resource Monitoring**: Live tracking via HPC Resource Monitor Hook
+- **No SLURM**: Direct execution without scheduling overhead
 
-# List issues
-curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-  "https://git.mpi-cbg.de/api/v4/projects/$GITLAB_PROJECT_ID/issues?state=opened"
 
-# Update issue labels  
-curl --request PUT \
-  --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-  --header "Content-Type: application/json" \
-  --data '{"labels": ["priority:high", "type:feature"]}' \
-  "https://git.mpi-cbg.de/api/v4/projects/$GITLAB_PROJECT_ID/issues/<issue_iid>"
-```
+## 📚 Documentation References
 
-**Available Scripts:**
-- `tools/gitlab/get-token.sh` - Retrieves the stored GitLab token
-- `tools/gitlab/gitlab-api.sh` - Wrapper for GitLab API calls  
-- `tools/gitlab/setup-secure-config.sh` - Initial token setup (interactive)
-
-**Task Distribution Analysis:**
-- **Total Tasks**: 1,168 across 7 epics (mathematical-core, performance, test-framework, etc.)
-- **Status Breakdown**: 1,033 not started, 113 completed, 21 in progress, 1 cancelled
-- **Priority Distribution**: 28 Critical, 18 High, 1,064 Medium, 58 Low priority tasks
-- **Epic Categories**: Comprehensive coverage across mathematical core, HPC deployment, performance, testing, and visualization
-
-**Active Priorities:**
-1. **📈 HIGH PRIORITY: GitLab Visual Project Management** - Deploy extracted tasks to GitLab boards and milestone system ✅ COMPLETED
-2. **🔬 Mathematical Algorithm Review** - Deep dive into homotopy continuation mathematical correctness
-3. **🎯 Optimization Algorithm Refinement** - Improve numerical stability and convergence properties  
-4. **📊 Performance Benchmarking** - Comprehensive performance analysis across different problem types
-5. **🖥️ HPC Resource Monitor Hook** - GitLab Issue #26 - Implement comprehensive HPC resource monitoring system for experiment management (CREATED September 4, 2025)
-6. **📋 SLURM Infrastructure** - Create direct node job scheduling templates (lower priority)
-7. **📁 Example Architecture** - Organize GlobTim example management system (lower priority)
-
-## 📚 HPC Documentation References - COMPLETE SOLUTION SET
-- **`docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`** - Current infrastructure migration to direct r04n02 access ✅ OPERATIONAL
-- **`docs/hpc/HOMOTOPY_SOLUTION_SUMMARY.md`** - Technical analysis of HomotopyContinuation deployment approaches ✅ CREATED
-- **`docs/hpc/HPC_BUNDLE_SOLUTIONS.md`** - Historical bundle creation solutions (legacy) ✅ ARCHIVED
-- **Legacy Scripts** - Bundle-based deployment scripts removed as part of infrastructure modernization
-
-### Repository Status (September 1, 2025):
-**✅ HPC INFRASTRUCTURE PHASE COMPLETE:**
-- ✅ **Infrastructure Modernized**: Direct r04n02 compute node access operational
-- ✅ **Security Implemented**: SSH keys, workspace isolation, resource constraints configured
-- ✅ **Git Integration**: Full GitLab connectivity established on compute node
-- ✅ **Agent Updated**: HPC cluster operator agent modernized for dual workflow support
-- ✅ **Mathematical Validation**: 624 passing tests confirming core functionality
-
-**📈 CURRENT PRIORITY: Advanced Project Management & Mathematical Excellence**
-✅ **Repository Hygiene Complete**: 60+ clutter files removed, .gitignore enhanced, excellent repository health achieved
-✅ **Test Suite Excellence**: All 64 convenience method tests passing, scalar function handling fixed
-✅ **Infrastructure Work Complete**: All HPC deployment challenges resolved, focus shifted to mathematical core
-🔄 **NEW FOCUS**: Advanced GitLab visual tracking features and mathematical algorithm refinement
+**For detailed information, see:**
+- **HPC Infrastructure**: `docs/hpc/HPC_DIRECT_NODE_MIGRATION_PLAN.md`
+- **Hook Integration**: `docs/hpc/HOOK_INTEGRATION_GUIDE.md` 
+- **GitLab Management**: `docs/project-management/GITLAB_VISUAL_MANAGEMENT_STATUS.md`
+- **Security Framework**: `docs/hpc/SSH_SECURITY_SYSTEM_DOCUMENTATION.md`
+- **Historical Milestones**: `docs/project-management/MILESTONE_HISTORY.md`

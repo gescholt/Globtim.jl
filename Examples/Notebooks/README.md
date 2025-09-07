@@ -53,3 +53,11 @@ To run these notebooks:
 - Notebooks with `_msolve` suffix demonstrate using the Msolve solver for exact polynomial system solving
 - All notebooks assume Globtim.jl is already installed
 - Some notebooks may generate output files (PDFs, PNGs) which are excluded from version control
+
+### Plotting Functions
+
+For notebooks using plotting functionality (especially Deuflhard.ipynb):
+
+- **CairoMakie plotting functions** require module prefix: `Globtim.cairo_plot_polyapprox_levelset()`
+- Load CairoMakie first: `using CairoMakie; CairoMakie.activate!()`
+- The function generates contour plots with critical points and minimizers
