@@ -150,8 +150,8 @@ export to_exact_monomial_basis, sparsify_polynomial, exact_polynomial_coefficien
 # export compute_l2_norm_vandermonde, compute_l2_norm_coeffs
 # export compute_approximation_error,
 #     analyze_sparsification_tradeoff, analyze_approximation_error_tradeoff
-# export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
-# export truncate_polynomial_adaptive, analyze_coefficient_distribution
+export truncate_polynomial, monomial_l2_contributions, analyze_truncation_impact
+export truncate_polynomial_adaptive, analyze_coefficient_distribution
 export BoxDomain,
     AbstractDomain, compute_l2_norm, verify_truncation_quality, integrate_monomial
 
