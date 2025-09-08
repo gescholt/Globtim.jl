@@ -9,7 +9,8 @@ Globtim plotting functions are divided into two categories based on their backen
 These functions require `CairoMakie.activate!()`:
 
 ### Core 2D Plotting Functions
-- `cairo_plot_polyapprox_levelset()` - 2D contour plots with critical points
+- `cairo_plot_polyapprox_levelset()` - 2D contour plots with critical points and minimizers
+  - **Important**: Must be called with module prefix: `Globtim.cairo_plot_polyapprox_levelset()`
 - `plot_discrete_l2()` - L2 norm plots
 - `plot_convergence_analysis()` - Convergence analysis plots
 - `capture_histogram()` - Histogram of captured vs uncaptured points
@@ -57,10 +58,10 @@ These functions require `GLMakie.activate!()`:
 
 ## Usage Pattern
 ```julia
-# For static 2D plots
+# For static 2D plots (e.g., Deuflhard notebook)
 using CairoMakie
 CairoMakie.activate!()
-fig = cairo_plot_polyapprox_levelset(...)
+fig = Globtim.cairo_plot_polyapprox_levelset(...)  # Note: module prefix required
 # save("output.pdf", fig)
 
 # For 3D/interactive plots

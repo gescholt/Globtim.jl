@@ -67,14 +67,50 @@ log_performance() {
 collect_node_metrics() {
     local metrics_file="$PERFORMANCE_DIR/node_metrics_$(date +%Y%m%d_%H%M%S).json"
     
-    # Memory metrics
-    local memory_info=$(free -m)
-    local total_mem=$(echo "$memory_info" | awk 'NR==2{print $2}')
-    local used_mem=$(echo "$memory_info" | awk 'NR==2{print $3}')
-    local memory_percent=$(( (used_mem * 100) / total_mem ))
+    # Memory metrics - Support both Linux (HPC) and macOS (local)
+    local memory_percent=0
+    local total_mem=0
+    local used_mem=0
     
-    # CPU metrics
-    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+    if command -v free >/dev/null 2>&1; then
+        # Linux system (HPC environment)
+        local memory_info=$(free -m)
+        total_mem=$(echo "$memory_info" | awk 'NR==2{print $2}')
+        used_mem=$(echo "$memory_info" | awk 'NR==2{print $3}')
+        memory_percent=$(( (used_mem * 100) / total_mem ))
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS system (local development)
+        local mem_info=$(vm_stat)
+        local page_size=$(vm_stat | grep -o '[0-9]*' | head -1)
+        local free_pages=$(echo "$mem_info" | grep "Pages free" | grep -o '[0-9]*')
+        local inactive_pages=$(echo "$mem_info" | grep "Pages inactive" | grep -o '[0-9]*')
+        local speculative_pages=$(echo "$mem_info" | grep "Pages speculative" | grep -o '[0-9]*')
+        local wired_pages=$(echo "$mem_info" | grep "Pages wired down" | grep -o '[0-9]*')
+        local active_pages=$(echo "$mem_info" | grep "Pages active" | grep -o '[0-9]*')
+        
+        if [[ -n "$page_size" && -n "$free_pages" && -n "$wired_pages" && -n "$active_pages" ]]; then
+            total_mem=$(( (free_pages + inactive_pages + speculative_pages + wired_pages + active_pages) * page_size / 1024 / 1024 ))
+            used_mem=$(( (wired_pages + active_pages) * page_size / 1024 / 1024 ))
+            if [[ $total_mem -gt 0 ]]; then
+                memory_percent=$(( (used_mem * 100) / total_mem ))
+            fi
+        fi
+    fi
+    
+    # CPU metrics - Support both Linux (HPC) and macOS (local)
+    local cpu_usage="0"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS system - use iostat for CPU usage
+        cpu_usage=$(iostat -c 1 | tail -1 | awk '{print $3}' | head -1 || echo "0")
+    else
+        # Linux system (HPC environment)
+        cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}' || echo "0")
+    fi
+    
+    # Ensure cpu_usage is a valid number
+    if ! [[ "$cpu_usage" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+        cpu_usage="0"
+    fi
     
     # Disk usage (home directory)
     local disk_usage=$(df -h ~ | tail -1 | awk '{print $5}' | sed 's/%//')
@@ -242,11 +278,17 @@ create_performance_dashboard() {
 EOF
     
     if [ -f "$latest_metrics" ]; then
-        # Parse JSON and create dashboard content
-        local memory_percent=$(cat "$latest_metrics" | grep -o '"usage_percent": [0-9]*' | cut -d: -f2 | tr -d ' ')
-        local cpu_usage=$(cat "$latest_metrics" | grep -o '"usage_percent": [0-9.]*' | tail -1 | cut -d: -f2 | tr -d ' ')
+        # Parse JSON and create dashboard content - handle decimal values properly
+        local memory_percent=$(cat "$latest_metrics" | grep -o '"usage_percent": [0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
+        local cpu_usage=$(cat "$latest_metrics" | grep -o '"usage_percent": [0-9.]*' | tail -1 | cut -d: -f2 | tr -d ' ' | cut -d. -f1)
         local julia_count=$(cat "$latest_metrics" | grep -o '"julia_count": [0-9]*' | cut -d: -f2 | tr -d ' ')
         local tmux_count=$(cat "$latest_metrics" | grep -o '"tmux_sessions": [0-9]*' | cut -d: -f2 | tr -d ' ')
+        
+        # Set defaults if parsing failed
+        memory_percent=${memory_percent:-0}
+        cpu_usage=${cpu_usage:-0}
+        julia_count=${julia_count:-0}
+        tmux_count=${tmux_count:-0}
         
         # Determine alert levels
         local memory_class="alert-ok"
@@ -258,9 +300,9 @@ EOF
             memory_class="alert-medium"
         fi
         
-        if (( $(echo "$cpu_usage > $CPU_THRESHOLD" | bc -l) )); then
+        if (( cpu_usage > CPU_THRESHOLD )); then
             cpu_class="alert-high"
-        elif (( $(echo "$cpu_usage > 70" | bc -l) )); then
+        elif (( cpu_usage > 70 )); then
             cpu_class="alert-medium"
         fi
         

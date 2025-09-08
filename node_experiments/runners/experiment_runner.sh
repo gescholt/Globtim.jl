@@ -63,6 +63,14 @@ function start_experiment() {
         echo 'Heap Size: $heap_size'
         echo '========================================='
         
+        # Issue #53 Fix: Ensure all package dependencies are instantiated
+        echo 'Instantiating package dependencies (Issue #53 fix)...'
+        julia --project=. -e 'using Pkg; Pkg.instantiate()' || {
+            echo 'ERROR: Pkg.instantiate() failed - dependencies not properly installed'
+            exit 1
+        }
+        echo '✅ Package dependencies instantiated successfully'
+        
         # Run the actual experiment with specified heap size
         julia --project=. --heap-size-hint=$heap_size $experiment_script \$LOG_DIR
         
