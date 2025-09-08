@@ -203,10 +203,12 @@ function start_experiment() {
     
     # Check if orchestrator is available
     if [[ -x "$HOOK_ORCHESTRATOR" ]]; then
-        return start_experiment_orchestrated "$experiment_script" "$session_name" "$context"
+        start_experiment_orchestrated "$experiment_script" "$session_name" "$context"
+        return $?
     else
         print_warning "Hook orchestrator not available - using legacy execution"
-        return start_experiment_legacy "$experiment_script" "$session_name"
+        start_experiment_legacy "$experiment_script" "$session_name"
+        return $?
     fi
 }
 
@@ -317,6 +319,14 @@ function start_tmux_session() {
         echo 'Started: \$(date)'
         echo 'Session: $session_name'
         echo '========================================='
+        
+        # Issue #53 Fix: Ensure all package dependencies are instantiated
+        echo 'Instantiating package dependencies (Issue #53 fix)...'
+        julia --project=. -e 'using Pkg; Pkg.instantiate()' || {
+            echo 'ERROR: Pkg.instantiate() failed - dependencies not properly installed'
+            exit 1
+        }
+        echo '✅ Package dependencies instantiated successfully'
         
         # Start background monitoring for this experiment
         if [[ -x '$HPC_MONITOR' ]]; then
