@@ -2,8 +2,10 @@
 # Enhanced 4D Model Experiment with Critical Points DataFrame Output
 # This script runs the complete GlobTim pipeline and saves critical points
 
+# Issue #53 Fix: Ensure package dependencies are properly instantiated
 using Pkg
 Pkg.activate(dirname(dirname(@__DIR__)))
+Pkg.instantiate()  # Fix for "Package StaticArrays is required but does not seem to be installed"
 
 using Globtim
 using DynamicPolynomials
