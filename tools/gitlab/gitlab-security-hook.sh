@@ -5,8 +5,13 @@
 
 set -euo pipefail
 
-# Configuration
-GLOBTIM_PROJECT_DIR="/Users/ghscholt/globtim"
+# Configuration - Auto-detect environment
+if [[ -d "/home/scholten/globtim" ]]; then
+    GLOBTIM_PROJECT_DIR="/home/scholten/globtim"
+else
+    GLOBTIM_PROJECT_DIR="/Users/ghscholt/globtim"
+fi
+
 SECURE_TOKEN_SCRIPT="$GLOBTIM_PROJECT_DIR/tools/gitlab/get-token-noninteractive.sh"
 HOOK_LOG_FILE="$GLOBTIM_PROJECT_DIR/.gitlab_hook.log"
 REQUIRED_VARS=("GITLAB_URL" "GITLAB_TOKEN" "GITLAB_PROJECT_PATH")
