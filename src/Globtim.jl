@@ -220,6 +220,10 @@ include("InteractiveVizCore.jl") #Core analysis functions (no GLMakie dependency
 # - InteractiveViz.jl: Full interactive visualization framework  
 # - AlgorithmViz.jl: Algorithm-specific visualization integrations
 
+# Issue #67: Extensible Visualization Framework
+include("VisualizationFramework.jl") #Abstract plotting interfaces and data preparation
+include("PostProcessing.jl") #Unified post-processing framework with visualization
+
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
 
