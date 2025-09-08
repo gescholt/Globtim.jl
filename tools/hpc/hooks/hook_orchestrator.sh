@@ -249,17 +249,25 @@ execute_hook() {
         if [[ "$ENVIRONMENT" == "local" ]] || ! command -v timeout >/dev/null 2>&1; then
             # On macOS or when timeout is not available, run without timeout
             if hook_output=$("$full_path" "$context" 2>&1); then
+                hook_exit_code=0
+                log_info "Hook $hook_id completed successfully"
+                break
+            else
+                hook_exit_code=$?
+                log_warning "Hook $hook_id failed (attempt $attempt/$retry_count): exit code $hook_exit_code"
+                log_debug "Hook output: $hook_output"
+            fi
         else
             # On Linux/HPC with timeout available
             if hook_output=$(timeout "$timeout" "$full_path" "$context" 2>&1); then
-        fi
-            hook_exit_code=0
-            log_info "Hook $hook_id completed successfully"
-            break
-        else
-            hook_exit_code=$?
-            log_warning "Hook $hook_id failed (attempt $attempt/$retry_count): exit code $hook_exit_code"
-            log_debug "Hook output: $hook_output"
+                hook_exit_code=0
+                log_info "Hook $hook_id completed successfully"
+                break
+            else
+                hook_exit_code=$?
+                log_warning "Hook $hook_id failed (attempt $attempt/$retry_count): exit code $hook_exit_code"
+                log_debug "Hook output: $hook_output"
+            fi
         fi
         
         ((attempt++))
