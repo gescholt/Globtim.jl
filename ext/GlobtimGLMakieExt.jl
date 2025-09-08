@@ -8,6 +8,10 @@ using Parameters    # Required for LevelSetViz.jl
 using DynamicPolynomials
 using LinearAlgebra
 
+# Import types from Globtim that are needed but not exported
+const LevelSetData = Globtim.LevelSetData
+const VisualizationParameters = Globtim.VisualizationParameters
+
 # Include GLMakie-specific plotting functionality
 include("../src/graphs_makie.jl")
 include("../src/LevelSetViz.jl")
