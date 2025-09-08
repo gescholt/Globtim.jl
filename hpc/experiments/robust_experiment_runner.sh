@@ -82,24 +82,12 @@ function resolve_script() {
 function validate_environment_orchestrated() {
     local context="$1"
     
-    print_info "🚀 Starting orchestrated validation pipeline (Issue #41)"
+    print_info "🚀 Delegating to orchestrated full pipeline (Issue #41)"
+    print_info "Note: Validation will be handled as part of the full pipeline orchestration"
     
-    if [[ -x "$HOOK_ORCHESTRATOR" ]]; then
-        print_info "Using Strategic Hook Orchestrator for comprehensive validation"
-        
-        # Execute validation phase through orchestrator
-        if "$HOOK_ORCHESTRATOR" phase validation "$context"; then
-            print_info "✅ Orchestrated validation completed successfully"
-            return 0
-        else
-            print_error "❌ Orchestrated validation failed"
-            return 1
-        fi
-    else
-        print_warning "Hook orchestrator not available - falling back to legacy validation"
-        validate_environment_legacy "$context"
-        return $?
-    fi
+    # The orchestrator will handle validation as the first phase of the full pipeline
+    # No separate validation call needed - this avoids state conflicts
+    return 0
 }
 
 # Legacy comprehensive validation function - Issue #27 (Fallback Only)
@@ -193,8 +181,8 @@ function start_experiment() {
     local experiment_script=$1
     local session_name=$2
     
-    # Create experiment context for orchestrator
-    local context="experiment:$session_name:$experiment_script"
+    # Create experiment context for orchestrator (format must include session name for ID extraction)
+    local context="$session_name:$experiment_script"
     
     print_info "🚀 Starting orchestrated experiment execution (Issue #41)"
     print_info "Experiment: $EXPERIMENT_NAME"
@@ -219,30 +207,27 @@ function start_experiment_orchestrated() {
     local context="$3"
     
     print_info "🎯 Using Strategic Hook Orchestrator for full pipeline execution"
+    print_info "Context: $context"
+    
+    # The orchestrator will handle all phases including execution
+    # We need to export key variables that the hooks will need
+    export GLOBTIM_EXPERIMENT_SCRIPT="$experiment_script"
+    export GLOBTIM_SESSION_NAME="$session_name" 
+    export GLOBTIM_PROJECT_DIR="$GLOBTIM_DIR"
     
     # Execute the full pipeline through the orchestrator
     if "$HOOK_ORCHESTRATOR" orchestrate "$context"; then
         print_info "✅ Orchestrated pipeline completed successfully!"
-        
-        # Extract resolved script from orchestrator state if available
-        local resolved_script
-        if ! resolved_script=$(resolve_script "$experiment_script"); then
-            print_error "Script resolution failed even after orchestrated validation"
-            return 1
-        fi
-        
-        # Start the actual tmux execution (this is now the execution phase)
-        start_tmux_session "$resolved_script" "$session_name"
-        
-        print_info "🎉 Orchestrated experiment started successfully!"
+        print_info "🎉 Experiment execution handled by orchestrator!"
         return 0
     else
         print_error "❌ Orchestrated pipeline failed"
         
         # Check if lifecycle manager can provide recovery information
         if [[ -x "$LIFECYCLE_MANAGER" ]]; then
-            local exp_id=$(echo "$context" | cut -d: -f2)
-            print_info "📊 Experiment lifecycle status:"
+            # Extract experiment ID from context (first part before colon)
+            local exp_id="${context%%:*}"
+            print_info "📊 Experiment lifecycle status for: $exp_id"
             "$LIFECYCLE_MANAGER" report "$exp_id" || true
         fi
         
