@@ -120,17 +120,21 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
     basis = :chebyshev
 )
     T = eltype(S)  # Infer type from input
-    m, N = Lambda.size
-    n, N = size(S)
+    m, n_dim = Lambda.size  # m = number of multi-indices, n_dim = number of dimensions  
+    n, N = size(S)          # n = number of dimensions, N = number of sample points
     V = zeros(T, n, m)  # Use inferred type instead of Float64
 
-    # Get unique points (they're the same for each dimension)
-    unique_points = unique(S[:, 1])
+    # Get unique points from all columns to handle floating-point precision issues
+    all_points = Set{T}()
+    for i in 1:n, j in 1:N
+        push!(all_points, S[i, j])
+    end
+    unique_points = sort(collect(all_points))
 
     # Find max degree needed
     max_degree = maximum(Lambda.data)
 
-    # Create point index lookup once
+    # Create point index lookup with all unique points
     point_indices = Dict(point => i for (i, point) in enumerate(unique_points))
 
     if basis == :legendre
@@ -152,7 +156,7 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
         # Compute Vandermonde matrix using cached values
         @views for i in 1:n, j in 1:m
             P = one(T)  # Use one(T) instead of 1.0
-            for k in 1:N
+            for k in 1:n_dim
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
                 point_idx = point_indices[point]
@@ -191,7 +195,7 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
         # Compute Vandermonde matrix using cached values
         @views for i in 1:n, j in 1:m
             P = one(T)
-            for k in 1:N
+            for k in 1:n_dim
                 degree = Int(Lambda.data[j, k])
                 point = S[i, k]
                 point_idx = point_indices[point]
