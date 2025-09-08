@@ -197,10 +197,19 @@ execute_hook() {
     log_info "Executing hook: $hook_id (phase: $phase)"
     log_debug "Hook path: $hook_path, timeout: ${timeout}s, retries: $retry_count, critical: $is_critical"
     
-    # Resolve hook path
+    # Resolve hook path with environment-aware path translation
     local full_path
     if [[ "$hook_path" = /* ]]; then
-        full_path="$hook_path"
+        # Absolute path - check if it needs environment translation
+        if [[ "$ENVIRONMENT" == "hpc" && "$hook_path" =~ ^/Users/ghscholt ]]; then
+            # Translate macOS paths to HPC paths
+            full_path="${hook_path/\/Users\/ghscholt/\/home\/scholten}"
+        elif [[ "$ENVIRONMENT" == "local" && "$hook_path" =~ ^/home/scholten ]]; then
+            # Translate HPC paths to macOS paths
+            full_path="${hook_path/\/home\/scholten/\/Users\/ghscholt}"
+        else
+            full_path="$hook_path"
+        fi
     else
         full_path="$GLOBTIM_DIR/$hook_path"
     fi
@@ -236,8 +245,14 @@ execute_hook() {
             sleep $((attempt * 2))  # Exponential backoff
         fi
         
-        # Execute with timeout
-        if hook_output=$(timeout "$timeout" "$full_path" "$context" 2>&1); then
+        # Execute with timeout (environment-aware)
+        if [[ "$ENVIRONMENT" == "local" ]] || ! command -v timeout >/dev/null 2>&1; then
+            # On macOS or when timeout is not available, run without timeout
+            if hook_output=$("$full_path" "$context" 2>&1); then
+        else
+            # On Linux/HPC with timeout available
+            if hook_output=$(timeout "$timeout" "$full_path" "$context" 2>&1); then
+        fi
             hook_exit_code=0
             log_info "Hook $hook_id completed successfully"
             break
@@ -411,10 +426,11 @@ orchestrate_full_pipeline() {
     log_info "Experiment Type: $experiment_type" 
     log_info "Experiment ID: $experiment_id"
     
-    # Initialize experiment state using lifecycle manager
+    # Initialize experiment state using lifecycle manager and mark initialization as completed
     local lifecycle_manager="$HOOKS_DIR/lifecycle_manager.sh"
     if [[ -x "$lifecycle_manager" ]]; then
         "$lifecycle_manager" create "$experiment_id" "$context" "$experiment_type"
+        "$lifecycle_manager" update "$experiment_id" "initialization" "completed" "$context" 0
     fi
     
     # Define phase execution order
