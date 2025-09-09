@@ -12,6 +12,7 @@ Date: September 4, 2025
 
 using Pkg
 using InteractiveUtils
+using Dates
 
 # Configuration for validation
 const CRITICAL_PACKAGES = [
