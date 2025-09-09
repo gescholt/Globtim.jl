@@ -16,12 +16,16 @@ using LinearAlgebra
 using Statistics
 using Dates
 
-# Get parameters from environment or use defaults
-samples_per_dim = parse(Int, get(ENV, "SAMPLES_PER_DIM", "8"))
-degree = parse(Int, get(ENV, "DEGREE", "10"))
+# Get parameters from environment or use corrected safe defaults
+# CORRECTED: Based on memory analysis, 12 samples per dim is safe for 4D
+samples_per_dim = parse(Int, get(ENV, "SAMPLES_PER_DIM", "12"))
+degree = parse(Int, get(ENV, "DEGREE", "6"))  # Safe degree range: 4-8
 results_dir = length(ARGS) > 0 ? ARGS[1] : joinpath(@__DIR__, "..", "outputs", "lotka_volterra_4d_$(Dates.format(now(), "yyyymmdd_HHMMSS"))")
 
 mkpath(results_dir)
+
+# Define GN early for configuration output
+GN = samples_per_dim
 
 # Timer for performance tracking
 to = TimerOutput()
@@ -33,7 +37,7 @@ println("Configuration:")
 println("  Parameter space dimension: 4")
 println("  Polynomial degree: $degree")
 println("  Samples per parameter: $samples_per_dim")
-println("  Total parameter combinations: $(samples_per_dim^4)")
+println("  Total parameter combinations: $(GN+1)^4 = $((GN+1)^4)")
 println("  Results directory: $results_dir")
 println("="^80)
 
@@ -106,7 +110,27 @@ end
 θ_center = [1.0, 1.0, 1.0, 1.0]  # Central point for sampling
 θ_range = 0.8  # ±80% around center
 n = 4  # Parameter space dimension
-GN = samples_per_dim^n
+
+# Memory safety validation for 4D parameter estimation
+function validate_lotka_volterra_parameters(samples_per_dim, degree)
+    # CORRECTED: Grid generation uses (samples_per_dim + 1)^4 points total
+    actual_points_per_dim = samples_per_dim + 1
+    total_grid_points = actual_points_per_dim^4
+    grid_memory_gb = total_grid_points * (4 * 8 + 32) / (1024^3)
+    
+    if grid_memory_gb > 10.0
+        error("Unsafe parameters: $(samples_per_dim) samples per parameter creates $(actual_points_per_dim)^4 = $(total_grid_points) grid points, requiring $(round(grid_memory_gb, digits=3)) GB. Use ≤12 for 4D parameter estimation.")
+    end
+    
+    if degree > 10
+        @warn "High degree ($degree) may cause numerical issues. Recommended range: 4-8 for parameter estimation"
+    end
+    
+    println("✅ Lotka-Volterra parameters validated: $(samples_per_dim) samples/param → $(actual_points_per_dim)^4 = $(total_grid_points) grid points, degree $degree, ~$(round(grid_memory_gb, digits=3)) GB memory")
+end
+
+# Validate parameters before proceeding
+validate_lotka_volterra_parameters(samples_per_dim, degree)
 
 println("\nStep 1: Sampling parameter space and evaluating objective function...")
 @timeit to "test_input" begin
@@ -118,7 +142,7 @@ println("\nStep 1: Sampling parameter space and evaluating objective function...
         sample_range = θ_range
     )
 end
-println("✓ Generated $(TR.GN) parameter samples")
+println("✓ Generated $(TR.GN) parameter samples ($(GN+1)^4 grid points)")
 println("  Objective function ready for polynomial approximation")
 
 println("\nStep 2: Constructing polynomial approximation of objective function...")
@@ -141,7 +165,7 @@ approx_info = Dict(
     "parameter_dimension" => n,
     "polynomial_degree" => degree,
     "samples_per_parameter" => samples_per_dim,
-    "total_samples" => GN,
+    "total_samples" => (GN+1)^4,
     "condition_number" => pol.cond_vandermonde,
     "L2_norm" => pol.nrm,
     "basis" => "chebyshev",
@@ -254,7 +278,7 @@ open(summary_file, "w") do io
     println(io, "  Parameter space dimension: $n")
     println(io, "  Polynomial degree: $degree")
     println(io, "  Samples per parameter: $samples_per_dim")
-    println(io, "  Total parameter samples: $GN")
+    println(io, "  Total parameter samples: $((GN+1)^4)")
     println(io, "")
     println(io, "Approximation Quality:")
     println(io, "  Condition number: $(pol.cond_vandermonde)")

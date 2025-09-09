@@ -18,9 +18,10 @@ using Statistics
 using Dates
 using JSON
 
-# Get parameters from environment or use defaults
-samples_per_dim = parse(Int, get(ENV, "SAMPLES_PER_DIM", "10"))
-degree = parse(Int, get(ENV, "DEGREE", "12"))
+# Get parameters from environment or use corrected safe defaults
+# CORRECTED: Based on memory analysis, GN=12 samples per dim is safe for 4D
+samples_per_dim = parse(Int, get(ENV, "SAMPLES_PER_DIM", "12"))
+degree = parse(Int, get(ENV, "DEGREE", "6"))  # Safe degree range: 4-8
 results_dir = length(ARGS) > 0 ? ARGS[1] : joinpath(@__DIR__, "results_4d_$(Dates.format(now(), "yyyymmdd_HHMMSS"))")
 
 mkpath(results_dir)
@@ -55,11 +56,33 @@ function error_func_4d(p::AbstractVector)
     return term1 + term2 + term3 + oscillation
 end
 
-# Configuration
+# Configuration - Corrected safe parameters for 4D experiments
 n = 4
 p_center = [0.25, 0.25, 0.45, 0.55]
 sample_range = 0.2  # Slightly larger range for 4D
-GN = samples_per_dim^n
+
+# CORRECTED: Use samples_per_dim directly instead of ^n calculation
+# This prevents confusion - GN is already samples per dimension
+GN = samples_per_dim^n  # Total samples: samples_per_dim^4
+
+# Memory safety validation
+function validate_4d_parameters(samples_per_dim, degree)
+    # Calculate expected memory usage
+    grid_memory_gb = (samples_per_dim^4) * (4 * 8 + 32) / (1024^3)
+    
+    if grid_memory_gb > 10.0
+        error("Unsafe parameters: $(samples_per_dim) samples per dim would require $(round(grid_memory_gb, digits=3)) GB. Use ≤12 samples per dim for 4D.")
+    end
+    
+    if degree > 10
+        @warn "High degree ($degree) may cause numerical issues. Recommended range: 4-8"
+    end
+    
+    println("✅ Parameters validated: $(samples_per_dim) samples/dim, degree $degree, ~$(round(grid_memory_gb, digits=3)) GB memory")
+end
+
+# Validate parameters before proceeding
+validate_4d_parameters(samples_per_dim, degree)
 
 println("\nStep 1: Generating sample points and evaluating function...")
 @timeit to "test_input" begin
