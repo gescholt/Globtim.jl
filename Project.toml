@@ -5,6 +5,7 @@ authors = ["Georgy Scholten <scholtengeorgy@gmail.com>"]
 version = "1.1.2"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -29,7 +30,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [weakdeps]
-CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
@@ -44,7 +44,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 [extensions]
 GlobtimAnalysisExt = ["Clustering", "Distributions"]
 GlobtimCairoMakieExt = "CairoMakie"
-GlobtimDataExt = ["CSV"]
+GlobtimDataExt = ["CSV", "DataFrames"]
 GlobtimDevExt = ["JuliaFormatter"]
 GlobtimGLMakieExt = "GLMakie"
 
