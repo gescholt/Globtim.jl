@@ -49,7 +49,6 @@ GlobtimDevExt = ["JuliaFormatter"]
 GlobtimGLMakieExt = "GLMakie"
 
 [compat]
-CSV = "0.10"
 CairoMakie = "0.11"
 Clustering = "0.15"
 Colors = "0.12"
