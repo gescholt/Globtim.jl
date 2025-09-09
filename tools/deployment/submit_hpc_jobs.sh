@@ -1,6 +1,26 @@
 #!/bin/bash
 
-# Submit and manage Globtim HPC jobs via SLURM
+# DEPRECATED - SLURM-based HPC job submission
+# This script is for legacy clusters that use SLURM scheduling
+# 
+# For current r04n02 cluster execution, use instead:
+# ./hpc/experiments/robust_experiment_runner.sh
+# or
+# ./node_experiments/runners/experiment_runner.sh
+#
+# Issue #56: Legacy SLURM infrastructure removal
+
+echo "⚠️  DEPRECATED SCRIPT"
+echo "This SLURM-based script is no longer used on r04n02"  
+echo ""
+echo "Use direct execution instead:"
+echo "  ./hpc/experiments/robust_experiment_runner.sh 4d-model"
+echo "  ./node_experiments/runners/experiment_runner.sh lotka-volterra-4d"
+echo ""
+echo "Exiting to prevent confusion with legacy SLURM workflow"
+exit 1
+
+# Legacy SLURM implementation follows (preserved for reference)
 
 # Load configuration
 if [ -f "cluster_config.sh" ]; then

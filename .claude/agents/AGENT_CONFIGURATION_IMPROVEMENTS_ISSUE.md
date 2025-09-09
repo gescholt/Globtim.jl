@@ -1,3 +1,8 @@
+---
+name: agent-configuration-improvements-issue
+description: Completed review and improvements for Claude Code agent configurations with GitLab API integration
+---
+
 # Agent Configuration Review & Improvements Issue
 
 ## Status: COMPLETED ✅

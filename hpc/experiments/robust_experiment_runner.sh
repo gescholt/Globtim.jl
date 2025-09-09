@@ -19,6 +19,10 @@ fi
 EXPERIMENT_NAME="${1:-experiment}"
 SESSION_NAME="globtim_${EXPERIMENT_NAME}_$(date +%Y%m%d_%H%M%S)"
 
+# Issue #66: Post-processing integration configuration
+ENABLE_POST_PROCESSING="${ENABLE_POST_PROCESSING:-true}"
+POST_PROCESSING_SCRIPT="$GLOBTIM_DIR/Examples/quick_result_summary.jl"
+
 # Issue #41: Strategic Hook Integration - Unified Hook Orchestrator
 HOOK_ORCHESTRATOR="$GLOBTIM_DIR/tools/hpc/hooks/hook_orchestrator.sh"
 LIFECYCLE_MANAGER="$GLOBTIM_DIR/tools/hpc/hooks/lifecycle_manager.sh"
@@ -42,6 +46,43 @@ function print_warning() {
 
 function print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Issue #66: Post-processing trigger function
+function trigger_post_processing() {
+    local log_dir="$1"
+    local session_name="$2"
+    
+    if [[ "$ENABLE_POST_PROCESSING" != "true" ]]; then
+        print_info "📊 Post-processing disabled (ENABLE_POST_PROCESSING=false)"
+        return 0
+    fi
+    
+    print_info "🔍 Starting automatic post-processing..."
+    
+    # Look for result files in the log directory
+    local result_files=($(find "$log_dir" -name "*.json" -o -name "*results*.csv" 2>/dev/null))
+    
+    if [[ ${#result_files[@]} -eq 0 ]]; then
+        print_warning "⚠️  No result files found for post-processing in: $log_dir"
+        return 0
+    fi
+    
+    # Process each result file
+    for result_file in "${result_files[@]}"; do
+        print_info "📊 Processing: $(basename "$result_file")"
+        
+        # Use Julia to run quick result summary
+        if [[ -f "$POST_PROCESSING_SCRIPT" ]]; then
+            julia --project="$GLOBTIM_DIR" "$POST_PROCESSING_SCRIPT" "$result_file" || {
+                print_warning "⚠️  Post-processing failed for: $(basename "$result_file")"
+            }
+        else
+            print_warning "⚠️  Post-processing script not found: $POST_PROCESSING_SCRIPT"
+        fi
+    done
+    
+    print_info "✅ Post-processing completed for session: $session_name"
 }
 
 # Function to validate and resolve experiment script
@@ -320,10 +361,12 @@ function start_tmux_session() {
         fi
         
         # Run the actual experiment with maximum memory configuration
-        julia --project=. --heap-size-hint=100G --max-gc-memory=80G $resolved_script \$LOG_DIR
+        EXPERIMENT_EXIT_CODE=0
+        julia --project=. --heap-size-hint=100G --max-gc-memory=80G $resolved_script \$LOG_DIR || EXPERIMENT_EXIT_CODE=\$?
         
         echo '========================================='
         echo 'Completed: \$(date)'
+        echo 'Exit Code: \$EXPERIMENT_EXIT_CODE'
         echo '========================================='
         
         # Stop monitoring and generate final report
@@ -332,6 +375,53 @@ function start_tmux_session() {
             '$HPC_MONITOR' stop-monitoring '$session_name' || true
             '$HPC_MONITOR' performance-check || true
             '$HPC_MONITOR' dashboard || true
+        fi
+        
+        # Issue #66: Trigger post-processing if experiment succeeded
+        if [[ \$EXPERIMENT_EXIT_CODE -eq 0 ]]; then
+            echo '🔍 Triggering automatic post-processing...'
+            cd '$GLOBTIM_DIR'
+            # Define the post-processing function in the tmux session
+            trigger_post_processing() {
+                local log_dir=\"\$1\"
+                local session_name=\"\$2\"
+                
+                if [[ \"$ENABLE_POST_PROCESSING\" != \"true\" ]]; then
+                    echo \"📊 Post-processing disabled (ENABLE_POST_PROCESSING=false)\"
+                    return 0
+                fi
+                
+                echo \"🔍 Starting automatic post-processing...\"
+                
+                # Look for result files in the log directory
+                local result_files=(\$(find \"\$log_dir\" -name \"*.json\" -o -name \"*results*.csv\" 2>/dev/null))
+                
+                if [[ \${#result_files[@]} -eq 0 ]]; then
+                    echo \"⚠️  No result files found for post-processing in: \$log_dir\"
+                    return 0
+                fi
+                
+                # Process each result file
+                for result_file in \"\${result_files[@]}\"; do
+                    echo \"📊 Processing: \$(basename \"\$result_file\")\"
+                    
+                    # Use Julia to run quick result summary
+                    if [[ -f \"$POST_PROCESSING_SCRIPT\" ]]; then
+                        julia --project=\"$GLOBTIM_DIR\" \"$POST_PROCESSING_SCRIPT\" \"\$result_file\" || {
+                            echo \"⚠️  Post-processing failed for: \$(basename \"\$result_file\")\"
+                        }
+                    else
+                        echo \"⚠️  Post-processing script not found: $POST_PROCESSING_SCRIPT\"
+                    fi
+                done
+                
+                echo \"✅ Post-processing completed for session: \$session_name\"
+            }
+            
+            # Call post-processing function
+            trigger_post_processing \"\$LOG_DIR\" \"$session_name\"
+        else
+            echo \"⚠️  Experiment failed (exit code: \$EXPERIMENT_EXIT_CODE) - skipping post-processing\"
         fi
     "
     
@@ -433,6 +523,12 @@ EOF
             echo "  • Environment Validation: Package availability and dependencies"
             echo "  • Path resolution and comprehensive error reporting"
             echo "  • Prevents 95% of common experiment failures"
+            echo ""
+            echo "Post-Processing Integration (Issue #66):"
+            echo "  • Automatic result analysis after successful experiment completion"
+            echo "  • Quick result summaries with quality assessment"
+            echo "  • Disable with: export ENABLE_POST_PROCESSING=false"
+            echo "  • Results saved to experiment output directory"
             echo ""
             echo "Examples:"
             echo "  $0 2d-test"
