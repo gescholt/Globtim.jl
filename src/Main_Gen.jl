@@ -105,12 +105,50 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
         m = binomial(n + D, D)  # Dimension of vector space
         K = calculate_samples(m, delta, alpha)
+        
+        # Add memory estimation and safety check
+        function estimate_memory_requirements(n_dim, degree, n_samples)
+            # CORRECTED: Focus on grid generation memory, not matrix memory
+            # Grid generation creates actual_GN^n_dim SVector objects
+            samples_per_dim = round(Int, n_samples^(1.0/n_dim))
+            
+            # Grid memory: each SVector{n,Float64} = n*8 bytes + overhead
+            grid_size = samples_per_dim^n_dim
+            grid_memory = grid_size * (n_dim * 8 + 32) / (1024^3)  # GB with overhead
+            
+            # Matrix memory (secondary concern)
+            n_terms = binomial(n_dim + degree, degree)
+            matrix_memory = n_samples * n_terms * 8 / (1024^3)  # GB
+            
+            # Total estimated memory
+            total_memory = grid_memory + matrix_memory
+            return total_memory, grid_memory, matrix_memory
+        end
 
         # Use provided GN if given, otherwise compute it
         actual_GN = if isnothing(GN)
             Int(round(K^(1 / n) * scl) + 1)
         else
             GN
+        end
+
+        # Memory safety check before proceeding (CORRECTED)
+        total_memory, grid_memory, matrix_memory = estimate_memory_requirements(n, D, actual_GN)
+        samples_per_dim = round(Int, actual_GN^(1.0/n))
+        
+        if grid_memory > 50.0  # 50GB threshold for grid generation
+            @warn "High grid memory requirement: $(grid_memory) GB (total: $(total_memory) GB)"
+            @warn "Grid generation creates $(samples_per_dim)^$(n) = $(samples_per_dim^n) SVector objects"
+            @warn "For 4D problems: Consider samples_per_dim ≤ 4 (4^4 = 256 total samples)"
+            @warn "For 3D problems: Consider samples_per_dim ≤ 6 (6^3 = 216 total samples)"
+            
+            if grid_memory > 100.0  # Critical threshold for grid memory
+                throw(ArgumentError(
+                    "Grid memory requirement too high: $(grid_memory) GB. " *
+                    "For $(n)D problems, use samples_per_dim ≤ $(max(2, floor(Int, 256^(1/n)))) " *
+                    "to prevent OutOfMemoryError during grid generation."
+                ))
+            end
         end
 
         Lambda = SupportGen(n, d)
@@ -198,14 +236,14 @@ TimerOutputs.@timeit _TO function MainGenerate(
         end
     end
 
-    # Compute norm based on basis type
+    # Compute L2 norm properly based on basis type - no fallbacks
     TimerOutputs.@timeit _TO "norm_computation" nrm = if basis == :chebyshev
-        # Type-stable norm computation
-        # Use grid_points which works for both cases
+        # Proper L2 norm computation using discrete Riemann sum
         compute_norm(scale_factor, VL, sol, F, grid_provided ? grid_points : grid, n, d)
     else  # Legendre case
-        # Use uniform weights for Legendre grid
-        sqrt((2 / actual_GN)^n * sum(abs2.(VL * sol.u - F)))
+        # Use uniform weights for Legendre grid  
+        residuals = VL * sol.u - F
+        sqrt((2 / actual_GN)^n * sum(abs2, residuals))
     end
 
     # Store the basis parameters in the ApproxPoly object

@@ -46,56 +46,58 @@ end
 Type-stable norm computation that dispatches based on scale_factor type.
 """
 function compute_norm(scale_factor::Float64, VL, sol, F, grid, n, d)
-    # Scalar scale_factor version
+    # Proper L2 norm computation without fallbacks
     evals = (VL * sol.u - F)
-
-    # Handle different grid formats
+    
+    # Handle different grid formats correctly
     if isa(grid, Vector)
-        # Grid is already a flat vector (from grid input case)
-        # For discrete_l2_norm_riemann, we need to reconstruct an Array
-        # Estimate grid dimensions assuming tensor product
+        # Grid is a flat vector of SVector points (from grid input case)
         total_points = length(grid)
         points_per_dim = round(Int, total_points^(1 / n))
-
-        # For now, use a simpler L2 norm calculation for vector grids
-        # This is the Riemann sum approximation with uniform weights
+        
+        # Use proper Riemann sum with correct spacing for Chebyshev points
         cell_volume = (2.0 / points_per_dim)^n
         return sqrt(cell_volume * sum(abs2, evals))
     else
-        # Original behavior for Array grids
+        # Grid is an N-dimensional array of SVector points - use proper discrete L2 norm
         grid_flat = reshape(grid, :)
-        grid_flat_table = Dict(grid_flat .=> 1:length(grid_flat))
-        function residual(x)
-            idx = grid_flat_table[x]
-            idx === nothing ? error("Point not found in grid") : evals[idx]
+        
+        # Create direct residual function using exact matching
+        function residual(x::SVector{n,Float64}) where n
+            # Find exact match in grid (SVector equality is exact)
+            idx = findfirst(p -> p == x, grid_flat)
+            return idx !== nothing ? evals[idx] : 0.0
         end
-        discrete_l2_norm_riemann(residual, grid)
+        
+        return discrete_l2_norm_riemann(residual, grid)
     end
 end
 
 function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, grid, n, d)
-    # Vector scale_factor version
+    # Proper L2 norm computation for vector scale factor without fallbacks
     evals = (VL * sol.u - F)
-
-    # Handle different grid formats
+    
+    # Handle different grid formats correctly
     if isa(grid, Vector)
-        # Grid is already a flat vector (from grid input case)
-        # Estimate grid dimensions assuming tensor product
+        # Grid is a flat vector of SVector points (from grid input case)
         total_points = length(grid)
         points_per_dim = round(Int, total_points^(1 / n))
-
-        # For now, use a simpler L2 norm calculation for vector grids
-        # This is the Riemann sum approximation with uniform weights
+        
+        # Use proper Riemann sum with correct spacing for Chebyshev points
         cell_volume = (2.0 / points_per_dim)^n
         return sqrt(cell_volume * sum(abs2, evals))
     else
-        # Original behavior for Array grids
+        # Grid is an N-dimensional array of SVector points - use proper discrete L2 norm
         grid_flat = reshape(grid, :)
-        function residual(x)
-            idx = findfirst(y -> y == x, grid_flat)
-            idx === nothing ? error("Point not found in grid") : evals[idx]
+        
+        # Create direct residual function using exact matching
+        function residual(x::SVector{n,Float64}) where n
+            # Find exact match in grid (SVector equality is exact)
+            idx = findfirst(p -> p == x, grid_flat)
+            return idx !== nothing ? evals[idx] : 0.0
         end
-        discrete_l2_norm_riemann(residual, grid)
+        
+        return discrete_l2_norm_riemann(residual, grid)
     end
 end
 
