@@ -62,8 +62,8 @@ p_center = [0.25, 0.25, 0.45, 0.55]
 sample_range = 0.2  # Slightly larger range for 4D
 
 # CORRECTED: Use samples_per_dim directly instead of ^n calculation
-# This prevents confusion - GN is already samples per dimension
-GN = samples_per_dim^n  # Total samples: samples_per_dim^4
+# GN represents samples per dimension, NOT total samples
+GN = samples_per_dim  # samples_per_dim = 12 -> creates 12^4 = 20736 total points
 
 # Memory safety validation
 function validate_4d_parameters(samples_per_dim, degree)
