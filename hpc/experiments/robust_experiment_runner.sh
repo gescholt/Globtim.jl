@@ -466,9 +466,9 @@ case "${1:-}" in
         start_experiment "hpc/experiments/test_2d_deuflhard.jl" "$SESSION_NAME"
         ;;
     4d-model)
-        # Get parameters
-        SAMPLES=${2:-10}
-        DEGREE=${3:-12}
+        # Get parameters - FIXED: Use 12 samples per dimension for proper 4D experiments
+        SAMPLES=${2:-12}
+        DEGREE=${3:-6}
         
         # Create custom 4D script with parameters in the experiment directory
         SCRIPT_DIR="$GLOBTIM_DIR/hpc/experiments/temp"
@@ -512,7 +512,7 @@ EOF
             echo ""
             echo "Commands:"
             echo "  2d-test                    - Run 2D Deuflhard test"
-            echo "  4d-model [s] [d]           - Run 4D model (s=samples, d=degree)"
+            echo "  4d-model [s] [d]           - Run 4D model (s=samples/dim default 12, d=degree default 6)"
             echo "  status                     - Check current experiment status"
             echo "  attach                     - Attach to current experiment"
             echo "  list                       - List all GlobTim sessions"
@@ -532,7 +532,7 @@ EOF
             echo ""
             echo "Examples:"
             echo "  $0 2d-test"
-            echo "  $0 4d-model 10 12"
+            echo "  $0 4d-model 12 6                       # 12 samples/dim, degree 6 (safe 4D parameters)"
             echo "  $0 status"
             echo "  $0 my-test hpc_minimal_2d_example.jl"
             echo "  $0 benchmark 4d                           # Pattern match"
