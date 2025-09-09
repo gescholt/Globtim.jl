@@ -671,6 +671,17 @@ create_default_registry() {
             "retry_count": 1,
             "critical": false,
             "description": "GitLab project integration and status updates"
+        },
+        "package_loading_detector": {
+            "path": "tools/hpc/hooks/package_loading_detector.sh",
+            "phases": ["validation", "preparation"],
+            "contexts": ["*"],
+            "experiment_types": ["*"],
+            "priority": 15,
+            "timeout": 120,
+            "retry_count": 1,
+            "critical": true,
+            "description": "Package loading failure detection and automatic resolution guidance"
         }
     }
 }
