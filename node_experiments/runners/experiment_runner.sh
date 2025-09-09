@@ -138,9 +138,9 @@ case "${1:-}" in
         verify_packages
         ;;
     lotka-volterra-4d)
-        # Lotka-Volterra 4D parameter estimation
-        SAMPLES=${2:-8}
-        DEGREE=${3:-10}
+        # Lotka-Volterra 4D parameter estimation - CORRECTED SAFE PARAMETERS
+        SAMPLES=${2:-12}  # Corrected: 12 samples per dim is safe for 4D
+        DEGREE=${3:-6}    # Corrected: degree 6 in safe range 4-8
         HEAP_SIZE="50G"
         
         print_info "Lotka-Volterra 4D Parameter Estimation"
@@ -163,9 +163,9 @@ EOF
         start_experiment "$SCRIPT_FILE" "$SESSION_NAME" "$HEAP_SIZE"
         ;;
     rosenbrock-4d)
-        # Test case - 4D Rosenbruck optimization
-        SAMPLES=${2:-10}
-        DEGREE=${3:-12}
+        # Test case - 4D Rosenbruck optimization - CORRECTED SAFE PARAMETERS
+        SAMPLES=${2:-12}  # Corrected: 12 samples per dim is safe for 4D
+        DEGREE=${3:-6}    # Corrected: degree 6 in safe range 4-8
         HEAP_SIZE="50G"
         
         print_info "4D Rosenbrock Test Case"
@@ -225,8 +225,8 @@ EOF
         echo ""
         echo "Examples:"
         echo "  $0 verify                           # Check dependencies"
-        echo "  $0 lotka-volterra-4d 8 10          # LV parameter estimation"
-        echo "  $0 rosenbrock-4d 10 12             # 4D test case"
+        echo "  $0 lotka-volterra-4d 12 6           # LV parameter estimation (corrected safe params)"
+        echo "  $0 rosenbrock-4d 12 6              # 4D test case (corrected safe params)"
         echo "  $0 status                          # Check progress"
         echo ""
         echo "🎯 PRIORITY: Use 'lotka-volterra-4d' for today's main goal"
