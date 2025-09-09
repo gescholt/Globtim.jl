@@ -1,0 +1,125 @@
+{
+  "experiment_id": "2d-test_20250908_143719",
+  "current_phase": "archived",
+  "status": "completed",
+  "context": "globtim_2d-test_20250908_143719:hpc/experiments/test_2d_deuflhard.jl",
+  "experiment_type": "2d",
+  "environment": "local",
+  "created_at": "2025-09-08T12:37:19Z",
+  "updated_at": "2025-09-08T12:37:29Z",
+  "phase_history": [
+    {
+      "phase": "initialization",
+      "status": "pending",
+      "timestamp": "2025-09-08T12:37:19Z",
+      "duration_seconds": 0
+    },
+    {
+      "phase": "initialization",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:19Z",
+      "duration_seconds": 0,
+      "previous_phase": "initialization",
+      "previous_status": "pending"
+    },
+    {
+      "phase": "validation",
+      "status": "running",
+      "timestamp": "2025-09-08T12:37:19Z",
+      "duration_seconds": 0,
+      "previous_phase": "initialization",
+      "previous_status": "completed"
+    },
+    {
+      "phase": "validation",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:28Z",
+      "duration_seconds": 0,
+      "previous_phase": "validation",
+      "previous_status": "running"
+    },
+    {
+      "phase": "preparation",
+      "status": "running",
+      "timestamp": "2025-09-08T12:37:28Z",
+      "duration_seconds": 0,
+      "previous_phase": "validation",
+      "previous_status": "completed"
+    },
+    {
+      "phase": "preparation",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:28Z",
+      "duration_seconds": 0,
+      "previous_phase": "preparation",
+      "previous_status": "running"
+    },
+    {
+      "phase": "execution",
+      "status": "running",
+      "timestamp": "2025-09-08T12:37:28Z",
+      "duration_seconds": 0,
+      "previous_phase": "preparation",
+      "previous_status": "completed"
+    },
+    {
+      "phase": "execution",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:29Z",
+      "duration_seconds": 0,
+      "previous_phase": "execution",
+      "previous_status": "running"
+    },
+    {
+      "phase": "monitoring",
+      "status": "running",
+      "timestamp": "2025-09-08T12:37:29Z",
+      "duration_seconds": 0,
+      "previous_phase": "execution",
+      "previous_status": "completed"
+    },
+    {
+      "phase": "monitoring",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:29Z",
+      "duration_seconds": 0,
+      "previous_phase": "monitoring",
+      "previous_status": "running"
+    },
+    {
+      "phase": "completion",
+      "status": "running",
+      "timestamp": "2025-09-08T12:37:29Z",
+      "duration_seconds": 0,
+      "previous_phase": "monitoring",
+      "previous_status": "completed"
+    },
+    {
+      "phase": "completion",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:29Z",
+      "duration_seconds": 0,
+      "previous_phase": "completion",
+      "previous_status": "running"
+    },
+    {
+      "phase": "archived",
+      "status": "completed",
+      "timestamp": "2025-09-08T12:37:29Z",
+      "duration_seconds": 0,
+      "previous_phase": "completion",
+      "previous_status": "completed"
+    }
+  ],
+  "metadata": {
+    "manager_version": "1.0.0",
+    "total_phases": 13,
+    "completed_phases": 6,
+    "failed_phases": 0,
+    "retry_count": 0,
+    "estimated_completion": 0,
+    "performance_metrics": {}
+  },
+  "recovery_attempts": [],
+  "tags": []
+}

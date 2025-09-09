@@ -1,7 +1,26 @@
 #!/bin/bash
 
-# Custom HPC Test Runner
-# Run any .jl file on the HPC cluster with custom parameters
+# DEPRECATED - Custom HPC Test Runner using SLURM
+# This script generates SLURM scripts for legacy clusters
+# 
+# For current r04n02 cluster execution, use instead:
+# ./hpc/experiments/robust_experiment_runner.sh <experiment-name> <script>
+# or
+# ./node_experiments/runners/experiment_runner.sh <script-pattern>
+#
+# Issue #56: Legacy SLURM infrastructure removal
+
+echo "⚠️  DEPRECATED SCRIPT"
+echo "This SLURM-based script is no longer used on r04n02"  
+echo ""
+echo "Use direct execution instead:"
+echo "  ./hpc/experiments/robust_experiment_runner.sh my-test <your-script.jl>"
+echo "  ./node_experiments/runners/experiment_runner.sh <pattern>"
+echo ""
+echo "Exiting to prevent confusion with legacy SLURM workflow"
+exit 1
+
+# Legacy SLURM implementation follows (preserved for reference)
 
 set -e
 

@@ -1,3 +1,8 @@
+---
+name: ssh-security-integration-guide
+description: Integration guide for SSH security framework across Claude Code agents requiring HPC cluster access
+---
+
 # SSH Security Hook Integration Guide for Claude Code Agents
 
 ## 🎯 Overview

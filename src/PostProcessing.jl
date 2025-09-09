@@ -16,7 +16,17 @@ Date: September 2025
 module PostProcessing
 
 using JSON
-using CSV
+# Optional CSV dependency
+const CSV_AVAILABLE = try
+    using CSV
+    true
+catch
+    false
+end
+
+if !CSV_AVAILABLE
+    @warn "CSV package not available - CSV parsing functionality disabled"
+end
 using DataFrames
 using Statistics
 using LinearAlgebra
@@ -111,15 +121,19 @@ function load_from_directory(dir_path::String)
                 println("⚠️  Warning: Could not parse JSON file $file: $e")
             end
         elseif endswith(file, ".csv")
-            try
-                df = CSV.read(file_path, DataFrame)
-                if "function_value" in names(df)
-                    function_evaluations = df
-                elseif "iteration" in names(df) || "step" in names(df)
-                    convergence_data = df
+            if CSV_AVAILABLE
+                try
+                    df = CSV.read(file_path, DataFrame)
+                    if "function_value" in names(df)
+                        function_evaluations = df
+                    elseif "iteration" in names(df) || "step" in names(df)
+                        convergence_data = df
+                    end
+                catch e
+                    println("⚠️  Warning: Could not parse CSV file $file: $e")
                 end
-            catch e
-                println("⚠️  Warning: Could not parse CSV file $file: $e")
+            else
+                println("⚠️  Warning: CSV package not available - skipping $file")
             end
         end
     end

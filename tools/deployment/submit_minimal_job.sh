@@ -1,23 +1,24 @@
 #!/bin/bash
 
-# Submit minimal Globtim job that avoids disk quota issues
+# DEPRECATED - SLURM-based submission script
+# This script is for the legacy falcon cluster that uses SLURM scheduling
+# 
+# For current r04n02 cluster execution, use instead:
+# ./hpc/experiments/robust_experiment_runner.sh
+# or
+# ./node_experiments/runners/experiment_runner.sh
+#
+# Issue #56: Legacy SLURM infrastructure removal
 
-# Load configuration
-if [ -f "cluster_config.sh" ]; then
-    source cluster_config.sh
-else
-    echo "Error: cluster_config.sh not found"
-    exit 1
-fi
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-echo -e "${BLUE}=== Minimal Globtim HPC Job Submission ===${NC}"
+echo "⚠️  DEPRECATED SCRIPT"
+echo "This SLURM-based script is no longer used on r04n02"  
+echo ""
+echo "Use direct execution instead:"
+echo "  ./hpc/experiments/robust_experiment_runner.sh 2d-test"
+echo "  ./node_experiments/runners/experiment_runner.sh test-2d"
+echo ""
+echo "Exiting to prevent confusion with legacy SLURM workflow"
+exit 1
 
 # First, clean up home directory to free space
 echo -e "${YELLOW}Cleaning up home directory...${NC}"

@@ -1,4 +1,15 @@
 #!/bin/bash
+
+# DEPRECATED SLURM TEMPLATE - Issue #56
+# This template is for legacy clusters that use SLURM scheduling
+# 
+# For current r04n02 cluster execution, use direct execution via:
+# ./hpc/experiments/robust_experiment_runner.sh
+# or
+# ./node_experiments/runners/experiment_runner.sh
+#
+# Legacy SLURM template preserved for reference:
+
 #SBATCH --job-name=globtim_custom
 #SBATCH --partition=batch          # Options: batch, long, bigmem, gpu
 #SBATCH --nodes=1
@@ -9,7 +20,7 @@
 #SBATCH --output=globtim_custom_%j.out
 #SBATCH --error=globtim_custom_%j.err
 
-# Custom Globtim Job Template
+# Custom Globtim Job Template (DEPRECATED)
 # Copy this file and modify for your specific needs
 
 echo "=== Custom Globtim Job ==="
