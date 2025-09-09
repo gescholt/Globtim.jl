@@ -76,17 +76,17 @@ else
     echo -e "   ${RED}✗${NC} ExperimentTracker missing"
 fi
 
-# Check SlurmJobGenerator.jl
-if grep -q "generate_benchmark_slurm_script" src/HPC/SlurmJobGenerator.jl; then
-    echo -e "   ${GREEN}✓${NC} SLURM script generation function defined"
+# Check Direct Execution Framework  
+if [ -x "hpc/experiments/robust_experiment_runner.sh" ]; then
+    echo -e "   ${GREEN}✓${NC} Direct execution runner available"
 else
-    echo -e "   ${RED}✗${NC} SLURM script generation function missing"
+    echo -e "   ${RED}✗${NC} Direct execution runner missing"
 fi
 
-if grep -q "generate_job_array_script" src/HPC/SlurmJobGenerator.jl; then
-    echo -e "   ${GREEN}✓${NC} Job array script generation function defined"
+if [ -x "node_experiments/runners/experiment_runner.sh" ]; then
+    echo -e "   ${GREEN}✓${NC} Node experiment runner available"
 else
-    echo -e "   ${RED}✗${NC} Job array script generation function missing"
+    echo -e "   ${RED}✗${NC} Node experiment runner missing"
 fi
 
 echo ""
@@ -119,32 +119,29 @@ done
 
 echo ""
 
-# Check SLURM script templates
-echo -e "${YELLOW}5. Validating SLURM Script Templates...${NC}"
+# Check Direct Execution Templates
+echo -e "${YELLOW}5. Validating Direct Execution Framework...${NC}"
 
-# Create a temporary test to check script generation structure
-temp_script=$(mktemp)
-cat > "$temp_script" << 'EOF'
-# Mock SLURM script validation
-if grep -q "#SBATCH --job-name=" src/HPC/SlurmJobGenerator.jl; then
-    echo "✓ SBATCH job name directive"
+# Check tmux-based execution capabilities
+if command -v tmux >/dev/null 2>&1; then
+    echo -e "   ${GREEN}✓${NC} tmux available for persistent execution"
+else
+    echo -e "   ${RED}✗${NC} tmux not available"
 fi
-if grep -q "#SBATCH --partition=" src/HPC/SlurmJobGenerator.jl; then
-    echo "✓ SBATCH partition directive"
-fi
-if grep -q "#SBATCH --cpus-per-task=" src/HPC/SlurmJobGenerator.jl; then
-    echo "✓ SBATCH CPU directive"
-fi
-if grep -q "safe_globtim_workflow" src/HPC/SlurmJobGenerator.jl; then
-    echo "✓ Globtim workflow call"
-fi
-if grep -q "compute_min_distances_to_global" src/HPC/SlurmJobGenerator.jl; then
-    echo "✓ Distance computation call"
-fi
-EOF
 
-echo -e "   ${GREEN}$(bash "$temp_script")${NC}"
-rm "$temp_script"
+# Check Julia project environment
+if [ -f "Project.toml" ]; then
+    echo -e "   ${GREEN}✓${NC} Julia project environment configured"
+else
+    echo -e "   ${RED}✗${NC} Julia project environment missing"
+fi
+
+# Check hook integration
+if [ -d "tools/hpc/hooks" ]; then
+    echo -e "   ${GREEN}✓${NC} HPC hook system available"
+else
+    echo -e "   ${RED}✗${NC} HPC hook system missing"
+fi
 
 echo ""
 
@@ -181,7 +178,7 @@ echo -e "${BLUE}=== Validation Summary ===${NC}"
 echo -e "${GREEN}✓ Infrastructure files created and structured${NC}"
 echo -e "${GREEN}✓ Key components defined${NC}"
 echo -e "${GREEN}✓ Benchmark functions registered${NC}"
-echo -e "${GREEN}✓ SLURM integration implemented${NC}"
+echo -e "${GREEN}✓ Direct execution framework implemented${NC}"
 echo -e "${GREEN}✓ Job tracking system implemented${NC}"
 echo ""
 

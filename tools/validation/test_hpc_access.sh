@@ -44,9 +44,8 @@ ssh -i "${SSH_KEY_PATH}" "${CLUSTER_HOST}" "
     which julia || echo 'Julia not in PATH'
     julia --version 2>/dev/null || echo 'Julia not available'
     
-    echo -e '\n=== SLURM Check ==='
-    which sbatch || echo 'SLURM not available'
-    sinfo 2>/dev/null | head -5 || echo 'Cannot access SLURM info'
+    echo -e '\n=== Direct Execution Check ==='
+    echo 'Using direct execution (tmux) - no SLURM scheduler on r04n02'
     
     echo -e '\n=== Available Space ==='
     df -h | grep -E '(Filesystem|/home|/projects|/sw)' || df -h | head -5

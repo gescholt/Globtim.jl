@@ -156,11 +156,34 @@ julia --project=. -e '
 '
 ```
 
+## GitLab Integration & Security
+
+### Secure GitLab Operations for HPC Coordination
+When reporting HPC deployment status or coordinating with GitLab project management:
+
+```bash
+# ALWAYS use secure GitLab API wrapper for HPC status updates
+./tools/gitlab/claude-agent-gitlab.sh test
+./tools/gitlab/claude-agent-gitlab.sh get-issue <issue_id>
+./tools/gitlab/claude-agent-gitlab.sh update-issue <issue_id> "" "" "hpc-deployed,tested"
+
+# Trigger GitLab security validation for HPC operations
+export CLAUDE_CONTEXT="HPC deployment status update for GitLab"
+export CLAUDE_TOOL_NAME="hpc-deployment"
+export CLAUDE_SUBAGENT_TYPE="hpc-cluster-operator"
+./tools/gitlab/gitlab-security-hook.sh
+```
+
+**When GitLab Security Validation Required:**
+- Before updating HPC deployment status in GitLab issues
+- When coordinating HPC job completion with project-task-updater
+- For HPC infrastructure milestone updates
+
 ## Cross-Agent Coordination
 
 ### Handoff Protocols
 - **FROM julia-repo-guardian**: Receive repository state for HPC deployment
-- **TO project-task-updater**: Report HPC job completion status
+- **TO project-task-updater**: Report HPC job completion status using secure GitLab integration
 - **WITH julia-documenter-expert**: Coordinate documentation builds on cluster
 
 ### Performance Metrics
@@ -168,6 +191,7 @@ julia --project=. -e '
 - Package installation success (~90%)
 - Resource utilization efficiency
 - Queue wait time optimization
+- GitLab integration reliability
 
 ## Key Operational Notes
 

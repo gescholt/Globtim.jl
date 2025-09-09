@@ -50,7 +50,13 @@ using Dates
 using JSON
 using LinearAlgebra
 using DataFrames
-using CSV
+# Optional CSV dependency
+const CSV_AVAILABLE = try
+    using CSV
+    true
+catch
+    false
+end
 
 # Re-export TimerOutputs for convenience
 export TimerOutput, @timeit, @elapsed
