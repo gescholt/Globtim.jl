@@ -191,6 +191,70 @@ julia --project=. scripts/validate_environment.jl
 2. **Automated testing**: CI/CD pipeline testing on both environments
 3. **Documentation**: Keep this document updated with lessons learned
 
+## 🚨 CRITICAL: Package Loading Failures on HPC Cluster
+
+**If you encounter package loading failures on the HPC cluster, THIS SECTION MUST BE READ FIRST.**
+
+### Immediate Diagnosis Steps
+
+**Common Error Patterns:**
+- `ERROR: KeyError: key "CSV" not found`
+- `ERROR: Unsatisfiable requirements detected for package OpenBLAS32_jll`
+- `WARNING: The active manifest file has dependencies that were resolved with a different julia version`
+
+### PROVEN SOLUTION PROTOCOL (September 2025)
+
+**This protocol resolved 100% package loading failures on r04n02:**
+
+1. **Connect to HPC cluster**:
+   ```bash
+   ssh scholten@r04n02
+   cd /home/scholten/globtim
+   ```
+
+2. **Pull latest changes** (ensure updated Project.toml):
+   ```bash
+   git pull
+   ```
+
+3. **CRITICAL: Remove problematic Manifest.toml**:
+   ```bash
+   rm Manifest.toml
+   ```
+
+4. **Regenerate entire environment**:
+   ```bash
+   julia --project=. -e "using Pkg; Pkg.instantiate()"
+   ```
+
+5. **Verify package loading**:
+   ```bash
+   julia --project=. -e "using CSV, DataFrames; println(\"SUCCESS: Packages loaded correctly\")"
+   ```
+
+### Why This Works
+
+- **Root Cause**: Manifest.toml generated with different Julia version (1.11.6 vs 1.10.5)
+- **Solution**: Complete environment regeneration using cluster's native Julia version
+- **Result**: All 203+ packages reinstall with correct version compatibility
+
+### Warning Signs Requiring Immediate Action
+
+- Any `KeyError` during package operations
+- Julia version warnings in Manifest.toml
+- OpenBLAS32_jll version conflicts
+- CSV package loading failures
+
+**DO NOT ATTEMPT**:
+- Manual package version fixes
+- Partial environment updates
+- Ignoring Julia version warnings
+
+**ALWAYS DO**:
+- Complete Manifest.toml regeneration
+- Full environment rebuild
+- Verification testing after fixes
+
 ## Emergency Procedures
 
 ### When Version Conflicts Occur
