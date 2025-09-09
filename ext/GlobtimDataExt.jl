@@ -3,15 +3,13 @@ module GlobtimDataExt
 using Globtim
 import CSV, DataFrames
 
-# Data I/O functionality that depends on CSV and DataFrames
-export load_data, save_data, create_results_dataframe
-
+# Extend the stub functions from Globtim
 """
     load_data(filepath::String) -> DataFrames.DataFrame
 
 Load data from CSV file when CSV and DataFrames are available.
 """
-function load_data(filepath::String)
+function Globtim.load_data(filepath::String)
     return CSV.read(filepath, DataFrames.DataFrame)
 end
 
@@ -20,7 +18,7 @@ end
 
 Save DataFrame to CSV file when CSV and DataFrames are available.
 """
-function save_data(data::DataFrames.DataFrame, filepath::String)
+function Globtim.save_data(data::DataFrames.DataFrame, filepath::String)
     CSV.write(filepath, data)
 end
 
@@ -29,7 +27,7 @@ end
 
 Create a standard results dataframe structure.
 """
-function create_results_dataframe()
+function Globtim.create_results_dataframe()
     return DataFrames.DataFrame(
         function_name = String[],
         critical_points = Int[],
