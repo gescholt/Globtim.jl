@@ -110,13 +110,20 @@ bundle_*/
 globtim_*_tests_*.out
 globtim_*_tests_*.err
 
-# Temporary Julia scripts
+# Temporary Julia scripts and debugging files  
 analyze_*.jl
 create_*.jl
 extract_*.jl
 fix_*.jl
 test_*.jl
 verify_*.jl
+debug_*.jl
+*_debug.jl
+*_validation.jl
+*_test.jl
+simple_*.jl
+investigate_*.jl
+hpc_*_debug.jl
 
 # SLURM job files
 *.slurm
@@ -125,3 +132,20 @@ slurm-jobs/
 # Cleanup analysis files (temporary - archive when complete)
 *_CLEANUP_ANALYSIS.md
 *_WORKFLOW_ANALYSIS.md
+
+# Hook state and monitoring files
+tools/hpc/hooks/state/*.json
+tools/hpc/monitoring/dashboard/*.html
+tools/hpc/monitoring/performance/*.json
+tools/hpc/monitoring/performance/*.log
+
+# Temporary analysis and collection files
+comprehensive_collection_analysis.jl
+simple_collection_analysis.jl
+actionable_optimization_plan.jl
+
+# Temporary output and result directories (preserve in proper locations)
+node_experiments/
+*_experiments/
+*/outputs/
+*/results/
