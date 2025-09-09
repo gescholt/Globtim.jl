@@ -104,7 +104,9 @@ objective_function(p) = enhanced_4d_function(p, tracker)
 n = 4
 p_center = [0.3, 0.4, 0.5, 0.6]  # Offset center for more interesting optimization
 sample_range = 0.15  # Smaller range for focused analysis
-GN = samples_per_dim^n
+# CRITICAL FIX: GN = samples_per_dim, NOT samples_per_dim^n
+# This was the major bug causing memory issues in 4D experiments
+GN = samples_per_dim  # Samples per dimension (GlobTim handles total internally)
 
 println("\nPhase 1: Sample Generation and Function Evaluation")
 println("📊 Tracking: Memory allocation, evaluation timing, convergence patterns")
