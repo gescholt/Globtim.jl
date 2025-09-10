@@ -16,34 +16,21 @@ The GlobTim HPC execution framework has migrated from SLURM-based job scheduling
 
 ### Current Solution
 
-**New Documentation**: `COMPUTATION_PROCEDURES.md`  
-**Framework**: tmux-based persistent execution  
+**New Documentation**: `README.md` - Quick start guide for r04n02  
+**Framework**: tmux-based persistent execution via `robust_experiment_runner.sh`  
 **Benefits**: Immediate execution, better control, simpler deployment
 
-### Historical SLURM Documentation
+### Legacy Documentation Archived
 
-The following files contain historical SLURM workflow information:
+**September 10, 2025 Update**: Major obsolete documentation has been archived to `docs/archive/legacy_hpc_2025_09_10/`:
 
-**Primary SLURM Documentation:**
-- `SLURM_WORKFLOW_GUIDE.md` - Main SLURM workflow guide (ARCHIVED)
+**Archived Files:**
+- `SLURM_WORKFLOW_GUIDE.md` - SLURM job scheduling workflows
+- `FALCON_USAGE_GUIDE.md` - Falcon cluster with 267MB bundles  
+- `README_HPC_Bundle.md` - Bundle-based deployment procedures
+- `HPC_PACKAGE_BUNDLING_STRATEGY.md` - Package bundling approach
 
-**Files with SLURM References:**
-- `HPC_EXECUTION_GUIDE.md`
-- `TMUX_FRAMEWORK_MIGRATION.md`
-- `DOCUMENTATION_UPDATE_SUMMARY_20250902.md`
-- `ROBUST_WORKFLOW_GUIDE.md`
-- `HPC_DIRECT_NODE_MIGRATION_PLAN.md`
-- `HOMOTOPY_SOLUTION_SUMMARY.md`
-- `HPC_BUNDLE_SOLUTIONS.md`
-- `HPC_DEPLOYMENT_GUIDE.md`
-- `FALCON_USAGE_GUIDE.md`
-- `CLUSTER_WORKFLOW.md`
-- `README_HPC_Bundle.md`
-- `precision_optimization_guide.md`
-- `HPC_LIGHT_2D_FILES_DOCUMENTATION.md`
-- `HPC_PACKAGE_BUNDLING_STRATEGY.md`
-
-**Archive Status**: These files are maintained for historical reference but contain superseded workflows.
+**Remaining Legacy References**: Some files still contain historical SLURM/bundle references but are being preserved for transition documentation purposes.
 
 ### Migration Actions Taken
 
@@ -54,8 +41,9 @@ The following files contain historical SLURM workflow information:
 
 ### For Current HPC Operations
 
-**Use**: `COMPUTATION_PROCEDURES.md` - Complete guide for tmux-based workflow  
-**Ignore**: Historical SLURM references in other documentation files
+**Use**: `README.md` - Quick start guide with 30-second workflow  
+**Also**: `COMPUTATION_PROCEDURES.md` - Detailed tmux execution procedures  
+**Ignore**: Historical SLURM/bundle references in transition documentation
 
 ---
 
