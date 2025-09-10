@@ -86,6 +86,40 @@ gitlab_api() {
     fi
 }
 
+# Build JSON safely from fields
+# Prevents JSON construction errors by using array-based approach
+# and proper quote escaping instead of regex cleanup
+build_issue_json() {
+    local fields=()
+    local title="$1"
+    local description="$2" 
+    local labels="$3"
+    local milestone_id="$4"
+    
+    # Escape quotes in values
+    title=$(echo "$title" | sed 's/"/\\"/g')
+    description=$(echo "$description" | sed 's/"/\\"/g')
+    labels=$(echo "$labels" | sed 's/"/\\"/g')
+    
+    # Build field array
+    [ -n "$title" ] && fields+=("\"title\": \"$title\"")
+    [ -n "$description" ] && fields+=("\"description\": \"$description\"")
+    [ -n "$labels" ] && fields+=("\"labels\": \"$labels\"")
+    [ -n "$milestone_id" ] && fields+=("\"milestone_id\": $milestone_id")
+    
+    # Join with commas
+    local field_string=""
+    for i in "${!fields[@]}"; do
+        if [ $i -eq 0 ]; then
+            field_string="${fields[$i]}"
+        else
+            field_string="${field_string}, ${fields[$i]}"
+        fi
+    done
+    
+    echo "{$field_string}"
+}
+
 # Create GitLab issue
 create_issue() {
     local title="$1"
@@ -93,17 +127,43 @@ create_issue() {
     local labels="$3"
     local milestone_id="$4"
     
-    local issue_data=$(cat <<EOF
-{
-    "title": "$title",
-    "description": "$description",
-    "labels": "$labels"$([ -n "$milestone_id" ] && echo ", \"milestone_id\": $milestone_id" || echo "")
-}
-EOF
-    )
+    local issue_data
+    issue_data=$(build_issue_json "$title" "$description" "$labels" "$milestone_id")
     
     log "Creating GitLab issue: $title"
     gitlab_api "POST" "projects/$GITLAB_PROJECT_ID/issues" "$issue_data"
+}
+
+# Build update JSON safely from fields  
+build_update_json() {
+    local fields=()
+    local title="$1"
+    local description="$2"
+    local labels="$3" 
+    local state_event="$4"
+    
+    # Escape quotes in values
+    [ -n "$title" ] && title=$(echo "$title" | sed 's/"/\\"/g')
+    [ -n "$description" ] && description=$(echo "$description" | sed 's/"/\\"/g')
+    [ -n "$labels" ] && labels=$(echo "$labels" | sed 's/"/\\"/g')
+    
+    # Build field array
+    [ -n "$title" ] && fields+=("\"title\": \"$title\"")
+    [ -n "$description" ] && fields+=("\"description\": \"$description\"")
+    [ -n "$labels" ] && fields+=("\"labels\": \"$labels\"")
+    [ -n "$state_event" ] && fields+=("\"state_event\": \"$state_event\"")
+    
+    # Join with commas
+    local field_string=""
+    for i in "${!fields[@]}"; do
+        if [ $i -eq 0 ]; then
+            field_string="${fields[$i]}"
+        else
+            field_string="${field_string}, ${fields[$i]}"
+        fi
+    done
+    
+    echo "{$field_string}"
 }
 
 # Update GitLab issue
@@ -114,16 +174,8 @@ update_issue() {
     local labels="$4"
     local state_event="$5"
     
-    local update_data=$(cat <<EOF
-{$([ -n "$title" ] && echo "\"title\": \"$title\",")
-$([ -n "$description" ] && echo "\"description\": \"$description\",")
-$([ -n "$labels" ] && echo "\"labels\": \"$labels\",")
-$([ -n "$state_event" ] && echo "\"state_event\": \"$state_event\"")}
-EOF
-    )
-    
-    # Clean up trailing commas
-    update_data=$(echo "$update_data" | sed 's/,}/}/' | sed 's/,$//')
+    local update_data
+    update_data=$(build_update_json "$title" "$description" "$labels" "$state_event")
     
     log "Updating GitLab issue #$issue_iid"
     gitlab_api "PUT" "projects/$GITLAB_PROJECT_ID/issues/$issue_iid" "$update_data"
