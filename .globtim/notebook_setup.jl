@@ -114,11 +114,36 @@ else  # HPC environment
     end
 end
 
-# Load core Globtim functionality from main project
+# Load core Globtim functionality
 try
-    println("Loading Globtim from main project...")
-    # Add main project to load path
-    push!(LOAD_PATH, project_root)
+    println("Loading Globtim from current environment...")
+    
+    # For local environment, load Globtim directly from the current environment
+    if env_type == :local
+        # The local environment should have Globtim as a dependency or dev dependency
+        # First check if we need to add it as a dev dependency
+        using Pkg
+        
+        # Check if Globtim is already available in current environment
+        try
+            using Globtim
+            println("Globtim found in current environment!")
+        catch
+            println("Adding Globtim as dev dependency...")
+            Pkg.develop(path=project_root)
+        end
+    else
+        # For HPC, use the main project approach
+        if project_root ∉ LOAD_PATH
+            push!(LOAD_PATH, project_root)
+        end
+        
+        src_path = joinpath(project_root, "src")
+        if src_path ∉ LOAD_PATH
+            push!(LOAD_PATH, src_path)
+        end
+    end
+    
     using Globtim
     using DynamicPolynomials: @polyvar
     using DynamicPolynomials, DataFrames
