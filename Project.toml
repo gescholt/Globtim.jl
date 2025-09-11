@@ -43,7 +43,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [extensions]
 GlobtimAnalysisExt = ["Clustering", "Distributions"]
-GlobtimCairoMakieExt = "CairoMakie"
+GlobtimCairoMakieExt = ["CairoMakie", "Distributions"]
 GlobtimDataExt = ["CSV", "DataFrames"]
 GlobtimDevExt = ["JuliaFormatter"]
 GlobtimGLMakieExt = "GLMakie"

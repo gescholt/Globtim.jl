@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Cluster Report Generator - Shell Wrapper
+# Simple wrapper around the Julia cluster report generator for easier usage
+
+set -e  # Exit on error
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Usage function
+usage() {
+    echo "Cluster Report Generator"
+    echo ""
+    echo "Usage: $0 <tag>"
+    echo ""
+    echo "Examples:"
+    echo "  $0 4d_results          # Analyze 4d_results.json"
+    echo "  $0 job_59780294        # Analyze specific job"
+    echo "  $0 20250809            # Analyze all jobs from date"
+    echo "  $0 --help              # Show this help"
+    echo ""
+    echo "The tool will automatically find and analyze cluster outputs"
+    echo "matching the provided tag/identifier."
+}
+
+# Check for help flag
+if [[ "$1" == "--help" || "$1" == "-h" || $# -eq 0 ]]; then
+    usage
+    exit 0
+fi
+
+# Check if Julia is available
+if ! command -v julia &> /dev/null; then
+    echo "❌ Error: Julia is not installed or not in PATH"
+    echo "   Please install Julia or ensure it's accessible"
+    exit 1
+fi
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Check if the Julia script exists
+JULIA_SCRIPT="scripts/simple_cluster_report.jl"
+if [[ ! -f "$JULIA_SCRIPT" ]]; then
+    echo "❌ Error: Julia script not found at $JULIA_SCRIPT"
+    exit 1
+fi
+
+# Get the tag from command line
+TAG="$1"
+
+# Run the Julia script
+echo "🚀 Running cluster report generator with tag: '$TAG'"
+echo ""
+
+julia "$JULIA_SCRIPT" "$TAG"
+
+echo ""
+echo "✅ Report generation complete"
