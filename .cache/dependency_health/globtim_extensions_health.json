@@ -1,0 +1,10 @@
+{
+    "component": "globtim_extensions",
+    "status": "healthy",
+    "details": "GlobTim extensions loaded successfully", 
+    "timestamp": "2025-09-09T14:14:19Z",
+    "environment": "local",
+    "test_output": "SUCCESS: GlobtimDataExt extension functions available
+Extension status: loaded
+DataFrames loaded: true"
+}
