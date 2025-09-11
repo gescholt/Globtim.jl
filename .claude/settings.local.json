@@ -39,7 +39,8 @@
       "Bash(\"enhancement,feature,hpc,automation,json,parameters,pipeline,lotka-volterra,priority::high\")",
       "Bash(\"RESOLVED: JSON dependency missing in local development environment breaks notebook loading\" )",
       "Bash(\"completed,bug-fix,dependencies,local-environment,resolved\" )",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": [],
