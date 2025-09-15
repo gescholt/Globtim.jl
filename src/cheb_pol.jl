@@ -120,6 +120,8 @@ function _convert_value(val, precision::PrecisionType)
         if val isa Irrational
             # Handle irrational constants like π by rationalizing them
             return rationalize(BigInt, Float64(val))
+        elseif isnan(val)
+            error("Cannot convert NaN to rational number. Check computation for numerical instability.")
         else
             return typeof(val) <: Rational ? val : Rational{BigInt}(val)
         end
