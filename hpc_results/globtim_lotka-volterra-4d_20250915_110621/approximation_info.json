@@ -1,0 +1,23 @@
+{
+  "condition_number": 16.000000000000025,
+  "total_samples": 28561,
+  "true_parameters": [
+    1.5,
+    1.0,
+    0.75,
+    1.25
+  ],
+  "L2_norm": null,
+  "parameter_range": 0.8,
+  "polynomial_degree": 6,
+  "parameter_center": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "basis": "chebyshev",
+  "problem": "Lotka-Volterra parameter estimation",
+  "parameter_dimension": 4,
+  "samples_per_parameter": 12
+}
