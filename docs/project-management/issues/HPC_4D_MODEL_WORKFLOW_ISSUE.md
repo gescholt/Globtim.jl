@@ -37,9 +37,9 @@ HPC 4D Model Experiments - Phase 1 Validation
 
 ### Implementation Status
 - Phase 1: ✅ COMPLETE (September 2, 2025) - tmux-based framework operational
-- Phase 2: 🔄 READY TO TEST
+- Phase 2: 🚀 IN PROGRESS (September 15, 2025) - Minimal 4D example created and ready for HPC deployment
 - All scripts created and documented
-- Ready for HPC deployment and testing
+- Minimal 4D Lotka-Volterra example validated locally
 
 ### Files Created (Updated for tmux Framework)
 - `hpc/experiments/robust_experiment_runner.sh` - Automated tmux session management
@@ -48,14 +48,28 @@ HPC 4D Model Experiments - Phase 1 Validation
 - `hpc/experiments/config_4d_model.jl`
 - `hpc/monitoring/live_monitor.sh` - Real-time monitoring for tmux sessions
 - `docs/hpc/ROBUST_WORKFLOW_GUIDE.md` - Complete tmux-based workflow documentation
+- ✅ NEW: `tests/validation/lotka_volterra_4d_minimal.jl` - Minimal 4D Lotka-Volterra example (Sept 15, 2025)
 
 #### Phase 2: 4D Model Experimental Setup
+- [x] ✅ **PROGRESS UPDATE (September 15, 2025)**: Minimal 4D Lotka-Volterra Example Created
+  - **File Created**: `tests/validation/lotka_volterra_4d_minimal.jl`
+  - **Implementation**: Standard 5-step Globtim workflow following notebook patterns:
+    1. `test_input()` - Grid generation with 4D Lotka-Volterra parameters
+    2. `Constructor()` - Chebyshev polynomial approximation (degree=6)
+    3. `solve_polynomial_system()` - Critical point solving using HomotopyContinuation.jl
+    4. `process_crit_pts()` - Critical point processing and bounds checking
+    5. `analyze_critical_points()` - Final analysis with optimization identification
+  - **Safe 4D Parameters**: dim=4, degree=6, samples=12 per dimension (20,736 total grid points)
+  - **Memory Optimization**: Uses safe parameters validated from Issue #70 memory fixes
+  - **Diagnostic Output**: Essential prints for validation without excessive verbosity
+
 - [ ] Parameter Configuration Framework
-  - Define initial testing parameters
-    - Sample size: 10 samples per dimension
-    - Domain: Small, controlled experimental domain
-  - Create parameter sweep configuration mechanism
-  - Implement parameter validation checks
+  - [x] Define initial testing parameters (completed with minimal example)
+    - Sample size: 12 samples per dimension (optimized from memory analysis)
+    - Domain: Safe 4D experimental domain with center=[0,0,0,0], range=2.0
+    - Parameters: [1.2, 1.1, 1.05, 0.95] for 4D Lotka-Volterra system
+  - [ ] Create parameter sweep configuration mechanism
+  - [ ] Implement parameter validation checks
 
 - [ ] Numerical Stability Analysis
   - Monitor matrix conditioning numbers
@@ -96,9 +110,16 @@ HPC 4D Model Experiments - Phase 1 Validation
 - [x] Review current HPC infrastructure readiness
 - [x] Validate Julia environment on compute node (Julia 1.11.6 via juliaup)
 - [x] Implement tmux-based persistent execution framework
-- ✅ Framework ready for comprehensive HPC testing
-- 🔄 Initiate full 4D model experimental workflow using tmux sessions
-- 🎯 Begin detailed performance and stability analysis with live monitoring
+- [x] ✅ Create minimal 4D Lotka-Volterra example (COMPLETED Sept 15, 2025)
+- [ ] 🚀 **IMMEDIATE NEXT STEPS** (Ready for HPC Deployment):
+  1. Deploy `lotka_volterra_4d_minimal.jl` to r04n02 HPC node
+  2. Execute validation test to confirm approximant construction completes
+  3. Verify HomotopyContinuation successfully finds critical points in 4D
+  4. Validate L2 norm computation and memory optimization fixes are working
+  5. Confirm end-to-end 4D mathematical pipeline functionality
+- [ ] ✅ Framework ready for comprehensive HPC testing
+- [ ] 🔄 Initiate full 4D model experimental workflow using tmux sessions
+- [ ] 🎯 Begin detailed performance and stability analysis with live monitoring
 
 ### Estimated Timeline
 - Week 1-2: Infrastructure setup and 2D prototype
