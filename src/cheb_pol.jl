@@ -122,6 +122,10 @@ function _convert_value(val, precision::PrecisionType)
             return rationalize(BigInt, Float64(val))
         elseif isnan(val)
             error("Cannot convert NaN to rational number. Check computation for numerical instability.")
+        elseif val == 0.0 || iszero(val)
+            return Rational{BigInt}(0)
+        elseif isinf(val)
+            error("Cannot convert Inf to rational number. Check computation for numerical overflow.")
         else
             return typeof(val) <: Rational ? val : Rational{BigInt}(val)
         end
