@@ -172,6 +172,7 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
         # Special handling for exact types vs floating point
         if T <: Rational || T <: Integer
             # Use recurrence relation for exact computation
+            @info "  🚀 lambda_vandermonde_original: Using EXACT recurrence (Rational/Integer)"
             for degree in 0:max_degree
                 eval_cache[degree] = T[]
                 for point in unique_points
@@ -179,15 +180,27 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
                 end
             end
         else
-            # Use cosine formula for floating point types
-            @views for point in unique_points
-                point_idx = point_indices[point]
-                theta = acos(clamp(T(point), T(-1), T(1)))
-                for degree in 0:max_degree
-                    if !haskey(eval_cache, degree)
-                        eval_cache[degree] = Vector{T}(undef, length(unique_points))
-                    end
-                    eval_cache[degree][point_idx] = cos(degree * theta)
+            # OPTIMIZATION: Use recurrence relation instead of trig functions (Issue #202 Tier 1 Opt #2)
+            # This matches the optimization in lambda_vandermonde_tensorized.jl
+            @info "  🚀 lambda_vandermonde_original: Using OPTIMIZED recurrence (Float type) - Issue #202 Tier 1 Opt #2"
+
+            # Pre-allocate all degree vectors
+            for degree in 0:max_degree
+                eval_cache[degree] = Vector{T}(undef, length(unique_points))
+            end
+
+            # Compute using recurrence for each point
+            @views for (point_idx, point) in enumerate(unique_points)
+                if max_degree >= 0
+                    eval_cache[0][point_idx] = one(T)  # T_0(x) = 1
+                end
+                if max_degree >= 1
+                    eval_cache[1][point_idx] = T(point)  # T_1(x) = x
+                end
+                for degree in 2:max_degree
+                    eval_cache[degree][point_idx] =
+                        2 * T(point) * eval_cache[degree - 1][point_idx] -
+                        eval_cache[degree - 2][point_idx]
                 end
             end
         end
@@ -234,34 +247,38 @@ function chebyshev_value_exact(n::Int, x::T) where {T}
 end
 
 """
-    lambda_vandermonde(Lambda::NamedTuple, S; 
-                      basis::Symbol=:chebyshev, 
-                      force_anisotropic::Bool=false)
+    lambda_vandermonde(Lambda::NamedTuple, S;
+                      basis::Symbol=:chebyshev,
+                      force_anisotropic::Bool=false,
+                      force_tensorized::Bool=false)
 
-Enhanced lambda_vandermonde that automatically detects and handles anisotropic grids.
+Enhanced lambda_vandermonde that automatically selects the best implementation.
 
-This is a wrapper that maintains backward compatibility while adding anisotropic support.
-It automatically detects grid type and calls the appropriate implementation.
+This wrapper automatically detects grid structure and calls the optimal implementation:
+- Tensorized: For regular tensor-product grids (2x faster, eliminates dict lookup bottleneck)
+- Anisotropic: For grids with different nodes per dimension
+- Original: Fallback for irregular grids
 
 # Arguments
 - `Lambda::NamedTuple`: Multi-index set
 - `S`: Grid matrix (or vector for compatibility)
 - `basis::Symbol=:chebyshev`: Polynomial basis
 - `force_anisotropic::Bool=false`: Force use of anisotropic algorithm
+- `force_tensorized::Bool=false`: Force use of tensorized algorithm
 
 # Returns
 - Vandermonde matrix
 
-# Notes
-- Automatically detects anisotropic grids and uses appropriate algorithm
-- Falls back to original implementation for isotropic grids (better performance)
-- Use `force_anisotropic=true` to test anisotropic algorithm on isotropic grids
+# Performance
+- Tensorized version: ~2x faster than original (5.8ms → 2.9ms for 4D, GN=6, degree=5)
+- Reduces dictionary lookups by 126x (1.2M → 9.6K lookups)
 """
 function lambda_vandermonde(
     Lambda::NamedTuple,
     S;
     basis::Symbol = :chebyshev,
-    force_anisotropic::Bool = false
+    force_anisotropic::Bool = false,
+    force_tensorized::Bool = false
 )
     # Convert to matrix if needed for analysis
     S_matrix = isa(S, Matrix) ? S : S
@@ -269,16 +286,25 @@ function lambda_vandermonde(
     # Quick dimension check
     if size(S_matrix, 2) == 1
         # 1D case - always use original implementation
+        @debug "🔍 Vandermonde: Using ORIGINAL implementation (1D case)"
         return lambda_vandermonde_original(Lambda, S, basis = basis)
+    end
+
+    # Force tensorized if requested
+    if force_tensorized
+        @debug "🔍 Vandermonde: Using TENSORIZED implementation (forced)"
+        return lambda_vandermonde_tensorized(Lambda, S, basis = basis)
     end
 
     # Check if grid is anisotropic (only for matrix inputs)
     if force_anisotropic || (isa(S, Matrix) && is_grid_anisotropic(S))
         # Use anisotropic implementation
+        @debug "🔍 Vandermonde: Using ANISOTROPIC implementation"
         return lambda_vandermonde_anisotropic(Lambda, S, basis = basis)
     else
-        # Use original (optimized for isotropic case)
-        return lambda_vandermonde_original(Lambda, S, basis = basis)
+        # Use tensorized implementation for regular grids (2x faster!)
+        @debug "🔍 Vandermonde: Using TENSORIZED implementation (default for isotropic grids)"
+        return lambda_vandermonde_tensorized(Lambda, S, basis = basis)
     end
 end
 
@@ -323,7 +349,7 @@ function subdivide_domain(T::test_input)::Vector{test_input}
     subdivided_inputs = Vector{test_input}()
     new_scale = isnothing(T.sample_range) ? nothing : T.sample_range / 2
 
-    for i in 0:(2 ^ n - 1)
+    for i in 0:(2^n - 1)
         new_center = copy(T.center)
         if !isnothing(T.sample_range)
             for j in 0:(n - 1)

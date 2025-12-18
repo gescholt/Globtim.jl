@@ -4,7 +4,7 @@
 
 ### Prerequisites Checklist
 - [ ] SSH access to r04n02: `ssh scholten@r04n02`
-- [ ] Repository at `/home/scholten/globtim` is up to date
+- [ ] Repository at `/home/globaloptim/globtimcore` is up to date
 - [ ] CSV and JSON packages installed: `julia --project=. -e 'using Pkg; Pkg.add(["CSV", "JSON"])'`
 - [ ] Scripts have execute permissions: `chmod +x hpc/experiments/*.sh`
 
@@ -15,7 +15,7 @@
 ssh scholten@r04n02
 
 # 2. Navigate to repository
-cd /home/scholten/globtim
+cd /home/globaloptim/globtimcore
 
 # 3. Pull latest changes
 git pull origin main
@@ -81,6 +81,26 @@ tmux kill-session -t session_name
 ./hpc/experiments/robust_experiment_runner.sh status
 ```
 
+### Session Tracking (New in October 2025)
+
+**Modern Pattern**: Experiments launched with session tracking create `.session_info.json` files that enable:
+- **Session-directory linkage**: Session name matches directory name
+- **Real-time progress**: Monitor completion percentage
+- **Status tracking**: launching → running → completed/failed
+
+```bash
+# Check experiment status
+jq .status hpc_results/YOUR_EXPERIMENT/.session_info.json
+
+# Monitor progress
+jq .progress hpc_results/YOUR_EXPERIMENT/.session_info.json
+
+# Find session from directory name
+tmux attach -t "$(jq -r .session_name hpc_results/YOUR_EXPERIMENT/.session_info.json)"
+```
+
+**For detailed session tracking usage**, see [CLUSTER_EXPERIMENT_QUICK_START.md](CLUSTER_EXPERIMENT_QUICK_START.md)
+
 ## Common Issues and Solutions
 
 ### Issue 1: OutOfMemoryError
@@ -130,7 +150,7 @@ git pull origin main
 ## Directory Structure
 
 ```
-/home/scholten/globtim/
+/home/globaloptim/globtimcore/
 ├── hpc/
 │   ├── experiments/
 │   │   ├── run_4d_experiment.jl        # Main 4D experiment script
@@ -149,7 +169,7 @@ After experiment completion:
 
 ```bash
 # Navigate to results directory
-cd /home/scholten/globtim/hpc_results/globtim_4d-model_*
+cd /home/globaloptim/globtimcore/hpc_results/globtim_4d-model_*
 
 # Check available files
 ls -la
@@ -186,10 +206,10 @@ htop -u scholten
 free -h
 
 # Monitor specific tmux session output
-tail -f /home/scholten/globtim/hpc_results/*/output.log
+tail -f /home/globaloptim/globtimcore/hpc_results/*/output.log
 
 # Watch for completion
-watch -n 5 'ls -la /home/scholten/globtim/hpc_results/*/critical_points.csv'
+watch -n 5 'ls -la /home/globaloptim/globtimcore/hpc_results/*/critical_points.csv'
 ```
 
 ## Advanced Configuration
@@ -219,6 +239,6 @@ pol = Constructor(TR, degree, basis=:chebyshev, verbose=true)
 
 ## Contact and Support
 
-- Repository: https://git.mpi-cbg.de/scholten/globtim
+- Repository: https://git.mpi-cbg.de/globaloptim/globtimcore
 - Issues: See `docs/hpc/4D_EXPERIMENT_LESSONS_LEARNED.md` for common problems
 - Memory calculator: Use formula `(degree+1)^dim * samples * 8 / 10^9` GB

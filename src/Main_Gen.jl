@@ -1,6 +1,32 @@
 # Modified MainGenerate function to handle vector scale_factor
 
 """
+    print_timing_breakdown(; reset::Bool=true)
+
+Print detailed timing breakdown from TimerOutputs for polynomial construction.
+
+# Arguments
+- `reset::Bool=true`: Whether to reset the timer after printing
+
+# Example
+```julia
+result = Constructor(test_input)
+print_timing_breakdown()
+```
+"""
+function print_timing_breakdown(; reset::Bool = true)
+    println("\n" * "="^80)
+    println("TIMING BREAKDOWN (MainGenerate)")
+    println("="^80)
+    TimerOutputs.print_timer(_TO)
+    println("="^80 * "\n")
+
+    if reset
+        TimerOutputs.reset_timer!(_TO)
+    end
+end
+
+"""
     MainGenerate(
         f,
         n::Int,
@@ -71,19 +97,32 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
         # Store grid information
         matrix_from_grid = d
-        actual_GN = size(d, 1)
+        total_points = size(d, 1)
 
-        # Infer polynomial degree from grid size
-        # For tensor product grids: n_points ≈ (degree + 1)^dim
-        n_per_dim = round(Int, actual_GN^(1 / n))
-        degree_est = n_per_dim - 1
+        # Infer points per dimension from total grid size
+        # For tensor product grids: total_points = n_per_dim^dim
+        n_per_dim = round(Int, total_points^(1 / n))
+
+        # Set GN following convention: GN+1 points per dimension
+        actual_GN = n_per_dim - 1
+
+        # Check tensor product structure and warn if non-conforming
+        expected_points = (actual_GN + 1)^n
+        if total_points != expected_points
+            @warn "Grid may not be a tensor product. Expected $(expected_points) points " *
+                "for $(n)D grid with $(n_per_dim) points per dimension, but got $(total_points) points. " *
+                "Proceeding with inferred degree=$(actual_GN), but results may have degraded accuracy."
+        end
+
+        # Degree equals GN for tensor product grids
+        degree_est = actual_GN
 
         # Generate Lambda support based on inferred degree
         Lambda = SupportGen(n, (:one_d_for_all, degree_est))
 
         # Set D for compatibility
         D = degree_est
-        K = actual_GN  # Use grid size as sample count
+        K = total_points  # Use total grid size as sample count
 
         # No need to generate grid - we already have it
         grid = nothing  # Will be set later for function evaluation
@@ -105,21 +144,21 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
         m = binomial(n + D, D)  # Dimension of vector space
         K = calculate_samples(m, delta, alpha)
-        
+
         # Add memory estimation and safety check
         function estimate_memory_requirements(n_dim, degree, n_samples)
             # CORRECTED: Focus on grid generation memory, not matrix memory
             # Grid generation creates actual_GN^n_dim SVector objects
-            samples_per_dim = round(Int, n_samples^(1.0/n_dim))
-            
+            samples_per_dim = round(Int, n_samples^(1.0 / n_dim))
+
             # Grid memory: each SVector{n,Float64} = n*8 bytes + overhead
             grid_size = samples_per_dim^n_dim
             grid_memory = grid_size * (n_dim * 8 + 32) / (1024^3)  # GB with overhead
-            
+
             # Matrix memory (secondary concern)
             n_terms = binomial(n_dim + degree, degree)
             matrix_memory = n_samples * n_terms * 8 / (1024^3)  # GB
-            
+
             # Total estimated memory
             total_memory = grid_memory + matrix_memory
             return total_memory, grid_memory, matrix_memory
@@ -133,21 +172,24 @@ TimerOutputs.@timeit _TO function MainGenerate(
         end
 
         # Memory safety check before proceeding (CORRECTED)
-        total_memory, grid_memory, matrix_memory = estimate_memory_requirements(n, D, actual_GN)
-        samples_per_dim = round(Int, actual_GN^(1.0/n))
-        
+        total_memory, grid_memory, matrix_memory =
+            estimate_memory_requirements(n, D, actual_GN)
+        samples_per_dim = round(Int, actual_GN^(1.0 / n))
+
         if grid_memory > 50.0  # 50GB threshold for grid generation
             @warn "High grid memory requirement: $(grid_memory) GB (total: $(total_memory) GB)"
             @warn "Grid generation creates $(samples_per_dim)^$(n) = $(samples_per_dim^n) SVector objects"
             @warn "For 4D problems: Consider samples_per_dim ≤ 4 (4^4 = 256 total samples)"
             @warn "For 3D problems: Consider samples_per_dim ≤ 6 (6^3 = 216 total samples)"
-            
+
             if grid_memory > 100.0  # Critical threshold for grid memory
-                throw(ArgumentError(
-                    "Grid memory requirement too high: $(grid_memory) GB. " *
-                    "For $(n)D problems, use samples_per_dim ≤ $(max(2, floor(Int, 256^(1/n)))) " *
-                    "to prevent OutOfMemoryError during grid generation."
-                ))
+                throw(
+                    ArgumentError(
+                        "Grid memory requirement too high: $(grid_memory) GB. " *
+                        "For $(n)D problems, use samples_per_dim ≤ $(max(2, floor(Int, 256^(1/n)))) " *
+                        "to prevent OutOfMemoryError during grid generation."
+                    )
+                )
             end
         end
 
@@ -166,13 +208,20 @@ TimerOutputs.@timeit _TO function MainGenerate(
     is_anisotropic = grid_provided && is_grid_anisotropic(matrix_from_grid)
 
     # Call lambda_vandermonde with appropriate flag
-    VL = lambda_vandermonde(
-        Lambda,
-        matrix_from_grid,
-        basis = basis,
-        force_anisotropic = is_anisotropic
-    )
-    G_original = VL' * VL
+    TimerOutputs.@timeit _TO "vandermonde_construction" begin
+        VL = lambda_vandermonde(
+            Lambda,
+            matrix_from_grid,
+            basis = basis,
+            force_anisotropic = is_anisotropic
+        )
+    end
+
+    @info "  🔢 Computing Gram matrix ($(size(VL, 2)) × $(size(VL, 2)))..."
+    TimerOutputs.@timeit _TO "gram_matrix" begin
+        G_original = VL' * VL
+    end
+    @info "  ✓ Gram matrix computed"
 
     # Log if using anisotropic algorithm
     if verbose >= 1 && is_anisotropic
@@ -183,6 +232,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
     scaled_center = SVector{n, Float64}(center)
 
     # Handle different scale_factor types for function evaluation
+    n_grid_points = grid_provided ? size(matrix_from_grid, 1) : length(grid)
+    @info "  🎯 Evaluating objective function on grid ($n_grid_points points)..."
     TimerOutputs.@timeit _TO "evaluation" begin
         # Handle grid format differences
         if grid_provided
@@ -197,11 +248,12 @@ TimerOutputs.@timeit _TO function MainGenerate(
         end
 
         # Evaluate function on grid points
+        eval_start = time()
         if isa(scale_factor, Number)
             # Scalar scale_factor
             if n == 1
                 # For 1D functions, extract scalar from SVector
-                F = map(x -> f((scale_factor*x+scaled_center)[1]), grid_points)
+                F = map(x -> f((scale_factor * x + scaled_center)[1]), grid_points)
             else
                 F = map(x -> f(scale_factor * x + scaled_center), grid_points)
             end
@@ -219,32 +271,52 @@ TimerOutputs.@timeit _TO function MainGenerate(
             end
             F = map(apply_scale, grid_points)
         end
+        eval_time = time() - eval_start
+        if eval_time > 1.0  # Only log if evaluation took significant time
+            @info "  ⏱️  Evaluation rate: $(round(n_grid_points / eval_time, digits=1)) points/sec"
+        end
+    end
+    @info "  ✓ Function evaluation complete"
+
+    # Compute condition number only when needed (expensive: requires SVD)
+    # This saves ~160ms per call when verbose == 0
+    cond_vandermonde = if verbose >= 1
+        @info "  📐 Computing condition number..."
+        TimerOutputs.@timeit _TO "condition_number" begin
+            cond(G_original)
+        end
+    else
+        NaN  # Skip computation in non-verbose mode
     end
 
-    cond_vandermonde = cond(G_original)
+    if verbose >= 1
+        @info "  ✓ Condition number: $(cond_vandermonde)"
+    end
+
+    @info "  🔧 Solving linear system..."
     TimerOutputs.@timeit _TO "linear_solve_vandermonde" begin
         RHS = VL' * F
         linear_prob = LinearProblem(G_original, RHS)
         if verbose == 1
             println("Condition number of G: ", cond_vandermonde)
             # Use LU factorization to avoid QR pivot type issues in Julia 1.11
-            sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization(), verbose = true)
+            sol = LinearSolve.solve(
+                linear_prob,
+                LinearSolve.LUFactorization(),
+                verbose = true
+            )
             println("Chosen method: ", typeof(sol.alg))
         else
             # Use LU factorization to avoid QR pivot type issues in Julia 1.11
             sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization())
         end
     end
+    @info "  ✓ Linear system solved"
 
-    # Compute L2 norm properly based on basis type - no fallbacks
-    TimerOutputs.@timeit _TO "norm_computation" nrm = if basis == :chebyshev
-        # Proper L2 norm computation using discrete Riemann sum
-        compute_norm(scale_factor, VL, sol, F, grid_provided ? grid_points : grid, n, d)
-    else  # Legendre case
-        # Use uniform weights for Legendre grid  
-        residuals = VL * sol.u - F
-        sqrt((2 / actual_GN)^n * sum(abs2, residuals))
-    end
+    # Compute L2 norm using proper quadrature weights
+    # This ensures monotonic decrease with degree (by containment)
+    TimerOutputs.@timeit _TO "norm_computation" nrm =
+        compute_norm(scale_factor, VL, sol, F, basis, actual_GN, n)
 
     # Store the basis parameters in the ApproxPoly object
     # Use the smart constructor to get correct type parameters
@@ -256,8 +328,9 @@ TimerOutputs.@timeit _TO function MainGenerate(
         Lambda.data,
         degree_info,
         nrm,
-        actual_GN,
+        size(matrix_from_grid, 1),  # Total number of grid points
         scale_factor,
+        collect(center),  # Store center for coordinate transform in evaluate()
         matrix_from_grid,
         F,
         basis,
@@ -402,15 +475,28 @@ TimerOutputs.@timeit _TO function Constructor(
             power_of_two_denom = power_of_two_denom
         )
         if !isnothing(T.tolerance) && p.nrm < T.tolerance
-            println("attained the desired L2-norm: ", p.nrm)
-            println("Degree :$degree ")
+            if verbose >= 1
+                println("attained the desired L2-norm: ", p.nrm)
+                println("Degree :$degree ")
+            end
             break
         elseif isnothing(T.tolerance)
             # No tolerance specified, use the given degree without auto-increase
             break
         else
             degree += 1
-            println("Increase degree to: $degree")
+            if verbose >= 2
+                println("Increase degree to: $degree")
+            end
+
+            # Check if we've hit the maximum degree limit
+            if !isnothing(T.degree_max) && degree > T.degree_max
+                if verbose >= 1
+                    println("Reached maximum degree limit: $(T.degree_max)")
+                    println("Final L2-norm: ", p.nrm)
+                end
+                break
+            end
         end
     end
     return p

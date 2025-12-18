@@ -5,32 +5,51 @@
 ## 📋 Prerequisites
 
 - SSH access to r04n02 compute node: `ssh scholten@r04n02`
-- Repository cloned at `/home/scholten/globtim`
-- Julia 1.11.6 (automatically available via juliaup)
+- Repository cloned at `/home/globaloptim/globtimcore` (local) and `/home/scholten/globtimcore` (cluster)
+- Julia 1.11.6 (automatically available via juliaup on cluster)
 
-## 🚀 Running Examples (30 seconds to results)
+## 🚀 Running Experiments via Deployment Scripts (RECOMMENDED)
 
-### 1. Connect to HPC Node
+**Standard Operating Procedure**: All experiments should be launched via deployment scripts that handle file synchronization, environment verification, and tmux session creation.
+
+### 1. Single Experiment Launch (e.g., Issue #131)
 ```bash
+# From local machine
+cd /Users/ghscholt/GlobalOptim/globtimcore
+
+# Use the deployment script in the experiment config directory
+./experiments/lotka_volterra_4d_study/configs_YYYYMMDD_HHMMSS/deploy_exp1.sh
+```
+
+The deployment script automatically:
+- ✅ Syncs all files to cluster via rsync
+- ✅ Verifies Julia environment and packages
+- ✅ Creates tmux session with proper naming
+- ✅ Launches experiment with correct paths
+- ✅ Provides monitoring commands
+
+### 2. Campaign Launch (Multiple Experiments)
+```bash
+# From local machine
+cd /Users/ghscholt/GlobalOptim/globtimcore
+
+# Use campaign launcher script
+./scripts/launch_4d_lv_campaign.sh
+```
+
+### 3. Legacy Direct Execution (Not Recommended)
+For manual testing only - prefer deployment scripts for reproducibility:
+
+```bash
+# Connect to HPC Node
 ssh scholten@r04n02
-cd /home/scholten/globtim
-```
+cd /home/scholten/globtimcore
 
-### 2. Quick 2D Validation Test
-```bash
-# Runs in ~30 seconds, validates all infrastructure
+# Quick 2D validation test
 ./hpc/experiments/robust_experiment_runner.sh 2d-test
-```
 
-### 3. Production 4D Experiments
-```bash
-# 4D Lotka-Volterra parameter estimation (2-4 hours)
+# 4D experiments
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 8 10
-#                                                        ^  ^
-#                                              samples/dim  degree
-
-# 4D Rosenbrock optimization test
-./hpc/experiments/robust_experiment_runner.sh rosenbrock-4d 10 12
 ```
 
 ## 📊 Experiment Monitoring
@@ -46,14 +65,31 @@ tmux attach -t globtim_experiment_20250910_143000
 # Detach without stopping (Ctrl+B, then D)
 ```
 
-### Monitor Progress
+### Monitor Progress with Session Tracking
 ```bash
+# Check experiment status via .session_info.json
+ssh scholten@r04n02 'jq .status hpc_results/*/.session_info.json'
+
+# Monitor progress percentage
+ssh scholten@r04n02 'jq .progress hpc_results/GN=10_*/.session_info.json'
+
+# Watch progress in real-time
+watch -n 10 'ssh scholten@r04n02 "jq .progress hpc_results/YOUR_EXPERIMENT/.session_info.json"'
+
 # Check hook system logs (validation, monitoring, GitLab integration)
 tail -f tools/hpc/hooks/logs/orchestrator.log
 
 # Check resource usage
 top -u scholten
 ```
+
+**Session Tracking**: Experiments launched with the new session tracking pattern automatically create `.session_info.json` files containing:
+- Session name (matches tmux session and directory name)
+- Real-time progress updates
+- Experiment parameters
+- Status (launching/running/completed/failed)
+
+See [CLUSTER_EXPERIMENT_QUICK_START.md](CLUSTER_EXPERIMENT_QUICK_START.md) for detailed session tracking usage.
 
 ## 📁 Results and Post-Processing
 
@@ -123,7 +159,7 @@ julia --project=. -e "using Pkg; Pkg.instantiate()"
 ```
 
 ### Getting Help
-- **Issue Tracking**: https://git.mpi-cbg.de/scholten/globtim/-/issues
+- **Issue Tracking**: https://git.mpi-cbg.de/globaloptim/globtimcore/-/issues
 - **System Logs**: `tools/hpc/hooks/logs/`
 - **Performance Data**: `hpc_results/` directory
 
@@ -131,6 +167,8 @@ julia --project=. -e "using Pkg; Pkg.instantiate()"
 
 | Topic | Document |
 |-------|----------|
+| **Deployment Scripts** | `EXPERIMENT_LAUNCH_INFRASTRUCTURE.md` ⭐ |
+| **Session Tracking** | `CLUSTER_EXPERIMENT_QUICK_START.md` |
 | Detailed Workflows | `COMPUTATION_PROCEDURES.md` |
 | Hook System | `STRATEGIC_HOOK_INTEGRATION_DOCUMENTATION.md` |
 | Post-Processing | `POST_PROCESSING_ANALYSIS_REPORT.md` |
@@ -140,13 +178,21 @@ julia --project=. -e "using Pkg; Pkg.instantiate()"
 ## 🎯 Quick Commands Reference
 
 ```bash
-# Essential HPC workflow
+# RECOMMENDED: Deployment script workflow (from local machine)
+cd /Users/ghscholt/GlobalOptim/globtimcore
+./experiments/*/configs_*/deploy_expN.sh    # Single experiment
+./scripts/launch_4d_lv_campaign.sh          # Campaign
+
+# Legacy: Direct execution workflow (from cluster)
 ssh scholten@r04n02
-cd /home/scholten/globtim
+cd /home/scholten/globtimcore
 ./hpc/experiments/robust_experiment_runner.sh 2d-test        # Validate (30s)
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 8 10  # Production (3h)
-tmux ls                                                      # Monitor
-julia --project=. Examples/quick_result_summary.jl          # Results
+
+# Monitoring (same for both workflows)
+ssh scholten@r04n02 'tmux list-sessions'    # List sessions
+ssh scholten@r04n02 'tmux attach -t SESSION_NAME'  # Monitor
+julia --project=. Examples/quick_result_summary.jl # Results
 ```
 
 ---

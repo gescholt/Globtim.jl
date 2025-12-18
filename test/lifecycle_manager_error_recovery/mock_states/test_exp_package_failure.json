@@ -1,0 +1,52 @@
+{
+    "experiment_id": "test_exp_package_failure",
+    "current_phase": "execution",
+    "status": "failed",
+    "context": "minimal_4d_lv_test",
+    "experiment_type": "4d_lotka_volterra",
+    "environment": "hpc",
+    "created_at": "2025-09-29T20:10:00Z",
+    "updated_at": "2025-09-29T20:10:45Z",
+    "phase_history": [
+        {
+            "phase": "initialization",
+            "status": "completed",
+            "timestamp": "2025-09-29T20:10:00Z",
+            "duration_seconds": 5
+        },
+        {
+            "phase": "validation",
+            "status": "completed",
+            "timestamp": "2025-09-29T20:10:05Z",
+            "duration_seconds": 10
+        },
+        {
+            "phase": "preparation",
+            "status": "completed",
+            "timestamp": "2025-09-29T20:10:15Z",
+            "duration_seconds": 15
+        },
+        {
+            "phase": "execution",
+            "status": "failed",
+            "timestamp": "2025-09-29T20:10:45Z",
+            "duration_seconds": 30
+        }
+    ],
+    "metadata": {
+        "manager_version": "1.0.0",
+        "total_phases": 4,
+        "completed_phases": 3,
+        "failed_phases": 1,
+        "retry_count": 0,
+        "estimated_completion": null,
+        "performance_metrics": {}
+    },
+    "recovery_attempts": [],
+    "tags": [],
+    "error_info": {
+        "category": "PACKAGE_LOADING_FAILURE",
+        "message": "ERROR: LoadError: failed to load HomotopyContinuation",
+        "timestamp": "2025-09-29T20:10:45Z"
+    }
+}

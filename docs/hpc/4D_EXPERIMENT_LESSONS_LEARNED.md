@@ -20,7 +20,7 @@ This document provides a complete guide for running parameter estimation experim
 **Immediate next steps to run Lotka-Volterra parameter estimation:**
 
 - [ ] **SSH to node**: `ssh scholten@r04n02`
-- [ ] **Navigate and sync**: `cd /home/scholten/globtim && git pull origin main`
+- [ ] **Navigate and sync**: `cd /home/globaloptim/globtimcore && git pull origin main`
 - [ ] **Install JSON** (one-time): `julia --project=. -e 'using Pkg; Pkg.add("JSON")'`
 - [ ] **Run experiment**: `./node_experiments/runners/experiment_runner.sh lotka-volterra-4d 8 10`
 - [ ] **Monitor**: `tmux attach -t globtim_*` (Ctrl+B then D to detach)
@@ -29,7 +29,7 @@ This document provides a complete guide for running parameter estimation experim
 ## Critical Issues Encountered and Fixed
 
 ### 1. ❌ Package Activation Path Issue
-**Problem**: Script used `Pkg.activate(dirname(@__DIR__))` which activated `/home/scholten/globtim/hpc/` instead of `/home/scholten/globtim/`
+**Problem**: Script used `Pkg.activate(dirname(@__DIR__))` which activated `/home/globaloptim/globtimcore/hpc/` instead of `/home/globaloptim/globtimcore/`
 
 **Symptom**: Packages not found, wrong Project.toml activated
 
@@ -113,7 +113,7 @@ julia --project=. --heap-size-hint=50G $experiment_script \$LOG_DIR
 
 **Solution Process**:
 1. Commit and push locally: `git add -f hpc/experiments/run_4d_experiment.jl && git commit && git push`
-2. SSH to node and pull: `ssh scholten@r04n02 "cd /home/scholten/globtim && git pull origin main"`
+2. SSH to node and pull: `ssh scholten@r04n02 "cd /home/globaloptim/globtimcore && git pull origin main"`
 3. Handle local modifications: `git stash && git pull origin main`
 
 **Georgy** A carefull re-organization with a specific folder to run on the node should help. 
@@ -197,7 +197,7 @@ Before running any HPC experiment:
   - [ ] Common missing packages: CSV, JSON, Statistics
 
 - [ ] **Script Configuration**
-  - [ ] **FIXED Sept 3**: Use `get(ENV, "JULIA_PROJECT", "/home/scholten/globtim")` NOT `dirname(@__DIR__)`
+  - [ ] **FIXED Sept 3**: Use `get(ENV, "JULIA_PROJECT", "/home/globaloptim/globtimcore")` NOT `dirname(@__DIR__)`
   - [ ] **FIXED Sept 3**: Never access `TR.objective` as data - it's a Function type
   - [ ] No references to non-existent fields (e.g., `sample_pts`)
   - [ ] Proper error handling for large memory allocations
@@ -225,13 +225,13 @@ Before running any HPC experiment:
 tmux ls | grep globtim
 
 # View output log
-tail -f /home/scholten/globtim/hpc_results/globtim_*/output.log
+tail -f /home/globaloptim/globtimcore/hpc_results/globtim_*/output.log
 
 # View error log
-cat /home/scholten/globtim/hpc_results/globtim_*/error.log
+cat /home/globaloptim/globtimcore/hpc_results/globtim_*/error.log
 
 # Check Julia package status
-julia --project=/home/scholten/globtim -e 'using Pkg; Pkg.status()'
+julia --project=/home/globaloptim/globtimcore -e 'using Pkg; Pkg.status()'
 
 # Test memory allocation
 julia --heap-size-hint=50G -e 'println("Allocated")'

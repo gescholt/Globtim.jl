@@ -53,7 +53,7 @@ function process_crit_pts(
 
     # Handle case with no valid points
     if isempty(filtered_points)
-        result = Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim)
+        result = Dict(Symbol("x$i") => Float64[] for i in 1:(TR.dim))
         result[:z] = Float64[]
         return DataFrame(result)
     end
@@ -67,7 +67,10 @@ function process_crit_pts(
         [TR.sample_range .* p .+ center_vec for p in filtered_points]
     else
         # Vector scaling - apply per-coordinate scaling
-        [[TR.sample_range[i] * p[i] + center_vec[i] for i in 1:TR.dim] for p in filtered_points]
+        [
+            [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:(TR.dim)] for
+            p in filtered_points
+        ]
     end
 
     # Evaluate function at transformed points
@@ -114,7 +117,7 @@ function process_crit_pts(
     # Create DataFrame
     return DataFrame(
         merge(
-            Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim),
+            Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:(TR.dim)),
             Dict(:z => z)
         )
     )
@@ -287,7 +290,7 @@ function msolve_parser(
 
             if isempty(filtered_points)
                 println("No valid points found after filtering")
-                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:TR.dim))
+                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:(TR.dim)))
             end
 
             # Convert center to vector if it's not already
@@ -300,7 +303,7 @@ function msolve_parser(
             else
                 # Vector sample_range - apply per-coordinate scaling
                 [
-                    [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:TR.dim]
+                    [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:(TR.dim)]
                     for
                     p in filtered_points
                 ]
@@ -311,7 +314,8 @@ function msolve_parser(
             df = DataFrame(
                 merge(
                     Dict(
-                        Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:TR.dim
+                        Symbol("x$i") => [p[i] for p in points_to_process] for
+                        i in 1:(TR.dim)
                     ),
                     Dict(:z => z)
                 )

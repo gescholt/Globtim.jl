@@ -105,12 +105,12 @@ Each function includes comprehensive documentation with:
 
 # Function categorization for easy reference
 const BOWL_SHAPED_FUNCTIONS = [
-    :Sphere, :Rosenbrock, :Zakharov, :SumOfDifferentPowers, 
+    :Sphere, :Rosenbrock, :Zakharov, :SumOfDifferentPowers,
     :Trid, :RotatedHyperEllipsoid
 ]
 
 const MULTIMODAL_FUNCTIONS = [
-    :Ackley, :Griewank, :Schwefel, :Rastringin, :Levy, 
+    :Ackley, :Griewank, :Schwefel, :Rastringin, :Levy,
     :Michalewicz, :StyblinskiTang, :shubert, :dejong5
 ]
 
@@ -152,7 +152,7 @@ categories = get_function_category(:Rosenbrock)
 """
 function get_function_category(func_name::Symbol)
     categories = Symbol[]
-    
+
     if func_name in BOWL_SHAPED_FUNCTIONS
         push!(categories, :bowl_shaped)
     end
@@ -171,7 +171,7 @@ function get_function_category(func_name::Symbol)
     if func_name in HIGHER_D_FUNCTIONS
         push!(categories, :higher_d)
     end
-    
+
     return categories
 end
 
@@ -251,7 +251,7 @@ function get_function_info(func_name::Symbol)
         info[:global_min] = "zeros(n)"
         info[:global_min_value] = 0.0
         info[:properties] = ["multimodal", "non-separable", "many local minima"]
-    # Add more function-specific information as needed
+        # Add more function-specific information as needed
     end
 
     return info

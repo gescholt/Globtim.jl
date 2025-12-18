@@ -95,8 +95,8 @@ Legacy SLURM-based collection (now archived) - patterns apply to direct access.
 #### Standard Result Locations
 
 Results are typically saved to:
-- `/home/scholten/globtim/hpc_results/experiment_name_timestamp/`
-- `/home/scholten/globtim/lotka_volterra_4d_timestamp/`
+- `/home/globaloptim/globtimcore/hpc_results/experiment_name_timestamp/`
+- `/home/globaloptim/globtimcore/lotka_volterra_4d_timestamp/`
 - Local collected results: `./collected_results/experiment_name/`
 
 #### Key Result Files
@@ -121,7 +121,7 @@ experiment_directory/
 ssh scholten@r04n02
 
 # Navigate to results
-cd /home/scholten/globtim/hpc_results
+cd /home/globaloptim/globtimcore/hpc_results
 
 # List recent experiments
 ls -lt | head -10
@@ -136,10 +136,10 @@ cat results.json
 
 ```bash
 # Copy specific experiment results
-scp -r scholten@r04n02:/home/scholten/globtim/hpc_results/experiment_name_timestamp/ ./local_results/
+scp -r scholten@r04n02:/home/globaloptim/globtimcore/hpc_results/experiment_name_timestamp/ ./local_results/
 
 # Copy all recent results
-rsync -av scholten@r04n02:/home/scholten/globtim/hpc_results/ ./hpc_results/
+rsync -av scholten@r04n02:/home/globaloptim/globtimcore/hpc_results/ ./hpc_results/
 ```
 
 ## 📊 Result Analysis Tools
@@ -174,7 +174,7 @@ generate_optimization_report("hpc_results/collection_summary.json")
 ```bash
 # 1. Deploy and start experiment (using robust runner)
 ssh scholten@r04n02
-cd /home/scholten/globtim
+cd /home/globaloptim/globtimcore
 ./hpc/scripts/robust_experiment_runner.sh tests/validation/lotka_volterra_4d_minimal.jl
 
 # 2. Monitor experiment progress (from local machine)
@@ -184,7 +184,7 @@ tools/hpc/monitoring/tmux_monitor.sh globtim_4d_$(date +%Y%m%d)
 tools/hpc/monitoring/tmux_monitor.sh --list
 
 # 4. Collect results
-scp -r scholten@r04n02:/home/scholten/globtim/hpc_results/latest_experiment/ ./results/
+scp -r scholten@r04n02:/home/globaloptim/globtimcore/hpc_results/latest_experiment/ ./results/
 
 # 5. Analyze results locally
 julia --project=. analyze_collection_summary.jl
@@ -218,7 +218,7 @@ export STALE_THRESHOLD_HOURS=24
 export VERBOSE=true
 
 # Set GlobTim directory path
-export GLOBTIM_DIR=/home/scholten/globtim
+export GLOBTIM_DIR=/home/globaloptim/globtimcore
 ```
 
 ### Log Files
@@ -253,10 +253,10 @@ Monitoring logs are stored in:
 3. **No Results Found**
    ```bash
    # Check standard result directories
-   ssh scholten@r04n02 'find /home/scholten/globtim -name "*results*" -type d -mtime -1'
+   ssh scholten@r04n02 'find /home/globaloptim/globtimcore -name "*results*" -type d -mtime -1'
 
    # Check experiment logs
-   ssh scholten@r04n02 'ls -lt /home/scholten/globtim/hpc_results/'
+   ssh scholten@r04n02 'ls -lt /home/globaloptim/globtimcore/hpc_results/'
    ```
 
 ### Performance Optimization

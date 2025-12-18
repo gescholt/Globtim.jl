@@ -12,7 +12,17 @@ This directory contains all data from HPC benchmark runs, organized for easy acc
 
 ## Usage
 
-- Run `python3 collect_hpc_results.py` to collect new results
-- Run `python3 analyze_hpc_results.py` to generate analysis
-- Run `python3 quick_visualize.py` for quick visualization
-- Run `python3 data_manager.py --status` to check data status
+### Collection (Current)
+Use the Julia-based collection workflow from `globtimpostprocessing`:
+```julia
+using ClusterCollection
+collect_batch("tracking/batch_ID.json", "output_dir")
+```
+
+### Analysis (Current)
+- Run `python3 ../tools/benchmarking/benchmark_dashboard.py` for comprehensive analysis
+- Interactive dashboards saved to `visualizations/`
+
+### Legacy Tools (Archived)
+- `analyze_hpc_results.py` - Archived (see `../tools/benchmarking/archived/README.md`)
+- Use `benchmark_dashboard.py` instead for modern analysis

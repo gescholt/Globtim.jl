@@ -9,11 +9,11 @@ Modify these settings as needed based on your package's specific requirements.
 const AQUA_CONFIG = (
     # Method ambiguity exclusions
     ambiguity_exclusions = [
-        # Add specific method signatures here if needed
-        # Example: Base.show
-        # Base.convert
+    # Add specific method signatures here if needed
+    # Example: Base.show
+    # Base.convert
     ],
-    
+
     # Tests to skip entirely (use sparingly)
     skip_tests = [
         # Skip persistent tasks test temporarily due to version constraint issues
@@ -21,7 +21,7 @@ const AQUA_CONFIG = (
         # Skip stale deps test due to false positives for development tools
         :test_stale_deps
     ],
-    
+
     # Dependency analysis settings
     deps_compat_check = true,
     stale_deps_check = true,
@@ -40,16 +40,16 @@ const AQUA_CONFIG = (
         "SHA",             # Used in security features and integrity checking
         "UUIDs"            # Used in test ID generation and unique identifier creation
     ],
-    
+
     # Project structure validation
     project_toml_formatting = true,
-    
+
     # Custom test settings
     strict_mode = false,  # Set to true for stricter checking
-    
+
     # CI-specific settings
     ci_mode = haskey(ENV, "CI"),
-    
+
     # Verbose output settings
     verbose = get(ENV, "AQUA_VERBOSE", "false") == "true"
 )
@@ -66,28 +66,28 @@ Run Aqua tests with the configured settings
 """
 function run_configured_aqua_tests(module_to_test)
     config = get_aqua_config()
-    
+
     # Run tests based on configuration
     if :test_ambiguities ∉ config.skip_tests
         if isempty(config.ambiguity_exclusions)
             Aqua.test_ambiguities(module_to_test)
         else
-            Aqua.test_ambiguities(module_to_test; exclude=config.ambiguity_exclusions)
+            Aqua.test_ambiguities(module_to_test; exclude = config.ambiguity_exclusions)
         end
     end
-    
+
     if :test_undefined_exports ∉ config.skip_tests
         Aqua.test_undefined_exports(module_to_test)
     end
-    
+
     if :test_unbound_args ∉ config.skip_tests
         Aqua.test_unbound_args(module_to_test)
     end
-    
+
     if :test_persistent_tasks ∉ config.skip_tests
         Aqua.test_persistent_tasks(module_to_test)
     end
-    
+
     if config.project_toml_formatting && :test_project_toml_formatting ∉ config.skip_tests
         # Check if this function exists in the current Aqua version
         if isdefined(Aqua, :test_project_toml_formatting)
@@ -96,7 +96,7 @@ function run_configured_aqua_tests(module_to_test)
             @warn "test_project_toml_formatting not available in this Aqua version - skipping"
         end
     end
-    
+
     # Optional tests (may fail without breaking CI)
     if config.deps_compat_check
         try
@@ -105,17 +105,17 @@ function run_configured_aqua_tests(module_to_test)
             if config.ci_mode && config.strict_mode
                 rethrow(e)
             else
-                @warn "Dependency compatibility check failed" exception=e
+                @warn "Dependency compatibility check failed" exception = e
             end
         end
     end
-    
+
     if config.stale_deps_check && :test_stale_deps ∉ config.skip_tests
         try
             # Check if Aqua supports ignoring specific dependencies
             if hasmethod(Aqua.test_stale_deps, (typeof(module_to_test), Dict))
                 # Use ignore list if supported
-                Aqua.test_stale_deps(module_to_test; ignore=config.stale_deps_ignore)
+                Aqua.test_stale_deps(module_to_test; ignore = config.stale_deps_ignore)
             else
                 # Fallback to basic test (may produce false positives)
                 Aqua.test_stale_deps(module_to_test)
@@ -124,7 +124,8 @@ function run_configured_aqua_tests(module_to_test)
             if config.ci_mode && config.strict_mode
                 rethrow(e)
             else
-                @warn "Stale dependency check failed (may include false positives for dev tools)" exception=e
+                @warn "Stale dependency check failed (may include false positives for dev tools)" exception =
+                    e
             end
         end
     end
@@ -138,13 +139,13 @@ function should_run_aqua_tests()
     if get(ENV, "SKIP_AQUA_TESTS", "false") == "true"
         return false
     end
-    
+
     # Skip on older Julia versions where Aqua might not work well
     if VERSION < v"1.6"
         @warn "Skipping Aqua tests on Julia $(VERSION) - requires Julia 1.6+"
         return false
     end
-    
+
     return true
 end
 
@@ -153,14 +154,16 @@ Print Aqua configuration information
 """
 function print_aqua_config()
     config = get_aqua_config()
-    
+
     println("🔧 Aqua.jl Configuration:")
     println("  Strict mode: $(config.strict_mode)")
     println("  CI mode: $(config.ci_mode)")
     println("  Verbose: $(config.verbose)")
     println("  Ambiguity exclusions: $(length(config.ambiguity_exclusions))")
     println("  Skipped tests: $(config.skip_tests)")
-    println("  Dependency checks: compat=$(config.deps_compat_check), stale=$(config.stale_deps_check)")
+    println(
+        "  Dependency checks: compat=$(config.deps_compat_check), stale=$(config.stale_deps_check)"
+    )
     println("  Stale deps ignored: $(length(config.stale_deps_ignore)) packages")
     if config.verbose
         println("    Ignored packages: " * join(config.stale_deps_ignore, ", "))

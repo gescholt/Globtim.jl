@@ -3,7 +3,7 @@
 **Date**: August 12, 2025  
 **Commit**: `992f804`  
 **Status**: Successfully pushed to GitLab  
-**Repository**: `git.mpi-cbg.de:scholten/globtim.git`  
+**Repository**: `git.mpi-cbg.de:globaloptim/globtimcore.git`  
 
 ## 🎉 Push Summary
 

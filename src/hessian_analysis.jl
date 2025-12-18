@@ -6,33 +6,45 @@ using LinearAlgebra
 using DataFrames
 
 """
-    compute_hessians(f::Function, points::Matrix{Float64})::Vector{Matrix{Float64}}
+    compute_hessians(f, points::Matrix{Float64})::Vector{Matrix{Float64}}
 
 Compute Hessian matrices at specified points using ForwardDiff automatic differentiation.
 
 # Arguments
-- f: Objective function to analyze
+- f: Objective function to analyze (any callable)
 - points: Matrix where each row is a point (n_points × n_dims)
 
 # Returns
 Vector{Matrix{Float64}}: Hessian matrix for each point
 """
-function compute_hessians(f::Function, points::Matrix{Float64})::Vector{Matrix{Float64}}
+function compute_hessians(f, points::Matrix{Float64})::Vector{Matrix{Float64}}
     n_points, n_dims = size(points)
     hessians = Vector{Matrix{Float64}}(undef, n_points)
 
+    # Collect failures for summary reporting
+    failed_points = Int[]
+    failure_types = Set{String}()
+
     for i in 1:n_points
         try
-            point = points[i, :]
+            point = Vector{Float64}(points[i, :])
             @debug "Computing Hessian for point $i: $point"
             H = ForwardDiff.hessian(f, point)
             @debug "Point $i Hessian computed successfully: size=$(size(H)), det=$(det(H))"
             hessians[i] = H
         catch e
-            @debug "Point $i: Hessian computation failed with error: $e"
+            push!(failed_points, i)
+            push!(failure_types, string(typeof(e)))
+            @debug "Point $i: Hessian computation failed with error: $e" exception=(e, catch_backtrace())
             # Fallback for points where Hessian computation fails
             hessians[i] = fill(NaN, n_dims, n_dims)
         end
+    end
+
+    # Report summary if any points failed
+    if !isempty(failed_points)
+        sample_points = first(failed_points, min(5, length(failed_points)))
+        @warn "Hessian computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(failure_types)
     end
 
     return hessians

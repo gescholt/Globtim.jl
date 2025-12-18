@@ -13,7 +13,7 @@ This document provides the **current working workflow** for using GlobTim on the
 
 ### Available Resources
 - **Cluster:** falcon.hpc.uni-oldenburg.de
-- **Bundle Location:** `/home/scholten/globtim_optimal_bundle_20250821_152938.tar.gz`
+- **Bundle Location:** `/home/globaloptim/globtimcore_optimal_bundle_20250821_152938.tar.gz`
 - **Julia Version:** 1.11.2 at `/sw/bin/julia`
 - **Account:** `mpi`
 - **Partition:** `batch`
@@ -57,7 +57,7 @@ mkdir -p $WORK_DIR && cd $WORK_DIR
 
 # Extract the working bundle
 echo "Extracting bundle..."
-tar -xzf /home/scholten/globtim_optimal_bundle_20250821_152938.tar.gz
+tar -xzf /home/globaloptim/globtimcore_optimal_bundle_20250821_152938.tar.gz
 
 # Configure Julia environment
 export JULIA_DEPOT_PATH="$WORK_DIR/build_temp/depot"
@@ -180,7 +180,7 @@ solutions = solve(system)
 ### Getting Help
 
 1. Check job output files: `globtim_JOBID.out` and `globtim_JOBID.err`
-2. Verify bundle integrity: `tar -tzf /home/scholten/globtim_optimal_bundle_20250821_152938.tar.gz | head`
+2. Verify bundle integrity: `tar -tzf /home/globaloptim/globtimcore_optimal_bundle_20250821_152938.tar.gz | head`
 3. Test basic Julia: `/sw/bin/julia --version`
 
 ## Performance Tips

@@ -140,6 +140,7 @@ function compute_l2_norm_coeffs(pol::ApproxPoly, coeffs::Vector; grid_points = n
         0.0,  # Will be computed
         pol.N,
         pol.scale_factor,
+        pol.center,
         pol.grid,
         pol.z,
         pol.basis,
@@ -219,6 +220,7 @@ function sparsify_polynomial(
         l2_sparsified,  # Update norm
         pol.N,
         pol.scale_factor,
+        pol.center,
         pol.grid,
         pol.z,
         pol.basis,

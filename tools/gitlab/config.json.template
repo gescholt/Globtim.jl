@@ -1,6 +1,0 @@
-{
-  "project_id": "YOUR_GITLAB_PROJECT_ID",
-  "access_token": "YOUR_GITLAB_ACCESS_TOKEN",
-  "base_url": "https://gitlab.com/api/v4",
-  "rate_limit_delay": 1.0
-}

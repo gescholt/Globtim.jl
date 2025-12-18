@@ -6,16 +6,16 @@ Since you're the sole user of r04n02 and don't need SLURM's scheduling capabilit
 
 ## Recommended Approaches
 
-### 1. **tmux (BEST FOR YOUR USE CASE)** ⭐
+### 1. **tmux with Session Tracking (BEST FOR YOUR USE CASE)** ⭐
 
-tmux provides persistent terminal sessions that survive disconnections.
+tmux provides persistent terminal sessions that survive disconnections. Combined with session tracking, you get full experiment observability.
 
 #### Basic Usage:
 
 ```bash
 # SSH to r04n02
 ssh scholten@r04n02
-cd /home/scholten/globtim
+cd /home/globaloptim/globtimcore
 
 # Start a new tmux session for your experiment
 tmux new -s globtim_experiment
@@ -32,6 +32,43 @@ tmux attach -t globtim_experiment
 # List all tmux sessions
 tmux ls
 ```
+
+#### Modern Session Tracking Pattern (October 2025):
+
+For new experiments, use the session tracking pattern for better observability:
+
+```bash
+# 1. Generate directory name before launching Julia
+OUTPUT_DIR=$(julia --project=. -e '
+using DrWatson, Dates
+params = Dict("GN" => 10, "degree_range" => [8,10])
+dirname = savename(params) * "_" * Dates.format(now(), "yyyymmdd_HHMMSS")
+println(dirname)
+')
+
+# 2. Use same name for session (enables session-directory linkage)
+SESSION_NAME="$OUTPUT_DIR"
+
+# 3. Create .session_info.json immediately
+mkdir -p "hpc_results/$OUTPUT_DIR"
+cat > "hpc_results/$OUTPUT_DIR/.session_info.json" << EOF
+{
+  "session_name": "$SESSION_NAME",
+  "output_dir": "$PWD/hpc_results/$OUTPUT_DIR",
+  "started_at": "$(date -Iseconds)",
+  "status": "launching"
+}
+EOF
+
+# 4. Launch with --output-dir
+tmux new-session -d -s "$SESSION_NAME" \
+  "julia --project=. script.jl --output-dir=\"hpc_results/$OUTPUT_DIR\""
+
+# 5. Monitor progress via .session_info.json
+jq .progress "hpc_results/$OUTPUT_DIR/.session_info.json"
+```
+
+**See [CLUSTER_EXPERIMENT_QUICK_START.md](CLUSTER_EXPERIMENT_QUICK_START.md) for complete session tracking guide.**
 
 #### Using the Enhanced Robust Experiment Runner (with Issue #27 Validation):
 
@@ -160,7 +197,7 @@ Given that you:
 ssh scholten@r04n02
 
 # 2. Navigate to repository
-cd /home/scholten/globtim
+cd /home/globaloptim/globtimcore
 
 # 3. Start experiment with automatic validation and tmux management
 ./hpc/experiments/robust_experiment_runner.sh 4d-model 10 12

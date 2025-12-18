@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Globtim Experiment Configuration",
+  "description": "JSON schema for validating Globtim experiment configurations",
+  "type": "object",
+  "required": ["model_config", "numerical_params", "domain_config"],
+  "properties": {
+    "model_config": {
+      "type": "object",
+      "required": ["name", "dimension", "true_parameters"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["lotka_volterra_2d", "lotka_volterra_4d", "fitzhugh_nagumo"],
+          "description": "Name of the model to use"
+        },
+        "dimension": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Dimension of the model"
+        },
+        "true_parameters": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "description": "True parameter values for the model"
+        }
+      },
+      "additionalProperties": false
+    },
+    "numerical_params": {
+      "type": "object",
+      "required": ["GN", "degree_range"],
+      "properties": {
+        "GN": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 20,
+          "description": "Grid samples per dimension (GN^dimension total points)"
+        },
+        "degree_range": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Polynomial degree range [min_degree, max_degree]"
+        },
+        "basis": {
+          "type": "string",
+          "enum": ["chebyshev", "monomial"],
+          "default": "chebyshev",
+          "description": "Polynomial basis type"
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["Float64Precision", "AdaptivePrecision"],
+          "default": "Float64Precision",
+          "description": "Numerical precision mode"
+        }
+      },
+      "additionalProperties": false
+    },
+    "domain_config": {
+      "type": "object",
+      "required": ["ranges"],
+      "properties": {
+        "ranges": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Domain range value (must be positive)"
+          },
+          "minItems": 1,
+          "description": "Domain range values for each dimension"
+        },
+        "center_offset_strategy": {
+          "type": "string",
+          "enum": ["none", "random_sphere", "fixed"],
+          "default": "none",
+          "description": "Strategy for offsetting domain center"
+        },
+        "offset_magnitude": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Magnitude of center offset"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tracking": {
+      "type": "object",
+      "properties": {
+        "gitlab_enabled": {
+          "type": "boolean",
+          "description": "Enable GitLab integration for tracking"
+        },
+        "campaign_name": {
+          "type": "string",
+          "description": "Name of the experiment campaign"
+        },
+        "auto_create_issue": {
+          "type": "boolean",
+          "description": "Automatically create GitLab issue for this experiment"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

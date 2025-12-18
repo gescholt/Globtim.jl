@@ -121,5 +121,86 @@ function get_grid_info(grid)
     end
 end
 
+"""
+    generate_random_interior_point(
+        center::Vector{Float64},
+        domain_size::Union{Float64, Vector{Float64}},
+        dim::Int;
+        margin::Float64 = 0.1
+    )::Vector{Float64}
+
+Generate a random point in the interior of a domain defined by center and size.
+
+The domain is defined as a hypercube centered at `center` with half-widths given by
+`domain_size`. The function generates a point that is guaranteed to be in the interior
+by applying a safety margin from the boundaries.
+
+# Arguments
+- `center::Vector{Float64}`: Center point of the domain (n-dimensional)
+- `domain_size::Union{Float64, Vector{Float64}}`: Half-width of domain. If scalar,
+  same size is used for all dimensions. If vector, per-dimension sizes.
+- `dim::Int`: Dimension of the space
+- `margin::Float64`: Safety margin from boundaries (default 0.1 = stay within 90% of domain)
+
+# Returns
+- `Vector{Float64}`: Random point safely interior to the domain
+
+# Details
+The function first generates a random point in the standard hypercube [-1, 1]^n,
+applies the safety margin, then transforms to the actual domain using:
+`point = center + domain_size * scaled_random`
+
+The margin ensures the point is not too close to the boundary. A margin of 0.1 means
+the point will be within 90% of the domain extent from the center.
+
+# Examples
+```julia
+# 4D domain centered at [1, 1, 1, 1] with uniform half-width 0.8
+center = [1.0, 1.0, 1.0, 1.0]
+p_true = generate_random_interior_point(center, 0.8, 4)
+
+# 4D domain with per-dimension sizes
+center = [1.0, 1.0, 1.0, 1.0]
+sizes = [0.8, 0.6, 0.9, 0.7]
+p_true = generate_random_interior_point(center, sizes, 4)
+
+# With custom safety margin (stay within 80% of domain)
+p_true = generate_random_interior_point(center, 0.8, 4, margin=0.2)
+```
+"""
+function generate_random_interior_point(
+    center::Vector{Float64},
+    domain_size::Union{Float64, Vector{Float64}},
+    dim::Int;
+    margin::Float64 = 0.1
+)::Vector{Float64}
+    # Validate inputs
+    if length(center) != dim
+        error("center dimension ($(length(center))) must match dim ($dim)")
+    end
+
+    if margin < 0.0 || margin >= 1.0
+        error("margin must be in [0, 1), got $margin")
+    end
+
+    # Convert scalar domain_size to vector if needed
+    ds = if isa(domain_size, Number)
+        fill(Float64(domain_size), dim)
+    else
+        if length(domain_size) != dim
+            error("domain_size vector length ($(length(domain_size))) must match dim ($dim)")
+        end
+        domain_size
+    end
+
+    # Generate random point in [-1, 1]^n with margin
+    # interior_factor scales the range to stay away from boundaries
+    interior_factor = 1.0 - margin
+    random_unit = interior_factor .* (2.0 .* rand(dim) .- 1.0)
+
+    # Transform to actual domain: center + domain_size * random_unit
+    return center .+ ds .* random_unit
+end
+
 # Export the utility functions
-export grid_to_matrix, ensure_matrix_format, matrix_to_grid, get_grid_info
+export grid_to_matrix, ensure_matrix_format, matrix_to_grid, get_grid_info, generate_random_interior_point

@@ -4,6 +4,9 @@
 using StaticArrays
 using LinearAlgebra
 
+# Load quadrature weight computation
+include("quadrature_weights.jl")
+
 """
     scale_point(s::Float64, x::AbstractVector)
     scale_point(s::Vector{Float64}, x::AbstractVector)
@@ -41,64 +44,72 @@ function get_scale_factor_type(scale_factor::AbstractVector, dim::Int)
 end
 
 """
-    compute_norm(scale_factor, VL, sol, F, grid, n, d)
+    compute_norm(scale_factor, VL, sol, F, basis, GN, n)
 
-Type-stable norm computation that dispatches based on scale_factor type.
+Compute L2-norm of approximation error using proper quadrature weights.
+
+This function computes the discrete L2-norm approximation of ||f - p||_L2 where:
+- f are the function values at grid points (F)
+- p are the polynomial approximation values (VL * sol.u)
+- The norm is computed using appropriate quadrature weights for the grid type
+
+# Arguments
+- `scale_factor`: Domain scaling factor (scalar or vector, unused for norm computation)
+- `VL`: Vandermonde-like matrix evaluated at grid points
+- `sol`: Solution object containing polynomial coefficients (sol.u)
+- `F`: Function values at grid points
+- `basis::Symbol`: Basis type (:chebyshev or :legendre)
+- `GN::Int`: Grid parameter (grid has GN+1 points per dimension)
+- `n::Int`: Number of dimensions
+
+# Returns
+- `Float64`: Approximate L2-norm using quadrature
+
+# Notes
+- Grid points are REUSED (not re-evaluated) - only weights are computed
+- For Chebyshev grids: Uses Clenshaw-Curtis quadrature weights
+- For Legendre (uniform) grids: Uses trapezoidal rule weights
+- Guarantees monotonic decrease with polynomial degree (by containment)
 """
-function compute_norm(scale_factor::Float64, VL, sol, F, grid, n, d)
-    # Proper L2 norm computation without fallbacks
-    evals = (VL * sol.u - F)
-    
-    # Handle different grid formats correctly
-    if isa(grid, Vector)
-        # Grid is a flat vector of SVector points (from grid input case)
-        total_points = length(grid)
-        points_per_dim = round(Int, total_points^(1 / n))
-        
-        # Use proper Riemann sum with correct spacing for Chebyshev points
-        cell_volume = (2.0 / points_per_dim)^n
-        return sqrt(cell_volume * sum(abs2, evals))
-    else
-        # Grid is an N-dimensional array of SVector points - use proper discrete L2 norm
-        grid_flat = reshape(grid, :)
-        
-        # Create direct residual function using exact matching
-        function residual(x::SVector{n,Float64}) where n
-            # Find exact match in grid (SVector equality is exact)
-            idx = findfirst(p -> p == x, grid_flat)
-            return idx !== nothing ? evals[idx] : 0.0
-        end
-        
-        return discrete_l2_norm_riemann(residual, grid)
+function compute_norm(scale_factor::Float64, VL, sol, F, basis::Symbol, GN::Int, n::Int)
+    # Compute residuals at grid points (no re-evaluation of function)
+    residuals = VL * sol.u - F
+
+    # Compute quadrature weights for the grid
+    weights = compute_quadrature_weights(basis, GN, n)
+
+    # Handle non-tensor-product grids with mismatched dimensions
+    if length(residuals) != length(weights)
+        @warn "Grid dimensions mismatch (residuals=$(length(residuals)), weights=$(length(weights))). " *
+              "Using uniform weights for non-tensor-product grid."
+        # Use uniform weights: each point gets equal weight, normalized to integrate to domain volume
+        # For [-1,1]^n, volume = 2^n
+        weights = fill(2.0^n / length(residuals), length(residuals))
     end
+
+    # Compute weighted L2-norm
+    return sqrt(sum(abs2.(residuals) .* weights))
 end
 
-function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, grid, n, d)
-    # Proper L2 norm computation for vector scale factor without fallbacks
-    evals = (VL * sol.u - F)
-    
-    # Handle different grid formats correctly
-    if isa(grid, Vector)
-        # Grid is a flat vector of SVector points (from grid input case)
-        total_points = length(grid)
-        points_per_dim = round(Int, total_points^(1 / n))
-        
-        # Use proper Riemann sum with correct spacing for Chebyshev points
-        cell_volume = (2.0 / points_per_dim)^n
-        return sqrt(cell_volume * sum(abs2, evals))
-    else
-        # Grid is an N-dimensional array of SVector points - use proper discrete L2 norm
-        grid_flat = reshape(grid, :)
-        
-        # Create direct residual function using exact matching
-        function residual(x::SVector{n,Float64}) where n
-            # Find exact match in grid (SVector equality is exact)
-            idx = findfirst(p -> p == x, grid_flat)
-            return idx !== nothing ? evals[idx] : 0.0
-        end
-        
-        return discrete_l2_norm_riemann(residual, grid)
+function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, basis::Symbol, GN::Int, n::Int)
+    # Compute residuals at grid points (no re-evaluation of function)
+    residuals = VL * sol.u - F
+
+    # Compute quadrature weights for the grid
+    weights = compute_quadrature_weights(basis, GN, n)
+
+    # Handle non-tensor-product grids with mismatched dimensions
+    if length(residuals) != length(weights)
+        @warn "Grid dimensions mismatch (residuals=$(length(residuals)), weights=$(length(weights))). " *
+              "Using uniform weights for non-tensor-product grid."
+        # Use uniform weights: each point gets equal weight, normalized to domain volume
+        # For [-1,1]^n with anisotropic scaling, volume = prod(2 .* scale_factor)
+        volume = prod(2.0 .* scale_factor)
+        weights = fill(volume / length(residuals), length(residuals))
     end
+
+    # Compute weighted L2-norm
+    return sqrt(sum(abs2.(residuals) .* weights))
 end
 
 """

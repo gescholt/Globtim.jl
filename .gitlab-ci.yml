@@ -221,7 +221,7 @@ aqua-quality-check:
   script:
     - export PATH="$HOME/.juliaup/bin:$PATH"
     - julia --version
-    - julia --project=test -e 'using Pkg; Pkg.instantiate()'
+    - julia --project=. -e 'using Pkg; Pkg.instantiate()'
     - julia scripts/run-aqua-tests.jl --ci --verbose
   artifacts:
     when: on_failure

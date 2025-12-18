@@ -19,7 +19,7 @@ using Printf
 using Dates
 
 println("🚀 HPC Standalone Test - Core Julia Functionality")
-println("=" ^ 60)
+println("="^60)
 println("Started: $(now())")
 println()
 
@@ -53,7 +53,7 @@ println()
 # ============================================================================
 
 println("🔍 Environment Diagnostics")
-println("-" ^ 40)
+println("-"^40)
 
 println("Julia version: $(VERSION)")
 println("Available threads: $(Threads.nthreads())")
@@ -82,7 +82,7 @@ println()
 # ============================================================================
 
 println("🧮 Core Julia Functionality Tests")
-println("-" ^ 40)
+println("-"^40)
 
 test_results = Dict{String, Any}()
 tests_passed = 0
@@ -90,9 +90,9 @@ total_tests = 6
 
 # Test 1: Basic arithmetic
 try
-    result = 2.0^3 + sqrt(16) - sin(π/2)
+    result = 2.0^3 + sqrt(16) - sin(π / 2)
     expected = 8.0 + 4.0 - 1.0  # = 11.0
-    
+
     if abs(result - expected) < 1e-10
         println("✅ Test 1: Basic arithmetic passed")
         test_results["arithmetic"] = "PASS"
@@ -112,7 +112,7 @@ try
     b = rand(CONFIG.matrix_size)
     x = A \ b
     residual = norm(A * x - b)
-    
+
     if residual < 1e-10
         println("✅ Test 2: Linear algebra passed (residual: $(@sprintf("%.2e", residual)))")
         test_results["linear_algebra"] = "PASS"
@@ -131,13 +131,15 @@ end
 try
     Random.seed!(12345)
     samples = rand(CONFIG.n_samples)
-    
+
     mean_val = sum(samples) / length(samples)
-    std_val = sqrt(sum((samples .- mean_val).^2) / (length(samples) - 1))
-    
+    std_val = sqrt(sum((samples .- mean_val) .^ 2) / (length(samples) - 1))
+
     # Should be approximately mean=0.5, std≈0.29 for uniform [0,1]
     if 0.4 < mean_val < 0.6 && 0.2 < std_val < 0.4
-        println("✅ Test 3: Random generation passed (mean=$(@sprintf("%.3f", mean_val)), std=$(@sprintf("%.3f", std_val)))")
+        println(
+            "✅ Test 3: Random generation passed (mean=$(@sprintf("%.3f", mean_val)), std=$(@sprintf("%.3f", std_val)))"
+        )
         test_results["random"] = "PASS"
         test_results["random_mean"] = mean_val
         test_results["random_std"] = std_val
@@ -155,17 +157,17 @@ end
 try
     # Simple 2D function: f(x,y) = (x-1)² + (y+0.5)²
     f(x) = (x[1] - 1.0)^2 + (x[2] + 0.5)^2
-    
+
     # Test evaluation
     test_point = [1.0, -0.5]
     test_value = f(test_point)
-    
+
     # Simple grid search for minimum
     best_value = Inf
     best_point = [0.0, 0.0]
-    
-    for x1 in range(0.0, 2.0, length=21)
-        for x2 in range(-1.0, 0.0, length=21)
+
+    for x1 in range(0.0, 2.0, length = 21)
+        for x2 in range(-1.0, 0.0, length = 21)
             point = [x1, x2]
             value = f(point)
             if value < best_value
@@ -174,11 +176,13 @@ try
             end
         end
     end
-    
+
     if test_value < 1e-10 && best_value < 0.01
         println("✅ Test 4: Function optimization passed")
         println("   f([1.0, -0.5]) = $(@sprintf("%.2e", test_value))")
-        println("   Grid search minimum: $(@sprintf("%.4f", best_value)) at $(@sprintf("[%.2f, %.2f]", best_point[1], best_point[2]))")
+        println(
+            "   Grid search minimum: $(@sprintf("%.4f", best_value)) at $(@sprintf("[%.2f, %.2f]", best_point[1], best_point[2]))"
+        )
         test_results["optimization"] = "PASS"
         test_results["optimization_minimum"] = best_value
         tests_passed += 1
@@ -196,10 +200,10 @@ try
     if Threads.nthreads() > 1
         # Simple parallel computation
         results = zeros(CONFIG.n_tests)
-        Threads.@threads for i in 1:CONFIG.n_tests
+        Threads.@threads for i in 1:(CONFIG.n_tests)
             results[i] = sum(rand(1000))
         end
-        
+
         if all(results .> 400) && all(results .< 600)  # Should be around 500
             println("✅ Test 5: Multi-threading passed ($(Threads.nthreads()) threads)")
             test_results["threading"] = "PASS"
@@ -223,20 +227,20 @@ end
 try
     test_filename = "hpc_test_output.txt"
     test_data = "HPC test data: $(now())\nRandom number: $(rand())\n"
-    
+
     # Write file
     open(test_filename, "w") do f
         write(f, test_data)
     end
-    
+
     # Read file back
     read_data = read(test_filename, String)
-    
+
     if read_data == test_data
         println("✅ Test 6: File I/O passed")
         test_results["file_io"] = "PASS"
         tests_passed += 1
-        
+
         # Clean up
         rm(test_filename)
     else
@@ -253,7 +257,7 @@ end
 # ============================================================================
 
 println("\n⚡ Performance Benchmark")
-println("-" ^ 40)
+println("-"^40)
 
 benchmark_start = time()
 
@@ -283,9 +287,9 @@ println("Total benchmark time: $(@sprintf("%.3f", benchmark_time)) seconds")
 
 total_time = time() - benchmark_start
 
-println("\n" * "=" ^ 60)
+println("\n" * "="^60)
 println("🏁 HPC STANDALONE TEST COMPLETED")
-println("=" ^ 60)
+println("="^60)
 
 # Comprehensive results
 final_results = Dict(
@@ -326,7 +330,9 @@ println("   Mode: $(final_results["mode"])")
 println("   Julia version: $(final_results["julia_version"])")
 println("   Tests passed: $(final_results["tests_passed"])/$(final_results["total_tests"])")
 println("   Success rate: $(@sprintf("%.1f", 100 * final_results["success_rate"]))%")
-println("   Performance: Matrix mult $(@sprintf("%.3f", mult_time))s, Eigenvals $(@sprintf("%.3f", eigen_time))s")
+println(
+    "   Performance: Matrix mult $(@sprintf("%.3f", mult_time))s, Eigenvals $(@sprintf("%.3f", eigen_time))s"
+)
 println("   Total time: $(@sprintf("%.2f", final_results["total_time"])) seconds")
 
 if final_results["overall_success"]

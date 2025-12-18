@@ -53,62 +53,88 @@ catch e
 end
 ```
 """
-function safe_test_input(f::Function; dim::Int, center::Vector{Float64}, 
-                        sample_range::Float64, GN::Int=100, kwargs...)
-    
+function safe_test_input(f::Function; dim::Int, center::Vector{Float64},
+    sample_range::Float64, GN::Int = 100, kwargs...)
+
     # Comprehensive parameter validation
     validate_test_input_parameters(f, dim, center, sample_range, GN)
-    
+
     # Create parameter dictionary for error handling
-    params = Dict{String,Any}(
+    params = Dict{String, Any}(
         "dim" => dim,
         "center" => center,
         "sample_range" => sample_range,
         "GN" => GN
     )
     merge!(params, Dict(string(k) => v for (k, v) in kwargs))
-    
+
     # Define the construction function
-    function construct_test_input(; dim=dim, center=center, sample_range=sample_range, GN=GN, kwargs...)
+    function construct_test_input(;
+        dim = dim,
+        center = center,
+        sample_range = sample_range,
+        GN = GN,
+        kwargs...
+    )
         try
             # Monitor memory usage
             check_memory_usage("test_input_construction")
-            
+
             # Create test input
-            TR = test_input(f, dim=dim, center=center, sample_range=sample_range, GN=GN; kwargs...)
-            
-            @info "Test input constructed successfully" dim=dim sample_count=GN
+            TR = test_input(
+                f,
+                dim = dim,
+                center = center,
+                sample_range = sample_range,
+                GN = GN;
+                kwargs...
+            )
+
+            @info "Test input constructed successfully" dim = dim sample_count = GN
             return TR
-            
+
         catch e
             context = create_error_context("test_input_construction", params)
-            
+
             if isa(e, OutOfMemoryError)
-                throw(ResourceError(
-                    "memory", NaN, NaN,
-                    "Reduce sample count (GN) or problem dimension"
-                ))
+                throw(
+                    ResourceError(
+                        "memory", NaN, NaN,
+                        "Reduce sample count (GN) or problem dimension"
+                    )
+                )
             elseif isa(e, BoundsError) || isa(e, DimensionMismatch)
-                throw(ComputationError(
-                    "test_input_construction", "dimension_mismatch",
-                    context,
-                    ["Check center vector dimension", "Verify function accepts correct input size"]
-                ))
+                throw(
+                    ComputationError(
+                        "test_input_construction", "dimension_mismatch",
+                        context,
+                        [
+                            "Check center vector dimension",
+                            "Verify function accepts correct input size"
+                        ]
+                    )
+                )
             else
                 # Wrap unexpected errors
-                throw(ComputationError(
-                    "test_input_construction", "unexpected_error",
-                    merge(context, Dict("original_error" => string(e))),
-                    ["Check function implementation", "Verify all parameters", "Contact developers"]
-                ))
+                throw(
+                    ComputationError(
+                        "test_input_construction", "unexpected_error",
+                        merge(context, Dict("original_error" => string(e))),
+                        [
+                            "Check function implementation",
+                            "Verify all parameters",
+                            "Contact developers"
+                        ]
+                    )
+                )
             end
         end
     end
-    
+
     # Execute with automatic retry and parameter adjustment
     return safe_execute_with_fallback(
         construct_test_input, params,
-        max_retries=3, operation_name="test_input_construction"
+        max_retries = 3, operation_name = "test_input_construction"
     )
 end
 
@@ -155,28 +181,33 @@ pol = safe_constructor(TR, 8)
 pol = safe_constructor(TR, 12, basis=:legendre, precision=AdaptivePrecision, max_retries=5)
 ```
 """
-function safe_constructor(TR::test_input, degree::Int; 
-                         basis::Symbol=:chebyshev, precision::PrecisionType=RationalPrecision,
-                         verbose::Int=0, max_retries::Int=3)
-    
+function safe_constructor(TR::test_input, degree::Int;
+    basis::Symbol = :chebyshev, precision::PrecisionType = RationalPrecision,
+    verbose::Int = 0, max_retries::Int = 3)
+
     # Comprehensive parameter validation
-    validate_constructor_parameters(TR, degree, basis=basis, precision=precision)
-    
+    validate_constructor_parameters(TR, degree, basis = basis, precision = precision)
+
     # Create parameter dictionary
-    params = Dict{String,Any}(
+    params = Dict{String, Any}(
         "degree" => degree,
         "basis" => basis,
         "precision" => precision,
         "verbose" => verbose
     )
-    
+
     # Define the construction function with progress monitoring
-    function construct_polynomial(; degree=degree, basis=basis, precision=precision, verbose=verbose)
-        
+    function construct_polynomial(;
+        degree = degree,
+        basis = basis,
+        precision = precision,
+        verbose = verbose
+    )
+
         function construction_with_progress(progress::ComputationProgress)
             try
                 update_progress!(progress, 0.1, "Validating parameters")
-                
+
                 # Additional numerical stability checks
                 complexity = estimate_computation_complexity(TR.dim, degree, TR.GN)
 
@@ -184,106 +215,128 @@ function safe_constructor(TR::test_input, degree::Int;
 
                 # Much more conservative memory limits
                 if complexity["total_memory_mb"] > 1500  # > 1.5GB total
-                    throw(ResourceError(
-                        "memory", complexity["total_memory_mb"], 1500,
-                        "Reduce polynomial degree to ≤4 or reduce sample count significantly"
-                    ))
+                    throw(
+                        ResourceError(
+                            "memory", complexity["total_memory_mb"], 1500,
+                            "Reduce polynomial degree to ≤4 or reduce sample count significantly"
+                        )
+                    )
                 end
 
                 # Check if computation is feasible
                 if !complexity["memory_feasible"]
-                    throw(ResourceError(
-                        "memory", complexity["total_memory_mb"], 2000,
-                        "Problem too large for available memory. Use degree ≤4 for dimensions ≥3"
-                    ))
+                    throw(
+                        ResourceError(
+                            "memory", complexity["total_memory_mb"], 2000,
+                            "Problem too large for available memory. Use degree ≤4 for dimensions ≥3"
+                        )
+                    )
                 end
 
                 if !complexity["time_feasible"]
-                    @warn "Long computation time expected" estimated_time=complexity["estimated_time_s"]
+                    @warn "Long computation time expected" estimated_time =
+                        complexity["estimated_time_s"]
                 end
 
                 # Warn about all complexity issues
                 for warning in complexity["warnings"]
                     @warn warning
                 end
-                
+
                 update_progress!(progress, 0.3, "Constructing polynomial")
-                
+
                 # Monitor memory during construction
                 check_memory_usage("polynomial_construction")
-                
+
                 # Construct the polynomial
-                pol = Constructor(TR, degree, basis=basis, precision=precision, verbose=verbose)
-                
+                pol = Constructor(
+                    TR,
+                    degree,
+                    basis = basis,
+                    precision = precision,
+                    verbose = verbose
+                )
+
                 update_progress!(progress, 0.7, "Validating coefficients")
-                
+
                 # Validate the resulting polynomial
                 validate_polynomial_coefficients(pol.coeffs, "polynomial_construction")
-                
+
                 update_progress!(progress, 0.9, "Checking conditioning")
-                
+
                 # Check Vandermonde conditioning if available
                 if hasfield(typeof(pol), :cond_vandermonde) && !isnan(pol.cond_vandermonde)
                     check_matrix_conditioning(
-                        reshape([pol.cond_vandermonde], 1, 1), 
+                        reshape([pol.cond_vandermonde], 1, 1),
                         "vandermonde_matrix",
-                        max_condition=1e12
+                        max_condition = 1e12
                     )
                 end
-                
+
                 update_progress!(progress, 1.0, "Construction completed")
-                
-                @info "Polynomial constructed successfully" degree=degree basis=basis l2_error=pol.nrm condition_number=get(pol, :cond_vandermonde, "N/A")
-                
+
+                @info "Polynomial constructed successfully" degree = degree basis = basis l2_error =
+                    pol.nrm condition_number = get(pol, :cond_vandermonde, "N/A")
+
                 return pol
-                
+
             catch e
                 context = create_error_context("polynomial_construction", params)
                 context["TR_dim"] = TR.dim
                 context["TR_GN"] = TR.GN
-                
+
                 if isa(e, GlobtimError)
                     log_error_details(e, context)
                     rethrow(e)
                 elseif isa(e, OutOfMemoryError)
-                    throw(ResourceError(
-                        "memory", NaN, NaN,
-                        "Reduce polynomial degree or sample count"
-                    ))
+                    throw(
+                        ResourceError(
+                            "memory", NaN, NaN,
+                            "Reduce polynomial degree or sample count"
+                        )
+                    )
                 elseif isa(e, SingularException) || isa(e, LinearAlgebra.LAPACKException)
-                    throw(NumericalError(
-                        "polynomial_construction",
-                        "Matrix singularity or LAPACK error: $e",
-                        [
-                            "Reduce polynomial degree",
-                            "Increase sample count",
-                            "Try different basis (Chebyshev vs Legendre)",
-                            "Use AdaptivePrecision for better numerical stability"
-                        ],
-                        context
-                    ))
+                    throw(
+                        NumericalError(
+                            "polynomial_construction",
+                            "Matrix singularity or LAPACK error: $e",
+                            [
+                                "Reduce polynomial degree",
+                                "Increase sample count",
+                                "Try different basis (Chebyshev vs Legendre)",
+                                "Use AdaptivePrecision for better numerical stability"
+                            ],
+                            context
+                        )
+                    )
                 else
-                    throw(ComputationError(
-                        "polynomial_construction", "unexpected_error",
-                        merge(context, Dict("original_error" => string(e))),
-                        ["Check input parameters", "Try lower degree", "Contact developers"]
-                    ))
+                    throw(
+                        ComputationError(
+                            "polynomial_construction", "unexpected_error",
+                            merge(context, Dict("original_error" => string(e))),
+                            [
+                                "Check input parameters",
+                                "Try lower degree",
+                                "Contact developers"
+                            ]
+                        )
+                    )
                 end
             end
         end
-        
+
         # Execute with progress monitoring
         return with_progress_monitoring(
             construction_with_progress,
             "Polynomial Construction (degree $degree)",
-            interruptible=true
+            interruptible = true
         )
     end
-    
+
     # Execute with automatic retry and parameter adjustment
     return safe_execute_with_fallback(
         construct_polynomial, params,
-        max_retries=max_retries, operation_name="polynomial_construction"
+        max_retries = max_retries, operation_name = "polynomial_construction"
     )
 end
 
@@ -293,105 +346,72 @@ end
 
 """
     safe_solve_polynomial_system(x, pol::ApproxPoly;
-                                 solver_preference::Symbol=:homotopy_continuation,
-                                 enable_fallback::Bool=true, max_retries::Int=2)
+                                 solver::Symbol=:homotopy_continuation,
+                                 max_retries::Int=2)
 
-Safe wrapper for solve_polynomial_system with multiple solver backends and fallback.
+Safe wrapper for solve_polynomial_system with error handling.
 
 # Arguments
 - `x`: Polynomial variables
 - `pol::ApproxPoly`: Polynomial approximation
-- `solver_preference::Symbol=:homotopy_continuation`: Preferred solver (:homotopy_continuation or :msolve)
-- `enable_fallback::Bool=true`: Enable fallback to alternative solver
+- `solver::Symbol=:homotopy_continuation`: Solver to use (:homotopy_continuation or :msolve)
 - `max_retries::Int=2`: Maximum retry attempts
 
 # Returns
 - `Vector{Vector{Float64}}`: Critical points found
 
 # Throws
-- `ComputationError`: If all solvers fail
+- `ComputationError`: If solver fails
 """
 function safe_solve_polynomial_system(x, pol::ApproxPoly;
-                                     solver_preference::Symbol=:homotopy_continuation,
-                                     enable_fallback::Bool=true, max_retries::Int=2)
+    solver::Symbol = :homotopy_continuation, max_retries::Int = 2)
 
-    params = Dict{String,Any}(
+    params = Dict{String, Any}(
         "degree" => pol.degree,
         "basis" => pol.basis,
-        "solver_preference" => solver_preference,
-        "enable_fallback" => enable_fallback
+        "solver" => solver
     )
 
-    function solve_with_fallback(; solver_preference=solver_preference, enable_fallback=enable_fallback, kwargs...)
-        primary_solver = solver_preference
-        fallback_solver = solver_preference == :homotopy_continuation ? :msolve : :homotopy_continuation
-
-        # Try primary solver
+    function solve_with_solver(; solver = solver, kwargs...)
         try
-            @info "Attempting polynomial system solving" solver=primary_solver degree=pol.degree
+            @info "Attempting polynomial system solving" solver = solver degree = pol.degree
 
-            if primary_solver == :homotopy_continuation
+            if solver == :homotopy_continuation
                 solutions = solve_polynomial_system(x, pol)
             else
-                # Use msolve (would need to implement this path)
                 solutions = solve_polynomial_system(x, pol.dim, pol.degree, pol.coeffs,
-                                                  basis=pol.basis, precision=pol.precision)
+                    basis = pol.basis, precision = pol.precision)
             end
 
-            @info "Polynomial system solved successfully" solver=primary_solver solution_count=length(solutions)
+            @info "Polynomial system solved successfully" solver = solver solution_count =
+                length(solutions)
             return solutions
 
         catch e
-            @warn "Primary solver failed" solver=primary_solver error=e
+            @error "Solver failed" solver = solver error = e
 
-            if enable_fallback
-                try
-                    @info "Attempting fallback solver" solver=fallback_solver
+            context = create_error_context("polynomial_system_solving", params)
+            context["solver_error"] = string(e)
 
-                    if fallback_solver == :homotopy_continuation
-                        solutions = solve_polynomial_system(x, pol)
-                    else
-                        solutions = solve_polynomial_system(x, pol.dim, pol.degree, pol.coeffs,
-                                                          basis=pol.basis, precision=pol.precision)
-                    end
-
-                    @info "Fallback solver succeeded" solver=fallback_solver solution_count=length(solutions)
-                    return solutions
-
-                catch fallback_error
-                    @error "Both solvers failed" primary_error=e fallback_error=fallback_error
-
-                    context = create_error_context("polynomial_system_solving", params)
-                    context["primary_error"] = string(e)
-                    context["fallback_error"] = string(fallback_error)
-
-                    throw(ComputationError(
-                        "polynomial_system_solving", "all_solvers_failed",
-                        context,
-                        [
-                            "Reduce polynomial degree",
-                            "Try different basis (Chebyshev vs Legendre)",
-                            "Use different precision type",
-                            "Check for numerical instabilities in polynomial coefficients"
-                        ]
-                    ))
-                end
-            else
-                context = create_error_context("polynomial_system_solving", params)
-                context["solver_error"] = string(e)
-
-                throw(ComputationError(
+            throw(
+                ComputationError(
                     "polynomial_system_solving", "solver_failed",
                     context,
-                    ["Enable fallback solver", "Try different solver", "Reduce problem complexity"]
-                ))
-            end
+                    [
+                        "Try different solver (homotopy_continuation or msolve)",
+                        "Reduce polynomial degree",
+                        "Try different basis (Chebyshev vs Legendre)",
+                        "Use different precision type",
+                        "Check for numerical instabilities in polynomial coefficients"
+                    ]
+                )
+            )
         end
     end
 
     return safe_execute_with_fallback(
-        solve_with_fallback, params,
-        max_retries=max_retries, operation_name="polynomial_system_solving"
+        solve_with_solver, params,
+        max_retries = max_retries, operation_name = "polynomial_system_solving"
     )
 end
 
@@ -417,34 +437,39 @@ Safe wrapper for analyze_critical_points with comprehensive error handling.
 - `NumericalError`: If numerical issues occur
 """
 function safe_analyze_critical_points(f::Function, df::DataFrame, TR::test_input;
-                                     enable_hessian::Bool=true, max_retries::Int=2, kwargs...)
+    enable_hessian::Bool = true, max_retries::Int = 2, kwargs...)
 
     if nrow(df) == 0
         @warn "No critical points to analyze"
         return df, DataFrame()
     end
 
-    params = Dict{String,Any}(
+    params = Dict{String, Any}(
         "enable_hessian" => enable_hessian,
         "critical_point_count" => nrow(df)
     )
     merge!(params, Dict(string(k) => v for (k, v) in kwargs))
 
-    function analyze_with_monitoring(; enable_hessian=enable_hessian, kwargs...)
+    function analyze_with_monitoring(; enable_hessian = enable_hessian, kwargs...)
 
         function analysis_with_progress(progress::ComputationProgress)
             try
                 update_progress!(progress, 0.1, "Validating critical points")
 
                 # Validate input DataFrame
-                required_cols = [Symbol("x$i") for i in 1:TR.dim]
+                required_cols = [Symbol("x$i") for i in 1:(TR.dim)]
                 missing_cols = setdiff(required_cols, names(df))
                 if !isempty(missing_cols)
-                    throw(ComputationError(
-                        "critical_point_analysis", "invalid_dataframe",
-                        Dict("missing_columns" => missing_cols),
-                        ["Check DataFrame structure", "Ensure all coordinate columns are present"]
-                    ))
+                    throw(
+                        ComputationError(
+                            "critical_point_analysis", "invalid_dataframe",
+                            Dict("missing_columns" => missing_cols),
+                            [
+                                "Check DataFrame structure",
+                                "Ensure all coordinate columns are present"
+                            ]
+                        )
+                    )
                 end
 
                 update_progress!(progress, 0.2, "Starting BFGS refinement")
@@ -455,8 +480,8 @@ function safe_analyze_critical_points(f::Function, df::DataFrame, TR::test_input
                 # Perform the analysis
                 df_enhanced, df_min = analyze_critical_points(
                     f, copy(df), TR;
-                    enable_hessian=enable_hessian,
-                    verbose=false,  # Suppress verbose output for cleaner error handling
+                    enable_hessian = enable_hessian,
+                    verbose = false,  # Suppress verbose output for cleaner error handling
                     kwargs...
                 )
 
@@ -464,7 +489,8 @@ function safe_analyze_critical_points(f::Function, df::DataFrame, TR::test_input
 
                 # Validate results
                 if nrow(df_enhanced) != nrow(df)
-                    @warn "Row count changed during analysis" original=nrow(df) enhanced=nrow(df_enhanced)
+                    @warn "Row count changed during analysis" original = nrow(df) enhanced =
+                        nrow(df_enhanced)
                 end
 
                 # Check for NaN values in critical results
@@ -473,14 +499,16 @@ function safe_analyze_critical_points(f::Function, df::DataFrame, TR::test_input
                     if col in names(df_enhanced)
                         nan_count = count(ismissing, df_enhanced[!, col])
                         if nan_count > 0
-                            @warn "Found missing values in critical analysis" column=col count=nan_count
+                            @warn "Found missing values in critical analysis" column = col count =
+                                nan_count
                         end
                     end
                 end
 
                 update_progress!(progress, 1.0, "Analysis completed")
 
-                @info "Critical point analysis completed" original_points=nrow(df) enhanced_points=nrow(df_enhanced) minima_found=nrow(df_min)
+                @info "Critical point analysis completed" original_points = nrow(df) enhanced_points =
+                    nrow(df_enhanced) minima_found = nrow(df_min)
 
                 return df_enhanced, df_min
 
@@ -493,26 +521,36 @@ function safe_analyze_critical_points(f::Function, df::DataFrame, TR::test_input
                     log_error_details(e, context)
                     rethrow(e)
                 elseif isa(e, OutOfMemoryError)
-                    throw(ResourceError(
-                        "memory", NaN, NaN,
-                        "Reduce number of critical points or disable Hessian analysis"
-                    ))
+                    throw(
+                        ResourceError(
+                            "memory", NaN, NaN,
+                            "Reduce number of critical points or disable Hessian analysis"
+                        )
+                    )
                 elseif occursin("Optim", string(e)) || occursin("BFGS", string(e))
-                    throw(ComputationError(
-                        "critical_point_analysis", "optimization_failed",
-                        merge(context, Dict("optim_error" => string(e))),
-                        [
-                            "Disable Hessian analysis (enable_hessian=false)",
-                            "Adjust BFGS tolerances",
-                            "Check objective function for discontinuities"
-                        ]
-                    ))
+                    throw(
+                        ComputationError(
+                            "critical_point_analysis", "optimization_failed",
+                            merge(context, Dict("optim_error" => string(e))),
+                            [
+                                "Disable Hessian analysis (enable_hessian=false)",
+                                "Adjust BFGS tolerances",
+                                "Check objective function for discontinuities"
+                            ]
+                        )
+                    )
                 else
-                    throw(ComputationError(
-                        "critical_point_analysis", "unexpected_error",
-                        merge(context, Dict("original_error" => string(e))),
-                        ["Check function implementation", "Try with enable_hessian=false", "Contact developers"]
-                    ))
+                    throw(
+                        ComputationError(
+                            "critical_point_analysis", "unexpected_error",
+                            merge(context, Dict("original_error" => string(e))),
+                            [
+                                "Check function implementation",
+                                "Try with enable_hessian=false",
+                                "Contact developers"
+                            ]
+                        )
+                    )
                 end
             end
         end
@@ -520,13 +558,13 @@ function safe_analyze_critical_points(f::Function, df::DataFrame, TR::test_input
         return with_progress_monitoring(
             analysis_with_progress,
             "Critical Point Analysis ($(nrow(df)) points)",
-            interruptible=true
+            interruptible = true
         )
     end
 
     return safe_execute_with_fallback(
         analyze_with_monitoring, params,
-        max_retries=max_retries, operation_name="critical_point_analysis"
+        max_retries = max_retries, operation_name = "critical_point_analysis"
     )
 end
 
@@ -590,27 +628,40 @@ results = safe_globtim_workflow(
 ```
 """
 function safe_globtim_workflow(f::Function; dim::Int, center::Vector{Float64},
-                              sample_range::Float64, degree::Int=6, GN::Int=100,
-                              enable_hessian::Bool=true, basis::Symbol=:chebyshev,
-                              precision::PrecisionType=RationalPrecision, max_retries::Int=3)
+    sample_range::Float64, degree::Int = 6, GN::Int = 100,
+    enable_hessian::Bool = true, basis::Symbol = :chebyshev,
+    precision::PrecisionType = RationalPrecision, max_retries::Int = 3)
 
     workflow_start_time = time()
 
-    @info "Starting safe Globtim workflow" dim=dim degree=degree sample_count=GN basis=basis precision=precision
+    @info "Starting safe Globtim workflow" dim = dim degree = degree sample_count = GN basis =
+        basis precision = precision
 
     try
         # Stage 1: Create test input
         @info "Stage 1: Creating test input"
-        TR = safe_test_input(f, dim=dim, center=center, sample_range=sample_range, GN=GN)
+        TR = safe_test_input(
+            f,
+            dim = dim,
+            center = center,
+            sample_range = sample_range,
+            GN = GN
+        )
 
         # Stage 2: Construct polynomial approximation
         @info "Stage 2: Constructing polynomial approximation"
-        pol = safe_constructor(TR, degree, basis=basis, precision=precision, max_retries=max_retries)
+        pol = safe_constructor(
+            TR,
+            degree,
+            basis = basis,
+            precision = precision,
+            max_retries = max_retries
+        )
 
         # Stage 3: Find critical points
         @info "Stage 3: Finding critical points"
         @polyvar x[1:dim]
-        solutions = safe_solve_polynomial_system(x, pol, max_retries=max_retries)
+        solutions = safe_solve_polynomial_system(x, pol, max_retries = max_retries)
 
         # Stage 4: Process critical points
         @info "Stage 4: Processing critical points"
@@ -624,8 +675,8 @@ function safe_globtim_workflow(f::Function; dim::Int, center::Vector{Float64},
             @info "Stage 5: Enhanced critical point analysis"
             df_enhanced, df_min = safe_analyze_critical_points(
                 f, df_critical, TR,
-                enable_hessian=enable_hessian,
-                max_retries=max_retries
+                enable_hessian = enable_hessian,
+                max_retries = max_retries
             )
         else
             @warn "No critical points found - skipping enhanced analysis"
@@ -635,7 +686,7 @@ function safe_globtim_workflow(f::Function; dim::Int, center::Vector{Float64},
         # Create analysis summary
         workflow_time = time() - workflow_start_time
 
-        analysis_summary = Dict{String,Any}(
+        analysis_summary = Dict{String, Any}(
             "workflow_time_seconds" => workflow_time,
             "polynomial_degree" => degree,
             "polynomial_basis" => basis,
@@ -656,7 +707,8 @@ function safe_globtim_workflow(f::Function; dim::Int, center::Vector{Float64},
             analysis_summary["bfgs_convergence_rate"] = converged_count / nrow(df_enhanced)
         end
 
-        @info "Workflow completed successfully" total_time=workflow_time critical_points=nrow(df_critical) minima=nrow(df_min)
+        @info "Workflow completed successfully" total_time = workflow_time critical_points =
+            nrow(df_critical) minima = nrow(df_min)
 
         # Return comprehensive results
         return (
@@ -671,10 +723,10 @@ function safe_globtim_workflow(f::Function; dim::Int, center::Vector{Float64},
     catch e
         workflow_time = time() - workflow_start_time
 
-        @error "Workflow failed" total_time=workflow_time error=e
+        @error "Workflow failed" total_time = workflow_time error = e
 
         # Create failure summary
-        failure_summary = Dict{String,Any}(
+        failure_summary = Dict{String, Any}(
             "workflow_time_seconds" => workflow_time,
             "workflow_completed_successfully" => false,
             "failure_stage" => "unknown",
@@ -683,16 +735,22 @@ function safe_globtim_workflow(f::Function; dim::Int, center::Vector{Float64},
         )
 
         # Try to determine failure stage from error context
-        if isa(e, GlobtimError) && hasfield(typeof(e), :context) && haskey(e.context, "operation")
+        if isa(e, GlobtimError) && hasfield(typeof(e), :context) &&
+           haskey(e.context, "operation")
             failure_summary["failure_stage"] = e.context["operation"]
         end
 
         # Log detailed error information
         if isa(e, GlobtimError)
-            log_error_details(e, Dict("workflow_params" => Dict(
-                "dim" => dim, "degree" => degree, "GN" => GN,
-                "basis" => basis, "precision" => precision
-            )))
+            log_error_details(
+                e,
+                Dict(
+                    "workflow_params" => Dict(
+                        "dim" => dim, "degree" => degree, "GN" => GN,
+                        "basis" => basis, "precision" => precision
+                    )
+                )
+            )
         end
 
         # Re-throw the error with additional context
@@ -713,7 +771,7 @@ Diagnose Globtim setup and dependencies for troubleshooting.
 - `Dict{String,Any}`: Diagnostic information
 """
 function diagnose_globtim_setup()
-    diagnostics = Dict{String,Any}(
+    diagnostics = Dict{String, Any}(
         "julia_version" => string(VERSION),
         "globtim_loaded" => true,
         "timestamp" => Dates.now()
@@ -725,7 +783,7 @@ function diagnose_globtim_setup()
         "Optim", "ForwardDiff", "HomotopyContinuation"
     ]
 
-    package_status = Dict{String,Bool}()
+    package_status = Dict{String, Bool}()
     for pkg in required_packages
         try
             eval(:(using $(Symbol(pkg))))
@@ -753,7 +811,10 @@ function diagnose_globtim_setup()
     end
 
     if !package_status["HomotopyContinuation"]
-        push!(issues, "HomotopyContinuation.jl not available - polynomial system solving may fail")
+        push!(
+            issues,
+            "HomotopyContinuation.jl not available - polynomial system solving may fail"
+        )
     end
 
     diagnostics["potential_issues"] = issues

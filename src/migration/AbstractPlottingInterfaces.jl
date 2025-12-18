@@ -13,7 +13,7 @@ abstract type AbstractPolynomialData end
 Essential methods that any polynomial data implementation must provide for plotting.
 """
 function get_coefficients(::AbstractPolynomialData) end
-function get_degree(::AbstractPolynomialData) end  
+function get_degree(::AbstractPolynomialData) end
 function get_grid_points(::AbstractPolynomialData) end
 function get_function_values(::AbstractPolynomialData) end
 function get_basis_type(::AbstractPolynomialData) end
@@ -134,10 +134,10 @@ function default_plot_config()
     )
 end
 
-export AbstractPolynomialData, AbstractProblemData, AbstractCriticalPointData, 
-       AbstractLevelSetData, AbstractPlotConfig,
-       GenericPolynomialData, GenericProblemData, GenericPlotConfig,
-       get_coefficients, get_degree, get_grid_points, get_function_values,
-       get_basis_type, get_scale_factor, get_domain_center,
-       get_dimension, get_center_point, get_sample_range, get_objective_function,
-       default_plot_config
+export AbstractPolynomialData, AbstractProblemData, AbstractCriticalPointData,
+    AbstractLevelSetData, AbstractPlotConfig,
+    GenericPolynomialData, GenericProblemData, GenericPlotConfig,
+    get_coefficients, get_degree, get_grid_points, get_function_values,
+    get_basis_type, get_scale_factor, get_domain_center,
+    get_dimension, get_center_point, get_sample_range, get_objective_function,
+    default_plot_config

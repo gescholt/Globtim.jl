@@ -1,52 +1,35 @@
 {
   "permissions": {
     "allow": [
-      "Bash(claude doctor)",
-      "WebSearch",
-      "Bash(chmod:*)",
-      "Bash(./tests/gitlab_api/test_agent_specific.sh:*)",
-      "Bash(./tools/gitlab/get-token-noninteractive.sh:*)",
-      "Bash(./tests/gitlab_api/run_all_tests.sh:*)",
-      "Bash(./tools/gitlab/claude-agent-gitlab.sh test:*)",
-      "Bash(./tools/gitlab/claude-agent-gitlab.sh get-issue:*)",
-      "Bash(./tools/gitlab/claude-agent-gitlab.sh:*)",
-      "Bash(ssh:*)",
-      "Bash(if:*)",
-      "Bash(/dev/null)",
-      "Bash(then echo \"Token retrieval successful\")",
-      "Bash(else echo \"ERROR: GitLab token not configured. User must set it up manually.\")",
-      "Bash(exit 1)",
-      "Bash(fi)",
-      "mcp__ide__executeCode",
+      "Bash(jq:*)",
+      "Bash(\"Validate AdaptivePrecision Polynomial Expansion: HomotopyContinuation vs msolve Symbolic Comparison\" )",
+      "Bash(\"type::testing,component::precision,priority::medium,msolve-integration,symbolic-validation\")",
+      "Bash(./tools/gitlab/enhanced-gitlab-api.sh get-issue:*)",
       "Bash(julia:*)",
-      "Bash(curl:*)",
-      "Bash(scp:*)",
       "Bash(git add:*)",
+      "Bash(git config:*)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)",
+      "Bash(ls:*)",
+      "Bash(for dir in getting_started core_algorithm solvers)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(if [ -f \"/Users/ghscholt/GlobalOptim/globtimcore/docs/build/$dir/index.html\" ])",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(done)",
       "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(\"RESOLVED: Critical HPC experiment success rate improved from 11.8% to 100%\" )",
-      "Bash(\"resolved,critical-fix,memory-optimization,hpc,mathematical-core,completed\" )",
-      "Bash(\"close\")",
-      "Bash(\"HPC Infrastructure Analysis & New Hook System Recommendations\" )",
-      "Bash(\"status::ready-for-implementation,priority::high,component::hpc,type::enhancement\")",
-      "Bash(./tools/hpc/hooks/dependency_health_monitor.sh:*)",
-      "Bash(git remote set-url:*)",
-      "Bash(make:*)",
-      "Bash(./scripts/cluster-report:*)",
-      "Bash(./tools/hpc/hooks/package_loading_detector.sh:*)",
-      "Bash(./tools/hpc/hooks/hook_orchestrator.sh:*)",
-      "Bash(\"Feature: Standardized JSON Input Parameter System for HPC Pipeline Automation\" )",
-      "Bash(\"enhancement,feature,hpc,automation,json,parameters,pipeline,lotka-volterra,priority::high\")",
-      "Bash(\"RESOLVED: JSON dependency missing in local development environment breaks notebook loading\" )",
-      "Bash(\"completed,bug-fix,dependencies,local-environment,resolved\" )",
-      "Bash(git rm:*)",
-      "Bash(git restore:*)"
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": [],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "experiments/lv4d_2025"
+    ]
   },
-  "enableAllProjectMcpServers": false,
+  "enableAllProjectMcpServers": true,
   "hooks": {
     "PreToolUse": [
       {
@@ -54,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "#!/bin/bash\nif [[ \"$CLAUDE_TOOL_NAME\" != *\"git\"* ]] && [[ \"$CLAUDE_COMMAND\" != *\"git\"* ]]; then exit 0; fi\nif ! git rev-parse --git-dir > /dev/null 2>&1; then exit 0; fi\nif [ -f .env.gitlab.local ]; then\n  source .env.gitlab.local\n  current_url=$(git remote get-url origin 2>/dev/null)\n  if [[ \"$current_url\" != *\"oauth2:\"* ]]; then\n    echo \"🔧 Enforcing OAuth2 token authentication for git remote\"\n    git remote set-url origin \"https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/scholten/globtim.git\"\n    echo \"✅ Git remote URL updated to use token authentication\"\n  fi\nfi",
+            "command": "#!/bin/bash\nif [[ \"$CLAUDE_TOOL_NAME\" != *\"git\"* ]] && [[ \"$CLAUDE_COMMAND\" != *\"git\"* ]]; then exit 0; fi\nif ! git rev-parse --git-dir > /dev/null 2>&1; then exit 0; fi\n\n# CRITICAL: Verify we're in the correct repository!\nREPO_DIR=$(basename \"$(git rev-parse --show-toplevel)\")\n\n# Only set remote if we're in the CORRECT repository\nif [ \"$REPO_DIR\" != \"globtimcore\" ]; then\n  # We're NOT in globtimcore - do NOT modify the remote!\n  exit 0\nfi\n\ncurrent_url=$(git remote get-url origin 2>/dev/null)\n# Only convert HTTPS URLs that are not already OAuth2 or SSH\nif [[ \"$current_url\" == git@git.mpi-cbg.de:globaloptim/globtimcore.git ]]; then\n  # Already correct SSH - nothing to do\n  exit 0\nelif [[ \"$current_url\" == ssh://git.mpi-cbg.de/globaloptim/globtimcore.git ]]; then\n  # SSH but wrong format - fix it\n  echo \"🔧 Fixing SSH URL format for globtimcore\"\n  git remote set-url origin \"git@git.mpi-cbg.de:globaloptim/globtimcore.git\"\n  echo \"✅ Git remote configured correctly\"\nelif [[ \"$current_url\" == https://git.mpi-cbg.de* ]] && [[ \"$current_url\" != *\"oauth2:\"* ]]; then\n  # Plain HTTPS - try to convert to SSH\n  if ssh -T git@git.mpi-cbg.de 2>/dev/null | grep -q \"Welcome to GitLab\"; then\n    echo \"🔧 Switching to SSH authentication (preferred)\"\n    git remote set-url origin \"git@git.mpi-cbg.de:globaloptim/globtimcore.git\"\n    echo \"✅ Git remote configured for SSH authentication\"\n  elif [ -f .env.gitlab.local ]; then\n    source .env.gitlab.local\n    echo \"🔧 SSH unavailable, using OAuth2 token authentication\"\n    git remote set-url origin \"https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/globaloptim/globtimcore.git\"\n    echo \"✅ Git remote configured for token authentication\"\n  fi\nfi",
             "timeout": 10
           }
         ]
@@ -66,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "#!/bin/bash\nif ! git rev-parse --git-dir > /dev/null 2>&1; then exit 0; fi\ngit_status=$(git status --porcelain)\nif [ -z \"$git_status\" ]; then exit 0; fi\nfile_count=$(echo \"$git_status\" | wc -l | tr -d ' ')\nif [ \"$file_count\" -ge 5 ] || [[ \"$CLAUDE_CONTEXT\" == *\"commit\"* ]] || [[ \"$CLAUDE_CONTEXT\" == *\"push\"* ]]; then\n  if [ -f .env.gitlab.local ]; then\n    source .env.gitlab.local\n    if [[ \"$(git remote get-url origin)\" != *\"oauth2:\"* ]]; then\n      git remote set-url origin \"https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/scholten/globtim.git\"\n    fi\n  fi\n  git add .\n  commit_msg=\"feat: Auto-commit of development progress\n\n🔄 Changes Summary:\n- $file_count files modified/added\n- Context: $CLAUDE_CONTEXT\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"\n  git commit -m \"$commit_msg\"\n  git push\n  echo \"✅ Auto-committed and pushed $file_count files\"\nfi",
+            "command": "#!/bin/bash\nif ! git rev-parse --git-dir > /dev/null 2>&1; then exit 0; fi\n\n# CRITICAL: Verify we're in the correct repository!\nREPO_DIR=$(basename \"$(git rev-parse --show-toplevel)\")\n\n# Only proceed if we're in the CORRECT repository\nif [ \"$REPO_DIR\" != \"globtimcore\" ]; then\n  # We're NOT in globtimcore - do NOT auto-commit!\n  exit 0\nfi\n\ngit_status=$(git status --porcelain)\nif [ -z \"$git_status\" ]; then exit 0; fi\nfile_count=$(echo \"$git_status\" | wc -l | tr -d ' ')\nif [ \"$file_count\" -ge 5 ] || [[ \"$CLAUDE_CONTEXT\" == *\"commit\"* ]] || [[ \"$CLAUDE_CONTEXT\" == *\"push\"* ]]; then\n  current_url=$(git remote get-url origin 2>/dev/null)\n  # Only convert HTTPS URLs - leave SSH URLs alone\n  if [[ \"$current_url\" == git@git.mpi-cbg.de:globaloptim/globtimcore.git ]]; then\n    # Already correct SSH - nothing to do\n    :\n  elif [[ \"$current_url\" == ssh://git.mpi-cbg.de/globaloptim/globtimcore.git ]]; then\n    # Fix SSH format\n    git remote set-url origin \"git@git.mpi-cbg.de:globaloptim/globtimcore.git\"\n  elif [[ \"$current_url\" == https://git.mpi-cbg.de* ]] && [[ \"$current_url\" != *\"oauth2:\"* ]]; then\n    # Plain HTTPS - try to convert to SSH\n    if ssh -T git@git.mpi-cbg.de 2>/dev/null | grep -q \"Welcome to GitLab\"; then\n      git remote set-url origin \"git@git.mpi-cbg.de:globaloptim/globtimcore.git\"\n    elif [ -f .env.gitlab.local ]; then\n      source .env.gitlab.local\n      git remote set-url origin \"https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/globaloptim/globtimcore.git\"\n    fi\n  fi\n  git add .\n  commit_msg=\"feat: Auto-commit of development progress\n\n🔄 Changes Summary:\n- $file_count files modified/added\n- Context: $CLAUDE_CONTEXT\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"\n  git commit -m \"$commit_msg\"\n  git push\n  echo \"✅ Auto-committed and pushed $file_count files\"\nfi",
             "timeout": 60
           }
         ]

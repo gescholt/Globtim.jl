@@ -88,7 +88,7 @@ function analyze_critical_points_with_tables(
     df_enhanced, df_minima =
         analyze_critical_points(f, df, TR, enable_hessian = enable_hessian, kwargs...)
     @debug "analyze_critical_points completed. DataFrame columns: $(names(df_enhanced))"
-    
+
     # Perform valley detection analysis if requested
     if enable_valley_detection
         @info "Performing valley detection analysis..."

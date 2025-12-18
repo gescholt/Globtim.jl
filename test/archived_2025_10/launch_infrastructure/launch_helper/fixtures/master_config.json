@@ -1,0 +1,33 @@
+{
+  "study_name": "test_study",
+  "created_at": "2025-10-05T10:52:46",
+  "total_experiments": 3,
+  "domain_ranges": [0.4, 0.8, 1.2],
+  "parameters": {
+    "GN": 16,
+    "degree_range": [4, 12],
+    "p_true": [0.2, 0.3, 0.5, 0.6]
+  },
+  "experiments": [
+    {
+      "experiment_id": 1,
+      "domain_range": 0.4,
+      "p_center": [0.25, 0.35, 0.55, 0.65]
+    },
+    {
+      "experiment_id": 2,
+      "domain_range": 0.8,
+      "p_center": [0.22, 0.32, 0.52, 0.62]
+    },
+    {
+      "experiment_id": 3,
+      "domain_range": 1.2,
+      "p_center": [0.18, 0.28, 0.48, 0.58]
+    }
+  ],
+  "script_paths": [
+    "experiments/test_study/exp1.jl",
+    "experiments/test_study/exp2.jl",
+    "experiments/test_study/exp3.jl"
+  ]
+}

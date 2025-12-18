@@ -11,12 +11,18 @@ A structure to represent the polynomial approximation and related data.
 - `nrm::Float64`: The norm of the polynomial approximation.
 - `N::Int`: The number of grid points used in the approximation.
 - `scale_factor::S`: Scaling factor(s) applied to the domain (type-stable).
-- `grid::Matrix{Float64}`: The grid of points used in the approximation.
+- `center::Vector{Float64}`: Center point of the approximation domain.
+- `grid::Matrix{Float64}`: The grid of points used in the approximation (in [-1,1]^n normalized coordinates).
 - `z::Vector{Float64}`: The values of the function objective at the grid points.
 - `basis::Symbol`: Type of basis used (:chebyshev or :legendre).
 - `precision::PrecisionType`: Precision type for coefficients.
 - `normalized::Bool`: Whether normalized basis polynomials were used.
 - `power_of_two_denom::Bool`: Whether power-of-2 denominators were used (for rational precision).
+
+# Coordinate Transform
+To evaluate at point `x` in the original domain, the coordinate transform is:
+    x_normalized = (x - center) / scale_factor
+This maps from the original domain to [-1,1]^n where the basis polynomials are defined.
 
 # Description
 The `ApproxPoly` struct is used to store the results of a polynomial approximation, including the coefficients of the polynomial, the norm of the approximation, the number of grid points, the scaling factor, the grid of points, and the values of the function at the grid points. It also stores information about the basis used for the polynomial approximation.
@@ -30,6 +36,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     nrm::Float64
     N::Int
     scale_factor::S
+    center::Vector{Float64}
     grid::Matrix{Float64}
     z::Vector{Float64}
     basis::Symbol
@@ -39,6 +46,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     cond_vandermonde::Float64
 
     # Original constructor (backward compatibility) - scalar scale_factor
+    # Defaults center to zeros for backward compatibility
     function ApproxPoly{T}(
         coeffs::Vector{T},
         degree,
@@ -55,6 +63,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             nrm,
             N,
             scale_factor,
+            zeros(size(grid, 2)),  # Default center to zeros
             grid,
             z,
             :chebyshev,
@@ -66,6 +75,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     end
 
     # Vector scale_factor constructor (backward compatibility)
+    # Defaults center to zeros for backward compatibility
     function ApproxPoly{T}(
         coeffs::Vector{T},
         degree,
@@ -82,6 +92,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             nrm,
             N,
             scale_factor,
+            zeros(size(grid, 2)),  # Default center to zeros
             grid,
             z,
             :chebyshev,
@@ -100,6 +111,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         nrm::Float64,
         N::Int,
         scale_factor::Float64,
+        center::Vector{Float64},
         grid::Matrix{Float64},
         z::Vector{Float64},
         basis::Symbol,
@@ -115,6 +127,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             nrm,
             N,
             scale_factor,
+            center,
             grid,
             z,
             basis,
@@ -133,6 +146,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         nrm::Float64,
         N::Int,
         scale_factor::Vector{Float64},
+        center::Vector{Float64},
         grid::Matrix{Float64},
         z::Vector{Float64},
         basis::Symbol,
@@ -148,6 +162,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             nrm,
             N,
             scale_factor,
+            center,
             grid,
             z,
             basis,
@@ -166,6 +181,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         nrm::Float64,
         N::Int,
         scale_factor::Union{Float64, Vector{Float64}},
+        center::Vector{Float64},
         grid::Matrix{Float64},
         z::Vector{Float64};
         basis::Symbol = :chebyshev,
@@ -182,6 +198,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             nrm,
             N,
             scale_factor,
+            center,
             grid,
             z,
             basis,
@@ -200,6 +217,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         nrm::Float64,
         N::Int,
         scale_factor::S,
+        center::Vector{Float64},
         grid::Matrix{Float64},
         z::Vector{Float64},
         basis::Symbol,
@@ -215,6 +233,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             nrm,
             N,
             scale_factor,
+            center,
             grid,
             z,
             basis,
@@ -234,6 +253,7 @@ function ApproxPoly(
     nrm::Float64,
     N::Int,
     scale_factor::S,
+    center::Vector{Float64},
     grid::Matrix{Float64},
     z::Vector{Float64},
     basis::Symbol = :chebyshev,
@@ -249,6 +269,7 @@ function ApproxPoly(
         nrm,
         N,
         scale_factor,
+        center,
         grid,
         z,
         basis,
@@ -266,6 +287,7 @@ get_precision(p::ApproxPoly) = p.precision
 is_normalized(p::ApproxPoly) = p.normalized
 has_power_of_two_denom(p::ApproxPoly) = p.power_of_two_denom
 get_scale_factor(p::ApproxPoly) = p.scale_factor
+get_center(p::ApproxPoly) = p.center
 
 """
    struct test_input

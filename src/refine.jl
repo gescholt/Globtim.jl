@@ -2,6 +2,7 @@
 
 # Import ForwardDiff for enhanced BFGS functionality
 using ForwardDiff
+using Logging
 
 """
     assign_spatial_regions(df::DataFrame, TR::test_input, n_regions_per_dim::Int=5)::Vector{Int}
@@ -128,30 +129,43 @@ function compute_nearest_neighbors(df::DataFrame, n_dims::Int)::Vector{Float64}
 end
 
 """
-    compute_gradients(f::Function, points::Matrix{Float64})::Vector{Float64}
+    compute_gradients(f, points::Matrix{Float64})::Vector{Float64}
 
 Compute gradient norms at specified points using automatic differentiation.
 
 # Arguments
-- f: Function to differentiate
+- f: Function to differentiate (any callable)
 - points: Matrix where each row is a point (n_points × n_dims)
 
 # Returns
 Vector{Float64}: ||∇f(x)|| for each point
 """
-function compute_gradients(f::Function, points::Matrix{Float64})::Vector{Float64}
+function compute_gradients(f, points::Matrix{Float64})::Vector{Float64}
     n_points, n_dims = size(points)
     grad_norms = Vector{Float64}(undef, n_points)
 
+    # Collect failures for summary reporting
+    failed_points = Int[]
+    failure_types = Set{String}()
+
     for i in 1:n_points
         try
-            point = points[i, :]
+            point = Vector{Float64}(points[i, :])
             grad = ForwardDiff.gradient(f, point)
             grad_norms[i] = norm(grad)
         catch e
+            push!(failed_points, i)
+            push!(failure_types, string(typeof(e)))
+            @debug "Point $i: Gradient computation failed with error: $e" exception=(e, catch_backtrace())
             # Fallback for points where gradient computation fails
             grad_norms[i] = NaN
         end
+    end
+
+    # Report summary if any points failed
+    if !isempty(failed_points)
+        sample_points = first(failed_points, min(5, length(failed_points)))
+        @warn "Gradient computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(failure_types)
     end
 
     return grad_norms
@@ -383,6 +397,8 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     verbose = true,
     max_iters_in_optim = 100,
     enable_hessian = true,
+    enable_gradient_computation = true,
+    enable_bfgs_refinement = true,
     hessian_tol_zero = 1e-8,
     bfgs_g_tol = 1e-8,
     bfgs_f_abstol = 1e-8,
@@ -410,106 +426,121 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     df_min = DataFrame([name => Float64[] for name in min_cols[1:(end - 1)]])
     df_min[!, :captured] = Bool[]
 
-    for i in 1:nrow(df)
-        try
-            verbose && println("Processing point $i of $(nrow(df))")
+    if enable_bfgs_refinement
+        for i in 1:nrow(df)
+            try
+                verbose && println("Processing point $i of $(nrow(df))")
 
-            # Extract starting point
-            x0 = [df[i, Symbol("x$j")] for j in 1:n_dims]
+                # Extract starting point
+                x0 = [df[i, Symbol("x$j")] for j in 1:n_dims]
 
-            # Optimization
-            res = Optim.optimize(
-                f,
-                x0,
-                Optim.BFGS(),
-                Optim.Options(
-                    show_trace = false,
-                    f_calls_limit = max_iters_in_optim,
-                    g_tol = bfgs_g_tol,
-                    f_abstol = bfgs_f_abstol,
-                    x_abstol = bfgs_x_abstol
-                )
-                # https://discourse.julialang.org/t/how-to-properly-specify-maximum-interations-in-optimization/109144/5
-            )
-
-            minimizer = Optim.minimizer(res)
-            min_value = Optim.minimum(res)
-            steps = res.iterations
-            optim_converged = Optim.converged(res)
-
-            # Check if minimizer is within bounds - handle both scalar and vector scaling
-            within_bounds = if isa(TR.sample_range, Number)
-                # Scalar sample_range case
-                all(abs.(minimizer .- TR.center[1:n_dims]) .<= TR.sample_range)
-            else
-                # Vector sample_range case
-                all(abs.(minimizer[j] - TR.center[j]) <= TR.sample_range[j] for j in 1:n_dims)
-            end
-
-            # Only mark as converged if both optimization converged AND within bounds
-            converged = optim_converged && within_bounds
-
-            # Print status with appropriate symbol
-            if verbose
-                println(
-                    converged ? "Optimization has converged within bounds: $green_check" :
-                    "Optimization status: $red_cross" *
-                    (optim_converged ? " (outside bounds)" : " (did not converge)")
-                )
-            end
-
-            # Update df results
-            for j in 1:n_dims
-                df[i, Symbol("y$j")] = minimizer[j]
-            end
-            df[i, :steps] = steps
-            df[i, :converged] = converged  # Updated to use new converged status
-
-            # Check if minimizer is close to starting point
-            distance = norm([df[i, Symbol("x$j")] - minimizer[j] for j in 1:n_dims])
-            df[i, :close] = distance < tol_dist
-
-            # Skip adding to df_min if outside bounds
-            !within_bounds && continue
-
-            # Check if the minimizer is new
-            is_new = true
-            for j in 1:nrow(df_min)
-                if norm([df_min[j, Symbol("x$k")] - minimizer[k] for k in 1:n_dims]) <
-                   tol_dist
-                    is_new = false
-                    break
+                # Optimization (with ODE warning suppression)
+                # Using NelderMead (gradient-free) for robustness with ODE-based objectives
+                res = Logging.with_logger(Logging.NullLogger()) do
+                    Optim.optimize(
+                        f,
+                        x0,
+                        Optim.NelderMead(),
+                        Optim.Options(
+                            show_trace = false,
+                            iterations = max_iters_in_optim,
+                            f_tol = bfgs_f_abstol,
+                            x_tol = bfgs_x_abstol
+                        )
+                    )
                 end
-            end
 
-            # Add new unique minimizer
-            if is_new
-                # Check if minimizer is captured by any initial point
-                is_captured = any(
-                    norm([df[k, Symbol("x$j")] - minimizer[j] for j in 1:n_dims]) < tol_dist
-                    for k in 1:nrow(df)
-                )
+                minimizer = Optim.minimizer(res)
+                min_value = Optim.minimum(res)
+                steps = res.iterations
+                optim_converged = Optim.converged(res)
 
-                # Create new row for df_min
-                new_row = Dict{Symbol, Any}()
+                # Check if minimizer is within bounds - handle both scalar and vector scaling
+                within_bounds = if isa(TR.sample_range, Number)
+                    # Scalar sample_range case
+                    all(abs.(minimizer .- TR.center[1:n_dims]) .<= TR.sample_range)
+                else
+                    # Vector sample_range case
+                    all(abs.(minimizer[j] - TR.center[j]) <= TR.sample_range[j] for j in 1:n_dims)
+                end
+
+                # Only mark as converged if both optimization converged AND within bounds
+                converged = optim_converged && within_bounds
+
+                # Print status with appropriate symbol
+                if verbose
+                    println(
+                        converged ? "Optimization has converged within bounds: $green_check" :
+                        "Optimization status: $red_cross" *
+                        (optim_converged ? " (outside bounds)" : " (did not converge)")
+                    )
+                end
+
+                # Update df results
                 for j in 1:n_dims
-                    new_row[Symbol("x$j")] = minimizer[j]
+                    df[i, Symbol("y$j")] = minimizer[j]
                 end
-                new_row[:value] = min_value
-                new_row[:captured] = is_captured
+                df[i, :steps] = steps
+                df[i, :converged] = converged  # Updated to use new converged status
 
-                push!(df_min, new_row)
+                # Check if minimizer is close to starting point
+                distance = norm([df[i, Symbol("x$j")] - minimizer[j] for j in 1:n_dims])
+                df[i, :close] = distance < tol_dist
+
+                # Skip adding to df_min if outside bounds
+                !within_bounds && continue
+
+                # Check if the minimizer is new
+                is_new = true
+                for j in 1:nrow(df_min)
+                    if norm([df_min[j, Symbol("x$k")] - minimizer[k] for k in 1:n_dims]) <
+                       tol_dist
+                        is_new = false
+                        break
+                    end
+                end
+
+                # Add new unique minimizer
+                if is_new
+                    # Check if minimizer is captured by any initial point
+                    is_captured = any(
+                        norm([df[k, Symbol("x$j")] - minimizer[j] for j in 1:n_dims]) <
+                        tol_dist
+                        for k in 1:nrow(df)
+                    )
+
+                    # Create new row for df_min
+                    new_row = Dict{Symbol, Any}()
+                    for j in 1:n_dims
+                        new_row[Symbol("x$j")] = minimizer[j]
+                    end
+                    new_row[:value] = min_value
+                    new_row[:captured] = is_captured
+
+                    push!(df_min, new_row)
+                end
+
+            catch e
+                verbose && println("Error processing point $i: $e")
+                # Handle errors in df
+                for j in 1:n_dims
+                    df[i, Symbol("y$j")] = NaN
+                end
+                df[i, :close] = false
+                df[i, :steps] = -1
+                df[i, :converged] = false
             end
-
-        catch e
-            verbose && println("Error processing point $i: $e")
-            # Handle errors in df
+        end
+    else
+        # Skip BFGS refinement: use raw points as results
+        verbose && println("BFGS refinement disabled, using raw critical points")
+        for i in 1:nrow(df)
             for j in 1:n_dims
-                df[i, Symbol("y$j")] = NaN
+                df[i, Symbol("y$j")] = df[i, Symbol("x$j")]
             end
-            df[i, :close] = false
-            df[i, :steps] = -1
+            df[i, :steps] = 0
             df[i, :converged] = false
+            df[i, :close] = false
         end
     end
 
@@ -540,15 +571,22 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     df[!, :nearest_neighbor_dist] = nn_distances
 
     # 4. Gradient norms at critical points
-    if verbose
-        println("Computing gradient norms at critical points...")
+    if enable_gradient_computation
+        if verbose
+            println("Computing gradient norms at critical points...")
+        end
+        points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
+        for i in 1:n_dims
+            points_matrix[:, i] = df[!, Symbol("x$i")]
+        end
+        grad_norms = compute_gradients(f, points_matrix)
+        df[!, :gradient_norm] = grad_norms
+    else
+        if verbose
+            println("Gradient computation disabled")
+        end
+        df[!, :gradient_norm] = fill(NaN, nrow(df))
     end
-    points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
-    for i in 1:n_dims
-        points_matrix[:, i] = df[!, Symbol("x$i")]
-    end
-    grad_norms = compute_gradients(f, points_matrix)
-    df[!, :gradient_norm] = grad_norms
 
     # 5. Basin analysis for df_min (only if we have minimizers)
     if nrow(df_min) > 0
@@ -769,35 +807,42 @@ function enhanced_bfgs_refinement(
         # Time the optimization
         start_time = time()
 
-        # Run BFGS with selected parameters
-        result = Optim.optimize(
-            objective_function,
-            point,
-            Optim.BFGS(),
-            Optim.Options(
-                iterations = config.max_iterations,
-                g_tol = tolerance_used,
-                f_abstol = config.f_abs_tol,
-                x_abstol = config.x_tol,
-                show_trace = config.show_trace,
-                store_trace = true,
-                extended_trace = true
+        # Run optimization with selected parameters (with ODE warning suppression)
+        # Using NelderMead (gradient-free) for robustness with ODE-based objectives
+        result = Logging.with_logger(Logging.NullLogger()) do
+            Optim.optimize(
+                objective_function,
+                point,
+                Optim.NelderMead(),
+                Optim.Options(
+                    iterations = config.max_iterations,
+                    f_tol = config.f_abs_tol,
+                    x_tol = config.x_tol,
+                    show_trace = config.show_trace,
+                    store_trace = true,
+                    extended_trace = true
+                )
             )
-        )
+        end
 
         optimization_time = time() - start_time
 
         # Calculate metrics
         refined_point = Optim.minimizer(result)
         refined_value = Optim.minimum(result)
-        grad = ForwardDiff.gradient(objective_function, refined_point)
+        # Note: NelderMead doesn't compute gradients, so we compute it separately if needed
+        grad = try
+            ForwardDiff.gradient(objective_function, refined_point)
+        catch
+            fill(NaN, length(refined_point))  # Return NaN gradient if computation fails
+        end
 
         # Determine convergence reason
         convergence_reason = determine_convergence_reason(result, tolerance_used, config)
 
         # Extract call counts
         f_calls = Optim.f_calls(result)
-        g_calls = Optim.g_calls(result)
+        g_calls = 0  # NelderMead doesn't use gradients
 
         # Calculate distance to expected minimum if provided
         distance_to_expected =
@@ -937,5 +982,113 @@ end
 # Export enhanced BFGS functions
 export enhanced_bfgs_refinement, refine_with_enhanced_bfgs, determine_convergence_reason
 
+"""
+    detect_distinct_local_minima(
+        points::Matrix{Float64},
+        objective_values::Vector{Float64},
+        classifications::Vector{Symbol};
+        distance_threshold::Float64 = 1e-3,
+        objective_threshold::Float64 = 1e-6
+    )
+
+Identify distinct local minima using spatial+objective clustering.
+
+Only points classified as `:minimum` are considered. Points are grouped into
+clusters based on spatial proximity AND objective value similarity. Returns
+one representative per cluster (the point with lowest objective value).
+
+# Arguments
+- `points`: Matrix where each row is a point (n_points × n_dims)
+- `objective_values`: Objective function values at each point
+- `classifications`: Critical point classifications (from classify_critical_points)
+- `distance_threshold`: Spatial proximity threshold (Euclidean distance)
+- `objective_threshold`: Objective value similarity threshold
+
+# Returns
+NamedTuple with:
+- `n_distinct_minima`: Number of unique local minima clusters
+- `cluster_representatives`: Indices of representative points (best in each cluster)
+- `cluster_sizes`: Number of points in each cluster
+- `representative_objectives`: Objective values of representatives
+"""
+function detect_distinct_local_minima(
+    points::Matrix{Float64},
+    objective_values::Vector{Float64},
+    classifications::Vector{Symbol};
+    distance_threshold::Float64 = 1e-3,
+    objective_threshold::Float64 = 1e-6
+)
+    # Filter for minima only
+    minima_indices = findall(c -> c == :minimum, classifications)
+
+    if isempty(minima_indices)
+        return (
+            n_distinct_minima = 0,
+            cluster_representatives = Int[],
+            cluster_sizes = Int[],
+            representative_objectives = Float64[]
+        )
+    end
+
+    minima_points = points[minima_indices, :]
+    minima_objectives = objective_values[minima_indices]
+    n_minima = length(minima_indices)
+
+    # Simple greedy clustering algorithm
+    clusters = Vector{Vector{Int}}()
+    used = Set{Int}()
+
+    for i in 1:n_minima
+        if i ∈ used
+            continue
+        end
+
+        # Start new cluster with point i
+        cluster = [i]
+        push!(used, i)
+
+        # Find all points that should be in same cluster
+        for j in (i+1):n_minima
+            if j ∈ used
+                continue
+            end
+
+            # Check spatial proximity AND objective similarity
+            spatial_dist = norm(minima_points[i, :] - minima_points[j, :])
+            objective_diff = abs(minima_objectives[i] - minima_objectives[j])
+
+            if spatial_dist < distance_threshold && objective_diff < objective_threshold
+                push!(cluster, j)
+                push!(used, j)
+            end
+        end
+
+        push!(clusters, cluster)
+    end
+
+    # Find representative (best objective) for each cluster
+    representatives = Int[]
+    cluster_sizes = Int[]
+    representative_objs = Float64[]
+
+    for cluster in clusters
+        # Get index within minima_indices that has best objective
+        local_best_idx = argmin([minima_objectives[k] for k in cluster])
+        # Convert back to original point index
+        global_idx = minima_indices[cluster[local_best_idx]]
+
+        push!(representatives, global_idx)
+        push!(cluster_sizes, length(cluster))
+        push!(representative_objs, objective_values[global_idx])
+    end
+
+    return (
+        n_distinct_minima = length(clusters),
+        cluster_representatives = representatives,
+        cluster_sizes = cluster_sizes,
+        representative_objectives = representative_objs
+    )
+end
+
 # Export functions used by other modules
-export compute_gradients, analyze_basins
+export compute_gradients, analyze_basins, detect_distinct_local_minima
