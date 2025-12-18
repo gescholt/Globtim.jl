@@ -1,0 +1,258 @@
+{
+    "campaign_date": "2025-10-04",
+    "campaign_id": "lv4d_domain_sweep_extended",
+    "parameters": {
+        "domain_ranges": [
+            0.4,
+            0.8,
+            1.2,
+            1.6
+        ],
+        "model": "Lotka-Volterra 4D",
+        "precision_modes": [
+            "Float64",
+            "Adaptive"
+        ],
+        "total_experiments": 8,
+        "total_computations": 72,
+        "degree_range": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+        ],
+        "samples_per_dim": 16
+    },
+    "experiments": [
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.4766955375671387,
+            "experiment_id": "lv4d_float64_0.05_GN16_20250928_095757",
+            "timestamp": "20250928_095757",
+            "domain_range": 0.05,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.5047082901000977,
+            "experiment_id": "lv4d_float64_0.1_GN16_20250928_095759",
+            "timestamp": "20250928_095759",
+            "domain_range": 0.1,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.3165555000305176,
+            "experiment_id": "lv4d_float64_0.15_GN16_20250928_095801",
+            "timestamp": "20250928_095801",
+            "domain_range": 0.15,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.503467321395874,
+            "experiment_id": "lv4d_float64_0.2_GN16_20250928_095803",
+            "timestamp": "20250928_095803",
+            "domain_range": 0.2,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.4689419269561768,
+            "experiment_id": "lv4d_adaptive_0.05_GN16_20250928_095805",
+            "timestamp": "20250928_095805",
+            "domain_range": 0.05,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.459646224975586,
+            "experiment_id": "lv4d_adaptive_0.1_GN16_20250928_095807",
+            "timestamp": "20250928_095807",
+            "domain_range": 0.1,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.5085861682891846,
+            "experiment_id": "lv4d_adaptive_0.15_GN16_20250928_095809",
+            "timestamp": "20250928_095809",
+            "domain_range": 0.15,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.4928257465362549,
+            "experiment_id": "lv4d_adaptive_0.2_GN16_20250928_095811",
+            "timestamp": "20250928_095811",
+            "domain_range": 0.2,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.4665107727050781,
+            "experiment_id": "lv4d_float64_0.05_GN16_20250928_095854",
+            "timestamp": "20250928_095854",
+            "domain_range": 0.05,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.479046106338501,
+            "experiment_id": "lv4d_float64_0.1_GN16_20250928_095856",
+            "timestamp": "20250928_095856",
+            "domain_range": 0.1,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.2792985439300537,
+            "experiment_id": "lv4d_float64_0.15_GN16_20250928_095858",
+            "timestamp": "20250928_095858",
+            "domain_range": 0.15,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 1.474351406097412,
+            "experiment_id": "lv4d_float64_0.2_GN16_20250928_095900",
+            "timestamp": "20250928_095900",
+            "domain_range": 0.2,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.4601895809173584,
+            "experiment_id": "lv4d_adaptive_0.05_GN16_20250928_095902",
+            "timestamp": "20250928_095902",
+            "domain_range": 0.05,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.4656546115875244,
+            "experiment_id": "lv4d_adaptive_0.1_GN16_20250928_095904",
+            "timestamp": "20250928_095904",
+            "domain_range": 0.1,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.5009400844573975,
+            "experiment_id": "lv4d_adaptive_0.15_GN16_20250928_095906",
+            "timestamp": "20250928_095906",
+            "domain_range": 0.15,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 1.4723377227783203,
+            "experiment_id": "lv4d_adaptive_0.2_GN16_20250928_095908",
+            "timestamp": "20250928_095908",
+            "domain_range": 0.2,
+            "successful_degrees": 0
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 14.744685649871826,
+            "experiment_id": "lv4d_float64_0.05_GN16_20250928_100427",
+            "timestamp": "20250928_100427",
+            "domain_range": 0.05,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 15.2176833152771,
+            "experiment_id": "lv4d_float64_0.1_GN16_20250928_100429",
+            "timestamp": "20250928_100429",
+            "domain_range": 0.1,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 13.47416377067566,
+            "experiment_id": "lv4d_float64_0.2_GN16_20250928_100434",
+            "timestamp": "20250928_100434",
+            "domain_range": 0.2,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 13.07035779953003,
+            "experiment_id": "lv4d_adaptive_0.05_GN16_20250928_100436",
+            "timestamp": "20250928_100436",
+            "domain_range": 0.05,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "float64",
+            "status": "completed",
+            "total_time": 17.359209299087524,
+            "experiment_id": "lv4d_float64_0.15_GN16_20250928_100432",
+            "timestamp": "20250928_100432",
+            "domain_range": 0.15,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 15.243895530700684,
+            "experiment_id": "lv4d_adaptive_0.1_GN16_20250928_100438",
+            "timestamp": "20250928_100438",
+            "domain_range": 0.1,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 12.872056007385254,
+            "experiment_id": "lv4d_adaptive_0.2_GN16_20250928_100442",
+            "timestamp": "20250928_100442",
+            "domain_range": 0.2,
+            "successful_degrees": 9
+        },
+        {
+            "precision_mode": "adaptive",
+            "status": "completed",
+            "total_time": 15.280949115753174,
+            "experiment_id": "lv4d_adaptive_0.15_GN16_20250928_100440",
+            "timestamp": "20250928_100440",
+            "domain_range": 0.15,
+            "successful_degrees": 9
+        }
+    ],
+    "campaign_id": "lv4d_extended_2025",
+    "naming_convention": {
+        "pattern": "lv4d_{precision}_{domain}_GN16_{timestamp}",
+        "examples": [
+            "lv4d_float64_0.4_GN16_20251004_143000",
+            "lv4d_adaptive_1.2_GN16_20251004_143100"
+        ]
+    },
+    "description": "Extended domain sweep campaign - testing robustness with larger domain sizes (0.4-1.6) vs previous campaign (0.05-0.2)"
+}

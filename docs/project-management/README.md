@@ -30,9 +30,9 @@ git commit -m "Fix bug, closes #123"
 ```
 
 ### 📋 Project Boards
-- **[Development Workflow](https://git.mpi-cbg.de/scholten/globtim/-/boards)** - Daily task management
-- **[Epic Progress](https://git.mpi-cbg.de/scholten/globtim/-/boards)** - Strategic project tracking
-- **[Priority Focus](https://git.mpi-cbg.de/scholten/globtim/-/boards)** - Urgency-based prioritization
+- **[Development Workflow](https://git.mpi-cbg.de/globaloptim/globtimcore/-/boards)** - Daily task management
+- **[Epic Progress](https://git.mpi-cbg.de/globaloptim/globtimcore/-/boards)** - Strategic project tracking
+- **[Priority Focus](https://git.mpi-cbg.de/globaloptim/globtimcore/-/boards)** - Urgency-based prioritization
 
 ### Issue Management Workflow
 ```
@@ -71,7 +71,7 @@ backlog → ready → in-progress → review → testing → done
 ### Initial Setup
 ```bash
 # Set environment variables
-export GITLAB_PROJECT_ID="2545"
+export GITLAB_PROJECT_ID="2859"
 export GITLAB_PRIVATE_TOKEN="your-token"
 
 # Create labels
@@ -83,7 +83,7 @@ export GITLAB_PRIVATE_TOKEN="your-token"
 
 ### Environment File (.env.gitlab)
 ```bash
-GITLAB_PROJECT_ID=2545
+GITLAB_PROJECT_ID=2859
 GITLAB_PRIVATE_TOKEN=your-token
 GITLAB_API_URL=https://git.mpi-cbg.de/api/v4
 CURRENT_MILESTONE_ID=current-sprint-id
@@ -122,7 +122,7 @@ CURRENT_MILESTONE_ID=current-sprint-id
 
 ## 🔗 Key Resources
 
-- **GitLab Project**: https://git.mpi-cbg.de/scholten/globtim
+- **GitLab Project**: https://git.mpi-cbg.de/globaloptim/globtimcore
 - **GitHub Mirror**: https://github.com/gescholt/Globtim.jl
 - **Sprint Planning**: `wiki/Planning/SPRINTS.md`
 - **Epic Tracking**: `wiki/Planning/EPICS.md`

@@ -165,7 +165,7 @@ For custom workflows or troubleshooting, run components individually:
 **Julia Environment Failures**:
 ```bash
 # Reinstall packages
-cd /home/scholten/globtim
+cd /home/globaloptim/globtimcore
 julia --project=. -e "using Pkg; Pkg.instantiate()"
 
 # Check specific package

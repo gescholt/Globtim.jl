@@ -65,7 +65,7 @@ cp Manifest-local.toml Manifest.toml
 julia --project=.
 
 # HPC deployment
-scp Manifest-hpc.toml r04n02:/home/scholten/globtim/Manifest.toml
+scp Manifest-hpc.toml r04n02:/home/globaloptim/globtimcore/Manifest.toml
 ```
 
 **Advantages**:
@@ -209,7 +209,7 @@ julia --project=. scripts/validate_environment.jl
 1. **Connect to HPC cluster**:
    ```bash
    ssh scholten@r04n02
-   cd /home/scholten/globtim
+   cd /home/globaloptim/globtimcore
    ```
 
 2. **Pull latest changes** (ensure updated Project.toml):

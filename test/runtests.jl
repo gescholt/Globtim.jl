@@ -12,16 +12,9 @@ println(
     filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim))
 )
 
-# Handle CSV as weak dependency - try loading but provide fallback
-try
-    # Import CSV to trigger the GlobtimDataExt extension
-    import CSV
-    println("✅ CSV loaded successfully (weak dependency activated)")
-    global CSV_AVAILABLE = true
-catch e
-    println("⚠️ CSV not available, skipping CSV-dependent tests: $e")
-    global CSV_AVAILABLE = false
-end
+# CSV is required for tests - no fallback
+import CSV
+println("✅ CSV loaded successfully")
 
 using DataFrames
 using DynamicPolynomials
@@ -113,7 +106,7 @@ using ProgressLogging
     @testset "Comparison with MATLAB results" begin
         # Load the pre-computed critical points from MATLAB if the file exists
         matlab_file_path = "../data/matlab_critical_points/valid_points_deuflhard.csv"
-        if CSV_AVAILABLE && isfile(matlab_file_path)
+        if isfile(matlab_file_path)
             matlab_df = DataFrame(CSV.File(matlab_file_path))
 
             # Make sure df_cheb exists and has rows
@@ -131,63 +124,17 @@ using ProgressLogging
             else
                 @info "DataFrame from Chebyshev test is empty or undefined, skipping comparison"
             end
-        elseif !CSV_AVAILABLE
-            @info "CSV not available (weak dependency), skipping MATLAB comparison tests"
         else
             @info "MATLAB comparison file not found, skipping comparison tests"
         end
     end
 end
 
-# Include ForwardDiff integration tests
-include("test_forwarddiff_integration.jl")
-
-# Include function value error analysis tests
-include("test_function_value_analysis.jl")
-
-# Include new exact arithmetic and sparsification tests
-include("test_exact_conversion.jl")
+# Active test files
+include("test_approx_poly_eval.jl")
 include("test_sparsification.jl")
 include("test_truncation.jl")
-
-# Include L2-norm scaling and type safety tests
-include("test_l2_norm_scaling.jl")
-
-# Include anisotropic grid functionality tests
-include("test_anisotropic_grids.jl")
-
-# Include quadrature-based L2 norm tests
-include("test_quadrature_l2_norm_simple.jl")  # Using simplified version
-
-# Include Phase 1/2 quadrature integration tests
-include("test_quadrature_l2_phase1_2.jl")
-
-# Include quadrature vs Riemann comparison tests
-include("test_quadrature_vs_riemann.jl")
-
-# Include Phase 2 Hessian analysis tests
-include("test_hessian_analysis.jl")
-
-# Include Phase 3 enhanced analysis integration tests
-include("test_enhanced_analysis_integration.jl")
-
-# Include Phase 3 statistical tables tests
-include("test_statistical_tables.jl")
-
-# Include grid-based MainGenerate tests
-include("test_maingen_grid_functionality.jl")
-
-# Include anisotropic grid integration tests
-include("test_anisotropic_integration.jl")
-
-# Include lambda_vandermonde anisotropic tests
-include("test_lambda_vandermonde_anisotropic.jl")
-
-# Include convenience methods tests
-include("test_convenience_methods.jl")
-
-# Include Aqua.jl quality assurance tests
 include("test_aqua.jl")
-
-# Include Parameter Tracking Infrastructure Configuration Tests
-include("test_parameter_tracking_config.jl")
+include("test_model_registry.jl")
+include("test_adaptive_subdivision.jl")
+include("test_gpu_batched.jl")

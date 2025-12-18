@@ -29,7 +29,7 @@ This hook activates when Claude Code detects HPC-related context in:
 
 ### 2. Access Security Policies
 - ❌ Prevents credential exposure in context
-- ❌ Blocks operations in `/tmp` directory (enforces `/home/scholten/globtim/hpc/experiments/temp/`)
+- ❌ Blocks operations in `/tmp` directory (enforces `/home/globaloptim/globtimcore/hpc/experiments/temp/`)
 - ❌ Detects potentially destructive command patterns
 
 ### 3. Experiment Environment
@@ -48,7 +48,7 @@ All agents automatically benefit from this security validation:
 
 # ✅ SECURE: Uses validated SSH access
 node = SecureNodeAccess()
-result = node.execute_command("ls /home/scholten/globtim")
+result = node.execute_command("ls /home/globaloptim/globtimcore")
 
 # ❌ BLOCKED: Direct SSH without validation would trigger security warnings
 ```
@@ -95,7 +95,7 @@ ssh -o ConnectTimeout=5 scholten@r04n02 "echo 'Connected successfully'"
 ```
 
 ### Security Policy Violations
-- **"/tmp directory blocked"**: Use `/home/scholten/globtim/hpc/experiments/temp/` instead
+- **"/tmp directory blocked"**: Use `/home/globaloptim/globtimcore/hpc/experiments/temp/` instead
 - **Credential exposure detected**: Ensure context doesn't contain sensitive data
 - **Destructive command pattern**: Review command for potentially dangerous operations
 

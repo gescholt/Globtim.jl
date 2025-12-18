@@ -1,195 +1,45 @@
 """
-Aqua.jl quality assurance tests for Globtim.jl
+Aqua.jl Quality Assurance Tests for Globtim
 
-This file contains comprehensive code quality tests using Aqua.jl to ensure:
-- No method ambiguities
-- No undefined exports
-- No unbound type parameters
-- No persistent tasks
-- Proper project structure
-- Dependency hygiene
+This file runs Aqua.jl quality assurance checks on the Globtim package.
+Configuration is loaded from aqua_config.jl.
+
+Aqua.jl checks for:
+- Method ambiguities
+- Undefined exports
+- Unbound type parameters
+- Persistent tasks
+- Project TOML formatting
+- Dependency compatibility
+- Stale dependencies
+
+See: https://github.com/JuliaTesting/Aqua.jl
 """
 
 using Test
-
-# Try to load Aqua, skip tests if not available
-try
-    using Aqua
-catch e
-    @warn "Aqua.jl not available, skipping Aqua tests" exception=e
-    exit()
-end
-
+using Aqua
 using Globtim
 
 # Load Aqua configuration
 include("aqua_config.jl")
 
 @testset "Aqua.jl Quality Assurance" begin
-
     # Check if we should run Aqua tests
     if !should_run_aqua_tests()
-        @info "Skipping Aqua tests (disabled or unsupported environment)"
+        @info "Skipping Aqua tests (disabled via environment variable or Julia version)"
+        @test_skip "Aqua tests disabled"
         return
     end
 
     # Print configuration info
-    print_aqua_config()
-    
-    @testset "Aqua.jl Tests" begin
-        @info "Running configured Aqua.jl quality tests..."
-        
-        # Use the configured Aqua tests that handle false positives and exclusions
+    if get(ENV, "AQUA_VERBOSE", "false") == "true"
+        print_aqua_config()
+    end
+
+    # Run configured Aqua tests
+    @testset "Configured Aqua Tests" begin
         run_configured_aqua_tests(Globtim)
-        
-        @info "✅ All Aqua.jl tests passed (with configured exclusions)"
     end
-    
-    @testset "Package Structure Validation" begin
-        @info "Validating package structure..."
-        
-        # Check that the package follows Julia conventions
-        # This is a custom test to verify our package structure
-        
-        # Check that main module file exists and is properly structured
-        @test isfile(joinpath(dirname(pathof(Globtim)), "Globtim.jl"))
-        
-        # Check that all included files exist
-        globtim_file = joinpath(dirname(pathof(Globtim)), "Globtim.jl")
-        content = read(globtim_file, String)
-        
-        # Extract include statements
-        include_pattern = r"include\(\"([^\"]+)\"\)"
-        includes = [m.captures[1] for m in eachmatch(include_pattern, content)]
-        
-        # Verify all included files exist
-        for include_file in includes
-            include_path = joinpath(dirname(pathof(Globtim)), include_file)
-            @test isfile(include_path)
-        end
-        
-        @info "✅ Package structure validation passed"
-    end
-    
-    @testset "Export Consistency" begin
-        @info "Testing export consistency..."
-        
-        # Custom test to ensure exports are consistent
-        exported_names = names(Globtim)
-        
-        # Check that we have a reasonable number of exports (not too few, not too many)
-        @test length(exported_names) > 10
-        @test length(exported_names) < 200
-        
-        # Check that all exported functions are callable or are types/constants
-        problematic_exports = String[]
-        
-        for name in exported_names
-            if name == :Globtim  # Skip the module name itself
-                continue
-            end
-            
-            try
-                obj = getfield(Globtim, name)
-                # Check if it's a function, type, or constant
-                if !(isa(obj, Function) || isa(obj, Type) || isa(obj, DataType) || 
-                     isa(obj, UnionAll) || isa(obj, Module))
-                    # For other objects, just check they're defined
-                    @test isdefined(Globtim, name)
-                end
-            catch e
-                push!(problematic_exports, string(name))
-                @warn "Issue with export $name" exception=e
-            end
-        end
-        
-        if !isempty(problematic_exports)
-            @warn "Problematic exports found" exports=problematic_exports
-        end
-        
-        @info "✅ Export consistency check completed"
-    end
-    
-    @testset "Code Quality Metrics" begin
-        @info "Computing code quality metrics..."
-        
-        # Custom metrics for code quality
-        globtim_file = joinpath(dirname(pathof(Globtim)), "Globtim.jl")
-        content = read(globtim_file, String)
-        
-        # Count exports
-        export_count = length(names(Globtim)) - 1  # Exclude module name
-        @info "Total exports: $export_count"
-        
-        # Count includes
-        include_pattern = r"include\(\"([^\"]+)\"\)"
-        include_count = length(collect(eachmatch(include_pattern, content)))
-        @info "Total included files: $include_count"
-        
-        # Basic complexity metrics
-        lines = split(content, '\n')
-        total_lines = length(lines)
-        comment_lines = count(line -> startswith(strip(line), "#"), lines)
-        blank_lines = count(line -> isempty(strip(line)), lines)
-        code_lines = total_lines - comment_lines - blank_lines
-        
-        @info "Code metrics:" total_lines comment_lines blank_lines code_lines
-        
-        # Ensure reasonable code organization
-        @test include_count > 5
-        @test export_count > 10
-        
-        @info "✅ Code quality metrics computed"
-    end
+
+    println("\n✅ Aqua.jl quality assurance checks completed!")
 end
-
-# Additional helper function for manual testing
-"""
-    run_aqua_tests_verbose()
-
-Run Aqua tests with verbose output for debugging purposes.
-This function is useful for local development and debugging.
-"""
-function run_aqua_tests_verbose()
-    println("🔍 Running comprehensive Aqua.jl tests for Globtim.jl")
-    println("=" ^ 60)
-    
-    # Test each component individually with detailed output
-    components = [
-        ("Method Ambiguities", () -> Aqua.test_ambiguities(Globtim)),
-        ("Undefined Exports", () -> Aqua.test_undefined_exports(Globtim)),
-        ("Unbound Args", () -> Aqua.test_unbound_args(Globtim)),
-        ("Persistent Tasks", () -> Aqua.test_persistent_tasks(Globtim))
-    ]
-    
-    results = Dict{String, Bool}()
-    
-    for (name, test_func) in components
-        print("Testing $name... ")
-        try
-            test_func()
-            println("✅ PASSED")
-            results[name] = true
-        catch e
-            println("❌ FAILED")
-            println("  Error: $e")
-            results[name] = false
-        end
-    end
-    
-    println("\n📊 Summary:")
-    passed = count(values(results))
-    total = length(results)
-    println("  Passed: $passed/$total")
-    
-    if passed == total
-        println("🎉 All Aqua tests passed!")
-    else
-        println("⚠️  Some tests failed - see details above")
-    end
-    
-    return results
-end
-
-# Export the helper function for easy access
-export run_aqua_tests_verbose

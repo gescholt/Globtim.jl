@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "parameter_tracking_version": "1.0.0",
+    "hook_name": "parameter-tracking-hook",
+    "creation_source": "parameter_tracking_hook.sh"
+  },
+  "experiment_info": {
+    "experiment_name": "test_experiment",
+    "script_path": "./sample_experiment.jl",
+    "script_basename": "sample_experiment.jl",
+    "additional_args": "",
+    "detected_parameters": [
+      "GN = 12"
+,
+      "degree = 6"
+    ],
+    "experiment_start_time": "2025-09-21T10:00:38Z",
+    "parameter_capture_time": "2025-09-21T10:00:38Z",
+    "output_directory": "./output"
+  },
+  "git_info": {
+    "git_commit_hash": "cc7fb836a56326de407b9635b0234eb74681a124",
+    "git_branch": "main",
+    "git_status": "dirty",
+    "globtim_directory": "/Users/ghscholt/globtimcore"
+  },
+  "environment_info": {
+    "hostname": "harrington-mac-13.local",
+    "working_directory": "/Users/ghscholt/globtimcore/tests/hooks/test_data_parameter_tracking",
+    "os_info": "Darwin harrington-mac-13.local 24.6.0 Darwin Kernel Version 24.6.0: Mon Jul 14 11:30:40 PDT 2025; root:xnu-11417.140.69~1/RELEASE_ARM64_T6041 arm64",
+    "julia_version": "julia version 1.11.7",
+    "environment": "local",
+    "memory_total": "unknown",
+    "cpu_count": "12",
+    "disk_usage": "47%",
+    "path": "/Users/ghscholt/.juliaup/bin:/opt/anaconda3/bin:/opt/anaconda3/condabin:/Users/ghscholt/.juliaup/bin:/opt/homebrew/lib/ruby/gems/3.4.0/bin:/opt/homebrew/opt/ruby/bin:/Users/ghscholt/.rbenv/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/Library/TeX/texbin:/Applications/quarto/bin:/Library/Frameworks/Maple.framework/Versions/2024/bin"
+  },
+  "package_info": {
+    "project_toml_status": "found",
+    "manifest_toml_status": "found_modified_1757971650",
+    "julia_project_path": "/Users/ghscholt/globtimcore"
+  },
+  "hook_execution": {
+    "parameter_log_file": "/Users/ghscholt/globtimcore/tools/hpc/hooks/../../../logs/hooks/parameter-tracking-hook_20250921_120038.log",
+    "execution_environment": "local"
+  }
+}

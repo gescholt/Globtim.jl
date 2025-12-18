@@ -1,9 +1,0 @@
-ERROR: LoadError: UndefVarError: `PrecisionType` not defined in `Main`
-Stacktrace:
- [1] top-level scope
-   @ /tmp/globtim_59770062/src/Structures.jl:3
- [2] include(fname::String)
-   @ Main ./sysimg.jl:38
- [3] top-level scope
-   @ none:6
-in expression starting at /tmp/globtim_59770062/src/Structures.jl:3

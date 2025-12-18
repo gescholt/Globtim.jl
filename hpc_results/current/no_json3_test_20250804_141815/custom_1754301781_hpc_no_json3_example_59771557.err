@@ -1,5 +1,0 @@
-slurmstepd: error: *** JOB 59771557 ON c02n16 CANCELLED AT 2025-08-04T12:13:15 DUE TO TIME LIMIT ***
-
-[109612] signal 15: Terminated
-in expression starting at none:3
-epoll_pwait at /lib64/libc.so.6 (unknown line)

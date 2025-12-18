@@ -10,6 +10,9 @@ Manifest.toml
 .vscode/
 .idea/
 
+# 3rd party tool directories
+.augment/
+
 # Temporary files
 *.tmp
 *.temp
@@ -93,6 +96,10 @@ __pycache__/
 *.pyd
 .Python
 
+# Claude Code cache and memory
+.cache/
+.claudemem
+
 # HPC test results (keep locally but don't commit)
 hpc/jobs/submission/collected_results/
 
@@ -146,6 +153,37 @@ actionable_optimization_plan.jl
 
 # Temporary output and result directories (preserve in proper locations)
 node_experiments/
-*_experiments/
 */outputs/
 */results/
+
+# Generated experiment files (auto-generated from templates)
+experiments/generated/*.jl
+
+# Result data files (JSON/CSV/PNG outputs)
+*_results.json
+*_summary.json
+*_analysis.csv
+*_index.json
+*_convergence_analysis.png
+*_critical_point_analysis.png
+
+# Archive and backup directories
+archives/
+!archives/tools_hpc_archived_2025_10_10/
+backup_*/
+archive_*/
+*_archive_*/
+cluster_results_*/
+collected_*_results/
+*_comparison_results/
+
+# Experiment results - DEPRECATED legacy directories (use GLOBTIM_RESULTS_ROOT instead)
+# These are kept in .gitignore for backward compatibility only
+# New experiments should use standardized paths via OutputPathManager
+hpc_results/
+test_results/
+local_results/
+
+# Note: With standardized output system, experiments write to:
+#   $GLOBTIM_RESULTS_ROOT/{objective_name}/{experiment_id}_{timestamp}/
+# This directory is outside the repository and doesn't need .gitignore

@@ -1,0 +1,11 @@
+{
+  "batch_id": "batch_deg18_20251013_130344",
+  "campaign": "lv4d_deg18_testing_2025",
+  "start_time": "2025-10-13T13:03:44+02:00",
+  "domain_range": 0.3,
+  "degree_range": [4, 18],
+  "rationale": "Testing extended degrees based on successful convergence in campaign_lotka_volterra_4d_extended_degrees",
+  "reference": "globtimpostprocessing/collected_experiments_20251013_083530/campaign_lotka_volterra_4d_extended_degrees",
+  "total_experiments": 1,
+  "sessions": []
+}

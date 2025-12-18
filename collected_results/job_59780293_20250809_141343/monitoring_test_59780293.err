@@ -1,5 +1,0 @@
-ERROR: LoadError: UndefVarError: `now` not defined in `Main`
-Stacktrace:
- [1] top-level scope
-   @ ~/globtim_hpc/test_monitoring_workflow.jl:4
-in expression starting at /home/scholten/globtim_hpc/test_monitoring_workflow.jl:4

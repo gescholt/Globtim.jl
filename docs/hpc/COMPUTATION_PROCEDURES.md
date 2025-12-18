@@ -5,7 +5,7 @@ This document provides step-by-step procedures for launching and monitoring comp
 
 ## Prerequisites
 - SSH access to r04n02: `ssh scholten@r04n02`
-- GlobTim repository cloned at `/home/scholten/globtim`
+- GlobTim repository cloned at `/home/globaloptim/globtimcore`
 - Julia 1.11.6 available via juliaup (automatically in PATH)
 
 ## Launching Computations
@@ -14,7 +14,7 @@ This document provides step-by-step procedures for launching and monitoring comp
 ```bash
 # Connect to r04n02 compute node
 ssh scholten@r04n02
-cd /home/scholten/globtim
+cd /home/globaloptim/globtimcore
 ```
 
 ### 2. Available Experiment Types
@@ -65,7 +65,7 @@ The experiment runner automatically:
 [INFO] Heap size allocation: 50G
 [INFO] Experiment started successfully!
 [INFO] To monitor: tmux attach -t globtim_lv4d_20250903_115955
-[INFO] Results will be saved to: /home/scholten/globtim/node_experiments/outputs/globtim_lv4d_20250903_115955
+[INFO] Results will be saved to: /home/globaloptim/globtimcore/node_experiments/outputs/globtim_lv4d_20250903_115955
 ```
 
 ## Monitoring Computations
@@ -102,7 +102,7 @@ ps aux | grep julia
 htop
 
 # Check disk usage in output directory
-du -sh /home/scholten/globtim/node_experiments/outputs/*
+du -sh /home/globaloptim/globtimcore/node_experiments/outputs/*
 ```
 
 ### 4. Progress Indicators
@@ -164,7 +164,7 @@ Parameter estimation errors:
 
 ### 6. Output Files Structure
 ```
-/home/scholten/globtim/node_experiments/outputs/globtim_lv4d_YYYYMMDD_HHMMSS/
+/home/globaloptim/globtimcore/node_experiments/outputs/globtim_lv4d_YYYYMMDD_HHMMSS/
 ├── output.log              # Computation progress log
 ├── error.log               # Error messages (should be minimal)
 ├── approximation_info.json # Polynomial approximation details
@@ -222,7 +222,7 @@ journalctl --user -u julia
 #### Collect Partial Results
 ```bash
 # Even failed computations may have partial results
-ls /home/scholten/globtim/node_experiments/outputs/failed_session_name/
+ls /home/globaloptim/globtimcore/node_experiments/outputs/failed_session_name/
 ```
 
 ## Computation Phases and Timing

@@ -1,21 +1,32 @@
 # Globtim.jl Documentation
 
-[![Run Tests](https://github.com/gescholt/globtim.jl/actions/workflows/test.yml/badge.svg)](https://github.com/gescholt/globtim.jl/actions/workflows/test.yml)
 [![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 **Global optimization of continuous functions via polynomial approximation**
 
-Globtim finds **all local minima** of continuous functions over compact domains using Chebyshev/Legendre polynomial approximation and critical point analysis.
+## The Problem
 
-## Overview
+Finding all local minima of a continuous function over a bounded domain is fundamentally hard. Standard optimization algorithms (gradient descent, BFGS, etc.) find *one* local minimum from a given starting point—but how do you know there isn't a better one elsewhere?
 
-Globtim.jl provides a comprehensive framework for global optimization through:
+## The Approach
 
-1. **Polynomial Approximation**: High-accuracy approximation using Chebyshev/Legendre polynomials
-2. **Critical Point Finding**: Systematic identification of all stationary points
-3. **Hessian Analysis**: Classification and validation of critical points
-4. **Statistical Assessment**: Quality metrics and convergence analysis
+Globtim solves this by replacing your function with a polynomial approximation. Why polynomials?
+
+1. **Smooth functions are well-approximated by polynomials** — Chebyshev and Legendre expansions converge rapidly for smooth functions
+2. **Polynomial critical points can be found exactly** — Setting ∇p(x) = 0 gives a polynomial system, which has finitely many solutions that can be computed using homotopy continuation
+3. **Refinement recovers true minima** — Each polynomial critical point seeds a local optimization (BFGS) on the original function
+
+The result: a systematic way to find *all* local minima, not just the nearest one.
+
+## Algorithm Overview
+
+```
+f(x)  →  Polynomial p(x)  →  Solve ∇p = 0  →  Refine with BFGS  →  All minima
+         (Chebyshev fit)     (HomotopyContinuation)
+```
+
+For functions that vary on different scales in different regions, Globtim uses **adaptive subdivision** to build piecewise polynomial approximations that maintain accuracy everywhere.
 
 ## Installation
 
@@ -28,26 +39,19 @@ pkg> add Globtim
 - **For visualization**: `add CairoMakie` or `add GLMakie`
 - **For exact solving**: Install [Msolve](https://msolve.lip6.fr/)
 
-## Quick Start
+## Getting Started
 
-```julia
-using Globtim, DynamicPolynomials, DataFrames
+To see Globtim in action, run the demo script:
 
-# Define problem
-f = Deuflhard  # Built-in test function
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
-
-# Step 1: Polynomial approximation
-pol = Constructor(TR, 8)  # Degree 8 approximation
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
-
-# Step 2: Enhanced analysis
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+```bash
+julia --project=. examples/quick_subdivision_demo.jl
 ```
 
-## New Features
+This tests adaptive subdivision on multiple functions (sphere, Rosenbrock, Rastrigin) and shows the algorithm's behavior.
+
+For a detailed walkthrough, see [Getting Started](getting_started.md).
+
+## Key Features
 
 ### Anisotropic Grid Support
 - Generate grids with different numbers of points per dimension

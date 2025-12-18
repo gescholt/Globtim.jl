@@ -121,11 +121,15 @@ function _convert_value(val, precision::PrecisionType)
             # Handle irrational constants like π by rationalizing them
             return rationalize(BigInt, Float64(val))
         elseif isnan(val)
-            error("Cannot convert NaN to rational number. Check computation for numerical instability.")
+            error(
+                "Cannot convert NaN to rational number. Check computation for numerical instability."
+            )
         elseif val == 0.0 || iszero(val)
             return Rational{BigInt}(0)
         elseif isinf(val)
-            error("Cannot convert Inf to rational number. Check computation for numerical overflow.")
+            error(
+                "Cannot convert Inf to rational number. Check computation for numerical overflow."
+            )
         else
             return typeof(val) <: Rational ? val : Rational{BigInt}(val)
         end
@@ -439,7 +443,7 @@ This function is designed to work well with AdaptivePrecision polynomials.
 - Truncated polynomial with small coefficients removed
 - Statistics about the truncation (number of terms removed, etc.)
 """
-function truncate_polynomial_adaptive(poly, threshold::Real; relative::Bool=false)
+function truncate_polynomial_adaptive(poly, threshold::Real; relative::Bool = false)
     terms_list = terms(poly)
     coeffs = [coefficient(t) for t in terms_list]
 
@@ -460,7 +464,8 @@ function truncate_polynomial_adaptive(poly, threshold::Real; relative::Bool=fals
 
     if n_kept == n_total
         # No truncation needed
-        return poly, (n_total=n_total, n_kept=n_kept, n_removed=0, sparsity_ratio=0.0)
+        return poly,
+        (n_total = n_total, n_kept = n_kept, n_removed = 0, sparsity_ratio = 0.0)
     elseif n_kept == 0
         # All coefficients too small - keep the largest one
         max_idx = argmax(coeff_magnitudes)
@@ -500,7 +505,7 @@ function analyze_coefficient_distribution(poly)
     coeff_magnitudes = [abs(Float64(c)) for c in coeffs]
 
     # Sort by magnitude
-    sorted_mags = sort(coeff_magnitudes, rev=true)
+    sorted_mags = sort(coeff_magnitudes, rev = true)
 
     # Statistics
     n_total = length(sorted_mags)
@@ -513,7 +518,7 @@ function analyze_coefficient_distribution(poly)
     large_gaps = findall(gaps .< -2.0)  # Gaps of more than 2 orders of magnitude
 
     suggested_thresholds = if !isempty(large_gaps)
-        [10^log_mags[gap_idx+1] for gap_idx in large_gaps[1:min(3, end)]]
+        [10^log_mags[gap_idx + 1] for gap_idx in large_gaps[1:min(3, end)]]
     else
         [max_coeff * 1e-12, max_coeff * 1e-10, max_coeff * 1e-8]
     end

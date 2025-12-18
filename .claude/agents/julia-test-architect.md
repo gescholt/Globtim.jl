@@ -134,7 +134,7 @@ export CLAUDE_SUBAGENT_TYPE="julia-test-architect"
 python3 -c "
 from tools.hpc.secure_node_config import SecureNodeAccess
 node = SecureNodeAccess()
-result = node.execute_command('cd /home/scholten/globtim && julia --project=. -e \"using Pkg; Pkg.test()\"')
+result = node.execute_command('cd /home/globaloptim/globtimcore && julia --project=. -e \"using Pkg; Pkg.test()\"')
 print('HPC test execution completed securely')
 "
 ```

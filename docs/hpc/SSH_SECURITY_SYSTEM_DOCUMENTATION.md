@@ -133,7 +133,7 @@ from tools.hpc.node_monitor import NodeMonitor
 
 # Secure node access with automatic security validation
 node = SecureNodeAccess()
-result = node.execute_command("ls /home/scholten/globtim/Examples")
+result = node.execute_command("ls /home/globaloptim/globtimcore/Examples")
 
 # Advanced monitoring with security integration  
 monitor = NodeMonitor()

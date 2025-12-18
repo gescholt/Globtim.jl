@@ -33,7 +33,7 @@ if [ -f .env.gitlab.local ]; then
     # If URL doesn't contain oauth2 token, fix it
     if [[ "$current_url" != *"oauth2:"* ]]; then
         echo "🔧 Enforcing OAuth2 token authentication for git remote"
-        git remote set-url origin "https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/scholten/globtim.git"
+        git remote set-url origin "https://oauth2:${GITLAB_PRIVATE_TOKEN}@git.mpi-cbg.de/globaloptim/globtimcore.git"
         echo "✅ Git remote URL updated to use token authentication"
     fi
 fi

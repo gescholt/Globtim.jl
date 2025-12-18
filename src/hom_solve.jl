@@ -86,7 +86,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
 
     if return_system
-        return rl_sol, (pol, sys, length(hc_result))
+        return rl_sol, (pol, sys, Int(length(hc_result)))
     else
         return rl_sol
     end
@@ -360,16 +360,16 @@ solutions = solve_polynomial_with_defaults(x, pol, precision=Float64Precision)
 function solve_polynomial_with_defaults(x, pol::ApproxPoly; kwargs...)
     # Use the existing ApproxPoly method but ensure we pass through our safe defaults
     # The kwargs will override the defaults when explicitly provided
-    default_kwargs = Dict{Symbol,Any}(
+    default_kwargs = Dict{Symbol, Any}(
         :basis => :chebyshev,
         :precision => RationalPrecision,
         :normalized => true,
         :power_of_two_denom => false,
         :return_system => false
     )
-    
+
     # Merge user-provided kwargs with defaults (user kwargs take precedence)
-    merged_kwargs = merge(default_kwargs, Dict{Symbol,Any}(kwargs))
-    
+    merged_kwargs = merge(default_kwargs, Dict{Symbol, Any}(kwargs))
+
     return solve_polynomial_system(x, pol; merged_kwargs...)
 end

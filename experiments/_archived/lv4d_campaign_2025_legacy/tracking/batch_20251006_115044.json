@@ -1,0 +1,113 @@
+{
+  "batch_id": "batch_20251006_115044",
+  "start_time": "2025-10-06T11:50:44+02:00",
+  "campaign": "lv4d_campaign_2025",
+  "total_experiments": 7,
+  "sessions": [
+    {
+      "session_name": "minimal_4d_lv_test_GN=5_domain_size_param=0.1_max_time=45.0_20251006_115045",
+      "parameters": {
+        "GN": 5,
+        "degree_range": [
+          4,
+          5
+        ],
+        "domain_size_param": 0.1,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=5_domain_size_param=0.1_max_time=45.0_20251006_115045/experiment.log",
+      "cluster_node": "r04n02"
+    },
+    {
+      "session_name": "minimal_4d_lv_test_GN=5_domain_size_param=0.15_max_time=45.0_20251006_115050",
+      "parameters": {
+        "GN": 5,
+        "degree_range": [
+          4,
+          5
+        ],
+        "domain_size_param": 0.15,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=5_domain_size_param=0.15_max_time=45.0_20251006_115050/experiment.log",
+      "cluster_node": "r04n02"
+    },
+    {
+      "session_name": "minimal_4d_lv_test_GN=5_domain_size_param=0.2_max_time=45.0_20251006_115052",
+      "parameters": {
+        "GN": 5,
+        "degree_range": [
+          4,
+          5
+        ],
+        "domain_size_param": 0.2,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=5_domain_size_param=0.2_max_time=45.0_20251006_115052/experiment.log",
+      "cluster_node": "r04n02"
+    },
+    {
+      "session_name": "minimal_4d_lv_test_GN=6_domain_size_param=0.1_max_time=45.0_20251006_115054",
+      "parameters": {
+        "GN": 6,
+        "degree_range": [
+          4,
+          6
+        ],
+        "domain_size_param": 0.1,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=6_domain_size_param=0.1_max_time=45.0_20251006_115054/experiment.log",
+      "cluster_node": "r04n02"
+    },
+    {
+      "session_name": "minimal_4d_lv_test_GN=6_domain_size_param=0.15_max_time=45.0_20251006_115056",
+      "parameters": {
+        "GN": 6,
+        "degree_range": [
+          4,
+          6
+        ],
+        "domain_size_param": 0.15,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=6_domain_size_param=0.15_max_time=45.0_20251006_115056/experiment.log",
+      "cluster_node": "r04n02"
+    },
+    {
+      "session_name": "minimal_4d_lv_test_GN=8_domain_size_param=0.1_max_time=45.0_20251006_115059",
+      "parameters": {
+        "GN": 8,
+        "degree_range": [
+          4,
+          7
+        ],
+        "domain_size_param": 0.1,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=8_domain_size_param=0.1_max_time=45.0_20251006_115059/experiment.log",
+      "cluster_node": "r04n02"
+    },
+    {
+      "session_name": "minimal_4d_lv_test_GN=8_domain_size_param=0.15_max_time=45.0_20251006_115101",
+      "parameters": {
+        "GN": 8,
+        "degree_range": [
+          4,
+          7
+        ],
+        "domain_size_param": 0.15,
+        "max_time": 45.0
+      },
+      "status": "launching",
+      "log_file": "/home/scholten/globtimcore/hpc_results/minimal_4d_lv_test_GN=8_domain_size_param=0.15_max_time=45.0_20251006_115101/experiment.log",
+      "cluster_node": "r04n02"
+    }
+  ]
+}

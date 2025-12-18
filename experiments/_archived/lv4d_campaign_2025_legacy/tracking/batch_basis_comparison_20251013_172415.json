@@ -1,0 +1,11 @@
+{
+  "batch_id": "batch_basis_comparison_20251013_172415",
+  "campaign": "lv4d_basis_comparison_2025",
+  "start_time": "2025-10-13T17:24:15+02:00",
+  "domain_range": 0.3,
+  "degree_range": [4, 6],
+  "basis_types": ["chebyshev", "legendre"],
+  "rationale": "Direct comparison of Chebyshev vs Legendre polynomial bases for parameter estimation",
+  "total_experiments": 2,
+  "sessions": []
+}

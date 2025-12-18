@@ -1,0 +1,105 @@
+# Circular Dependency Prevention CI Check
+name: Circular Dependency Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'Project.toml'
+      - 'Manifest.toml'
+      - 'src/**'
+      - 'ext/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'Project.toml'
+      - 'Manifest.toml'
+      - 'src/**'
+      - 'ext/**'
+
+jobs:
+  validate-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Julia
+      uses: julia-actions/setup-julia@v1
+      with:
+        version: '1.11'
+
+    - name: Validate Project.toml structure
+      run: |
+        echo "🔍 Running Project.toml validation..."
+        julia tools/validation/validate_project_toml.jl
+
+    - name: Test package loading isolation
+      run: |
+        echo "🧪 Testing core package loading in isolation..."
+        julia --project=. -e "using Pkg; Pkg.instantiate()"
+        julia --project=. -e "using Globtim; println(\"✅ Core package loads successfully\")"
+
+    - name: Test precompilation for circular dependencies
+      run: |
+        echo "⚙️ Testing precompilation for circular dependency warnings..."
+        julia --project=. -e "
+          using Pkg;
+          output = IOBuffer();
+          Pkg.precompile(io=output);
+          precomp_output = String(take!(output));
+
+          # Check for circular dependency warnings
+          if occursin(\"Circular dependency detected\", precomp_output)
+            println(\"⚠️ CIRCULAR DEPENDENCY WARNING DETECTED:\");
+            println(precomp_output);
+            println(\"\\n⚠️ Warning: Circular dependencies found but functionality may still work\");
+            println(\"Consider reviewing dependencies according to circular dependency prevention rules\");
+          else
+            println(\"✅ No circular dependency warnings detected\");
+          end
+        "
+
+    - name: Test extension loading
+      run: |
+        echo "🔌 Testing extension loading..."
+        julia --project=. -e "
+          using Globtim;
+
+          # Test available extensions
+          println(\"📦 Available extensions:\");
+
+          # Try loading weakdeps to trigger extensions
+          try
+            using Clustering, Distributions;
+            println(\"✅ GlobtimAnalysisExt loads successfully\");
+          catch e
+            println(\"⚠️ Extension loading issue: \$e\");
+          end
+        "
+
+    - name: Generate dependency report
+      if: always()
+      run: |
+        echo "📊 Generating dependency validation report..."
+        julia --project=. -e "
+          using Pkg;
+
+          println(\"\\n📋 DEPENDENCY VALIDATION REPORT\");
+          println(\"=\"^50);
+
+          # Project info
+          project = Pkg.project();
+          println(\"📦 Package: \$(project.name) v\$(project.version)\");
+
+          # Dependency counts
+          deps = length(project.dependencies);
+          weakdeps = haskey(project.extras, \"weakdeps\") ? length(project.extras[\"weakdeps\"]) : 0;
+          extensions = haskey(project.extras, \"extensions\") ? length(project.extras[\"extensions\"]) : 0;
+
+          println(\"📊 Dependencies: \$deps regular, \$weakdeps weak, \$extensions extensions\");
+
+          # Status summary
+          println(\"\\n✅ Validation completed - see logs above for details\");
+        "

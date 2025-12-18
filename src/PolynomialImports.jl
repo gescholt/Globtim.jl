@@ -21,7 +21,7 @@ Or for quick setup:
 
 module PolynomialImports
 
-export setup_polyvar, ensure_polyvar, create_polynomial_vars
+export setup_polyvar, ensure_polyvar, create_polynomial_vars, test_polyvar_availability
 
 # Import with error handling
 const DYNAMIC_POLYNOMIALS_AVAILABLE = try
@@ -50,11 +50,11 @@ function setup_polyvar()
         @info "💡 Try: Pkg.add(\"DynamicPolynomials\")"
         return false
     end
-    
+
     @info """
     ✅ To use @polyvar in your script, add this line:
     using DynamicPolynomials: @polyvar
-    
+
     Or use the full module name:
     DynamicPolynomials.@polyvar x[1:2]
     """
@@ -78,17 +78,17 @@ function ensure_polyvar()
         # @polyvar not available, try to import it
         @info "🔧 @polyvar not available, attempting import..."
     end
-    
+
     if !DYNAMIC_POLYNOMIALS_AVAILABLE
         @error "❌ Cannot ensure @polyvar: DynamicPolynomials not available"
         @info "💡 Try: Pkg.add(\"DynamicPolynomials\")"
         return false
     end
-    
+
     # Strategy 1: Direct import into Main
     try
         Core.eval(Main, :(using DynamicPolynomials: @polyvar))
-        
+
         # Verify it worked
         Core.eval(Main, :(@polyvar verification_var))
         @info "✅ @polyvar macro imported successfully (Strategy 1)"
@@ -96,12 +96,12 @@ function ensure_polyvar()
     catch e1
         @warn "Strategy 1 failed: $e1"
     end
-    
+
     # Strategy 2: Import the full module then bring macro into scope
     try
         Core.eval(Main, :(using DynamicPolynomials))
         Core.eval(Main, :(import DynamicPolynomials: @polyvar))
-        
+
         # Verify it worked
         Core.eval(Main, :(@polyvar verification_var_2))
         @info "✅ @polyvar macro imported successfully (Strategy 2)"
@@ -109,7 +109,7 @@ function ensure_polyvar()
     catch e2
         @warn "Strategy 2 failed: $e2"
     end
-    
+
     # Strategy 3: Manual macro definition (last resort)
     try
         Core.eval(Main, :(
@@ -117,7 +117,7 @@ function ensure_polyvar()
                 DynamicPolynomials.@polyvar(args...)
             end
         ))
-        
+
         # Verify it worked
         Core.eval(Main, :(@polyvar verification_var_3))
         @info "✅ @polyvar macro created successfully (Strategy 3 - manual definition)"
@@ -125,7 +125,7 @@ function ensure_polyvar()
     catch e3
         @warn "Strategy 3 failed: $e3"
     end
-    
+
     @error "❌ All strategies failed to make @polyvar available"
     @info "💡 Manual workaround: use DynamicPolynomials.@polyvar instead of @polyvar"
     return false
@@ -143,15 +143,18 @@ Examples:
     # Create vector variables  
     x = create_polynomial_vars([:x], Dict(:x => 4))[1]  # Creates x[1:4]
 """
-function create_polynomial_vars(names::Vector{Symbol}, dimensions::Dict{Symbol,Int}=Dict())
+function create_polynomial_vars(
+    names::Vector{Symbol},
+    dimensions::Dict{Symbol, Int} = Dict()
+)
     if !DYNAMIC_POLYNOMIALS_AVAILABLE
         error("Cannot create polynomial variables: DynamicPolynomials not available")
     end
-    
+
     ensure_polyvar() || error("Could not ensure @polyvar availability")
-    
+
     vars = []
-    
+
     for name in names
         if haskey(dimensions, name)
             dim = dimensions[name]
@@ -166,7 +169,7 @@ function create_polynomial_vars(names::Vector{Symbol}, dimensions::Dict{Symbol,I
             push!(vars, var)
         end
     end
-    
+
     return length(vars) == 1 ? vars[1] : tuple(vars...)
 end
 
@@ -178,14 +181,14 @@ Returns detailed diagnostics.
 """
 function test_polyvar_availability()
     println("🧪 Testing @polyvar availability...")
-    
+
     if !DYNAMIC_POLYNOMIALS_AVAILABLE
         println("❌ DynamicPolynomials module not available")
         return false
     end
-    
+
     println("✅ DynamicPolynomials module available")
-    
+
     # Test 1: Can we create a simple variable?
     try
         ensure_polyvar()
@@ -195,7 +198,7 @@ function test_polyvar_availability()
         println("❌ Test 1 failed: $e")
         return false
     end
-    
+
     # Test 2: Can we create vector variables?
     try
         Core.eval(Main, :(@polyvar test_y[1:3]))
@@ -204,7 +207,7 @@ function test_polyvar_availability()
         println("❌ Test 2 failed: $e")
         return false
     end
-    
+
     # Test 3: Can we use the variables in expressions?
     try
         result = Core.eval(Main, :(test_x^2 + test_y[1] + test_y[2]))
@@ -214,7 +217,7 @@ function test_polyvar_availability()
         println("❌ Test 3 failed: $e")
         return false
     end
-    
+
     println("🎉 All tests passed! @polyvar is fully functional")
     return true
 end

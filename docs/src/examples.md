@@ -1,262 +1,153 @@
 # Examples
 
-This page provides complete working examples demonstrating various features of Globtim.jl.
+This page provides pointers to runnable example files demonstrating Globtim features. Run examples from the globtimcore root directory.
 
-## Example 1: Basic Usage
+## Running Examples
 
-Finding all minima of the Deuflhard function:
-
-```julia
-using Globtim, DynamicPolynomials, DataFrames
-
-# Define the problem
-f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
-
-# Polynomial approximation
-pol = Constructor(TR, 8)
-println("Approximation error: ", pol.nrm)
-
-# Find critical points
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
-
-# Alternative: Use the new convenience method
-# solutions = solve_polynomial_system(x, pol)  # Automatically extracts dimension and degree
-
-# Refine and classify
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
-
-# Display results
-println("\\nUnique minima found:")
-for i in 1:nrow(df_min)
-    x1, x2 = df_min[i, :x1], df_min[i, :x2]
-    val = df_min[i, :value]
-    println("  Minimum $i: ($x1, $x2) with f = $val")
-end
+```bash
+julia --project=. Examples/hpc_minimal_2d_example.jl
 ```
 
-## Example 2: Custom Function
+## Quick Reference
 
-Optimizing a user-defined function:
+| Feature | Example File | Description |
+|---------|--------------|-------------|
+| Basic 2D workflow | `Examples/hpc_minimal_2d_example.jl` | Complete polynomial → critical points |
+| Custom objectives | `Examples/custom_function_demo.jl` | User-defined functions |
+| Sparsification | `Examples/sparsification_demo.jl` | Coefficient truncation |
+| Anisotropic grids | `Examples/anisotropic_grid_demo.jl` | Non-uniform spacing |
+| High-dimensional | `Examples/high_dimensional_demo.jl` | 3D/4D problems |
+| Domain exploration | `Examples/domain_sweep_demo.jl` | Domain size effects |
+| 1D functions | `Examples/scalar_function_demo.jl` | Scalar input functions |
+| Degree comparison | `Examples/polynomial_basis_comparison.jl` | Chebyshev vs Legendre |
+
+---
+
+## Basic 2D Workflow
+
+**See:** `Examples/hpc_minimal_2d_example.jl`
+
+**Core API sequence:**
+
+| Step | API Call |
+|------|----------|
+| 1. Define problem | `test_input(f, dim=2, center=[0.0,0.0], sample_range=1.2)` |
+| 2. Build polynomial | `Constructor(TR, degree)` |
+| 3. Find critical pts | `solve_polynomial_system(x, pol)` |
+| 4. Process solutions | `process_crit_pts(solutions, f, TR)` |
+| 5. Analyze & classify | `analyze_critical_points(f, df, TR, enable_hessian=true)` |
+
+---
+
+## Custom Objective Functions
+
+**See:** `Examples/custom_function_demo.jl`
+
+Define any function accepting a vector `x` and returning a scalar:
 
 ```julia
-# Define custom objective
-function my_function(x)
-    return (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1*sin(10*x[1]*x[2])
-end
-
-# Set up problem
-TR = test_input(my_function, dim=2, center=[0.0, 0.0], sample_range=2.0)
-
-# Higher degree for complex function
-pol = Constructor(TR, 10)
-
-# Standard workflow
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 10, pol.coeffs)
-df = process_crit_pts(solutions, my_function, TR)
-df_enhanced, df_min = analyze_critical_points(my_function, df, TR)
-
-# Analyze critical point types
-types = unique(df_enhanced.critical_point_type)
-for t in types
-    count = sum(df_enhanced.critical_point_type .== t)
-    println("$t: $count points")
-end
+my_function(x) = (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1*sin(10*x[1]*x[2])
 ```
 
-## Example 3: Statistical Analysis
+---
 
-Generating comprehensive reports:
+## Statistical Analysis with Tables
 
+**See:** `Examples/hierarchical_experiment_example.jl`
+
+**API pattern:**
 ```julia
-# Run analysis with tables
-df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
-    f, df, TR,
-    enable_hessian=true,
-    show_tables=true,
-    table_types=[:minimum, :saddle, :maximum]
-)
-
-# Access statistics
-println("\\nStatistical Summary:")
-println("Average condition number: ", mean(df_enhanced.hessian_condition_number))
-println("Max gradient norm: ", maximum(df_enhanced.gradient_norm))
-println("Convergence rate: ", sum(df_enhanced.converged) / nrow(df_enhanced))
-
-# Export results
-write_tables_to_csv(tables, "deuflhard_results.csv")
-write_tables_to_markdown(tables, "deuflhard_results.md")
+df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(f, df, TR, show_tables=true)
 ```
 
-## Example 4: High-Dimensional Problem
+Export options: `write_tables_to_csv()`, `write_tables_to_markdown()`, `write_tables_to_latex()`
 
-Handling higher dimensions:
+---
+
+## High-Dimensional Problems (3D/4D)
+
+**See:** `Examples/high_dimensional_demo.jl`
+
+**Tips:**
+- Use `AdaptivePrecision` for accuracy/performance balance
+- Reduce polynomial degree as dimension increases (4D → degree 4-6)
+- Disable Hessian analysis for faster results: `enable_hessian=false`
+
+---
+
+## Domain Exploration
+
+**See:** `Examples/domain_sweep_demo.jl`
+
+Test different domain sizes to find all critical points:
 
 ```julia
-# 3D Rastringin function
-f = Rastringin
-TR = test_input(f, dim=3, center=[0.0, 0.0, 0.0], sample_range=5.12)
-
-# Use moderate degree for 3D
-pol = Constructor(TR, 6)
-
-# Find critical points
-@polyvar x[1:3]
-solutions = solve_polynomial_system(x, 3, 6, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
-
-# Refine without Hessian for speed
-df_enhanced, df_min = analyze_critical_points(
-    f, df, TR,
-    enable_hessian=false,  # Faster for high dimensions
-    verbose=true
-)
-
-println("Found $(nrow(df_min)) local minima in 3D")
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)      # uniform
+TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectangular
 ```
 
-## Example 5: Domain Exploration
+---
 
-Testing different domain sizes:
+## Visualization
+
+For plotting critical points and convergence analysis, use the **globtimplots** package:
 
 ```julia
-f = HolderTable  # Has 4 global minima
-
-# Try different domain sizes
-for r in [8.0, 10.0, 12.0]
-    TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)
-    pol = Constructor(TR, 8)
-    
-    @polyvar x[1:2]
-    solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-    df = process_crit_pts(solutions, f, TR)
-    df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
-    
-    println("Domain ±$r: found $(nrow(df_min)) minima")
-end
+using GlobtimPlots
+fig = plot_critical_points(df_enhanced)
+fig = plot_convergence(results)
 ```
 
-## Example 6: Visualization
+See `globtimplots` documentation for available plot types.
 
-Creating plots (requires CairoMakie):
+---
 
-```julia
-using CairoMakie
+## Polynomial Degree Comparison
 
-# Run standard analysis
-f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
-pol = Constructor(TR, 8)
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+**See:** `Examples/polynomial_basis_comparison.jl`
 
-# Create visualizations
-fig1 = plot_hessian_norms(df_enhanced)
-save("hessian_norms.png", fig1)
+Compare Chebyshev vs Legendre bases and analyze how polynomial degree affects approximation quality and critical point discovery.
 
-fig2 = plot_condition_numbers(df_enhanced)
-save("condition_numbers.png", fig2)
+---
 
-fig3 = plot_critical_eigenvalues(df_enhanced)
-save("critical_eigenvalues.png", fig3)
+## 1D Functions with Scalar Input
 
-fig4 = plot_all_eigenvalues(f, df_enhanced, sort_by=:magnitude)
-save("all_eigenvalues.png", fig4)
-```
+**See:** `Examples/scalar_function_demo.jl`
 
-## Example 7: Comparing Polynomial Degrees
-
-Analyzing approximation quality:
+Works with functions like `sin`, `cos` that expect scalar input:
 
 ```julia
-f = Branin
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=15.0)
-
-results = DataFrame(
-    degree = Int[],
-    l2_error = Float64[],
-    n_critical = Int[],
-    n_minima = Int[]
-)
-
-for deg in [4, 6, 8, 10]
-    pol = Constructor(TR, deg)
-    @polyvar x[1:2]
-    solutions = solve_polynomial_system(x, 2, deg, pol.coeffs)
-    df = process_crit_pts(solutions, f, TR)
-    df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=false)
-    
-    push!(results, (deg, pol.nrm, nrow(df), nrow(df_min)))
-end
-
-println(results)
-```
-
-## Example 8: 1D Functions with Scalar Input
-
-Working with 1D functions that expect scalar input (like `sin`, `cos`, etc.):
-
-```julia
-using Globtim, DynamicPolynomials, DataFrames
-
-# Define a 1D function with scalar input
-f = x -> sin(3*x) + 0.1*x^2
-
-# Set up the problem
+f = x -> sin(3x) + 0.1*x^2
 TR = test_input(f, dim=1, center=[0.0], sample_range=π)
-
-# Build polynomial approximation
-pol = Constructor(TR, 10)
-println("Approximation error: ", pol.nrm)
-
-# Find critical points using the new convenience method
-@polyvar x
-solutions = solve_polynomial_system(x, pol)  # No need to specify dimension or degree!
-
-# Process critical points - automatically handles scalar functions
-df = process_crit_pts(solutions, f, TR)
-
-println("\nCritical points found:")
-for i in 1:nrow(df)
-    x_val = df.x1[i]
-    f_val = df.z[i]
-    println("  x = $x_val, f(x) = $f_val")
-end
-
-# The old way still works but requires more parameters:
-# solutions = solve_polynomial_system([x], 1, 10, pol.coeffs)
 ```
 
-## Example 9: Basin Analysis
+---
 
-Understanding convergence basins:
+## Basin Analysis
 
-```julia
-# Function with interesting basin structure
-f(x) = (x[1]^2 + x[2]^2 - 1)^2 + 0.1*(x[1]^2 + x[2]^2)
+**See:** `Examples/validation_integration_test.jl`
 
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
-pol = Constructor(TR, 8)
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, 2, 8, pol.coeffs)
-df = process_crit_pts(solutions, f, TR)
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
+Analyze convergence basins for critical points. The `df_min` DataFrame includes:
+- `basin_points` - Number of points converging to this minimum
+- `average_convergence_steps` - Mean BFGS iterations
+- `region_coverage_count` - Spatial coverage metric
 
-# Analyze basins
-println("\\nBasin Analysis:")
-for i in 1:nrow(df_min)
-    basin_size = df_min[i, :basin_points]
-    avg_steps = df_min[i, :average_convergence_steps]
-    coverage = df_min[i, :region_coverage_count]
-    
-    println("Minimum $i:")
-    println("  Basin size: $basin_size points")
-    println("  Average convergence: $avg_steps steps")
-    println("  Spatial coverage: $coverage regions")
-end
-```
+---
+
+## Advanced Examples
+
+| Example | Description |
+|---------|-------------|
+| `Examples/standardized_experiment_template.jl` | Template for reproducible experiments |
+| `Examples/automated_experiment_template.jl` | Batch experiment automation |
+| `Examples/random_p_true_example.jl` | Parameter estimation workflows |
+| `Examples/quick_subdivision_demo.jl` | Adaptive subdivision methods |
+
+---
+
+## Next Steps
+
+- [Getting Started](getting_started.md) - Basic concepts and setup
+- [API Reference](api_reference.md) - Complete function documentation
+- [Precision Parameters](precision_parameters.md) - Numerical precision options
+- [Sparsification](sparsification.md) - Polynomial complexity reduction

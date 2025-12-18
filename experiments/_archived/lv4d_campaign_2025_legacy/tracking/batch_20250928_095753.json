@@ -1,0 +1,63 @@
+{
+  "batch_id": "batch_20250928_095753",
+  "start_time": "2025-09-28T09:57:53+02:00",
+  "total_experiments": 8,
+  "sessions": [
+    {
+      "session_name": "lv4d_float64_005",
+      "domain_range": 0.05,
+      "precision_mode": "float64",
+      "status": "running",
+      "log_file": "lv4d_float64_005_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_float64_01",
+      "domain_range": 0.1,
+      "precision_mode": "float64",
+      "status": "running",
+      "log_file": "lv4d_float64_01_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_float64_015",
+      "domain_range": 0.15,
+      "precision_mode": "float64",
+      "status": "running",
+      "log_file": "lv4d_float64_015_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_float64_02",
+      "domain_range": 0.2,
+      "precision_mode": "float64",
+      "status": "running",
+      "log_file": "lv4d_float64_02_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_adaptive_005",
+      "domain_range": 0.05,
+      "precision_mode": "adaptive",
+      "status": "running",
+      "log_file": "lv4d_adaptive_005_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_adaptive_01",
+      "domain_range": 0.1,
+      "precision_mode": "adaptive",
+      "status": "running",
+      "log_file": "lv4d_adaptive_01_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_adaptive_015",
+      "domain_range": 0.15,
+      "precision_mode": "adaptive",
+      "status": "running",
+      "log_file": "lv4d_adaptive_015_20250928_095753.log"
+    },
+    {
+      "session_name": "lv4d_adaptive_02",
+      "domain_range": 0.2,
+      "precision_mode": "adaptive",
+      "status": "running",
+      "log_file": "lv4d_adaptive_02_20250928_095753.log"
+    }
+  ]
+}

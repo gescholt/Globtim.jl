@@ -580,6 +580,7 @@ TR = test_input(Sphere, dim=10, center=zeros(10), sample_range=5.12)
 # References
 - Jamil, M. & Yang, X.-S. A Literature Survey of Benchmark Functions For Global Optimization Problems. Int. J. Math. Model. Numer. Optim. 4, 150–194 (2013).
 """
+function Sphere end  # Declare as new generic function (not extension of Optim.Sphere)
 function Sphere(x::AbstractVector)
     return sum(xi^2 for xi in x)
 end
@@ -632,7 +633,7 @@ function Rosenbrock(x::AbstractVector)
         throw(ArgumentError("Rosenbrock function requires at least 2 dimensions"))
     end
 
-    return sum(100 * (x[i+1] - x[i]^2)^2 + (1 - x[i])^2 for i in 1:(n-1))
+    return sum(100 * (x[i + 1] - x[i]^2)^2 + (1 - x[i])^2 for i in 1:(n - 1))
 end
 
 """
@@ -781,7 +782,7 @@ function Levy(x::AbstractVector)
 
     term1 = sin(π * w[1])^2
 
-    term2 = sum((w[i] - 1)^2 * (1 + 10 * sin(π * w[i] + 1)^2) for i in 1:(n-1))
+    term2 = sum((w[i] - 1)^2 * (1 + 10 * sin(π * w[i] + 1)^2) for i in 1:(n - 1))
 
     term3 = (w[n] - 1)^2 * (1 + sin(2 * π * w[n])^2)
 
@@ -943,7 +944,7 @@ function Booth(x::AbstractVector)
     end
 
     x1, x2 = x[1], x[2]
-    return (x1 + 2*x2 - 7)^2 + (2*x1 + x2 - 5)^2
+    return (x1 + 2 * x2 - 7)^2 + (2 * x1 + x2 - 5)^2
 end
 
 """
@@ -990,13 +991,21 @@ TR = test_input(Branin, dim=2, center=[π, 2.275], sample_range=7.5)
 - Branin, F.H. Widely convergent method for finding multiple solutions of simultaneous nonlinear equations. IBM J. Res. Dev. 16, 504–522 (1972).
 - Jamil, M. & Yang, X.-S. A Literature Survey of Benchmark Functions For Global Optimization Problems. Int. J. Math. Model. Numer. Optim. 4, 150–194 (2013).
 """
-function Branin(x::AbstractVector; a=1, b=5.1/(4*π^2), c=5/π, r=6, s=10, t=1/(8*π))
+function Branin(
+    x::AbstractVector;
+    a = 1,
+    b = 5.1 / (4 * π^2),
+    c = 5 / π,
+    r = 6,
+    s = 10,
+    t = 1 / (8 * π)
+)
     if length(x) != 2
         throw(ArgumentError("Branin function is only defined for 2D input"))
     end
 
     x1, x2 = x[1], x[2]
-    return a * (x2 - b*x1^2 + c*x1 - r)^2 + s*(1 - t)*cos(x1) + s
+    return a * (x2 - b * x1^2 + c * x1 - r)^2 + s * (1 - t) * cos(x1) + s
 end
 
 """
@@ -1048,8 +1057,12 @@ function GoldsteinPrice(x::AbstractVector)
 
     x1, x2 = x[1], x[2]
 
-    term1 = 1 + (x1 + x2 + 1)^2 * (19 - 14*x1 + 3*x1^2 - 14*x2 + 6*x1*x2 + 3*x2^2)
-    term2 = 30 + (2*x1 - 3*x2)^2 * (18 - 32*x1 + 12*x1^2 + 48*x2 - 36*x1*x2 + 27*x2^2)
+    term1 =
+        1 + (x1 + x2 + 1)^2 * (19 - 14 * x1 + 3 * x1^2 - 14 * x2 + 6 * x1 * x2 + 3 * x2^2)
+    term2 =
+        30 +
+        (2 * x1 - 3 * x2)^2 *
+        (18 - 32 * x1 + 12 * x1^2 + 48 * x2 - 36 * x1 * x2 + 27 * x2^2)
 
     return term1 * term2
 end
@@ -1150,7 +1163,7 @@ function McCormick(x::AbstractVector)
     end
 
     x1, x2 = x[1], x[2]
-    return sin(x1 + x2) + (x1 - x2)^2 - 1.5*x1 + 2.5*x2 + 1
+    return sin(x1 + x2) + (x1 - x2)^2 - 1.5 * x1 + 2.5 * x2 + 1
 end
 
 # ======================================================= n-D Benchmark Functions =======================================================
@@ -1204,9 +1217,9 @@ TR = test_input(Michalewicz, dim=5, center=fill(π/2, 5), sample_range=π/2)
 - Michalewicz, Z. Genetic Algorithms + Data Structures = Evolution Programs. (Springer-Verlag, 1996).
 - Jamil, M. & Yang, X.-S. A Literature Survey of Benchmark Functions For Global Optimization Problems. Int. J. Math. Model. Numer. Optim. 4, 150–194 (2013).
 """
-function Michalewicz(x::AbstractVector; m=10)
+function Michalewicz(x::AbstractVector; m = 10)
     n = length(x)
-    return -sum(sin(x[i]) * sin(i * x[i]^2 / π)^(2*m) for i in 1:n)
+    return -sum(sin(x[i]) * sin(i * x[i]^2 / π)^(2 * m) for i in 1:n)
 end
 
 """
@@ -1251,7 +1264,7 @@ TR = test_input(StyblinskiTang, dim=5, center=fill(-2.903534, 5), sample_range=5
 - Jamil, M. & Yang, X.-S. A Literature Survey of Benchmark Functions For Global Optimization Problems. Int. J. Math. Model. Numer. Optim. 4, 150–194 (2013).
 """
 function StyblinskiTang(x::AbstractVector)
-    return 0.5 * sum(xi^4 - 16*xi^2 + 5*xi for xi in x)
+    return 0.5 * sum(xi^4 - 16 * xi^2 + 5 * xi for xi in x)
 end
 
 """
@@ -1297,7 +1310,7 @@ TR = test_input(SumOfDifferentPowers, dim=5, center=zeros(5), sample_range=1.0)
 """
 function SumOfDifferentPowers(x::AbstractVector)
     n = length(x)
-    return sum(abs(x[i])^(i+1) for i in 1:n)
+    return sum(abs(x[i])^(i + 1) for i in 1:n)
 end
 
 """
@@ -1356,7 +1369,7 @@ function Trid(x::AbstractVector)
     end
 
     term1 = sum((xi - 1)^2 for xi in x)
-    term2 = sum(x[i] * x[i-1] for i in 2:n)
+    term2 = sum(x[i] * x[i - 1] for i in 2:n)
 
     return term1 - term2
 end
@@ -1459,11 +1472,11 @@ function Powell(x::AbstractVector)
     end
 
     result = 0.0
-    for i in 1:4:(n-3)
-        term1 = (x[i] + 10*x[i+1])^2
-        term2 = 5 * (x[i+2] - x[i+3])^2
-        term3 = (x[i+1] - 2*x[i+2])^4
-        term4 = 10 * (x[i] - x[i+3])^4
+    for i in 1:4:(n - 3)
+        term1 = (x[i] + 10 * x[i + 1])^2
+        term2 = 5 * (x[i + 2] - x[i + 3])^2
+        term3 = (x[i + 1] - 2 * x[i + 2])^4
+        term4 = 10 * (x[i] - x[i + 3])^4
         result += term1 + term2 + term3 + term4
     end
 

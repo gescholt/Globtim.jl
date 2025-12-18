@@ -77,7 +77,8 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
         # Check all tensor product combinations
         for indices in
             Iterators.product((1:length(pts) for pts in unique_points_per_dim)...)
-            point = SVector{n_dims}([unique_points_per_dim[d][indices[d]] for d in 1:n_dims])
+            point =
+                SVector{n_dims}([unique_points_per_dim[d][indices[d]] for d in 1:n_dims])
             if !(point in existing_points)
                 is_tensor_product = false
                 break
