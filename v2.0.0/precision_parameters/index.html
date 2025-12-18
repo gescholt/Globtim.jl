@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Precision Parameters · Globtim.jl Documentation</title><meta name="title" content="Precision Parameters · Globtim.jl Documentation"/><meta property="og:title" content="Precision Parameters · Globtim.jl Documentation"/><meta property="twitter:title" content="Precision Parameters · Globtim.jl Documentation"/><meta name="description" content="Documentation for Globtim.jl Documentation."/><meta property="og:description" content="Documentation for Globtim.jl Documentation."/><meta property="twitter:description" content="Documentation for Globtim.jl Documentation."/><meta property="og:url" content="https://gescholt.github.io/Globtim.jl/stable/precision_parameters/"/><meta property="twitter:url" content="https://gescholt.github.io/Globtim.jl/stable/precision_parameters/"/><link rel="canonical" href="https://gescholt.github.io/Globtim.jl/stable/precision_parameters/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Globtim.jl Documentation</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../core_algorithm/">Core Algorithm</a></li><li><a class="tocitem" href="../polynomial_approximation/">Polynomial Approximation</a></li><li><a class="tocitem" href="../solvers/">Solvers</a></li><li><a class="tocitem" href="../critical_point_analysis/">Critical Point Analysis</a></li><li><a class="tocitem" href="../anisotropic_grids_guide/">Anisotropic Grids</a></li><li><a class="tocitem" href="../sparsification/">Sparsification</a></li><li><a class="tocitem" href="../grid_formats/">Grid Formats</a></li><li><span class="tocitem">Testing</span><ul><li><a class="tocitem" href="../test_documentation/">Test Documentation</a></li><li><a class="tocitem" href="../test_running_guide/">Test Running Guide</a></li><li><a class="tocitem" href="../anisotropic_grid_tests/">Anisotropic Grid Tests</a></li></ul></li><li><a class="tocitem" href="../examples/">Examples</a></li><li><a class="tocitem" href="../visualization/">Visualization</a></li><li><a class="tocitem" href="../api_reference/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Precision Parameters</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Precision Parameters</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gescholt/Globtim.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="github.com/gescholt/Globtim.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Precision-Parameters"><a class="docs-heading-anchor" href="#Precision-Parameters">Precision Parameters</a><a id="Precision-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Precision-Parameters" title="Permalink"></a></h1><p>This guide provides comprehensive documentation for Globtim&#39;s precision parameter system, which allows you to control the numerical precision used in polynomial approximation for optimal performance and accuracy trade-offs.</p><h2 id="Overview"><a class="docs-heading-anchor" href="#Overview">Overview</a><a id="Overview-1"></a><a class="docs-heading-anchor-permalink" href="#Overview" title="Permalink"></a></h2><p>Globtim supports multiple precision types through the <code>precision</code> parameter in the <code>Constructor</code> function. Each precision type offers different trade-offs between computational performance, memory usage, and numerical accuracy.</p><pre><code class="language-julia hljs"># Basic syntax
+pol = Constructor(TR, degree, precision=PrecisionType)</code></pre><h2 id="Available-Precision-Types"><a class="docs-heading-anchor" href="#Available-Precision-Types">Available Precision Types</a><a id="Available-Precision-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Available-Precision-Types" title="Permalink"></a></h2><h3 id="Float64Precision"><a class="docs-heading-anchor" href="#Float64Precision">Float64Precision</a><a id="Float64Precision-1"></a><a class="docs-heading-anchor-permalink" href="#Float64Precision" title="Permalink"></a></h3><p><strong>Standard double-precision floating-point arithmetic</strong></p><ul><li><strong>Performance</strong>: ⭐⭐⭐⭐⭐ (Fastest)</li><li><strong>Accuracy</strong>: ⭐⭐⭐ (Standard)</li><li><strong>Memory</strong>: ⭐⭐⭐⭐⭐ (Lowest)</li><li><strong>Best for</strong>: General use, fast computation, production workflows</li></ul><pre><code class="language-julia hljs">pol = Constructor(TR, 8, precision=Float64Precision)
+println(&quot;Coefficient type: $(eltype(pol.coeffs))&quot;)  # Float64</code></pre><p><strong>Characteristics:</strong></p><ul><li>Uses IEEE 754 double precision (~15-16 decimal digits)</li><li>Fastest computation and lowest memory usage</li><li>Standard choice for most applications</li><li>May accumulate numerical errors in high-degree polynomials</li></ul><h3 id="AdaptivePrecision-**Recommended**"><a class="docs-heading-anchor" href="#AdaptivePrecision-**Recommended**">AdaptivePrecision ⭐ <strong>Recommended</strong></a><a id="AdaptivePrecision-**Recommended**-1"></a><a class="docs-heading-anchor-permalink" href="#AdaptivePrecision-**Recommended**" title="Permalink"></a></h3><p><strong>Hybrid approach: Float64 for evaluation, BigFloat for coefficient manipulation</strong></p><ul><li><strong>Performance</strong>: ⭐⭐⭐⭐ (Very Good)</li><li><strong>Accuracy</strong>: ⭐⭐⭐⭐⭐ (Excellent)</li><li><strong>Memory</strong>: ⭐⭐⭐⭐ (Good)</li><li><strong>Best for</strong>: High accuracy with good performance, extended precision needs</li></ul><pre><code class="language-julia hljs">pol = Constructor(TR, 8, precision=AdaptivePrecision)
+println(&quot;Raw coefficients: $(eltype(pol.coeffs))&quot;)  # Float64
+
+# Extended precision in monomial expansion
+@polyvar x[1:2]
+mono_poly = to_exact_monomial_basis(pol, variables=x)
+coeffs = [coefficient(t) for t in terms(mono_poly)]
+println(&quot;Monomial coefficients: $(typeof(coeffs[1]))&quot;)  # BigFloat</code></pre><p><strong>Key Features:</strong></p><ul><li>Function evaluation stays Float64 (fast sampling)</li><li>Coefficient manipulation uses BigFloat (accurate)</li><li>Seamless integration with sparsification</li><li>Automatic precision selection based on coefficient magnitude</li><li>Optimal for high-dimensional problems</li></ul><h3 id="RationalPrecision"><a class="docs-heading-anchor" href="#RationalPrecision">RationalPrecision</a><a id="RationalPrecision-1"></a><a class="docs-heading-anchor-permalink" href="#RationalPrecision" title="Permalink"></a></h3><p><strong>Exact rational arithmetic with arbitrary precision</strong></p><ul><li><strong>Performance</strong>: ⭐⭐ (Slow)</li><li><strong>Accuracy</strong>: ⭐⭐⭐⭐⭐ (Exact)</li><li><strong>Memory</strong>: ⭐⭐ (High usage)</li><li><strong>Best for</strong>: Exact arithmetic, symbolic computation, research applications</li></ul><pre><code class="language-julia hljs">pol = Constructor(TR, 8, precision=RationalPrecision)
+println(&quot;Coefficient type: $(eltype(pol.coeffs))&quot;)  # Rational{BigInt}</code></pre><p><strong>Characteristics:</strong></p><ul><li>Uses <code>Rational{BigInt}</code> for exact representations</li><li>No rounding errors in coefficient computation</li><li>Can represent exact polynomial coefficients</li><li>Memory and computation intensive</li><li>Ideal for problems requiring exact solutions</li></ul><h3 id="BigFloatPrecision"><a class="docs-heading-anchor" href="#BigFloatPrecision">BigFloatPrecision</a><a id="BigFloatPrecision-1"></a><a class="docs-heading-anchor-permalink" href="#BigFloatPrecision" title="Permalink"></a></h3><p><strong>Extended precision floating-point throughout</strong></p><ul><li><strong>Performance</strong>: ⭐ (Slowest)</li><li><strong>Accuracy</strong>: ⭐⭐⭐⭐⭐ (Maximum)</li><li><strong>Memory</strong>: ⭐ (Highest usage)</li><li><strong>Best for</strong>: Maximum precision requirements, research applications</li></ul><pre><code class="language-julia hljs">pol = Constructor(TR, 8, precision=BigFloatPrecision)
+println(&quot;Coefficient type: $(eltype(pol.coeffs))&quot;)  # BigFloat</code></pre><p><strong>Characteristics:</strong></p><ul><li>Uses BigFloat throughout the computation</li><li>Configurable precision (default: 256 bits)</li><li>Highest numerical accuracy available</li><li>Significant performance and memory overhead</li><li>Use only when maximum precision is essential</li></ul><h2 id="Performance-Comparison"><a class="docs-heading-anchor" href="#Performance-Comparison">Performance Comparison</a><a id="Performance-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Comparison" title="Permalink"></a></h2><h3 id="Computational-Cost"><a class="docs-heading-anchor" href="#Computational-Cost">Computational Cost</a><a id="Computational-Cost-1"></a><a class="docs-heading-anchor-permalink" href="#Computational-Cost" title="Permalink"></a></h3><table><tr><th style="text-align: right">Precision Type</th><th style="text-align: right">Constructor Time</th><th style="text-align: right">Memory Usage</th><th style="text-align: right">Coefficient Access</th></tr><tr><td style="text-align: right">Float64Precision</td><td style="text-align: right">1.0× (baseline)</td><td style="text-align: right">1.0×</td><td style="text-align: right">Fastest</td></tr><tr><td style="text-align: right">AdaptivePrecision</td><td style="text-align: right">1.2×</td><td style="text-align: right">1.5×</td><td style="text-align: right">Fast</td></tr><tr><td style="text-align: right">RationalPrecision</td><td style="text-align: right">5-10×</td><td style="text-align: right">3-5×</td><td style="text-align: right">Slow</td></tr><tr><td style="text-align: right">BigFloatPrecision</td><td style="text-align: right">3-8×</td><td style="text-align: right">2-4×</td><td style="text-align: right">Moderate</td></tr></table><h3 id="Accuracy-Comparison"><a class="docs-heading-anchor" href="#Accuracy-Comparison">Accuracy Comparison</a><a id="Accuracy-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Accuracy-Comparison" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Test function with known exact representation
+f_exact = x -&gt; x[1]^2 + x[2]^2
+TR = test_input(f_exact, dim=2, center=[0.0, 0.0], sample_range=1.0)
+
+# Compare approximation errors
+precisions = [Float64Precision, AdaptivePrecision, RationalPrecision, BigFloatPrecision]
+for prec in precisions
+    pol = Constructor(TR, 2, precision=prec)
+    println(&quot;$(prec): L2-norm = $(pol.nrm)&quot;)
+end</code></pre><p>Expected output:</p><pre><code class="nohighlight hljs">Float64Precision: L2-norm = 1.2e-15
+AdaptivePrecision: L2-norm = 2.3e-16
+RationalPrecision: L2-norm = 0.0
+BigFloatPrecision: L2-norm = 1.1e-77</code></pre><h2 id="Integration-with-Sparsification"><a class="docs-heading-anchor" href="#Integration-with-Sparsification">Integration with Sparsification</a><a id="Integration-with-Sparsification-1"></a><a class="docs-heading-anchor-permalink" href="#Integration-with-Sparsification" title="Permalink"></a></h2><p>AdaptivePrecision provides the best integration with Globtim&#39;s sparsification features:</p><h3 id="Coefficient-Analysis"><a class="docs-heading-anchor" href="#Coefficient-Analysis">Coefficient Analysis</a><a id="Coefficient-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Coefficient-Analysis" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Create polynomial with AdaptivePrecision
+pol = Constructor(TR, 10, precision=AdaptivePrecision)
+
+# Convert to monomial basis
+@polyvar x[1:2]
+mono_poly = to_exact_monomial_basis(pol, variables=x)
+
+# Analyze coefficient distribution
+analysis = analyze_coefficient_distribution(mono_poly)
+println(&quot;Analysis results:&quot;)
+println(&quot;  Total terms: $(analysis.n_total)&quot;)
+println(&quot;  Max coefficient: $(analysis.max_coefficient)&quot;)
+println(&quot;  Min coefficient: $(analysis.min_coefficient)&quot;)
+println(&quot;  Dynamic range: $(analysis.dynamic_range)&quot;)
+println(&quot;  Suggested thresholds: $(analysis.suggested_thresholds)&quot;)</code></pre><h3 id="Adaptive-Truncation"><a class="docs-heading-anchor" href="#Adaptive-Truncation">Adaptive Truncation</a><a id="Adaptive-Truncation-1"></a><a class="docs-heading-anchor-permalink" href="#Adaptive-Truncation" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Apply smart truncation
+threshold = analysis.suggested_thresholds[1]
+truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+
+println(&quot;Truncation results:&quot;)
+println(&quot;  Original terms: $(stats.n_total)&quot;)
+println(&quot;  Kept terms: $(stats.n_kept)&quot;)
+println(&quot;  Removed terms: $(stats.n_removed)&quot;)
+println(&quot;  Sparsity ratio: $(round(stats.sparsity_ratio*100, digits=1))%&quot;)</code></pre><h3 id="Sparsification-Workflow"><a class="docs-heading-anchor" href="#Sparsification-Workflow">Sparsification Workflow</a><a id="Sparsification-Workflow-1"></a><a class="docs-heading-anchor-permalink" href="#Sparsification-Workflow" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Complete sparsification workflow with AdaptivePrecision
+function sparsify_with_adaptive_precision(f, TR, degree, threshold_factor=0.1)
+    # Step 1: Create polynomial with AdaptivePrecision
+    pol = Constructor(TR, degree, precision=AdaptivePrecision)
+    
+    # Step 2: Convert to monomial basis
+    @polyvar x[1:length(TR.center)]
+    mono_poly = to_exact_monomial_basis(pol, variables=x)
+    
+    # Step 3: Analyze coefficients
+    analysis = analyze_coefficient_distribution(mono_poly)
+    
+    # Step 4: Apply adaptive truncation
+    threshold = analysis.suggested_thresholds[1] * threshold_factor
+    truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+    
+    return (
+        original=mono_poly,
+        truncated=truncated_poly,
+        analysis=analysis,
+        stats=stats
+    )
+end
+
+# Usage example
+result = sparsify_with_adaptive_precision(Deuflhard, TR, 8)
+println(&quot;Achieved $(round(result.stats.sparsity_ratio*100, digits=1))% sparsity&quot;)</code></pre><h2 id="Use-Case-Guidelines"><a class="docs-heading-anchor" href="#Use-Case-Guidelines">Use Case Guidelines</a><a id="Use-Case-Guidelines-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-Guidelines" title="Permalink"></a></h2><h3 id="When-to-Use-Each-Precision-Type"><a class="docs-heading-anchor" href="#When-to-Use-Each-Precision-Type">When to Use Each Precision Type</a><a id="When-to-Use-Each-Precision-Type-1"></a><a class="docs-heading-anchor-permalink" href="#When-to-Use-Each-Precision-Type" title="Permalink"></a></h3><h4 id="Float64Precision-2"><a class="docs-heading-anchor" href="#Float64Precision-2">Float64Precision</a><a class="docs-heading-anchor-permalink" href="#Float64Precision-2" title="Permalink"></a></h4><ul><li><strong>General optimization problems</strong></li><li><strong>Production workflows requiring speed</strong></li><li><strong>Batch processing on HPC clusters</strong></li><li><strong>Preliminary analysis and prototyping</strong></li></ul><pre><code class="language-julia hljs"># Fast batch processing
+results = []
+for degree in 4:2:12
+    pol = Constructor(TR, degree, precision=Float64Precision)
+    push!(results, (degree=degree, error=pol.nrm))
+end</code></pre><h4 id="AdaptivePrecision-(Recommended-Default)"><a class="docs-heading-anchor" href="#AdaptivePrecision-(Recommended-Default)">AdaptivePrecision (Recommended Default)</a><a id="AdaptivePrecision-(Recommended-Default)-1"></a><a class="docs-heading-anchor-permalink" href="#AdaptivePrecision-(Recommended-Default)" title="Permalink"></a></h4><ul><li><strong>High-dimensional problems (dim ≥ 4)</strong></li><li><strong>Extended precision requirements</strong></li><li><strong>Research applications needing accuracy</strong></li><li><strong>Problems with coefficient truncation</strong></li></ul><pre><code class="language-julia hljs"># High-dimensional optimization
+f_6d = x -&gt; sum(x.^2) + 0.1*prod(sin.(π*x))
+TR_6d = test_input(f_6d, dim=6, center=zeros(6), sample_range=1.0)
+pol_6d = Constructor(TR_6d, 4, precision=AdaptivePrecision)</code></pre><h4 id="RationalPrecision-2"><a class="docs-heading-anchor" href="#RationalPrecision-2">RationalPrecision</a><a class="docs-heading-anchor-permalink" href="#RationalPrecision-2" title="Permalink"></a></h4><ul><li><strong>Exact polynomial representations</strong></li><li><strong>Symbolic computation integration</strong></li><li><strong>Mathematical research requiring exactness</strong></li><li><strong>Small-scale problems where speed is not critical</strong></li></ul><pre><code class="language-julia hljs"># Exact representation of polynomial functions
+f_poly = x -&gt; 2*x[1]^3 - x[1]^2 + 3*x[2]^2 - 1
+pol_exact = Constructor(TR, 3, precision=RationalPrecision)
+# Should give exactly zero approximation error</code></pre><h4 id="BigFloatPrecision-2"><a class="docs-heading-anchor" href="#BigFloatPrecision-2">BigFloatPrecision</a><a class="docs-heading-anchor-permalink" href="#BigFloatPrecision-2" title="Permalink"></a></h4><ul><li><strong>Maximum precision requirements</strong></li><li><strong>Ill-conditioned problems</strong></li><li><strong>Research requiring extended precision</strong></li><li><strong>Validation of other precision types</strong></li></ul><pre><code class="language-julia hljs"># Maximum precision for validation
+pol_reference = Constructor(TR, 12, precision=BigFloatPrecision)</code></pre><h2 id="High-Dimensional-Considerations"><a class="docs-heading-anchor" href="#High-Dimensional-Considerations">High-Dimensional Considerations</a><a id="High-Dimensional-Considerations-1"></a><a class="docs-heading-anchor-permalink" href="#High-Dimensional-Considerations" title="Permalink"></a></h2><h3 id="Memory-Scaling"><a class="docs-heading-anchor" href="#Memory-Scaling">Memory Scaling</a><a id="Memory-Scaling-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Scaling" title="Permalink"></a></h3><p>Polynomial coefficient count grows as <code>C(n+d, d)</code> where <code>n</code> is dimension and <code>d</code> is degree:</p><table><tr><th style="text-align: right">Dimension</th><th style="text-align: right">Degree 4</th><th style="text-align: right">Degree 6</th><th style="text-align: right">Degree 8</th><th style="text-align: right">Degree 10</th></tr><tr><td style="text-align: right">2D</td><td style="text-align: right">15</td><td style="text-align: right">28</td><td style="text-align: right">45</td><td style="text-align: right">66</td></tr><tr><td style="text-align: right">4D</td><td style="text-align: right">70</td><td style="text-align: right">210</td><td style="text-align: right">495</td><td style="text-align: right">1001</td></tr><tr><td style="text-align: right">6D</td><td style="text-align: right">210</td><td style="text-align: right">924</td><td style="text-align: right">3003</td><td style="text-align: right">8008</td></tr><tr><td style="text-align: right">8D</td><td style="text-align: right">495</td><td style="text-align: right">3003</td><td style="text-align: right">12870</td><td style="text-align: right">43758</td></tr></table><h3 id="Precision-Recommendations-by-Dimension"><a class="docs-heading-anchor" href="#Precision-Recommendations-by-Dimension">Precision Recommendations by Dimension</a><a id="Precision-Recommendations-by-Dimension-1"></a><a class="docs-heading-anchor-permalink" href="#Precision-Recommendations-by-Dimension" title="Permalink"></a></h3><pre><code class="language-julia hljs">function get_recommended_precision(dim, degree)
+    coeff_count = binomial(dim + degree, degree)
+
+    if coeff_count &lt; 100
+        return Float64Precision  # Small problems
+    elseif coeff_count &lt; 1000
+        return AdaptivePrecision  # Medium problems
+    elseif coeff_count &lt; 10000
+        return AdaptivePrecision  # Large problems (with truncation)
+    else
+        @warn &quot;Very large problem ($(coeff_count) coefficients). Consider reducing degree.&quot;
+        return AdaptivePrecision
+    end
+end
+
+# Usage
+recommended = get_recommended_precision(6, 8)
+pol = Constructor(TR, 8, precision=recommended)</code></pre><h3 id="High-Dimensional-Example"><a class="docs-heading-anchor" href="#High-Dimensional-Example">High-Dimensional Example</a><a id="High-Dimensional-Example-1"></a><a class="docs-heading-anchor-permalink" href="#High-Dimensional-Example" title="Permalink"></a></h3><pre><code class="language-julia hljs"># 8D optimization with precision management
+function optimize_8d_with_precision()
+    # Define 8D test function
+    f_8d = x -&gt; sum(x.^2) + 0.1*sum(sin.(5*π*x)) + 0.01*prod(x[1:4])
+    TR_8d = test_input(f_8d, dim=8, center=zeros(8), sample_range=1.0)
+
+    # Use AdaptivePrecision for accuracy
+    println(&quot;Creating 8D polynomial with AdaptivePrecision...&quot;)
+    pol_8d = Constructor(TR_8d, 4, precision=AdaptivePrecision, verbose=1)
+
+    # Apply sparsification to manage complexity
+    @polyvar x[1:8]
+    mono_poly = to_exact_monomial_basis(pol_8d, variables=x)
+
+    # Analyze and truncate
+    analysis = analyze_coefficient_distribution(mono_poly)
+    threshold = analysis.suggested_thresholds[2]  # More aggressive truncation
+    truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+
+    println(&quot;8D Results:&quot;)
+    println(&quot;  Original L2-norm: $(pol_8d.nrm)&quot;)
+    println(&quot;  Coefficient count: $(analysis.n_total)&quot;)
+    println(&quot;  After truncation: $(stats.n_kept) terms ($(round(stats.sparsity_ratio*100))% sparse)&quot;)
+
+    return truncated_poly
+end</code></pre><h2 id="HPC-Cluster-Optimization"><a class="docs-heading-anchor" href="#HPC-Cluster-Optimization">HPC Cluster Optimization</a><a id="HPC-Cluster-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#HPC-Cluster-Optimization" title="Permalink"></a></h2><h3 id="Resource-Requirements"><a class="docs-heading-anchor" href="#Resource-Requirements">Resource Requirements</a><a id="Resource-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Resource-Requirements" title="Permalink"></a></h3><p>Different precision types have different computational and memory requirements on HPC systems:</p><pre><code class="language-julia hljs"># HPC resource estimation
+function estimate_hpc_resources(dim, degree, precision_type)
+    coeff_count = binomial(dim + degree, degree)
+
+    # Base memory requirements (MB)
+    base_memory = if precision_type == Float64Precision
+        coeff_count * 8 / 1024^2  # 8 bytes per Float64
+    elseif precision_type == AdaptivePrecision
+        coeff_count * 16 / 1024^2  # ~16 bytes average
+    elseif precision_type == RationalPrecision
+        coeff_count * 64 / 1024^2  # ~64 bytes per Rational{BigInt}
+    elseif precision_type == BigFloatPrecision
+        coeff_count * 32 / 1024^2  # ~32 bytes per BigFloat
+    end
+
+    # Add overhead for computation
+    total_memory = base_memory * 5  # 5x overhead for computation
+
+    # Estimate computation time multiplier
+    time_multiplier = if precision_type == Float64Precision
+        1.0
+    elseif precision_type == AdaptivePrecision
+        1.5
+    elseif precision_type == RationalPrecision
+        8.0
+    elseif precision_type == BigFloatPrecision
+        4.0
+    end
+
+    return (
+        memory_mb = total_memory,
+        time_multiplier = time_multiplier,
+        coefficient_count = coeff_count
+    )
+end
+
+# Example usage
+resources = estimate_hpc_resources(4, 8, AdaptivePrecision)
+println(&quot;Estimated resources for 4D degree-8 with AdaptivePrecision:&quot;)
+println(&quot;  Memory: $(round(resources.memory_mb, digits=1)) MB&quot;)
+println(&quot;  Time multiplier: $(resources.time_multiplier)×&quot;)</code></pre><h3 id="HPC-Configuration-Examples"><a class="docs-heading-anchor" href="#HPC-Configuration-Examples">HPC Configuration Examples</a><a id="HPC-Configuration-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#HPC-Configuration-Examples" title="Permalink"></a></h3><pre><code class="language-julia hljs"># HPC-optimized configurations for different problem sizes
+
+# Small problems (&lt; 1000 coefficients)
+function hpc_small_config(TR, degree)
+    return Constructor(TR, degree,
+        precision=Float64Precision,  # Fast execution
+        basis=:chebyshev,           # Stable basis
+        verbose=0                   # Minimal output
+    )
+end
+
+# Medium problems (1000-10000 coefficients)
+function hpc_medium_config(TR, degree)
+    return Constructor(TR, degree,
+        precision=AdaptivePrecision,  # Good accuracy/speed balance
+        basis=:chebyshev,
+        verbose=0
+    )
+end
+
+# Large problems (&gt; 10000 coefficients)
+function hpc_large_config(TR, degree)
+    pol = Constructor(TR, degree,
+        precision=AdaptivePrecision,
+        basis=:chebyshev,
+        verbose=0
+    )
+
+    # Apply aggressive sparsification for large problems
+    @polyvar x[1:length(TR.center)]
+    mono_poly = to_exact_monomial_basis(pol, variables=x)
+    analysis = analyze_coefficient_distribution(mono_poly)
+
+    # Use more aggressive threshold for large problems
+    threshold = analysis.suggested_thresholds[3]  # More aggressive
+    truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+
+    println(&quot;Large problem sparsification: $(round(stats.sparsity_ratio*100))% sparse&quot;)
+    return truncated_poly
+end</code></pre><h2 id="Advanced-Usage-Patterns"><a class="docs-heading-anchor" href="#Advanced-Usage-Patterns">Advanced Usage Patterns</a><a id="Advanced-Usage-Patterns-1"></a><a class="docs-heading-anchor-permalink" href="#Advanced-Usage-Patterns" title="Permalink"></a></h2><h3 id="Precision-Conversion"><a class="docs-heading-anchor" href="#Precision-Conversion">Precision Conversion</a><a id="Precision-Conversion-1"></a><a class="docs-heading-anchor-permalink" href="#Precision-Conversion" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Convert between precision types
+function convert_precision(pol_source, target_precision)
+    # Extract problem specification
+    TR = pol_source.test_input  # If available
+    degree = pol_source.degree  # If available
+
+    # Recreate with target precision
+    pol_target = Constructor(TR, degree, precision=target_precision)
+
+    return pol_target
+end
+
+# Compare precisions on same problem
+function compare_precisions(TR, degree)
+    precisions = [Float64Precision, AdaptivePrecision, RationalPrecision]
+    results = Dict()
+
+    for prec in precisions
+        @time pol = Constructor(TR, degree, precision=prec)
+        results[prec] = (
+            l2_norm = pol.nrm,
+            coeff_type = eltype(pol.coeffs),
+            memory_estimate = sizeof(pol.coeffs)
+        )
+    end
+
+    return results
+end</code></pre><h3 id="Precision-Aware-Workflows"><a class="docs-heading-anchor" href="#Precision-Aware-Workflows">Precision-Aware Workflows</a><a id="Precision-Aware-Workflows-1"></a><a class="docs-heading-anchor-permalink" href="#Precision-Aware-Workflows" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Adaptive precision selection based on problem characteristics
+function smart_precision_selection(f, dim, degree, sample_range)
+    TR = test_input(f, dim=dim, center=zeros(dim), sample_range=sample_range)
+
+    # Quick Float64 test to assess problem difficulty
+    pol_test = Constructor(TR, min(degree, 4), precision=Float64Precision, verbose=0)
+
+    # Decision logic based on approximation quality
+    if pol_test.nrm &lt; 1e-12
+        # Very good approximation - Float64 sufficient
+        precision = Float64Precision
+        println(&quot;Selected Float64Precision (excellent approximation)&quot;)
+    elseif pol_test.nrm &lt; 1e-8
+        # Good approximation - AdaptivePrecision for safety
+        precision = AdaptivePrecision
+        println(&quot;Selected AdaptivePrecision (good approximation)&quot;)
+    else
+        # Poor approximation - need higher precision
+        precision = AdaptivePrecision
+        println(&quot;Selected AdaptivePrecision (challenging problem)&quot;)
+    end
+
+    # Create final polynomial with selected precision
+    pol_final = Constructor(TR, degree, precision=precision, verbose=0)
+
+    return pol_final
+end
+
+# Usage example
+pol = smart_precision_selection(Deuflhard, 2, 8, 1.2)</code></pre><h2 id="Troubleshooting"><a class="docs-heading-anchor" href="#Troubleshooting">Troubleshooting</a><a id="Troubleshooting-1"></a><a class="docs-heading-anchor-permalink" href="#Troubleshooting" title="Permalink"></a></h2><h3 id="Common-Issues-and-Solutions"><a class="docs-heading-anchor" href="#Common-Issues-and-Solutions">Common Issues and Solutions</a><a id="Common-Issues-and-Solutions-1"></a><a class="docs-heading-anchor-permalink" href="#Common-Issues-and-Solutions" title="Permalink"></a></h3><h4 id="Memory-Errors-with-High-Precision"><a class="docs-heading-anchor" href="#Memory-Errors-with-High-Precision">Memory Errors with High Precision</a><a id="Memory-Errors-with-High-Precision-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Errors-with-High-Precision" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Problem: OutOfMemoryError with RationalPrecision
+# Solution: Use AdaptivePrecision instead
+try
+    pol = Constructor(TR, 12, precision=RationalPrecision)
+catch OutOfMemoryError
+    println(&quot;Switching to AdaptivePrecision due to memory constraints&quot;)
+    pol = Constructor(TR, 12, precision=AdaptivePrecision)
+end</code></pre><h4 id="Slow-Performance-with-Extended-Precision"><a class="docs-heading-anchor" href="#Slow-Performance-with-Extended-Precision">Slow Performance with Extended Precision</a><a id="Slow-Performance-with-Extended-Precision-1"></a><a class="docs-heading-anchor-permalink" href="#Slow-Performance-with-Extended-Precision" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Problem: BigFloatPrecision too slow
+# Solution: Use AdaptivePrecision for better balance
+function performance_aware_constructor(TR, degree, max_time_seconds=60)
+    start_time = time()
+
+    # Try AdaptivePrecision first
+    pol = Constructor(TR, degree, precision=AdaptivePrecision, verbose=0)
+    elapsed = time() - start_time
+
+    if elapsed &gt; max_time_seconds
+        @warn &quot;Construction took $(round(elapsed, digits=1))s, consider reducing degree or using Float64Precision&quot;
+    end
+
+    return pol
+end</code></pre><h4 id="Numerical-Instability"><a class="docs-heading-anchor" href="#Numerical-Instability">Numerical Instability</a><a id="Numerical-Instability-1"></a><a class="docs-heading-anchor-permalink" href="#Numerical-Instability" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Problem: Poor approximation with Float64Precision
+# Solution: Upgrade to AdaptivePrecision
+function robust_constructor(TR, degree, target_accuracy=1e-10)
+    # Try Float64 first
+    pol_f64 = Constructor(TR, degree, precision=Float64Precision, verbose=0)
+
+    if pol_f64.nrm &gt; target_accuracy
+        println(&quot;Upgrading to AdaptivePrecision for better accuracy&quot;)
+        pol = Constructor(TR, degree, precision=AdaptivePrecision, verbose=0)
+
+        if pol.nrm &gt; target_accuracy
+            @warn &quot;Still poor approximation ($(pol.nrm)). Consider increasing degree.&quot;
+        end
+
+        return pol
+    else
+        return pol_f64
+    end
+end</code></pre><h2 id="Best-Practices"><a class="docs-heading-anchor" href="#Best-Practices">Best Practices</a><a id="Best-Practices-1"></a><a class="docs-heading-anchor-permalink" href="#Best-Practices" title="Permalink"></a></h2><h3 id="1.-Start-with-AdaptivePrecision"><a class="docs-heading-anchor" href="#1.-Start-with-AdaptivePrecision">1. Start with AdaptivePrecision</a><a id="1.-Start-with-AdaptivePrecision-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Start-with-AdaptivePrecision" title="Permalink"></a></h3><p>For most applications, <code>AdaptivePrecision</code> provides the best balance:</p><pre><code class="language-julia hljs"># Recommended default approach
+pol = Constructor(TR, degree, precision=AdaptivePrecision)</code></pre><h3 id="2.-Use-Float64Precision-for-Batch-Processing"><a class="docs-heading-anchor" href="#2.-Use-Float64Precision-for-Batch-Processing">2. Use Float64Precision for Batch Processing</a><a id="2.-Use-Float64Precision-for-Batch-Processing-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Use-Float64Precision-for-Batch-Processing" title="Permalink"></a></h3><p>When processing many problems where speed matters:</p><pre><code class="language-julia hljs"># Batch processing example
+function batch_optimize(functions, degrees)
+    results = []
+    for (f, deg) in zip(functions, degrees)
+        TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+        pol = Constructor(TR, deg, precision=Float64Precision)  # Fast
+        push!(results, pol.nrm)
+    end
+    return results
+end</code></pre><h3 id="3.-Apply-Sparsification-with-AdaptivePrecision"><a class="docs-heading-anchor" href="#3.-Apply-Sparsification-with-AdaptivePrecision">3. Apply Sparsification with AdaptivePrecision</a><a id="3.-Apply-Sparsification-with-AdaptivePrecision-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Apply-Sparsification-with-AdaptivePrecision" title="Permalink"></a></h3><p>Combine precision and sparsification for optimal results:</p><pre><code class="language-julia hljs"># Best practice workflow
+function optimal_workflow(f, dim, degree)
+    TR = test_input(f, dim=dim, center=zeros(dim), sample_range=1.0)
+
+    # Step 1: Create with AdaptivePrecision
+    pol = Constructor(TR, degree, precision=AdaptivePrecision)
+
+    # Step 2: Apply sparsification
+    @polyvar x[1:dim]
+    mono_poly = to_exact_monomial_basis(pol, variables=x)
+    analysis = analyze_coefficient_distribution(mono_poly)
+
+    # Step 3: Truncate if beneficial
+    if analysis.dynamic_range &gt; 1e6  # Large dynamic range
+        threshold = analysis.suggested_thresholds[1]
+        truncated_poly, stats = truncate_polynomial_adaptive(mono_poly, threshold)
+        println(&quot;Applied truncation: $(stats.n_kept)/$(stats.n_total) terms kept&quot;)
+        return truncated_poly
+    else
+        return mono_poly
+    end
+end</code></pre><h3 id="4.-Monitor-Resource-Usage"><a class="docs-heading-anchor" href="#4.-Monitor-Resource-Usage">4. Monitor Resource Usage</a><a id="4.-Monitor-Resource-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Monitor-Resource-Usage" title="Permalink"></a></h3><p>Always be aware of computational costs:</p><pre><code class="language-julia hljs"># Resource-aware construction
+function monitored_constructor(TR, degree, precision_type)
+    println(&quot;Creating polynomial: $(precision_type), degree $(degree)&quot;)
+
+    # Estimate resources
+    dim = length(TR.center)
+    resources = estimate_hpc_resources(dim, degree, precision_type)
+    println(&quot;Estimated memory: $(round(resources.memory_mb, digits=1)) MB&quot;)
+
+    # Time the construction
+    @time pol = Constructor(TR, degree, precision=precision_type)
+
+    println(&quot;Actual L2-norm: $(pol.nrm)&quot;)
+    return pol
+end</code></pre><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><ul><li><strong>AdaptivePrecision</strong>: Recommended default for most applications</li><li><strong>Float64Precision</strong>: Use for speed-critical batch processing</li><li><strong>RationalPrecision</strong>: Use only for exact arithmetic requirements</li><li><strong>BigFloatPrecision</strong>: Use only for maximum precision validation</li></ul><p>The precision parameter system in Globtim provides flexible control over the accuracy/performance trade-off, with <code>AdaptivePrecision</code> offering the best balance for most real-world applications.</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Thursday 18 December 2025 22:39">Thursday 18 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
