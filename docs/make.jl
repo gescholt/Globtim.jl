@@ -20,7 +20,9 @@ makedocs(
         "Critical Point Analysis" => "critical_point_analysis.md",
         "Anisotropic Grids" => "anisotropic_grids_guide.md",
         "Sparsification" => "sparsification.md",
+        "Exact Conversion" => "exact_conversion.md",
         "Grid Formats" => "grid_formats.md",
+        "Precision" => "precision_parameters.md",
         "Testing" => [
             "Test Documentation" => "test_documentation.md",
             "Test Running Guide" => "test_running_guide.md",
@@ -28,6 +30,7 @@ makedocs(
         ],
         "Examples" => "examples.md",
         "Visualization" => "visualization.md",
+        "GlobtimPlots" => "globtimplots.md",
         "API Reference" => "api_reference.md"
     ],
     checkdocs = :none
