@@ -1,8 +1,0 @@
-{
-    "package": "JSON3",
-    "status": "healthy",
-    "details": "JSON3 package loaded and functional",
-    "timestamp": "2025-09-09T14:14:24Z",
-    "environment": "local",
-    "test_output": "SUCCESS: JSON3 fully functional"
-}

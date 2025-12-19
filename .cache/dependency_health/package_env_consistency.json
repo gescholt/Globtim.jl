@@ -1,8 +1,0 @@
-{
-    "component": "package_environment_consistency",
-    "status": "failed",
-    "details": "Package environment consistency check failed: ERROR: Missing critical packages: JSON3, JSON, DataFrames",
-    "timestamp": "2025-09-09T14:14:21Z",
-    "environment": "local",
-    "test_output": "ERROR: Missing critical packages: JSON3, JSON, DataFrames"
-}
