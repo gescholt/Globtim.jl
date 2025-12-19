@@ -26,6 +26,8 @@ f(x)  →  Polynomial p(x)  →  Solve ∇p = 0  →  Refine with BFGS  →  All
          (Chebyshev fit)     (HomotopyContinuation)
 ```
 
+![Globtim Pipeline](assets/plots/hero_pipeline.png)
+
 For functions that vary on different scales in different regions, Globtim uses **adaptive subdivision** to build piecewise polynomial approximations that maintain accuracy everywhere.
 
 ## Installation
@@ -50,43 +52,3 @@ julia --project=. examples/quick_subdivision_demo.jl
 This tests adaptive subdivision on multiple functions (sphere, Rosenbrock, Rastrigin) and shows the algorithm's behavior.
 
 For a detailed walkthrough, see [Getting Started](getting_started.md).
-
-## Key Features
-
-### Anisotropic Grid Support
-- Generate grids with different numbers of points per dimension
-- Optimize point allocation for multiscale functions
-- Achieve up to 15x better accuracy for the same computational cost
-- Support for Chebyshev, Legendre, and uniform node distributions
-
-See [Anisotropic Grids Guide](anisotropic_grids_guide.md) for details.
-
-### Enhanced L²-Norm Computation
-- Quadrature-based L²-norm using orthogonal polynomials
-- Support for anisotropic grids in all norm computations
-- High-accuracy integration for smooth functions
-- Efficient tensor product quadrature
-
-### Polynomial Sparsification and Exact Arithmetic
-- Convert polynomials to exact monomial basis
-- Intelligently sparsify polynomials by removing small coefficients
-- Track L²-norm preservation during sparsification
-- Analyze tradeoffs between sparsity and approximation quality
-
-See [Polynomial Sparsification](sparsification.md) for details.
-
-### Exact Polynomial Conversion
-- Convert from orthogonal bases to monomial form
-- Support for exact rational arithmetic
-- Symbolic manipulation capabilities
-- Integration with computer algebra systems
-
-See [Exact Polynomial Conversion](exact_conversion.md) for details.
-
-## Testing
-
-Comprehensive test suite with detailed documentation:
-- [Test Documentation Overview](test_documentation.md) - Complete test suite guide
-- [Test Running Guide](test_running_guide.md) - How to run tests effectively
-- [Anisotropic Grid Tests](anisotropic_grid_tests.md) - Detailed test explanations
-
