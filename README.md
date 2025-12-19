@@ -1,5 +1,8 @@
 # Globtim - Global Optimization via Polynomial Approximation
 
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://gescholt.github.io/Globtim.jl/stable/)
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://gescholt.github.io/Globtim.jl/dev/)
+
 A Julia package for global optimization using polynomial approximation methods.
 
 ## What is Globtim?
