@@ -141,8 +141,46 @@ statistical_analysis(data)  # Distribution fitting
 
 ## Related Packages
 
-- **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** - Visualization and plotting (CairoMakie/GLMakie)
-- **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** - Result analysis and refinement
+Globtim produces critical point candidates. For analysis and refinement, use these companion packages:
+
+### GlobtimPostProcessing - Analysis & Refinement
+
+Refines raw critical points from polynomial approximation into verified critical points with high accuracy (~1e-12).
+
+```julia
+using GlobtimPostProcessing
+
+# Load experiment results from globtim output
+result = load_experiment_results("/path/to/experiment")
+
+# Refine critical points (requires your objective function)
+refined = refine_experiment_results(
+    "/path/to/experiment",
+    my_objective_function
+)
+```
+
+**Key features:**
+- Critical point refinement via local optimization (BFGS/Nelder-Mead)
+- Gradient validation (verify ||∇f(x*)|| ≈ 0)
+- Parameter recovery analysis
+- Quality diagnostics (L2 error, stagnation detection)
+
+Install: `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")`
+
+See [Examples/POST_PROCESSING_GUIDE.md](Examples/POST_PROCESSING_GUIDE.md) for detailed workflow.
+
+### GlobtimPlots - Visualization
+
+Creates publication-ready figures from globtim and GlobtimPostProcessing results (CairoMakie/GLMakie).
+
+```julia
+using GlobtimPlots
+fig = plot_critical_points(df_min)
+save("minima.pdf", fig)
+```
+
+Install: `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")`
 
 ## Repository Organization
 
