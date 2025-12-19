@@ -39,6 +39,9 @@ Examples/**/*.pdf
 *.heic
 *.heif
 
+# Exception: Documentation illustration assets
+!docs/src/assets/plots/*.png
+
 # Notebooks not ready for public release
 Examples/Notebooks/AnisotropicGridComparison.ipynb
 Examples/Notebooks/Triple_Graph*.ipynb

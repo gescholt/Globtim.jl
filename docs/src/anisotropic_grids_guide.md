@@ -12,6 +12,14 @@ Consider approximating a function like `f(x,y) = exp(-100x² - y²)`. This funct
 
 Using an isotropic grid wastes computational resources by placing unnecessary points in the y-direction. An anisotropic grid can achieve the same accuracy with fewer total points by allocating more points where the function varies rapidly.
 
+![Isotropic vs Anisotropic Grid Comparison](assets/plots/grid_comparison.png)
+
+*Both grids use 64 points, but the anisotropic grid allocates more points in the x-direction where higher resolution is needed.*
+
+![Multiscale Function Example](assets/plots/multiscale_function.png)
+
+*A multiscale function with rapid oscillation in x and slow variation in y. This function benefits significantly from anisotropic sampling.*
+
 ## Basic Usage
 
 ### Generating Anisotropic Grids

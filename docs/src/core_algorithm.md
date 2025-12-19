@@ -2,6 +2,20 @@
 
 Globtim's approach to global optimization consists of three main phases:
 
+```mermaid
+flowchart LR
+    subgraph Phase1["Phase 1: Polynomial Approximation"]
+        A[Sample function<br>on grid] --> B[Fit polynomial<br>in orthogonal basis]
+    end
+    subgraph Phase2["Phase 2: Critical Point Finding"]
+        C[Convert to<br>monomial basis] --> D[Solve ∇p = 0]
+    end
+    subgraph Phase3["Phase 3: Refinement"]
+        E[BFGS<br>refinement] --> F[Hessian<br>classification]
+    end
+    Phase1 --> Phase2 --> Phase3
+```
+
 ## 1. Polynomial Approximation
 
 The first step constructs a polynomial approximation of the objective function using discrete least squares. For detailed coverage of approximation methods, see [Polynomial Approximation](polynomial_approximation.md).
