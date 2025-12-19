@@ -6,6 +6,23 @@ Version 1.1.0 introduces comprehensive Hessian-based analysis for classifying an
 
 The `analyze_critical_points` function performs eigenvalue analysis to classify each critical point:
 
+```mermaid
+flowchart TD
+    H["Compute Hessian H(x*)"] --> E["Calculate eigenvalues λ₁, λ₂, ..."]
+    E --> Q{All λᵢ > 0?}
+    Q -->|Yes| MIN[/"Local Minimum"\]
+    Q -->|No| Q2{All λᵢ < 0?}
+    Q2 -->|Yes| MAX[\"Local Maximum"/]
+    Q2 -->|No| Q3{Any λᵢ ≈ 0?}
+    Q3 -->|Yes| DEG[/"Degenerate"\]
+    Q3 -->|No| SAD[/"Saddle Point"\]
+
+    style MIN fill:#90EE90
+    style MAX fill:#FFB6C1
+    style SAD fill:#FFD700
+    style DEG fill:#D3D3D3
+```
+
 ```julia
 df_enhanced, df_min = analyze_critical_points(
     f, df, TR,

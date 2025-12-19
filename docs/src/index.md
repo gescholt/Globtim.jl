@@ -90,9 +90,3 @@ Comprehensive test suite with detailed documentation:
 - [Test Running Guide](test_running_guide.md) - How to run tests effectively
 - [Anisotropic Grid Tests](anisotropic_grid_tests.md) - Detailed test explanations
 
-## Contents
-
-```@contents
-Pages = ["getting_started.md", "core_algorithm.md", "polynomial_approximation.md", "solvers.md", "critical_point_analysis.md", "anisotropic_grids_guide.md", "sparsification.md", "exact_conversion.md", "grid_formats.md", "test_documentation.md", "test_running_guide.md", "anisotropic_grid_tests.md", "api_reference.md", "examples.md", "visualization.md"]
-Depth = 2
-```
