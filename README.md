@@ -172,15 +172,42 @@ See [Examples/POST_PROCESSING_GUIDE.md](Examples/POST_PROCESSING_GUIDE.md) for d
 
 ### GlobtimPlots - Visualization
 
-Creates publication-ready figures from globtim and GlobtimPostProcessing results (CairoMakie/GLMakie).
+Creates publication-quality figures and interactive visualizations from globtim and GlobtimPostProcessing results.
 
 ```julia
-using GlobtimPlots
+using GlobtimPlots, CairoMakie
+
+# Backend selection
+CairoMakie.activate!()  # Static (PDF/PNG)
+# GLMakie.activate!()   # Interactive
+
+# Visualize critical points
 fig = plot_critical_points(df_min)
 save("minima.pdf", fig)
+
+# Level set visualization
+fig = create_level_set_visualization(pol, TR, solutions)
+save("levelset.png", fig)
+
+# Convergence analysis
+fig = plot_convergence_analysis(degrees, l2_errors)
+save("convergence.pdf", fig)
 ```
 
+**Key features:**
+- Level set and polynomial surface visualization (2D/3D)
+- Convergence analysis plots (L2 error vs degree)
+- Critical point scatter and Hessian eigenvalue plots
+- Campaign comparison across experiments
+- RL training dashboards and policy evolution
+- Subdivision tree visualization
+- 1D polynomial approximation plots
+- Animation generation (flyover, rotation)
+- Publication-ready PDF/PNG export
+
 Install: `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")`
+
+See [GlobtimPlots documentation](https://gescholt.github.io/Globtim.jl/stable/globtimplots/) for detailed workflow.
 
 ## Repository Organization
 
