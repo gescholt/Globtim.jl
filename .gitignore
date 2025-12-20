@@ -102,6 +102,13 @@ __pycache__/
 # Claude Code cache and memory
 .cache/
 .claudemem
+.claude/
+
+# GitLab internal configs (not for public release)
+.gitlab_config
+.gitlab_agent_config
+.gitlab-ci.yml
+.gitlab-ci.yml.npm-example
 
 # HPC test results (keep locally but don't commit)
 hpc/jobs/submission/collected_results/
