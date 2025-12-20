@@ -132,6 +132,7 @@ analyze_*.jl
 create_*.jl
 extract_*.jl
 fix_*.jl
+!scripts/fix_test_manifest.jl
 test_*.jl
 verify_*.jl
 debug_*.jl
