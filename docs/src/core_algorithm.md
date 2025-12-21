@@ -2,6 +2,7 @@
 
 Globtim's approach to global optimization consists of three main phases:
 
+<!-- Illustration commented out - not legible at current size
 ```mermaid
 flowchart LR
     subgraph Phase1["Phase 1: Polynomial Approximation"]
@@ -15,6 +16,7 @@ flowchart LR
     end
     Phase1 --> Phase2 --> Phase3
 ```
+-->
 
 ## 1. Polynomial Approximation
 
@@ -34,8 +36,6 @@ pol = Constructor(
 ```
 
 The sampling points are chosen to minimize approximation error and avoid Runge's phenomenon.
-
-For functions with different scales in different dimensions, see [Anisotropic Grids Guide](anisotropic_grids_guide.md).
 
 ### Approximation Quality
 

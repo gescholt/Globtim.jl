@@ -494,64 +494,6 @@ end
 pol = smart_precision_selection(Deuflhard, 2, 8, 1.2)
 ```
 
-## Troubleshooting
-
-### Common Issues and Solutions
-
-#### Memory Errors with High Precision
-```julia
-# Problem: OutOfMemoryError with RationalPrecision
-# Solution: Use AdaptivePrecision instead
-try
-    pol = Constructor(TR, 12, precision=RationalPrecision)
-catch OutOfMemoryError
-    println("Switching to AdaptivePrecision due to memory constraints")
-    pol = Constructor(TR, 12, precision=AdaptivePrecision)
-end
-```
-
-#### Slow Performance with Extended Precision
-```julia
-# Problem: BigFloatPrecision too slow
-# Solution: Use AdaptivePrecision for better balance
-function performance_aware_constructor(TR, degree, max_time_seconds=60)
-    start_time = time()
-
-    # Try AdaptivePrecision first
-    pol = Constructor(TR, degree, precision=AdaptivePrecision, verbose=0)
-    elapsed = time() - start_time
-
-    if elapsed > max_time_seconds
-        @warn "Construction took $(round(elapsed, digits=1))s, consider reducing degree or using Float64Precision"
-    end
-
-    return pol
-end
-```
-
-#### Numerical Instability
-```julia
-# Problem: Poor approximation with Float64Precision
-# Solution: Upgrade to AdaptivePrecision
-function robust_constructor(TR, degree, target_accuracy=1e-10)
-    # Try Float64 first
-    pol_f64 = Constructor(TR, degree, precision=Float64Precision, verbose=0)
-
-    if pol_f64.nrm > target_accuracy
-        println("Upgrading to AdaptivePrecision for better accuracy")
-        pol = Constructor(TR, degree, precision=AdaptivePrecision, verbose=0)
-
-        if pol.nrm > target_accuracy
-            @warn "Still poor approximation ($(pol.nrm)). Consider increasing degree."
-        end
-
-        return pol
-    else
-        return pol_f64
-    end
-end
-```
-
 ## Best Practices
 
 ### 1. Start with AdaptivePrecision

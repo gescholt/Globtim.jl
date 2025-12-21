@@ -228,43 +228,6 @@ The solution has **minimal performance impact**:
 - **Memory**: <1MB additional memory for utility functions
 - **Compatibility**: Fully backward compatible - existing code unchanged
 
-## Troubleshooting Guide
-
-### If @polyvar Still Fails
-
-1. **Check Environment Variable**:
-   ```julia
-   ENV["GLOBTIM_AUTO_POLYVAR"] = "true"  # Enable auto-setup
-   ```
-
-2. **Manual Setup**:
-   ```julia
-   using Globtim
-   ensure_polyvar()  # Force setup with diagnostics
-   ```
-
-3. **Test Diagnostics**:
-   ```julia
-   test_polyvar_availability()  # Detailed testing
-   ```
-
-4. **Fallback Workaround**:
-   ```julia
-   # If all else fails, use module-qualified syntax:
-   DynamicPolynomials.@polyvar x[1:2]
-   ```
-
-### Common Issues
-
-**Issue**: "DynamicPolynomials not available"  
-**Solution**: `Pkg.add("DynamicPolynomials")`
-
-**Issue**: Auto-setup disabled  
-**Solution**: `ENV["GLOBTIM_AUTO_POLYVAR"] = "true"; using Globtim`
-
-**Issue**: Multiple Julia sessions conflict  
-**Solution**: Restart Julia REPL and reload Globtim
-
 ## Files Modified
 
 ### Core Changes ✅

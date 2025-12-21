@@ -423,17 +423,6 @@ if get(ENV, "TEST_ANISOTROPIC", "false") == "true"
 end
 ```
 
-## Troubleshooting Checklist
-
-- [ ] Using `--project` flag?
-- [ ] In correct directory?
-- [ ] Dependencies installed? (`Pkg.instantiate()`)
-- [ ] Julia version compatible?
-- [ ] Package versions match Project.toml?
-- [ ] No conflicting global packages?
-- [ ] Clean git working directory?
-- [ ] Test files have correct includes?
-
 ## Summary
 
 Running tests effectively requires:

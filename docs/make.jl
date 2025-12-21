@@ -18,7 +18,6 @@ makedocs(
         "Polynomial Approximation" => "polynomial_approximation.md",
         "Solvers" => "solvers.md",
         "Critical Point Analysis" => "critical_point_analysis.md",
-        "Anisotropic Grids" => "anisotropic_grids_guide.md",
         "Sparsification" => "sparsification.md",
         "Exact Conversion" => "exact_conversion.md",
         "Grid Formats" => "grid_formats.md",

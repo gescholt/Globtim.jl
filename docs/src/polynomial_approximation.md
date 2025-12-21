@@ -138,8 +138,6 @@ grid = generate_anisotropic_grid([20, 10, 5], basis=:chebyshev)
 pol = Constructor(TR, grid)
 ```
 
-See [Anisotropic Grids Guide](anisotropic_grids_guide.md) for details.
-
 ## Best Practices
 
 1. **Degree Selection**
@@ -165,6 +163,5 @@ See [Anisotropic Grids Guide](anisotropic_grids_guide.md) for details.
 ## Related Documentation
 
 - [Core Algorithm](core_algorithm.md) - Overall optimization approach
-- [Anisotropic Grids Guide](anisotropic_grids_guide.md) - Advanced grid generation
 - [Polynomial Sparsification](sparsification.md) - Memory optimization techniques
 - [API Reference](api_reference.md) - Complete function documentation

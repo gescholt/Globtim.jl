@@ -164,46 +164,6 @@ for sol in solutions
 end
 ```
 
-## Performance Tips
-
-1. **Problem Scaling**
-   - Normalize domain to [-1,1]ⁿ for better conditioning
-   - Use appropriate polynomial degree (8-12 typical)
-
-2. **Memory Management**
-   - HomotopyContinuation: Enable compilation for repeated solves
-   - Msolve: Monitor RAM usage, may need 10-100x problem size
-
-3. **Parallel Execution**
-   - Both solvers support multithreading
-   - Set environment variable: `export JULIA_NUM_THREADS=8`
-
-## Troubleshooting
-
-### HomotopyContinuation Issues
-
-**Missing solutions:**
-- Increase tracker accuracy
-- Check for solutions at infinity
-- Try different random seed
-
-**Slow performance:**
-- Reduce polynomial degree
-- Enable compilation
-- Use fewer tracker steps
-
-### Msolve Issues
-
-**Installation problems:**
-- Check GMP/MPFR dependencies
-- Verify compiler support (C99)
-- Try pre-built binaries
-
-**Memory errors:**
-- Reduce polynomial degree
-- Increase system RAM/swap
-- Use HomotopyContinuation instead
-
 ## Related Documentation
 
 - [Core Algorithm](core_algorithm.md) - Overall optimization approach

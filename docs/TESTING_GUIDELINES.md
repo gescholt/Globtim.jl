@@ -158,33 +158,6 @@ As of September 2, 2025, the following Aqua.jl tests are known to fail (non-crit
 
 These are code quality issues that don't affect functionality but should be addressed for better maintainability.
 
-## Troubleshooting
-
-### Debug Test Loading
-
-```julia
-# Check which Globtim is being loaded
-using Pkg
-println("Project: ", Pkg.project().path)
-using Globtim
-println("Globtim path: ", pathof(Globtim))
-```
-
-### Clear All Julia Caches
-
-```bash
-# Nuclear option - clear everything
-rm -rf ~/.julia/compiled
-rm -rf ~/.julia/packages/Globtim
-```
-
-### Check for Manifest Conflicts
-
-```bash
-# Look for warnings about manifest differences
-julia --project=. -e "using Pkg; Pkg.resolve()"
-```
-
 ## Environment Variables
 
 ### Julia-Specific

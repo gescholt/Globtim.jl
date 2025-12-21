@@ -195,32 +195,6 @@ The weak dependency system is compatible with package bundling for HPC deploymen
 - **Local Development**: Load all dependencies for full functionality
 - **CI/CD**: Load dependencies as needed per test suite
 
-## Troubleshooting
-
-### Common Issues
-
-#### "Package not found" errors
-```julia
-# Error: UndefVarError: plot_function not defined
-# Solution: Load required weak dependency
-using CairoMakie  # Enables plotting functions
-```
-
-#### Extension not loading
-```julia
-# Check if weak dependency is available
-using Pkg
-Pkg.status("CairoMakie")  # Should show installed version
-```
-
-### Verification
-
-Check current dependency status:
-```julia
-using Pkg
-Pkg.status()  # Shows all loaded packages
-```
-
 ## Future Development
 
 ### Planned Extensions
