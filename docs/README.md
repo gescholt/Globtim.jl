@@ -34,7 +34,7 @@ The main user-facing documentation built with Documenter.jl:
 - **[Examples](src/examples.md)** - Practical examples and tutorials
 - **[Polynomial Approximation](src/polynomial_approximation.md)** - Approximation theory details
 - **[Critical Point Analysis](src/critical_point_analysis.md)** - Critical point finding and classification
-- **[Solvers](src/solvers.md)** - Integration with HomotopyContinuation.jl and Msolve
+- **[Solvers](src/solvers.md)** - Polynomial system solvers (numerical and symbolic)
 - **[Visualization](src/visualization.md)** - Plotting and visualization capabilities
 - **[Sparsification](src/sparsification.md)** - Polynomial complexity reduction
 - **[Grid Formats](src/grid_formats.md)** - Sampling grid specifications

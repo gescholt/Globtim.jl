@@ -87,15 +87,9 @@ solutions = solve_polynomial_system(
 
 Two solvers are available:
 
-1. **HomotopyContinuation.jl** (default): 
-   - Numerical polynomial system solver
-   - Finds all complex solutions
-   - Filters for real solutions in domain
+1. **[HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/)** (default): State of the art numerical algebraic geometry method
 
-2. **Msolve** (optional):
-   - Exact symbolic solver
-   - Requires external installation
-   - Useful for verification
+2. **[msolve](https://msolve.lip6.fr/)** (optional): State of the art symbolic (exact) method, relies on Gröbner basis computations
 
 For detailed solver configuration and selection guidelines, see [Polynomial System Solvers](solvers.md).
 

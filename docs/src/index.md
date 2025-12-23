@@ -23,7 +23,7 @@ The result: a systematic way to find *all* local minima, not just the nearest on
 
 ```
 f(x)  →  Polynomial p(x)  →  Solve ∇p = 0  →  Refine with BFGS  →  All minima
-         (Chebyshev fit)     (HomotopyContinuation)
+         (Chebyshev fit)     (numerical or exact)
 ```
 
 ![Globtim Pipeline](assets/plots/hero_pipeline.png)
@@ -39,7 +39,7 @@ pkg> add Globtim
 
 ### Optional Dependencies
 - **For visualization**: `add CairoMakie` or `add GLMakie`
-- **For exact solving**: Install [Msolve](https://msolve.lip6.fr/)
+- **For exact solving**: Install [msolve](https://msolve.lip6.fr/) (symbolic method based on Gröbner basis computations)
 
 ## Getting Started
 

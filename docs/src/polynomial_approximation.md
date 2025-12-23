@@ -96,7 +96,7 @@ exact_coeffs = exact_polynomial_coefficients(f, degree, domain_bounds)
 
 This enables:
 - Symbolic manipulation
-- Exact solver usage (Msolve)
+- Exact solver usage ([msolve](https://msolve.lip6.fr/))
 - Sparsification analysis
 
 ## Post-Processing

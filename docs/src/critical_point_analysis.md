@@ -1,27 +1,20 @@
 # Critical Point Analysis
 
-Version 1.1.0 introduces comprehensive Hessian-based analysis for classifying and validating critical points.
+## Overview
+
+Critical point analysis is performed **after** the polynomial approximation step has identified candidate critical points by solving ∇p(x) = 0. These polynomial critical points are approximate locations that need to be refined and classified on the original objective function.
+
+The analysis proceeds in two steps:
+
+1. **Refinement**: Each polynomial critical point serves as a starting point for local optimization (BFGS) on the original function f(x), converging to a true critical point
+
+2. **Classification**: The Hessian matrix at each refined point is computed using automatic differentiation ([ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/)), and eigenvalue analysis determines whether the point is a minimum, maximum, saddle, or degenerate
+
+ForwardDiff.jl provides efficient forward-mode automatic differentiation for computing exact gradients and Hessians without numerical approximation errors.
 
 ## Hessian-Based Classification
 
-The `analyze_critical_points` function performs eigenvalue analysis to classify each critical point:
-
-```mermaid
-flowchart TD
-    H["Compute Hessian H(x*)"] --> E["Calculate eigenvalues λ₁, λ₂, ..."]
-    E --> Q{All λᵢ > 0?}
-    Q -->|Yes| MIN[/"Local Minimum"\]
-    Q -->|No| Q2{All λᵢ < 0?}
-    Q2 -->|Yes| MAX[\"Local Maximum"/]
-    Q2 -->|No| Q3{Any λᵢ ≈ 0?}
-    Q3 -->|Yes| DEG[/"Degenerate"\]
-    Q3 -->|No| SAD[/"Saddle Point"\]
-
-    style MIN fill:#90EE90
-    style MAX fill:#FFB6C1
-    style SAD fill:#FFD700
-    style DEG fill:#D3D3D3
-```
+The `analyze_critical_points` function computes the Hessian at each refined critical point and classifies it based on eigenvalue analysis:
 
 ```julia
 df_enhanced, df_min = analyze_critical_points(

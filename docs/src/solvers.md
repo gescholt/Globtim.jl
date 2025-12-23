@@ -6,7 +6,9 @@ Globtim uses polynomial system solvers to find critical points by solving ∇p(x
 
 ### HomotopyContinuation.jl (Default)
 
-Numerical polynomial system solver using homotopy continuation methods.
+State of the art numerical algebraic geometry method.
+
+**Website:** [https://www.juliahomotopycontinuation.org/](https://www.juliahomotopycontinuation.org/)
 
 ```julia
 solutions = solve_polynomial_system(
@@ -15,20 +17,11 @@ solutions = solve_polynomial_system(
 )
 ```
 
-**Advantages:**
-- Finds all complex solutions reliably
-- Handles high-degree systems well
-- Good performance for moderate dimensions
-- No external dependencies
+### msolve (Optional)
 
-**Limitations:**
-- Numerical accuracy limited by floating point
-- May miss solutions in degenerate cases
-- Performance degrades in high dimensions
+State of the art symbolic (exact) method, relies on Gröbner basis computations.
 
-### Msolve (Optional)
-
-Exact arithmetic solver for polynomial systems.
+**Website:** [https://msolve.lip6.fr/](https://msolve.lip6.fr/)
 
 ```julia
 solutions = solve_polynomial_system(
@@ -38,17 +31,7 @@ solutions = solve_polynomial_system(
 )
 ```
 
-**Advantages:**
-- Exact rational arithmetic
-- Guaranteed to find all solutions
-- Handles degenerate cases perfectly
-- Useful for verification
-
-**Limitations:**
-- Requires external installation
-- Slower than numerical methods
-- Memory intensive for large systems
-- Limited to moderate polynomial degrees
+**Note:** Requires external installation (see below).
 
 ## Installing Msolve
 
@@ -97,13 +80,13 @@ pol = Constructor(TR, 8)
 
 @polyvar x[1:2]
 
-# HomotopyContinuation (fast)
+# HomotopyContinuation (numerical)
 @time solutions_hc = solve_polynomial_system(
     x, 2, 8, pol.coeffs,
     solver="HC"
 )
 
-# Msolve (exact)
+# msolve (symbolic/exact)
 @time solutions_ms = solve_polynomial_system(
     x, 2, 8, pol.coeffs,
     solver="msolve"
