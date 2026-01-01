@@ -17,7 +17,7 @@ solutions = solve_polynomial_system(
 )
 ```
 
-### msolve (Optional)
+### msolve
 
 State of the art symbolic (exact) method, relies on Gröbner basis computations.
 

@@ -89,7 +89,7 @@ Two solvers are available:
 
 1. **[HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/)** (default): State of the art numerical algebraic geometry method
 
-2. **[msolve](https://msolve.lip6.fr/)** (optional): State of the art symbolic (exact) method, relies on Gröbner basis computations
+2. **[msolve](https://msolve.lip6.fr/)**: State of the art symbolic (exact) method, relies on Gröbner basis computations
 
 For detailed solver configuration and selection guidelines, see [Polynomial System Solvers](solvers.md).
 

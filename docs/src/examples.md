@@ -31,13 +31,13 @@ Visual examples of Globtim finding critical points on standard benchmark functio
 ![Deuflhard Function](assets/plots/deuflhard.png)
 
 ### Holder Table
-![Holder Table Function](assets/plots/holder_table.png)
+![Holder Table Function](assets/plots/holder_table.pdf)
 
 ### Beale
-![Beale Function](assets/plots/beale.png)
+![Beale Function](assets/plots/beale.pdf)
 
 ### Branin
-![Branin Function](assets/plots/branin.png)
+![Branin Function](assets/plots/branin.pdf)
 
 ---
 

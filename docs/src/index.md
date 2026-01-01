@@ -26,7 +26,8 @@ f(x)  →  Polynomial p(x)  →  Solve ∇p = 0  →  Refine with BFGS  →  All
          (Chebyshev fit)     (numerical or exact)
 ```
 
-![Globtim Pipeline](assets/plots/hero_pipeline.png)
+| ![Step 1](assets/plots/hero_step1_sample.pdf) | ![Step 2](assets/plots/hero_step2_polynomial.pdf) | ![Step 3](assets/plots/hero_step3_minima.pdf) |
+|:--:|:--:|:--:|
 
 For functions that vary on different scales in different regions, Globtim uses **adaptive subdivision** to build piecewise polynomial approximations that maintain accuracy everywhere.
 
@@ -37,9 +38,9 @@ julia> ]
 pkg> add Globtim
 ```
 
-### Optional Dependencies
-- **For visualization**: `add CairoMakie` or `add GLMakie`
-- **For exact solving**: Install [msolve](https://msolve.lip6.fr/) (symbolic method based on Gröbner basis computations)
+### Additional Dependencies
+- **Visualization**: `add CairoMakie` or `add GLMakie`
+- **Exact solving**: Install [msolve](https://msolve.lip6.fr/) (symbolic method based on Gröbner basis computations)
 
 ## Getting Started
 
