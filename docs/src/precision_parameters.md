@@ -1,10 +1,12 @@
 # Precision Parameters
 
-This guide provides comprehensive documentation for Globtim's precision parameter system, which allows you to control the numerical precision used in polynomial approximation for optimal performance and accuracy trade-offs.
+Globtim serves as an interface between **numeric** and **symbolic** computation. The polynomial approximation pipeline involves multiple stages - sampling, coefficient computation, basis conversion, and critical point solving - each benefiting from different precision strategies.
 
 ## Overview
 
-Globtim supports multiple precision types through the `precision` parameter in the `Constructor` function. Each precision type offers different trade-offs between computational performance, memory usage, and numerical accuracy.
+A key feature of Globtim is exploring which precision types work best at each stage of the algorithm. The goal is to remain **efficient and fast** while maintaining **accuracy** where it matters most.
+
+Globtim supports multiple precision types through the `precision` parameter in the `Constructor` function:
 
 ```julia
 # Basic syntax
@@ -17,10 +19,7 @@ pol = Constructor(TR, degree, precision=PrecisionType)
 
 **Standard double-precision floating-point arithmetic**
 
-- **Performance**: ⭐⭐⭐⭐⭐ (Fastest)
-- **Accuracy**: ⭐⭐⭐ (Standard)
-- **Memory**: ⭐⭐⭐⭐⭐ (Lowest)
-- **Best for**: General use, fast computation, production workflows
+The default numeric type in Julia. Fast and memory-efficient, suitable for most stages of the pipeline where machine precision is sufficient.
 
 ```julia
 pol = Constructor(TR, 8, precision=Float64Precision)
@@ -33,14 +32,11 @@ println("Coefficient type: $(eltype(pol.coeffs))")  # Float64
 - Standard choice for most applications
 - May accumulate numerical errors in high-degree polynomials
 
-### AdaptivePrecision ⭐ **Recommended**
+### AdaptivePrecision
 
 **Hybrid approach: Float64 for evaluation, BigFloat for coefficient manipulation**
 
-- **Performance**: ⭐⭐⭐⭐ (Very Good)
-- **Accuracy**: ⭐⭐⭐⭐⭐ (Excellent)
-- **Memory**: ⭐⭐⭐⭐ (Good)
-- **Best for**: High accuracy with good performance, extended precision needs
+Uses numeric precision where speed matters (function sampling) and extended precision where accuracy matters (coefficient computation and basis conversion). This reflects Globtim's role as a numeric/symbolic interface.
 
 ```julia
 pol = Constructor(TR, 8, precision=AdaptivePrecision)
@@ -64,10 +60,7 @@ println("Monomial coefficients: $(typeof(coeffs[1]))")  # BigFloat
 
 **Exact rational arithmetic with arbitrary precision**
 
-- **Performance**: ⭐⭐ (Slow)
-- **Accuracy**: ⭐⭐⭐⭐⭐ (Exact)
-- **Memory**: ⭐⭐ (High usage)
-- **Best for**: Exact arithmetic, symbolic computation, research applications
+Fully symbolic computation using `Rational{BigInt}`. Enables exact polynomial representations with no rounding errors, at the cost of computational overhead.
 
 ```julia
 pol = Constructor(TR, 8, precision=RationalPrecision)
@@ -85,10 +78,7 @@ println("Coefficient type: $(eltype(pol.coeffs))")  # Rational{BigInt}
 
 **Extended precision floating-point throughout**
 
-- **Performance**: ⭐ (Slowest)
-- **Accuracy**: ⭐⭐⭐⭐⭐ (Maximum)
-- **Memory**: ⭐ (Highest usage)
-- **Best for**: Maximum precision requirements, research applications
+Uses BigFloat (configurable precision, default 256 bits) at all stages. Provides maximum numeric precision when needed for validation or ill-conditioned problems.
 
 ```julia
 pol = Constructor(TR, 8, precision=BigFloatPrecision)
@@ -225,7 +215,7 @@ for degree in 4:2:12
 end
 ```
 
-#### AdaptivePrecision (Recommended Default)
+#### AdaptivePrecision
 - **High-dimensional problems (dim ≥ 4)**
 - **Extended precision requirements**
 - **Research applications needing accuracy**
@@ -571,9 +561,11 @@ end
 
 ## Summary
 
-- **AdaptivePrecision**: Recommended default for most applications
-- **Float64Precision**: Use for speed-critical batch processing
-- **RationalPrecision**: Use only for exact arithmetic requirements
-- **BigFloatPrecision**: Use only for maximum precision validation
+| Precision Type | Numeric/Symbolic | Use Case |
+|----------------|------------------|----------|
+| **Float64Precision** | Numeric | Fast batch processing, production workflows |
+| **AdaptivePrecision** | Hybrid | High-dimensional problems, coefficient analysis |
+| **RationalPrecision** | Symbolic | Exact arithmetic, symbolic computation |
+| **BigFloatPrecision** | Extended Numeric | Maximum precision validation |
 
-The precision parameter system in Globtim provides flexible control over the accuracy/performance trade-off, with `AdaptivePrecision` offering the best balance for most real-world applications.
+The precision parameter system reflects Globtim's role as a numeric/symbolic interface, allowing you to choose the right precision strategy for each stage of your computation.

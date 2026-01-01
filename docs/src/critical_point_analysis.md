@@ -12,6 +12,8 @@ The analysis proceeds in two steps:
 
 ForwardDiff.jl provides efficient forward-mode automatic differentiation for computing exact gradients and Hessians without numerical approximation errors.
 
+> **Note:** For comprehensive campaign analysis, statistical reporting, and result aggregation across multiple experiments, see [GlobtimPostProcessing](https://gitlab.com/globaloptim/globtimpostprocessing). The `analyze_critical_points` function documented here provides basic refinement and classification for individual experiments.
+
 ## Hessian-Based Classification
 
 The `analyze_critical_points` function computes the Hessian at each refined critical point and classifies it based on eigenvalue analysis:

@@ -6,15 +6,14 @@ Welcome to the comprehensive documentation for Globtim.jl - a Julia package for 
 
 ### For Users
 - **[Getting Started](src/getting_started.md)** - Installation, first steps, and precision parameters
-- **[Precision Parameters](src/precision_parameters.md)** - Comprehensive guide to precision types and performance trade-offs
-- **[API Reference](src/api_reference.md)** - Complete function reference with precision options
-- **[Examples](src/examples.md)** - Practical usage examples
+- **[Examples](src/examples.md)** - Practical usage examples with visual gallery
 - **[Core Algorithm](src/core_algorithm.md)** - Understanding the mathematical approach
+- **[API Reference](src/api_reference.md)** - Complete function reference with precision options
+- **[Precision Parameters](src/precision_parameters.md)** - Comprehensive guide to precision types and performance trade-offs
 
 ### For Developers
 - **[Development Guide](../DEVELOPMENT_GUIDE.md)** - Setup and contribution workflow
 - **[Package Dependencies](../PACKAGE_DEPENDENCIES.md)** - Complete dependency architecture and extension system
-- **[Test Documentation](src/test_documentation.md)** - Running and writing tests
 - **[Project Management](project-management/)** - GitLab workflow and sprint process
 
 ### For Contributors
@@ -35,11 +34,9 @@ The main user-facing documentation built with Documenter.jl:
 - **[Polynomial Approximation](src/polynomial_approximation.md)** - Approximation theory details
 - **[Critical Point Analysis](src/critical_point_analysis.md)** - Critical point finding and classification
 - **[Solvers](src/solvers.md)** - Polynomial system solvers (numerical and symbolic)
-- **[Visualization](src/visualization.md)** - Plotting and visualization capabilities
+- **[GlobtimPlots](src/globtimplots.md)** - Visualization with Makie
 - **[Sparsification](src/sparsification.md)** - Polynomial complexity reduction
 - **[Grid Formats](src/grid_formats.md)** - Sampling grid specifications
-- **[Test Documentation](src/test_documentation.md)** - Test suite organization
-- **[Test Running Guide](src/test_running_guide.md)** - How to run tests
 
 ### Feature Documentation (`features/`)
 Detailed information about Globtim.jl capabilities:
@@ -104,13 +101,8 @@ Historical documentation preserved for reference:
 3. Review [Critical Point Analysis](src/critical_point_analysis.md)
 4. Check [Solvers](src/solvers.md) for implementation details
 
-#### **Run tests or add new tests**
-1. Follow [Test Running Guide](src/test_running_guide.md)
-2. Review [Test Documentation](src/test_documentation.md)
-3. Check [Test Coverage Matrix](development/test_coverage_matrix.md)
-
 #### **Create visualizations**
-1. Review [Visualization](src/visualization.md) guide
+1. Review [GlobtimPlots](src/globtimplots.md) guide
 2. Check [Plotting Backends](features/plotting-backends.md) for setup
 3. Study [Examples](src/examples.md) for plotting code
 

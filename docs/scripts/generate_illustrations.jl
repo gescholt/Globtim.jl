@@ -41,7 +41,7 @@ mkpath(OUTPUT_DIR)
     generate_grid_comparison()
 
 Generate side-by-side comparison of isotropic vs anisotropic grids.
-Saves to: docs/src/assets/plots/grid_comparison.png
+Saves to: docs/src/assets/plots/grid_comparison.pdf
 """
 function generate_grid_comparison()
     fig = Figure(size=(900, 400), fontsize=14)
@@ -69,8 +69,8 @@ function generate_grid_comparison()
     ys_aniso = [y for _ in nodes_x for y in nodes_y]
     scatter!(ax2, xs_aniso, ys_aniso, markersize=8, color=:coral)
 
-    outpath = joinpath(OUTPUT_DIR, "grid_comparison.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "grid_comparison.pdf")
+    save(outpath, fig)
     @info "Saved grid comparison" path=outpath
     return fig
 end
@@ -80,7 +80,7 @@ end
 
 Generate heatmap showing a multiscale function that benefits from anisotropic grids.
 Shows why x-direction needs more points than y-direction.
-Saves to: docs/src/assets/plots/multiscale_function.png
+Saves to: docs/src/assets/plots/multiscale_function.pdf
 """
 function generate_multiscale_heatmap()
     fig = Figure(size=(700, 500), fontsize=14)
@@ -104,8 +104,8 @@ function generate_multiscale_heatmap()
     text!(ax, -0.9, -0.85, text="High frequency in x\n→ needs more points",
         fontsize=11, color=:white, align=(:left, :bottom))
 
-    outpath = joinpath(OUTPUT_DIR, "multiscale_function.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "multiscale_function.pdf")
+    save(outpath, fig)
     @info "Saved multiscale heatmap" path=outpath
     return fig
 end
@@ -114,7 +114,7 @@ end
     generate_critical_point_example()
 
 Generate example showing critical points on a 2D function surface.
-Saves to: docs/src/assets/plots/critical_points_example.png
+Saves to: docs/src/assets/plots/critical_points_example.pdf
 """
 function generate_critical_point_example()
     fig = Figure(size=(800, 400), fontsize=14)
@@ -151,80 +151,108 @@ function generate_critical_point_example()
         xlabel="x", ylabel="y", zlabel="f(x,y)",
         azimuth=-0.4π)
 
-    surface!(ax2, xs, ys, zs, colormap=:viridis, alpha=0.8)
+    surface!(ax2, xs, ys, zs, colormap=:viridis, alpha=0.8, rasterize=5)
 
-    outpath = joinpath(OUTPUT_DIR, "critical_points_example.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "critical_points_example.pdf")
+    save(outpath, fig)
     @info "Saved critical points example" path=outpath
     return fig
 end
 
-"""
-    generate_hero_illustration()
-
-Generate hero illustration for landing page showing the Globtim pipeline:
-- Original function with contours
-- Polynomial approximation critical points
-- Visual representation of the algorithm workflow
-
-Saves to: docs/src/assets/plots/hero_pipeline.png
-"""
-function generate_hero_illustration()
-    fig = Figure(size=(1500, 550), fontsize=16)
-
-    # Himmelblau-like function with multiple minima
+# Shared data for hero illustrations (Himmelblau-like function)
+function _hero_data()
     f(x, y) = (x^2 + y - 11)^2 + (x + y^2 - 7)^2
-
     xs = range(-5, 5, length=150)
     ys = range(-5, 5, length=150)
     zs = [f(x, y) for x in xs, y in ys]
+    return xs, ys, zs
+end
 
-    # Panel 1: Original function
-    ax1 = Axis(fig[1, 1],
+"""
+    generate_hero_step1()
+
+Generate Step 1 of hero illustration: Sample the original function.
+Saves to: docs/src/assets/plots/hero_step1_sample.pdf
+"""
+function generate_hero_step1()
+    xs, ys, zs = _hero_data()
+    fig = Figure(size=(600, 550), fontsize=16)
+
+    ax = Axis(fig[1, 1],
         title="1. Sample Function",
         xlabel="x", ylabel="y",
         aspect=DataAspect())
-    contourf!(ax1, xs, ys, zs, levels=20, colormap=:viridis)
-    text!(ax1, 0, 4.2, text="f(x,y)", fontsize=16, align=(:center, :center), color=:white)
+    contourf!(ax, xs, ys, zs, levels=20, colormap=:viridis)
+    text!(ax, 0, 4.2, text="f(x,y)", fontsize=18, align=(:center, :center), color=:white)
 
-    # Panel 2: Polynomial approximation with grid
-    ax2 = Axis(fig[1, 2],
+    outpath = joinpath(OUTPUT_DIR, "hero_step1_sample.pdf")
+    save(outpath, fig)
+    @info "Saved hero step 1" path=outpath
+    return fig
+end
+
+"""
+    generate_hero_step2()
+
+Generate Step 2 of hero illustration: Polynomial approximation with sampling grid.
+Saves to: docs/src/assets/plots/hero_step2_polynomial.pdf
+"""
+function generate_hero_step2()
+    xs, ys, zs = _hero_data()
+    fig = Figure(size=(600, 550), fontsize=16)
+
+    ax = Axis(fig[1, 1],
         title="2. Polynomial Approximation",
         xlabel="x", ylabel="y",
         aspect=DataAspect())
-    contourf!(ax2, xs, ys, zs, levels=20, colormap=:viridis)
+    contourf!(ax, xs, ys, zs, levels=20, colormap=:viridis)
 
     # Show sampling grid (Chebyshev-like)
     grid_n = 8
     grid_pts = [cos(π * k / grid_n) * 5 for k in 0:grid_n]
     gx = [x for x in grid_pts for _ in grid_pts]
     gy = [y for _ in grid_pts for y in grid_pts]
-    scatter!(ax2, gx, gy, markersize=6, color=:white, alpha=0.7)
-    text!(ax2, 0, 4.2, text="p(x,y) ≈ f", fontsize=16, align=(:center, :center), color=:white)
+    scatter!(ax, gx, gy, markersize=8, color=:white, alpha=0.7)
+    text!(ax, 0, 4.2, text="p(x,y) ≈ f", fontsize=18, align=(:center, :center), color=:white)
 
-    # Panel 3: Critical points found
-    ax3 = Axis(fig[1, 3],
+    outpath = joinpath(OUTPUT_DIR, "hero_step2_polynomial.pdf")
+    save(outpath, fig)
+    @info "Saved hero step 2" path=outpath
+    return fig
+end
+
+"""
+    generate_hero_step3()
+
+Generate Step 3 of hero illustration: Find all critical points/minima.
+Saves to: docs/src/assets/plots/hero_step3_minima.pdf
+"""
+function generate_hero_step3()
+    xs, ys, zs = _hero_data()
+
+    # Use Globtim to find critical points (Himmelblau function)
+    f_vec(x) = (x[1]^2 + x[2] - 11)^2 + (x[1] + x[2]^2 - 7)^2
+    domain_range = 5.0
+    @info "Finding critical points for Himmelblau (hero step 3)..."
+    df = find_critical_points(f_vec, [0.0, 0.0], domain_range, degree=12)
+
+    fig = Figure(size=(600, 550), fontsize=16)
+
+    ax = Axis(fig[1, 1],
         title="3. Find All Minima",
         xlabel="x", ylabel="y",
         aspect=DataAspect())
-    contour!(ax3, xs, ys, zs, levels=20, colormap=:Blues)
+    contour!(ax, xs, ys, zs, levels=20, colormap=:Blues)
 
-    # Himmelblau minima (approximate locations)
-    minima_x = [3.0, -2.805, -3.779, 3.584]
-    minima_y = [2.0, 3.131, -3.283, -1.848]
-    scatter!(ax3, minima_x, minima_y,
-        color=:limegreen, markersize=22, marker=:star5,
+    # Plot minima found by Globtim
+    scatter!(ax, df.x1, df.x2,
+        color=:limegreen, markersize=24, marker=:star5,
         strokecolor=:black, strokewidth=2)
-    text!(ax3, 0, 4.2, text="∇p = 0 → BFGS", fontsize=16, align=(:center, :center), color=:black)
+    text!(ax, 0, 4.2, text="∇p = 0 → BFGS", fontsize=18, align=(:center, :center), color=:black)
 
-    # Add space between panels and arrows
-    colgap!(fig.layout, 60)
-    Label(fig[1, 1:2], "→", fontsize=60, tellwidth=false, halign=1.0)
-    Label(fig[1, 2:3], "→", fontsize=60, tellwidth=false, halign=1.0)
-
-    outpath = joinpath(OUTPUT_DIR, "hero_pipeline.png")
-    save(outpath, fig, px_per_unit=2)
-    @info "Saved hero illustration" path=outpath
+    outpath = joinpath(OUTPUT_DIR, "hero_step3_minima.pdf")
+    save(outpath, fig)
+    @info "Saved hero step 3" path=outpath n_critical_points=nrow(df)
     return fig
 end
 
@@ -233,7 +261,7 @@ end
 
 Generate Deuflhard function illustration (level sets + 3D surface).
 Uses actual Globtim Deuflhard function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/deuflhard.png
+Saves to: docs/src/assets/plots/deuflhard.pdf
 """
 function generate_deuflhard()
     fig = Figure(size=(1000, 450), fontsize=14)
@@ -244,7 +272,7 @@ function generate_deuflhard()
 
     # Find critical points via Globtim
     @info "Finding critical points for Deuflhard..."
-    df = find_critical_points(f, [0.0, 0.0], domain_range, degree=12)
+    df = find_critical_points(f, [0.0, 0.0], domain_range, degree=22)
 
     # Create evaluation grid
     xs = range(-domain_range, domain_range, length=150)
@@ -272,10 +300,10 @@ function generate_deuflhard()
         xlabel="x", ylabel="y", zlabel="f(x,y)",
         azimuth=-0.4π)
 
-    surface!(ax2, xs, ys, zs, colormap=:viridis)
+    surface!(ax2, xs, ys, zs, colormap=:viridis, rasterize=5)
 
-    outpath = joinpath(OUTPUT_DIR, "deuflhard.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "deuflhard.pdf")
+    save(outpath, fig)
     @info "Saved Deuflhard illustration" path=outpath n_critical_points=nrow(df)
     return fig
 end
@@ -285,7 +313,7 @@ end
 
 Generate Holder Table function illustration (level sets + 3D surface).
 Uses actual Globtim HolderTable function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/holder_table.png
+Saves to: docs/src/assets/plots/holder_table.pdf
 """
 function generate_holder_table()
     fig = Figure(size=(1000, 450), fontsize=14)
@@ -296,7 +324,7 @@ function generate_holder_table()
 
     # Find critical points via Globtim
     @info "Finding critical points for HolderTable..."
-    df = find_critical_points(f, [0.0, 0.0], domain_range, degree=12)
+    df = find_critical_points(f, [0.0, 0.0], domain_range, degree=18)
 
     # Create evaluation grid
     xs = range(-domain_range, domain_range, length=200)
@@ -324,10 +352,10 @@ function generate_holder_table()
         xlabel="x", ylabel="y", zlabel="f(x,y)",
         azimuth=-0.4π)
 
-    surface!(ax2, xs, ys, zs, colormap=:viridis)
+    surface!(ax2, xs, ys, zs, colormap=:viridis, rasterize=5)
 
-    outpath = joinpath(OUTPUT_DIR, "holder_table.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "holder_table.pdf")
+    save(outpath, fig)
     @info "Saved Holder Table illustration" path=outpath n_critical_points=nrow(df)
     return fig
 end
@@ -337,7 +365,7 @@ end
 
 Generate Beale function illustration (level sets + 3D surface).
 Uses actual Globtim Beale function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/beale.png
+Saves to: docs/src/assets/plots/beale.pdf
 """
 function generate_beale()
     fig = Figure(size=(1000, 450), fontsize=14)
@@ -376,10 +404,10 @@ function generate_beale()
         xlabel="x", ylabel="y", zlabel="log₁₀(f+1)",
         azimuth=-0.4π)
 
-    surface!(ax2, xs, ys, log10.(zs .+ 1), colormap=:viridis)
+    surface!(ax2, xs, ys, log10.(zs .+ 1), colormap=:viridis, rasterize=5)
 
-    outpath = joinpath(OUTPUT_DIR, "beale.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "beale.pdf")
+    save(outpath, fig)
     @info "Saved Beale illustration" path=outpath n_critical_points=nrow(df)
     return fig
 end
@@ -389,7 +417,7 @@ end
 
 Generate Branin function illustration (level sets + 3D surface).
 Uses actual Globtim Branin function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/branin.png
+Saves to: docs/src/assets/plots/branin.pdf
 """
 function generate_branin()
     fig = Figure(size=(1000, 450), fontsize=14)
@@ -432,10 +460,10 @@ function generate_branin()
         xlabel="x", ylabel="y", zlabel="f(x,y)",
         azimuth=-0.4π)
 
-    surface!(ax2, xs, ys, zs, colormap=:viridis)
+    surface!(ax2, xs, ys, zs, colormap=:viridis, rasterize=5)
 
-    outpath = joinpath(OUTPUT_DIR, "branin.png")
-    save(outpath, fig, px_per_unit=2)
+    outpath = joinpath(OUTPUT_DIR, "branin.pdf")
+    save(outpath, fig)
     @info "Saved Branin illustration" path=outpath n_critical_points=nrow(df)
     return fig
 end
@@ -451,7 +479,9 @@ function generate_all()
     generate_grid_comparison()
     generate_multiscale_heatmap()
     generate_critical_point_example()
-    generate_hero_illustration()
+    generate_hero_step1()
+    generate_hero_step2()
+    generate_hero_step3()
     generate_deuflhard()
     generate_holder_table()
     generate_beale()
