@@ -26,7 +26,22 @@ f(x)  →  Polynomial p(x)  →  Solve ∇p = 0  →  Refine with BFGS  →  All
          (Chebyshev fit)     (HomotopyContinuation)
 ```
 
+| ![Step 1](assets/plots/hero_step1_sample.png) | ![Step 2](assets/plots/hero_step2_polynomial.png) | ![Step 3](assets/plots/hero_step3_minima.png) |
+|:--:|:--:|:--:|
+
 For functions that vary on different scales in different regions, Globtim uses **adaptive subdivision** to build piecewise polynomial approximations that maintain accuracy everywhere.
+
+## Benchmark Examples
+
+Globtim finding all critical points on standard test functions:
+
+| ![Deuflhard](assets/plots/deuflhard.png) | ![Holder Table](assets/plots/holder_table.png) |
+|:--:|:--:|
+| **Deuflhard** | **Holder Table** |
+
+| ![Beale](assets/plots/beale.png) | ![Branin](assets/plots/branin.png) |
+|:--:|:--:|
+| **Beale** | **Branin** |
 
 ## Installation
 

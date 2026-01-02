@@ -23,6 +23,24 @@ julia --project=. Examples/hpc_minimal_2d_example.jl
 
 ---
 
+## Test Function Gallery
+
+Visual examples of Globtim finding critical points on standard benchmark functions.
+
+### Deuflhard
+![Deuflhard Function](assets/plots/deuflhard.png)
+
+### Holder Table
+![Holder Table Function](assets/plots/holder_table.png)
+
+### Beale
+![Beale Function](assets/plots/beale.png)
+
+### Branin
+![Branin Function](assets/plots/branin.png)
+
+---
+
 ## Basic 2D Workflow
 
 **See:** `Examples/hpc_minimal_2d_example.jl`
