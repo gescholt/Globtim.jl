@@ -29,4 +29,7 @@ makedocs(
     checkdocs = :none
 )
 
-deploydocs(repo = "github.com/gescholt/Globtim.jl.git")
+deploydocs(
+    repo = "github.com/gescholt/Globtim.jl.git",
+    versions = ["stable" => "dev"]
+)
