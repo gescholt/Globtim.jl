@@ -169,14 +169,18 @@ export generate_anisotropic_grid
 # export get_grid_dimensions, is_anisotropic
 
 # Adaptive subdivision - error-driven domain refinement
-export Subdomain, SubdivisionTree,
+export Subdomain, SubdivisionTree, TreeStatistics,
     adaptive_refine, two_phase_refine,
     estimate_subdomain_error, subdivide_domain,
     select_cut_dimension, find_optimal_cut_sparse,
     get_bounds, n_leaves, n_active, total_error, error_balance_ratio,
     dimension, volume,  # Subdomain utilities
     select_cut_dimension_by_width,  # Fallback dimension selection
-    display_tree, get_max_depth  # Tree visualization & info
+    display_tree, get_max_depth,  # Tree visualization & info
+    compute_tree_statistics, print_tree_statistics,  # Statistics
+    get_leaf_subdomains, get_converged_leaves, get_active_leaves,  # Accessors
+    find_critical_points_in_tree,  # Critical point extraction
+    save_tree, load_tree  # Serialization
 
 # GPU acceleration - optional (requires CUDA.jl)
 export gpu_available, gpu_memory_info, estimate_gpu_memory_requirement

@@ -11,6 +11,8 @@ using LinearAlgebra
 using Statistics
 using Base.Threads
 using Printf
+using JLD2
+using DynamicPolynomials
 
 #==============================================================================#
 #                           DATA STRUCTURES                                     #
@@ -1255,4 +1257,182 @@ function two_phase_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Flo
                       "($(length(tree.converged_leaves)) converged)")
 
     return tree
+end
+
+#==============================================================================#
+#                    TREE STATISTICS AND ACCESSORS                             #
+#==============================================================================#
+
+"""
+    TreeStatistics
+
+Summary statistics for a SubdivisionTree.
+
+# Fields
+- `n_leaves::Int`: Total number of leaf subdomains
+- `n_converged::Int`: Number of converged leaves
+- `n_active::Int`: Number of active (unconverged) leaves
+- `dimension::Int`: Dimension of the domain
+- `total_l2_error::Float64`: Sum of L2 errors across all leaves
+- `max_depth::Int`: Maximum depth in the tree
+- `max_error::Float64`: Maximum L2 error among leaves
+- `min_error::Float64`: Minimum L2 error among leaves
+"""
+struct TreeStatistics
+    n_leaves::Int
+    n_converged::Int
+    n_active::Int
+    dimension::Int
+    total_l2_error::Float64
+    max_depth::Int
+    max_error::Float64
+    min_error::Float64
+end
+
+"""
+    compute_tree_statistics(tree::SubdivisionTree)
+
+Compute summary statistics for the subdivision tree.
+"""
+function compute_tree_statistics(tree::SubdivisionTree)
+    leaf_ids = vcat(tree.active_leaves, tree.converged_leaves)
+    errors = [tree.subdomains[id].l2_error for id in leaf_ids]
+    finite_errors = filter(isfinite, errors)
+
+    return TreeStatistics(
+        n_leaves(tree),
+        length(tree.converged_leaves),
+        length(tree.active_leaves),
+        dimension(tree.subdomains[tree.root_id]),
+        total_error(tree),
+        get_max_depth(tree),
+        isempty(finite_errors) ? Inf : maximum(finite_errors),
+        isempty(finite_errors) ? Inf : minimum(finite_errors)
+    )
+end
+
+"""
+    get_leaf_subdomains(tree::SubdivisionTree)
+
+Return all leaf subdomains (both active and converged).
+"""
+function get_leaf_subdomains(tree::SubdivisionTree)
+    leaf_ids = vcat(tree.active_leaves, tree.converged_leaves)
+    return [tree.subdomains[id] for id in leaf_ids]
+end
+
+"""
+    get_converged_leaves(tree::SubdivisionTree)
+
+Return converged leaf subdomains.
+"""
+function get_converged_leaves(tree::SubdivisionTree)
+    return [tree.subdomains[id] for id in tree.converged_leaves]
+end
+
+"""
+    get_active_leaves(tree::SubdivisionTree)
+
+Return active (unconverged) leaf subdomains.
+"""
+function get_active_leaves(tree::SubdivisionTree)
+    return [tree.subdomains[id] for id in tree.active_leaves]
+end
+
+"""
+    find_critical_points_in_tree(tree::SubdivisionTree)
+
+Find critical points in all leaf subdomains by solving the gradient polynomial system.
+
+For each leaf with a polynomial, solves ∇p(x) = 0 using HomotopyContinuation and
+transforms solutions from normalized [-1,1]^n coordinates to original domain coordinates.
+
+Returns a vector of critical points (as vectors) found across all leaves.
+"""
+function find_critical_points_in_tree(tree::SubdivisionTree)
+    cps = Vector{Float64}[]
+
+    for sd in get_leaf_subdomains(tree)
+        sd.polynomial === nothing && continue
+
+        pol = sd.polynomial
+        n_dim = dimension(sd)
+
+        # Create polynomial variables
+        @polyvar x[1:n_dim]
+
+        # Solve for critical points in normalized coordinates
+        local_cps = solve_polynomial_system(x, pol)
+
+        # Transform from [-1,1]^n to original coordinates
+        for cp_normalized in local_cps
+            cp_original = sd.center .+ sd.half_widths .* cp_normalized
+            push!(cps, cp_original)
+        end
+    end
+
+    return cps
+end
+
+"""
+    print_tree_statistics(tree::SubdivisionTree; io::IO=stdout)
+
+Print tree statistics to the specified IO stream.
+"""
+function print_tree_statistics(tree::SubdivisionTree; io::IO=stdout)
+    stats = compute_tree_statistics(tree)
+
+    println(io, "SubdivisionTree Statistics")
+    println(io, "  Dimension: $(stats.dimension)")
+    println(io, "  Leaves: $(stats.n_leaves) ($(stats.n_converged) converged, $(stats.n_active) active)")
+    println(io, "  Max depth: $(stats.max_depth)")
+    println(io, "  Total L2 error: $(stats.total_l2_error)")
+    println(io, "  Error range: [$(stats.min_error), $(stats.max_error)]")
+end
+
+#==============================================================================#
+#                         SERIALIZATION                                        #
+#==============================================================================#
+
+"""
+    save_tree(filename::String, tree::SubdivisionTree; metadata::Dict=Dict())
+
+Save a SubdivisionTree to a JLD2 file.
+
+# Arguments
+- `filename`: Path to save the tree
+- `tree`: The SubdivisionTree to save
+- `metadata`: Optional dictionary of metadata to store with the tree
+"""
+function save_tree(filename::String, tree::SubdivisionTree; metadata::Dict=Dict())
+    JLD2.jldsave(filename;
+        subdomains = tree.subdomains,
+        active_leaves = tree.active_leaves,
+        converged_leaves = tree.converged_leaves,
+        root_id = tree.root_id,
+        metadata = metadata
+    )
+end
+
+"""
+    load_tree(filename::String)
+
+Load a SubdivisionTree from a JLD2 file.
+
+# Returns
+- `(tree::SubdivisionTree, metadata::Dict)`: The loaded tree and any associated metadata
+"""
+function load_tree(filename::String)
+    data = JLD2.load(filename)
+
+    tree = SubdivisionTree(
+        data["subdomains"],
+        data["active_leaves"],
+        data["converged_leaves"],
+        data["root_id"]
+    )
+
+    metadata = get(data, "metadata", Dict())
+
+    return tree, metadata
 end
