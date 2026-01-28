@@ -524,7 +524,7 @@ function construct_polynomial_on_subdomain(::Function, subdomain::Subdomain,
     # Create ApproxPoly with anisotropic scale_factor
     return ApproxPoly{Float64}(
         coeffs,
-        Lambda,
+        Lambda.data,  # Pass the support matrix, not the full NamedTuple
         d_spec,
         nrm,
         size(samples, 1),
@@ -1362,7 +1362,12 @@ function find_critical_points_in_tree(tree::SubdivisionTree)
         @polyvar x[1:n_dim]
 
         # Solve for critical points in normalized coordinates
-        local_cps = solve_polynomial_system(x, pol)
+        local_cps = try
+            solve_polynomial_system_from_approx(x, pol)
+        catch e
+            @warn "Failed to find critical points in subdomain" exception=(e, catch_backtrace())
+            Vector{Float64}[]
+        end
 
         # Transform from [-1,1]^n to original coordinates
         for cp_normalized in local_cps
