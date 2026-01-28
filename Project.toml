@@ -48,13 +48,9 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [weakdeps]
-Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
-UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [extensions]
-GlobtimAnalysisExt = ["Clustering", "Distributions"]
 GlobtimCUDAExt = ["CUDA"]
 
 [compat]
@@ -62,7 +58,6 @@ Accessors = "0.1"
 ArgParse = "1.2.0"
 BenchmarkTools = "1.6.3"
 CSV = "0.10.15"
-Clustering = "0.15"
 ConstructionBase = "1"
 CUDA = "5"
 Dagger = "0.19.1"
@@ -70,7 +65,6 @@ DataFrames = "1.6"
 DataStructures = "0.18, 0.19"
 Dates = "1"
 DifferentialEquations = "7.16.1"
-Distributions = "0.25"
 DrWatson = "2.19.1"
 DynamicPolynomials = "0.6"
 ForwardDiff = "=0.10.39, 1"
@@ -103,7 +97,6 @@ StructTypes = "1.11.0"
 TOML = "1"
 Test = "1"
 TimerOutputs = "0.5"
-UUIDs = "1.10.5"
 julia = "1.10, 1.11, 1.12"
 
 [extras]

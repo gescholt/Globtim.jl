@@ -252,13 +252,43 @@ include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
 
-# Data I/O functions from GlobtimDataExt (available when CSV, DataFrames are loaded)
+# Data I/O functions (CSV and DataFrames are main dependencies)
 export load_data, save_data, create_results_dataframe
 
-# Stub functions that will be implemented by GlobtimDataExt
-function load_data end
-function save_data end
-function create_results_dataframe end
+using CSV
+
+"""
+    load_data(filepath::String) -> DataFrame
+
+Load data from CSV file.
+"""
+function load_data(filepath::String)
+    return CSV.read(filepath, DataFrame)
+end
+
+"""
+    save_data(data::DataFrame, filepath::String)
+
+Save DataFrame to CSV file.
+"""
+function save_data(data::DataFrame, filepath::String)
+    CSV.write(filepath, data)
+end
+
+"""
+    create_results_dataframe() -> DataFrame
+
+Create a standard results dataframe structure.
+"""
+function create_results_dataframe()
+    return DataFrame(
+        function_name = String[],
+        critical_points = Int[],
+        computation_time = Float64[],
+        degree = Int[],
+        samples = Int[]
+    )
+end
 
 # GPU acceleration stub functions - implemented by GlobtimCUDAExt when CUDA.jl is loaded
 """
