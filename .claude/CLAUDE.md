@@ -84,7 +84,7 @@ This package must remain lightweight and suitable for:
 ❌ **Application-Specific Code:**
 - Domain-specific models → Use Examples/ directory
 - Custom objective functions → Use Dynamic_objectives package
-- Experiment scripts → Use fav_exmpl/ or create separate repo
+- Experiment scripts → Use research/fav_exmpl/ or create separate repo
 
 ## Architecture: Separation of Concerns
 
