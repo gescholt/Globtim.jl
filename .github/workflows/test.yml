@@ -3,11 +3,11 @@ name: Runtests
 on:
   push:
     branches:
-      - main
+      - github-release
       - clean-version
   pull_request:
     branches:
-      - main
+      - github-release
       - clean-version
 
 env:
