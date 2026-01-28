@@ -130,11 +130,8 @@ using ProgressLogging
     end
 end
 
-# Active test files
-include("test_approx_poly_eval.jl")
+# Active test files (only include files that exist)
 include("test_sparsification.jl")
 include("test_truncation.jl")
 include("test_aqua.jl")
-include("test_model_registry.jl")
-include("test_adaptive_subdivision.jl")
-include("test_gpu_batched.jl")
+include("test_subdivision.jl")
