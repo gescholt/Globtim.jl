@@ -2,6 +2,36 @@
 docs/build/
 Manifest.toml
 
+# =============================================================================
+# Development-only content (available on GitLab dev branch only)
+# These directories are excluded from public GitHub releases
+# =============================================================================
+
+# Research experiments (private - on dev branch)
+experiments/
+
+# Internal tools and scripts
+tools/
+scripts/
+
+# Test debugging and archived tests
+test/debugging/
+test/archived_*/
+
+# Internal documentation (development, HPC, infrastructure)
+docs/hpc/
+docs/development/
+docs/troubleshooting/
+docs/bugfixes/
+docs/features/
+docs/infrastructure/
+
+# GitLab CI configuration (not needed on GitHub)
+.gitlab-ci.yml
+.gitlab/
+
+# =============================================================================
+
 # OS files
 .DS_Store
 **/.DS_Store
