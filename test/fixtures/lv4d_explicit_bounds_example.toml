@@ -1,0 +1,30 @@
+# Example: ODE Experiment with Explicit Domain Bounds
+# Alternative domain specification strategy
+
+[model_config]
+name = "lotka_volterra_4d"
+dimension = 4
+true_parameters = [1.5, 3.0, 1.0, 1.0]
+initial_conditions = [1.0, 1.0]
+
+[domain_config]
+strategy = "explicit_bounds"
+# Explicit bounds for each of the 4 parameters
+bounds = [
+    [1.1, 1.9],   # a1: [1.1, 1.9]
+    [2.2, 3.8],   # a2: [2.2, 3.8]
+    [0.6, 1.4],   # b1: [0.6, 1.4]
+    [0.6, 1.4]    # b2: [0.6, 1.4]
+]
+
+[computation_config]
+samples_per_dim = 16
+degrees = [4, 6, 8, 10, 12]  # Test fewer degrees
+precision_mode = "adaptive"
+
+[solver_config]
+method = "Rosenbrock23"
+abstol = 1.0e-10
+reltol = 1.0e-10
+time_span = [0.0, 10.0]
+saveat = 0.1

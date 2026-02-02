@@ -1,0 +1,200 @@
+# Build and documentation
+docs/build/
+Manifest.toml
+
+# OS files
+.DS_Store
+**/.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+
+# 3rd party tool directories
+.augment/
+
+# Temporary files
+*.tmp
+*.temp
+tmp_output_*.ms
+*_output/
+
+# Example outputs
+Examples/**/inputs.ms
+Examples/**/outputs.ms
+Examples/**/*.png
+Examples/**/*.pdf
+
+# All image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+*.tiff
+*.tif
+*.webp
+*.ico
+*.heic
+*.heif
+
+# Exception: Documentation illustration assets
+!docs/src/assets/plots/*.png
+
+# Notebooks not ready for public release
+Examples/Notebooks/AnisotropicGridComparison.ipynb
+Examples/Notebooks/Triple_Graph*.ipynb
+
+# Data outputs
+data/figures/
+
+# Environment files with secrets
+.env.gitlab
+.env.gitlab.local
+tools/gitlab/config.json
+tools/gitlab/.gitlab-token
+.gitlab-token
+gitlab-token.txt
+
+# SSH and server configuration - NEVER COMMIT THESE
+*.pem
+*.key
+*_rsa
+*_ed25519
+*_ecdsa
+id_*
+ssh_config
+server_config.sh
+cluster_config.sh
+fileserver_config.sh
+.ssh/
+ssh_keys/
+
+# Server connection scripts with credentials
+*_server_connect.sh
+*_cluster_connect.sh
+*_fileserver_connect.sh
+
+# Additional security patterns
+*password*
+*secret*
+*token*
+*credential*
+*.p12
+*.pfx
+config.ini
+settings.ini
+.env*
+!.env.example
+
+# Node.js dependencies
+docs/node_modules/
+docs/package-lock.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Claude Code cache and memory
+.cache/
+.claudemem
+.claude/
+
+# GitLab internal configs (not for public release)
+.gitlab_config
+.gitlab_agent_config
+.gitlab-ci.yml
+.gitlab-ci.yml.npm-example
+
+# HPC test results (keep locally but don't commit)
+hpc/jobs/submission/collected_results/
+
+# Build artifacts and temporary directories
+build_*/
+bundle_*/
+*_bundle/
+*.tar.gz
+*.zip
+
+# Log files and job outputs
+*.out
+*.err
+*.log
+globtim_*_tests_*.out
+globtim_*_tests_*.err
+
+# Temporary Julia scripts and debugging files  
+analyze_*.jl
+create_*.jl
+extract_*.jl
+fix_*.jl
+!scripts/fix_test_manifest.jl
+test_*.jl
+verify_*.jl
+debug_*.jl
+*_debug.jl
+*_validation.jl
+*_test.jl
+simple_*.jl
+investigate_*.jl
+hpc_*_debug.jl
+
+# SLURM job files
+*.slurm
+slurm-jobs/
+
+# Cleanup analysis files (temporary - archive when complete)
+*_CLEANUP_ANALYSIS.md
+*_WORKFLOW_ANALYSIS.md
+
+# Hook state and monitoring files
+tools/hpc/hooks/state/*.json
+tools/hpc/monitoring/dashboard/*.html
+tools/hpc/monitoring/performance/*.json
+tools/hpc/monitoring/performance/*.log
+
+# Temporary analysis and collection files
+comprehensive_collection_analysis.jl
+simple_collection_analysis.jl
+actionable_optimization_plan.jl
+
+# Temporary output and result directories (preserve in proper locations)
+node_experiments/
+*/outputs/
+*/results/
+
+# Generated experiment files (auto-generated from templates)
+experiments/generated/*.jl
+
+# Result data files (JSON/CSV/PNG outputs)
+*_results.json
+*_summary.json
+*_analysis.csv
+*_index.json
+*_convergence_analysis.png
+*_critical_point_analysis.png
+
+# Archive and backup directories
+archives/
+!archives/tools_hpc_archived_2025_10_10/
+backup_*/
+archive_*/
+*_archive_*/
+cluster_results_*/
+collected_*_results/
+*_comparison_results/
+
+# Experiment results - DEPRECATED legacy directories (use GLOBTIM_RESULTS_ROOT instead)
+# These are kept in .gitignore for backward compatibility only
+# New experiments should use standardized paths via OutputPathManager
+hpc_results/
+test_results/
+local_results/
+
+# Note: With standardized output system, experiments write to:
+#   $GLOBTIM_RESULTS_ROOT/{objective_name}/{experiment_id}_{timestamp}/
+# This directory is outside the repository and doesn't need .gitignore

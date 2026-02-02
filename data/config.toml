@@ -1,0 +1,80 @@
+# Test Functions Configuration
+
+[tref]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 120
+sample_range = 0.375  # 3/8
+tolerance = 3e-4
+
+[tref_small]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 40
+sample_range = 0.1
+tolerance = 3e-4
+
+[CrossInTray]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 120
+sample_range = 10.0  # a/b
+tolerance = 5e-2
+delta = 0.5
+alpha = 0.1
+
+[Deuflhard]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 120
+sample_range = 1.2  # 12/10
+tolerance = 3e-4
+delta = 0.5
+alpha = 0.1
+
+[dejong5]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 120
+sample_range = 50
+tolerance = 3e-4
+delta = 0.5 
+alpha = 0.1
+
+[gaussian]
+dim = 2 
+center = [0.0, 0.0]
+num_samples = 120 
+sample_range = 1.0
+tolerance = 3e-4
+delta = 0.5
+alpha = 0.1
+
+[HolderTable]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 120 
+sample_range = 10
+tolerance = 3e-4
+delta = 0.5
+alpha = 0.1
+
+[HolderSmall]
+dim = 2
+center = [0.0, 0.0]
+num_samples = 30 
+sample_range = 10
+tolerance = 3e-4
+delta = 0.5
+alpha = 0.1
+
+[Deuflhard_4d]
+dim = 4
+center = [0.5, -0.5, 0.5, -0.5]
+num_samples = 10
+sample_range = 0.6
+tolerance = 3e-4
+delta = 0.5
+alpha = 0.1
+
+
