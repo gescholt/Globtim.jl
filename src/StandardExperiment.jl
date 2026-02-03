@@ -600,7 +600,7 @@ function save_experiment_summary(summary::Dict, output_dir::String)
     # Save JLD2 with Git provenance (DrWatson) - convert symbols to strings for JLD2
     jld2_path = joinpath(output_dir, "results_summary.jld2")
     summary_for_jld2 = Dict{String, Any}(string(k) => v for (k, v) in summary)
-    tagsave(jld2_path, summary_for_jld2)
+    tagsave(jld2_path, summary_for_jld2; warn=false)
 end
 
 """
