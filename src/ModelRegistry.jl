@@ -1,7 +1,7 @@
 """
 ModelRegistry.jl
 
-Centralized registry for ODE models and benchmark functions used in globtimcore.
+Centralized registry for ODE models and benchmark functions used in globtim.
 Provides a unified API for querying, validating, and retrieving model definitions.
 
 # Example Usage

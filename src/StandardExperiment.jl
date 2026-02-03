@@ -6,7 +6,7 @@ This module now exports ONLY raw critical points from HomotopyContinuation.
 
 Provides standardized experiment execution that:
 - Eliminates code duplication across experiment templates
-- Exports raw critical points to CSV (no refinement in globtimcore)
+- Exports raw critical points to CSV (no refinement in globtim)
 - Integrates with existing infrastructure (hooks, CLI, DrWatson)
 - Supports 1-arg and 2-arg objective functions (auto-detection)
 - Captures rich error context for post-processing analysis
@@ -173,7 +173,7 @@ To refine critical points, use globtimpostprocessing:
 ```julia
 using Globtim, GlobtimPostProcessing
 
-# Step 1: Run experiment (globtimcore)
+# Step 1: Run experiment (globtim)
 result_raw = run_standard_experiment(objective, bounds, config)
 
 # Step 2: Refine (globtimpostprocessing)
