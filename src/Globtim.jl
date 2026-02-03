@@ -352,12 +352,12 @@ export EnhancedMetrics
 #     plot_level_set,
 #     create_level_set_visualization,
 #     create_level_set_animation,
-#     LevelSetData,
-#     VisualizationParameters,
 #     prepare_level_set_data,
 #     to_makie_format,
 #     plot_raw_vs_refined_eigenvalues
-# Note: LevelSetData and VisualizationParameters types are still defined below
+
+# Level set data types (canonical definitions, used by globtimplots)
+export LevelSetData, VisualizationParameters
 
 # Phase 3: Enhanced statistical tables and analysis - export main functions
 export analyze_critical_points_with_tables,
