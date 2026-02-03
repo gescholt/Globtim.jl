@@ -195,6 +195,21 @@ export GlobtimError,
 # export ComputationProgress, update_progress!, with_progress_monitoring
 # export validate_test_input_parameters, validate_constructor_parameters, create_error_context, log_error_details
 
+# Validation framework - consolidated from ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration
+export ValidationError, DataValidationError, PipelineBoundaryError
+export FilenameContaminationError, ParameterRangeError, SchemaValidationError, ContentValidationError
+export DataLoadError, DataQualityError, DataProductionError
+export StageTransitionError, InterfaceCompatibilityError, ResourceBoundaryError, FileSystemBoundaryError
+export DEFENSE_SUCCESS, DEFENSE_WARNING, DEFENSE_ERROR, DEFENSE_CRITICAL
+export PipelineBoundary, HPC_JOB_BOUNDARY, DATA_PROCESSING_BOUNDARY, VISUALIZATION_BOUNDARY, FILE_OPERATION_BOUNDARY
+export chain_validation, validate_column_type, safe_read_csv
+export detect_filename_contamination, validate_parameter_ranges, validate_experiment_output_strict
+export save_experiment_results_safe, load_and_validate_experiment_data, verify_written_data
+export validate_stage_transition, detect_interface_issues, validate_pipeline_connection
+export enhanced_pipeline_validation, validate_hpc_pipeline_stage
+export format_validation_error, format_boundary_error
+export create_validation_report, create_boundary_report, create_defense_report
+
 # Safe wrapper functions - keep main workflow functions only
 export safe_test_input, safe_constructor, safe_globtim_workflow
 export print_timing_breakdown
@@ -202,8 +217,6 @@ export print_timing_breakdown
 # export safe_solve_polynomial_system, safe_analyze_critical_points
 # export diagnose_globtim_setup
 
-include("config.jl")
-include("ConfigValidation.jl") #JSON schema validation for experiment configs
 include("LibFunctions.jl") #list of test functions.
 include("BenchmarkFunctions.jl") #benchmark function categorization and utilities.
 include("Structures.jl") # list of structures used in the code.
@@ -223,6 +236,7 @@ include("msolve_system.jl") #polynomial system solving with Msolve.
 include("hom_solve.jl") #polynomial system solving with homotopy Continuation. 
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
 include("data_structures.jl") #Enhanced data structures for multi-tolerance analysis
+include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
 include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
@@ -236,17 +250,8 @@ include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
 include("error_handling.jl") #Comprehensive error handling framework
+include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 include("safe_wrappers.jl") #Safe wrapper functions with error handling
-# Note: Legacy path modules removed (Issue #192 Phase 5):
-#   - ExperimentPathTracker.jl, ExperimentOutputOrganizer.jl, OutputPathManager.jl,
-#   - PathUtils.jl, ExperimentPaths.jl
-# All path management now unified in PathManager.jl
-# include("valley_detection.jl") #Valley detection and manifold following algorithms
-# include("conservative_valley_walking.jl") #Conservative valley walking with function value validation
-
-# Visualization removed - use GlobtimPlots package for all plotting
-# See docs/VISUALIZATION.md for migration guide
-# include("PostProcessing.jl") # DEPRECATED: Moved to globtimpostprocessing package (October 2025)
 include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
 
 # Export non-plotting functions that are always available
@@ -365,8 +370,12 @@ export analyze_critical_points_with_tables,
     render_console_table,
     render_comparative_table
 
-# Enhanced data structures
+# Enhanced data structures - canonical result types
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
+export ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult
+export PolynomialApproximationResult, CriticalPointAnalysisResult
+# Deprecated alias (will be removed in future versions)
+export AdaptiveCSVResult
 
 # Subdomain management functions - only export main functions
 export generate_4d_orthant_centers, create_orthant_test_inputs
@@ -397,11 +406,6 @@ export enhanced_bfgs_refinement
 # export detect_valley_at_point, follow_valley_manifold, project_to_critical_manifold
 # export analyze_valleys_in_critical_points
 # export create_valley_test_function, create_ridge_test_function
-
-# Conservative valley walking functions
-# TODO: These functions are not yet implemented - exports commented out
-# export ConservativeValleyConfig, ConservativeValleyStep
-# export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
 
 # Function value error analysis - only export main types and functions
 export FunctionValueError, ErrorMetrics, compute_function_value_errors
@@ -594,7 +598,7 @@ using .ExperimentCLI
 export ExperimentParams, parse_experiment_args, validate_params
 
 # ErrorCategorization - systematic error analysis (Issue #37)
-include("ErrorCategorization.jl")
+# Note: ErrorCategorization.jl is already included by validation.jl (line 36)
 using .ErrorCategorization
 
 # Export ErrorCategorization types and functions

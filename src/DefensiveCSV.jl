@@ -14,19 +14,10 @@ using CSV
 using DataFrames
 using Dates
 
-export defensive_csv_read, CSVLoadResult
+# Import CSVLoadResult from parent module (Globtim) — defined in data_structures.jl
+import ..CSVLoadResult
 
-"""
-Result structure for defensive CSV loading
-"""
-struct CSVLoadResult
-    success::Bool
-    data::Union{DataFrame, Nothing}
-    warnings::Vector{String}
-    error::Union{String, Nothing}
-    file::String
-    load_time::Float64
-end
+export defensive_csv_read, CSVLoadResult
 
 """
     defensive_csv_read(file_path::String; kwargs...) -> CSVLoadResult
