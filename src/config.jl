@@ -124,17 +124,6 @@ struct ConstructorParams
 end
 
 """
-    SparsificationParams
-
-Parameters for polynomial sparsification.
-"""
-struct SparsificationParams
-    enabled::Bool
-    threshold::Union{Float64, Nothing}
-    method::Union{String, Nothing}
-end
-
-"""
     AnalysisParams
 
 Parameters for critical point analysis.
@@ -142,7 +131,6 @@ Parameters for critical point analysis.
 struct AnalysisParams
     enable_hessian::Bool
     tol_dist::Float64
-    sparsification::Union{SparsificationParams, Nothing}
 
     # Tracking flags (Issue #124: metadata-driven plotting)
     track_convergence::Bool
@@ -281,7 +269,6 @@ const VALID_PRECISION_TYPES = [
 ]
 const VALID_BASIS_TYPES = ["chebyshev", "legendre"]
 const VALID_RESULT_FORMATS = ["json", "hdf5"]
-const VALID_SPARSIFICATION_METHODS = ["l2_norm", "absolute", "relative"]
 const VALID_DOMAIN_STRATEGIES = ["centered_at_true", "explicit_bounds", "random_offset"]
 const VALID_ODE_SOLVERS = [
     "Rosenbrock23", "Rodas4", "Rodas5", "Rodas5P",  # Rosenbrock methods
@@ -819,7 +806,7 @@ end
 
 # Configuration structures
 export FunctionParameters, FunctionConfig
-export TestInputParams, ConstructorParams, SparsificationParams, AnalysisParams, OutputSettings
+export TestInputParams, ConstructorParams, AnalysisParams, OutputSettings
 export ExperimentConfig
 export ODESolverConfig, DomainConfig, ModelConfig, ComputationConfig, ODEExperimentConfig
 
@@ -827,7 +814,7 @@ export ODESolverConfig, DomainConfig, ModelConfig, ComputationConfig, ODEExperim
 export ConfigError, ConfigValidationError, ConfigParseError
 
 # Validation constants
-export VALID_PRECISION_TYPES, VALID_BASIS_TYPES, VALID_RESULT_FORMATS, VALID_SPARSIFICATION_METHODS
+export VALID_PRECISION_TYPES, VALID_BASIS_TYPES, VALID_RESULT_FORMATS
 export VALID_DOMAIN_STRATEGIES, VALID_ODE_SOLVERS, VALID_PRECISION_MODES
 
 # TOML loading functions

@@ -86,14 +86,18 @@ end
 """
     compute_l2_norm_vandermonde(pol::ApproxPoly; grid_points=nothing)
 
-Compute the L²-norm of a polynomial using Vandermonde matrices directly.
+Compute the L²-norm of the polynomial approximation `||p||₂` over the grid domain
+using Vandermonde evaluation and Clenshaw-Curtis quadrature weights.
+
+Note: This computes `||p||₂`, the norm of the polynomial itself.
+For the approximation error `||f - p||₂`, use `pol.nrm` directly.
 
 # Arguments
 - `pol`: ApproxPoly object from Globtim
 - `grid_points`: Optional custom grid (uses pol.grid if not provided)
 
 # Returns
-- L²-norm value computed using Vandermonde matrix approach
+- L²-norm of the polynomial over the grid domain
 """
 function compute_l2_norm_vandermonde(pol::ApproxPoly; grid_points = nothing)
     # Use existing grid from polynomial or custom grid
@@ -102,7 +106,7 @@ function compute_l2_norm_vandermonde(pol::ApproxPoly; grid_points = nothing)
     # Ensure grid is in matrix format for lambda_vandermonde
     matrix_grid = ensure_matrix_format(grid)
     N = size(matrix_grid, 1)
-    dim = size(matrix_grid, 2)  # Get dimension from grid
+    dim = size(matrix_grid, 2)
 
     # Generate Lambda (support) for the polynomial
     Lambda = SupportGen(dim, pol.degree)
@@ -110,56 +114,60 @@ function compute_l2_norm_vandermonde(pol::ApproxPoly; grid_points = nothing)
     # Create Vandermonde matrix
     V = lambda_vandermonde(Lambda, matrix_grid, basis = pol.basis)
 
-    # Compute function values at grid points: f = V * coeffs
-    f_values = V * pol.coeffs
+    # Evaluate polynomial at grid points: p(x_i) = V * coeffs
+    p_values = V * pol.coeffs
 
-    # For simplicity, just use the polynomial's stored L2 norm
-    # This is the most accurate value already computed
-    return pol.nrm
+    # Compute quadrature weights (Clenshaw-Curtis for Chebyshev, trapezoidal for Legendre)
+    # Grid has (GN+1)^dim points total, so GN = N^(1/dim) - 1
+    GN = round(Int, N^(1 / dim)) - 1
+    weights = compute_quadrature_weights(pol.basis, GN, dim)
+
+    # Compute weighted L2-norm: ||p||₂ = sqrt(Σ w_i * p(x_i)²)
+    return sqrt(sum(abs2.(p_values) .* weights))
 end
 
 """
     compute_l2_norm_coeffs(pol::ApproxPoly, coeffs::Vector; grid_points=nothing)
 
-Compute L²-norm for polynomial with modified coefficients.
+Compute L²-norm `||p_modified||₂` for a polynomial with modified coefficients,
+using the same Vandermonde evaluation and quadrature weights as the original.
+
+This re-evaluates the polynomial with `coeffs` at the grid points and computes
+the weighted L2-norm via Clenshaw-Curtis quadrature.
 
 # Arguments
-- `pol`: Original ApproxPoly object
-- `coeffs`: Modified coefficient vector
-- `grid_points`: Optional custom grid
+- `pol`: Original ApproxPoly object (provides grid, basis, degree, support)
+- `coeffs`: Modified coefficient vector (same length as `pol.coeffs`)
+- `grid_points`: Optional custom grid (uses pol.grid if not provided)
 
 # Returns
-- L²-norm value for polynomial with modified coefficients
+- L²-norm of the polynomial with modified coefficients
 """
 function compute_l2_norm_coeffs(pol::ApproxPoly, coeffs::Vector; grid_points = nothing)
-    # Create a modified polynomial with new coefficients
-    pol_modified = ApproxPoly(
-        coeffs,
-        pol.support,
-        pol.degree,
-        0.0,  # Will be computed
-        pol.N,
-        pol.scale_factor,
-        pol.center,
-        pol.grid,
-        pol.z,
-        pol.basis,
-        pol.precision,
-        pol.normalized,
-        pol.power_of_two_denom,
-        pol.cond_vandermonde
-    )
+    # Use existing grid from polynomial or custom grid
+    grid = grid_points === nothing ? pol.grid : grid_points
 
-    # Simple approximation: scale the original norm by coefficient ratio
-    # This is not exact but gives a reasonable estimate
-    original_norm_sq = sum(abs2.(pol.coeffs))
-    modified_norm_sq = sum(abs2.(coeffs))
+    # Ensure grid is in matrix format
+    matrix_grid = ensure_matrix_format(grid)
+    N = size(matrix_grid, 1)
+    dim = size(matrix_grid, 2)
 
-    if original_norm_sq > 0
-        return pol.nrm * sqrt(modified_norm_sq / original_norm_sq)
-    else
-        return 0.0
-    end
+    # Generate Lambda (support) for the polynomial
+    Lambda = SupportGen(dim, pol.degree)
+
+    # Create Vandermonde matrix
+    V = lambda_vandermonde(Lambda, matrix_grid, basis = pol.basis)
+
+    # Evaluate modified polynomial at grid points
+    p_values = V * coeffs
+
+    # Compute quadrature weights
+    # Grid has (GN+1)^dim points total, so GN = N^(1/dim) - 1
+    GN = round(Int, N^(1 / dim)) - 1
+    weights = compute_quadrature_weights(pol.basis, GN, dim)
+
+    # Compute weighted L2-norm
+    return sqrt(sum(abs2.(p_values) .* weights))
 end
 
 """
