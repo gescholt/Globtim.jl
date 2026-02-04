@@ -444,7 +444,7 @@ end
     return -0.1 * sum(5 * pi * cos(x[i]) for i in 1:4) - sum(x[i]^2 for i in 1:4)
 end
 
-@doc nothing function Deuflhard_4d(xx::AbstractVector)::Float64
+@doc nothing function Deuflhard_4d(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Domain: [-1.2, 1.2]^4.
