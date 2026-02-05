@@ -278,7 +278,7 @@ function ode_tolerance_comparison()
         obj = make_error_distance(
             model, outputs, ic, p_true,
             [0.0, 20.0], 30,
-            L2_norm, first, nothing;
+            L2_norm;
             return_inf_on_error=true,
             abstol=cfg.abstol,
             reltol=cfg.reltol
@@ -317,7 +317,7 @@ function ode_tolerance_comparison()
     tol_obj = TolerantObjective(
         model, outputs, ic, p_true,
         [0.0, 20.0], 30,
-        L2_norm, first, nothing;
+        L2_norm;
         return_inf_on_error=true,
         abstol=1e-10,
         reltol=1e-10
