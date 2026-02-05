@@ -98,15 +98,14 @@ register_experiment(output_dir, experiment_metadata)
 # StandardExperiment automatically validates paths and enforces standards
 result = run_standard_experiment(
     objective_function = example_objective,
+    objective_name = objective_name,
     problem_params = problem_params,
     domain_bounds = domain_bounds,
     experiment_config = config,
     output_dir = output_dir,
     metadata = Dict(
-        "objective_name" => objective_name,
         "experiment_type" => "example_template",
         "system_type" => "quadratic_4d",
-        "true_params" => true_params,
         "description" => "Standardized experiment template demonstration"
     ),
     true_params = true_params  # Enables recovery_error calculation

@@ -124,6 +124,7 @@ end
 """
     run_standard_experiment(;
         objective_function::Function,
+        objective_name::String,
         problem_params,
         domain_bounds::Vector{Tuple{Float64, Float64}},
         experiment_config,
@@ -141,6 +142,9 @@ This function now exports only raw critical points from HomotopyContinuation.
 - `objective_function`: Function with signature f(point::Vector{Float64}) or f(point, params)
   - 1-argument: f(p::Vector{Float64}) -> Float64 (auto-detected, e.g., Dynamic_objectives)
   - 2-argument: f(p::Vector{Float64}, params) -> Float64 (legacy, requires problem_params)
+- `objective_name`: Identifier for the objective function (e.g., "lv4d", "deuflhard_4d_q4").
+  Stored in `results_summary.json` under `experiment_definition.objective_name` to make
+  experiment outputs self-describing for parameter sweep analysis.
 - `problem_params`: Problem-specific parameters (only for 2-arg functions)
 - `domain_bounds`: Vector of (min, max) tuples for each dimension
 - `experiment_config`: ExperimentParams from ExperimentCLI (GN, degree_range, max_time, domain_size)
@@ -174,12 +178,19 @@ To refine critical points, use globtimpostprocessing:
 using Globtim, GlobtimPostProcessing
 
 # Step 1: Run experiment (globtim)
-result_raw = run_standard_experiment(objective, bounds, config)
+result_raw = run_standard_experiment(
+    objective_function = my_objective,
+    objective_name = "my_problem",
+    problem_params = nothing,
+    domain_bounds = bounds,
+    experiment_config = config,
+    output_dir = "results/my_experiment"
+)
 
 # Step 2: Refine (globtimpostprocessing)
 result_refined = refine_experiment_results(
     result_raw[:output_dir],
-    objective,
+    my_objective,
     ode_refinement_config()
 )
 ```
@@ -187,7 +198,8 @@ result_refined = refine_experiment_results(
 # Example
 ```julia
 result = run_standard_experiment(
-    objective_function = p -> sum(p.^2),  # 1-arg function (auto-detected)
+    objective_function = p -> sum(p.^2),
+    objective_name = "quadratic_test",
     problem_params = nothing,
     domain_bounds = [(0.5, 1.5), (1.5, 2.5), (2.5, 3.5), (3.5, 4.5)],
     experiment_config = parse_experiment_args(ARGS),
@@ -198,6 +210,7 @@ result = run_standard_experiment(
 """
 function run_standard_experiment(;
     objective_function::Function,
+    objective_name::String,
     problem_params,
     domain_bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
@@ -280,7 +293,7 @@ function run_standard_experiment(;
     success_count = count(r -> r.status == "success", degree_results)
     success_rate = success_count / length(degree_results)
 
-    # Create experiment summary (Schema v1.1.0)
+    # Create experiment summary (Schema v3.0.0)
     experiment_summary = create_experiment_summary(
         degree_results,
         experiment_config,
@@ -288,7 +301,10 @@ function run_standard_experiment(;
         metadata,
         total_critical_points,
         total_time,
-        success_rate
+        success_rate;
+        objective_name = objective_name,
+        domain_bounds = domain_bounds,
+        true_params = true_params
     )
 
     # Save experiment summary
@@ -458,7 +474,11 @@ function process_single_degree(
 end
 
 """
-Create experiment summary (Phase 2: simplified for raw critical points only).
+Create experiment summary (Schema v3.0.0: full experiment definition).
+
+Stores the complete experiment definition — objective identity, domain, solver config —
+alongside per-degree results. This makes experiment outputs self-describing for
+parameter sweep analysis across multiple batches.
 """
 function create_experiment_summary(
     degree_results::Vector{DegreeResult},
@@ -467,7 +487,10 @@ function create_experiment_summary(
     metadata::Dict{String, Any},
     total_critical_points::Int,
     total_time::Float64,
-    success_rate::Float64
+    success_rate::Float64;
+    objective_name::String,
+    domain_bounds::Vector{Tuple{Float64, Float64}},
+    true_params::Union{Vector{Float64}, Nothing} = nothing,
 )
     # Build results_summary dict
     results_summary = Dict{String, Any}()
@@ -503,7 +526,27 @@ function create_experiment_summary(
         )
     end
 
-    # Build parameter dict for DrWatson
+    # Experiment definition: what problem was solved
+    experiment_definition = Dict{String, Any}(
+        "objective_name" => objective_name,
+        "dimension"      => length(domain_bounds),
+        "domain_bounds"  => [[lb, ub] for (lb, ub) in domain_bounds],
+        "true_params"    => true_params,
+    )
+
+    # Solver config: how it was solved (full ExperimentParams)
+    solver_config = Dict{String, Any}(
+        "GN"             => experiment_config.GN,
+        "degree_range"   => collect(experiment_config.degree_range),
+        "domain_size"    => experiment_config.domain_size,
+        "max_time"       => experiment_config.max_time,
+        "basis"          => string(experiment_config.basis),
+        "optim_f_tol"    => experiment_config.optim_f_tol,
+        "optim_x_tol"    => experiment_config.optim_x_tol,
+        "max_iterations" => experiment_config.max_iterations,
+    )
+
+    # Legacy params_dict for backward compatibility with PipelineRegistry
     GN = experiment_config.GN
     degree_range = collect(experiment_config.degree_range)
     domain_size_param = experiment_config.domain_size
@@ -516,6 +559,8 @@ function create_experiment_summary(
 
     summary = @dict(
         experiment_id,
+        experiment_definition,
+        solver_config,
         params_dict,
         results_summary,
         total_critical_points,
@@ -524,24 +569,17 @@ function create_experiment_summary(
         output_dir
     )
 
-    # Add metadata (convert String keys to Symbol keys for consistency)
-    for (key, value) in metadata
-        summary[Symbol(key)] = value
+    # Add user-provided metadata
+    if !isempty(metadata)
+        summary[:user_metadata] = metadata
     end
 
-    # Add schema version and computed statistics
-    # Phase 2: Simplified schema (raw critical points only, no refinement)
-    summary[:schema_version] = "2.0.0"
+    # Schema version and computed statistics
+    summary[:schema_version] = "3.0.0"
     summary[:degrees_processed] = length(degree_results)
     summary[:success_rate] = success_rate
-    summary[:degree_results] = degree_results  # Include degree results array
+    summary[:degree_results] = degree_results
     summary[:total_critical_points] = total_critical_points
-
-    # Store objective_name if present in metadata (Issue #174)
-    # This facilitates hierarchical path reconstruction and analysis
-    if haskey(metadata, "objective_name")
-        summary[:objective_name] = metadata["objective_name"]
-    end
 
     return summary
 end

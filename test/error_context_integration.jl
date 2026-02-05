@@ -39,6 +39,7 @@ using JSON3
         try
             result = run_standard_experiment(
                 objective_function = failing_objective,
+                objective_name = "test_failing_objective",
                 problem_params = (test_param = 42,),
                 domain_bounds = [(0.0, 1.0), (0.0, 1.0)],
                 experiment_config = config,
