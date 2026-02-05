@@ -403,7 +403,7 @@ end
 #==============================================================================#
 
 """
-    estimate_subdomain_error(f::Function, subdomain::Subdomain, degree;
+    estimate_subdomain_error(f, subdomain::Subdomain, degree;
                              n_samples_per_dim::Int=0, basis::Symbol=:chebyshev)
 
 Estimate L2 approximation error on a subdomain.
@@ -423,7 +423,7 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
 # Side Effects
 Updates subdomain.l2_error, subdomain.polynomial, subdomain.samples, subdomain.f_values
 """
-function estimate_subdomain_error(f::Function, subdomain::Subdomain, degree;
+function estimate_subdomain_error(f, subdomain::Subdomain, degree;
                                    n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
                                    eval_progress::Union{Function,Nothing}=nothing)
     n_dim = dimension(subdomain)
@@ -543,7 +543,7 @@ end
 #==============================================================================#
 
 """
-    find_optimal_cut_sparse(f::Function, subdomain::Subdomain, dim::Int, degree;
+    find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
                             n_candidates::Int=3, basis::Symbol=:chebyshev)
 
 Find optimal cut position along dimension `dim` using sparse evaluation.
@@ -564,7 +564,7 @@ Evaluates L2 error at a few candidate cut positions and fits a parabola to find 
 # Notes
 Uses existing samples where possible to minimize new function evaluations.
 """
-function find_optimal_cut_sparse(f::Function, subdomain::Subdomain, dim::Int, degree;
+function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
                                   n_candidates::Int=3, basis::Symbol=:chebyshev)
     # Candidate positions in normalized [-1, 1] coordinates
     # Default: -0.5, 0.0, 0.5 (quarter, half, three-quarters)
@@ -635,7 +635,7 @@ struct ProcessResult
 end
 
 """
-    process_subdomain(f::Function, tree::SubdivisionTree, subdomain_id::Int,
+    process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
                       degree, l2_tolerance::Float64;
                       optimize_cuts::Bool=true, basis::Symbol=:chebyshev)
 
@@ -653,7 +653,7 @@ Process a single subdomain: estimate error, decide if split needed, find optimal
 # Returns
 - ProcessResult with decision
 """
-function process_subdomain(f::Function, tree::SubdivisionTree, subdomain_id::Int,
+function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
                            degree, l2_tolerance::Float64;
                            optimize_cuts::Bool=true, basis::Symbol=:chebyshev,
                            eval_progress::Union{Function,Nothing}=nothing)
@@ -806,7 +806,7 @@ This function:
 5. Computes errors and determines split decisions
 
 # Arguments
-- `f::Function`: Objective function to approximate
+- `f`: Objective function to approximate (any callable, including TolerantObjective)
 - `tree::SubdivisionTree`: The subdivision tree
 - `batch_group::BatchGroup`: Group of subdomains with same configuration
 - `l2_tolerance::Float64`: Error tolerance for subdivision
@@ -816,7 +816,7 @@ This function:
 - Vector{ProcessResult}: Results for each subdomain in the batch
 """
 function process_subdomains_gpu(
-    f::Function,
+    f,
     tree::SubdivisionTree,
     batch_group::BatchGroup,
     l2_tolerance::Float64,
@@ -932,13 +932,13 @@ if !@isdefined(CuArray)
 end
 
 """
-    adaptive_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Float64}},
+    adaptive_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
                     degree; kwargs...)
 
 Main adaptive refinement loop with parallel processing.
 
 # Arguments
-- `f`: Function to approximate
+- `f`: Callable to approximate (any callable works, including `TolerantObjective`)
 - `initial_bounds`: Domain bounds as vector of (min, max) tuples
 - `degree`: Polynomial degree (or degree specification)
 
@@ -951,6 +951,8 @@ Main adaptive refinement loop with parallel processing.
 - `gpu::Bool=false`: Whether to use GPU acceleration (requires CUDA.jl)
 - `basis::Symbol=:chebyshev`: Basis type
 - `verbose::Bool=false`: Print progress information
+- `phase_callback::Union{Function,Nothing}=nothing`: Called with `(f, :refine, 0)` at start.
+    Use with `TolerantObjective` to set ODE tolerances per phase.
 
 # Returns
 - SubdivisionTree with refined subdomains
@@ -970,7 +972,7 @@ bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 tree = adaptive_refine(f, bounds, 4, l2_tolerance=1e-4, gpu=true)
 ```
 """
-function adaptive_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Float64}},
+function adaptive_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
                          degree;
                          l2_tolerance::Float64=1e-6,
                          max_depth::Int=10,
@@ -981,7 +983,8 @@ function adaptive_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Floa
                          basis::Symbol=:chebyshev,
                          verbose::Bool=false,
                          iteration_callback::Union{Function,Nothing}=nothing,
-                         eval_progress::Union{Function,Nothing}=nothing)
+                         eval_progress::Union{Function,Nothing}=nothing,
+                         phase_callback::Union{Function,Nothing}=nothing)
 
     # Validate GPU option
     if gpu && !gpu_available()
@@ -991,6 +994,11 @@ function adaptive_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Floa
 
     # Initialize tree
     tree = SubdivisionTree(initial_bounds)
+
+    # Notify phase callback that we're starting (single-phase refinement)
+    if phase_callback !== nothing
+        phase_callback(f, :refine, 0)
+    end
 
     iteration = 0
     while !isempty(tree.active_leaves)
@@ -1082,7 +1090,7 @@ end
 #==============================================================================#
 
 """
-    two_phase_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Float64}},
+    two_phase_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
                      degree; kwargs...)
 
 Two-phase adaptive refinement: coarse balancing pass, then accuracy refinement.
@@ -1091,7 +1099,7 @@ Phase 1 subdivides until errors are relatively balanced (no stragglers).
 Phase 2 refines to meet the final tolerance.
 
 # Arguments
-- `f`: Function to approximate
+- `f`: Callable to approximate (any callable works, including `TolerantObjective`)
 - `initial_bounds`: Domain bounds
 - `degree`: Polynomial degree
 
@@ -1105,11 +1113,14 @@ Phase 2 refines to meet the final tolerance.
 - `gpu::Bool=false`: Use GPU acceleration (requires CUDA.jl)
 - `basis::Symbol=:chebyshev`: Basis type
 - `verbose::Bool=false`: Print progress
+- `phase_callback::Union{Function,Nothing}=nothing`: Called with `(f, :coarse, 0)` at
+    Phase 1 start and `(f, :fine, 0)` at Phase 2 start. Use with `TolerantObjective` to
+    switch ODE tolerances between phases.
 
 # Returns
 - SubdivisionTree with refined subdomains
 """
-function two_phase_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Float64}},
+function two_phase_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
                           degree;
                           coarse_tolerance::Float64=1e-4,
                           fine_tolerance::Float64=1e-6,
@@ -1120,7 +1131,8 @@ function two_phase_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Flo
                           gpu::Bool=false,
                           basis::Symbol=:chebyshev,
                           verbose::Bool=false,
-                          iteration_callback::Union{Function,Nothing}=nothing)
+                          iteration_callback::Union{Function,Nothing}=nothing,
+                          phase_callback::Union{Function,Nothing}=nothing)
 
     # Validate GPU option
     if gpu && !gpu_available()
@@ -1129,6 +1141,12 @@ function two_phase_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Flo
     end
 
     verbose && println("=== Phase 1: Coarse balancing ===")
+
+    # Notify phase callback for Phase 1 (coarse balancing)
+    # This allows TolerantObjective to switch to coarse ODE tolerances
+    if phase_callback !== nothing
+        phase_callback(f, :coarse, 0)
+    end
 
     # Phase 1: Coarse balancing pass
     tree = SubdivisionTree(initial_bounds)
@@ -1191,6 +1209,12 @@ function two_phase_refine(f::Function, initial_bounds::Vector{Tuple{Float64, Flo
 
     verbose && println("Phase 1 complete: $(n_leaves(tree)) leaves")
     verbose && println("\n=== Phase 2: Accuracy refinement ===")
+
+    # Notify phase callback for Phase 2 (fine accuracy)
+    # This allows TolerantObjective to switch to tight ODE tolerances
+    if phase_callback !== nothing
+        phase_callback(f, :fine, 0)
+    end
 
     # Phase 2: Accuracy refinement
     # Move all converged leaves back to active for re-evaluation at fine tolerance
