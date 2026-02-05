@@ -72,7 +72,7 @@ using DrWatson
 using JLD2
 using LinearAlgebra
 
-export run_standard_experiment, DegreeResult
+export run_standard_experiment, DegreeResult, solve_and_transform
 
 # Import PathManager module (Issue #192, Unified Path Management)
 # PathManager consolidates PathUtils, OutputPathManager, ExperimentPaths, etc.
@@ -119,6 +119,46 @@ struct DegreeResult
     # Error information (if failed)
     # Can be String (legacy), Dict{String,Any} (rich context), or Nothing (success)
     error::Union{String, Dict{String, Any}, Nothing}
+end
+
+"""
+    solve_and_transform(pol::ApproxPoly, domain_bounds) -> (critical_points, solve_time)
+
+Solve a polynomial system via HomotopyContinuation and transform solutions from
+normalized [-1,1]^n coordinates to the original domain.
+
+This is the shared kernel used by both `run_standard_experiment` (full polynomials)
+and `run_sparsification_experiment` (sparsified polynomial variants).
+
+# Arguments
+- `pol::ApproxPoly`: Polynomial approximation (full or sparsified)
+- `domain_bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
+
+# Returns
+- `critical_points::Vector{Vector{Float64}}`: Critical points in original domain coordinates
+- `solve_time::Float64`: Wall-clock time for HC solve (seconds)
+"""
+function solve_and_transform(
+    pol,  # ApproxPoly — not typed to avoid import dependency
+    domain_bounds::Vector{Tuple{Float64, Float64}},
+)
+    dimension = length(domain_bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+
+    # Solve polynomial system via HomotopyContinuation
+    @polyvar x[1:dimension]
+    solve_time = @elapsed begin
+        raw_critical_points = Globtim.solve_polynomial_system_from_approx(x, pol)
+    end
+
+    # Transform from normalized [-1,1]^n to original domain coordinates
+    critical_points = [
+        sample_range .* [pt[i] for i in 1:dimension] .+ center
+        for pt in raw_critical_points
+    ]
+
+    return critical_points, solve_time
 end
 
 """
@@ -233,6 +273,43 @@ function run_standard_experiment(;
 
     mkpath(output_dir)
 
+    # Pre-compute domain geometry (invariant across degrees)
+    dimension = length(domain_bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+
+    # Detect function signature and create wrapper if needed
+    # Support both 1-arg (Dynamic_objectives pattern) and 2-arg (legacy pattern)
+    method_sig = first(methods(objective_function)).sig
+    while method_sig isa UnionAll
+        method_sig = method_sig.body
+    end
+    n_args = length(method_sig.parameters) - 1
+
+    func = if n_args == 1
+        if problem_params !== nothing
+            @warn "problem_params provided but objective_function takes 1 argument - ignoring params"
+        end
+        objective_function
+    elseif n_args == 2
+        if problem_params === nothing
+            error("2-argument objective function requires problem_params")
+        end
+        x -> objective_function(x, problem_params)
+    else
+        error("Objective function must accept 1 or 2 arguments, got $n_args")
+    end
+
+    # Build tensor representation ONCE (evaluates objective on GN^dimension grid points)
+    # This is invariant across degrees — only Constructor depends on degree.
+    TR = Globtim.test_input(
+        func,
+        dim = dimension,
+        center = center,
+        GN = experiment_config.GN,
+        sample_range = sample_range
+    )
+
     # Process each degree
     degree_results = DegreeResult[]
     total_critical_points = 0
@@ -243,8 +320,8 @@ function run_standard_experiment(;
         try
             result = process_single_degree(
                 degree,
-                objective_function,
-                problem_params,
+                func,
+                TR,
                 domain_bounds,
                 experiment_config,
                 output_dir,
@@ -314,93 +391,47 @@ function run_standard_experiment(;
 end
 
 """
-    process_single_degree(degree, objective_function, problem_params, domain_bounds,
+    process_single_degree(degree, func, TR, domain_bounds,
                          experiment_config, output_dir, true_params) -> DegreeResult
 
 Process a single polynomial degree through the complete pipeline.
+
+# Arguments
+- `degree::Int`: Polynomial degree to process
+- `func::Function`: Resolved 1-argument objective function
+- `TR`: Pre-computed tensor representation from `Globtim.test_input` (shared across degrees)
+- `domain_bounds`: Vector of (lower, upper) tuples
+- `experiment_config`: Experiment parameters (basis, GN, etc.)
+- `output_dir`: Directory for CSV output
+- `true_params`: Known true parameters (optional, for recovery error)
 """
 function process_single_degree(
     degree::Int,
-    objective_function::Function,
-    problem_params,
+    func::Function,
+    TR,
     domain_bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
     true_params::Union{Vector{Float64}, Nothing}
 )
     dimension = length(domain_bounds)
-    timing = Dict{String, Float64}()
-
-    # Phase 1: Polynomial Construction
-    poly_construction_start = time()
-
-    # Compute center and sample_range from domain_bounds
     center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+    timing = Dict{String, Float64}()
 
-    # Detect function signature and create wrapper if needed
-    # Support both 1-arg (Dynamic_objectives pattern) and 2-arg (legacy pattern)
-    method_sig = first(methods(objective_function)).sig
-    # Handle UnionAll types (generic functions with type parameters)
-    while method_sig isa UnionAll
-        method_sig = method_sig.body
-    end
-    n_args = length(method_sig.parameters) - 1
+    # Phase 1: Polynomial Construction (TR is pre-computed, only Constructor is degree-dependent)
+    poly_construction_start = time()
 
-    func = if n_args == 1
-        # 1-argument function (e.g., Dynamic_objectives)
-        if problem_params !== nothing
-            @warn "problem_params provided but objective_function takes 1 argument - ignoring params"
-        end
-        objective_function
-    elseif n_args == 2
-        # 2-argument function (legacy pattern)
-        if problem_params === nothing
-            error("2-argument objective function requires problem_params")
-        end
-        x -> objective_function(x, problem_params)
-    else
-        error("Objective function must accept 1 or 2 arguments, got $n_args")
-    end
-
-    # Build tensor representation (this evaluates objective on GN^dimension grid points)
-    grid_evals_start = time()
-    TR = Globtim.test_input(
-        func,
-        dim = dimension,
-        center = center,
-        GN = experiment_config.GN,
-        sample_range = sample_range
-    )
-    grid_evals_time = time() - grid_evals_start
-    n_grid_points = experiment_config.GN^dimension
-
-    # Construct polynomial approximation
     pol = Globtim.Constructor(TR, degree, basis = experiment_config.basis, normalized = false)
 
     timing["polynomial_construction_time"] = time() - poly_construction_start
     timing["l2_approx_error"] = pol.nrm
     timing["condition_number"] = pol.cond_vandermonde
 
-    # Phase 2: Critical Point Solving
-    solve_start = time()
-
-    @polyvar x[1:dimension]
-    raw_critical_points = Globtim.solve_polynomial_system(
-        x, dimension, degree, pol.coeffs,
-        basis = experiment_config.basis,
-        normalized = false
-    )
-
-    # Convert to array of arrays (normalized [-1,1] coordinates)
-    critical_points_normalized = [[pt[i] for i in 1:dimension] for pt in raw_critical_points]
-
-    timing["critical_point_solving_time"] = time() - solve_start
-
-    # Phase 3: Use raw critical points (refinement moved to globtimpostprocessing)
-    processing_start = time()
-
-    n_critical_points = length(critical_points_normalized)
+    # Phase 2: Critical Point Solving + coordinate transformation
+    critical_points_array, solve_time = solve_and_transform(pol, domain_bounds)
+    n_critical_points = length(critical_points_array)
+    timing["critical_point_solving_time"] = solve_time
 
     # CRITICAL FIX (Issue #111): ERROR if no critical points found
     if n_critical_points == 0
@@ -409,12 +440,8 @@ function process_single_degree(
 
     println("Found $n_critical_points raw critical points at degree $degree")
 
-    # Transform critical points from normalized [-1,1] to original domain coordinates
-    # x_original = sample_range .* x_normalized + center
-    critical_points_array = [
-        sample_range .* cp + center
-        for cp in critical_points_normalized
-    ]
+    # Phase 3: Use raw critical points (refinement moved to globtimpostprocessing)
+    processing_start = time()
 
     # Compute objective values at critical points (in original coordinates)
     objective_values = [func(critical_points_array[i]) for i in 1:n_critical_points]

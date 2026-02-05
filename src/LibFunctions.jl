@@ -14,7 +14,7 @@
     ) = new(centers, variances, alt_signs)
 end
 # ======================================================= Random noise =======================================================
-@doc nothing function random_noise(x::Vector{Float64})::Float64
+@doc nothing function random_noise(x::Vector{Float64})
     # =======================================================
     #   Not Rescaled
     #   Random noise function
@@ -70,7 +70,7 @@ end
            (-4 + 4 * x[2]^2) * x[2]^2
 end
 
-@doc nothing function shubert(xx::AbstractVector)::Float64
+@doc nothing function shubert(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Shubert function
@@ -82,7 +82,7 @@ end
     return sum1 * sum2
 end
 
-@doc nothing function dejong5(xx::AbstractVector)::Float64
+@doc nothing function dejong5(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   De Jong 5 function
@@ -112,7 +112,7 @@ end
     return y
 end
 
-@doc nothing function easom(xx::AbstractVector)::Float64
+@doc nothing function easom(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Easom function
@@ -201,7 +201,7 @@ end
     xx::AbstractVector,
     params::GaussianParams;
     verbose::Bool = false
-)::Float64
+)
     # =======================================================
     #   Not Rescaled
     #   Sum of N Gaussian function centered at random points in the domain with random variance.
@@ -286,7 +286,7 @@ f_val = HolderTable([8.0, 9.0])
 TR = test_input(HolderTable, dim=2, center=[0.0, 0.0], sample_range=10.0)
 ```
 """
-function HolderTable(xx::AbstractVector)::Float64
+function HolderTable(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Holder Table function
@@ -295,7 +295,7 @@ function HolderTable(xx::AbstractVector)::Float64
     return -abs(sin(xx[1]) * cos(xx[2]) * exp(abs(1 - sqrt(xx[1]^2 + xx[2]^2) / pi)))
 end
 
-@doc nothing function CrossInTray(xx::AbstractVector)::Float64
+@doc nothing function CrossInTray(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Cross-in-Tray function
@@ -356,7 +356,7 @@ end
     xx::AbstractVector;
     mean::Float64 = 0.0,
     stddev::Float64 = 5.0
-)::Float64
+)
     noise = rand(Distributions.Normal(mean, stddev))
     return Deuflhard(xx) + noise
 end
@@ -411,7 +411,7 @@ end
 
 # ======================================================= 4D Functions =======================================================
 
-@doc nothing function shubert_4d(xx::AbstractVector)::Float64
+@doc nothing function shubert_4d(xx::AbstractVector)
     # Sum of two Shubert 2D functions by coordinates 
     # Domain: [-10, 10]^4.
     return shubert(xx[1:2]) + shubert(xx[3:4])
@@ -472,9 +472,7 @@ end
     return sum(x[i]^6 * (2 + sin(1 / x[i])) for i in 1:dims)
 end
 
-@doc nothing function alpine1(
-    xx::Union{Vector{Float64}, StaticArraysCore.SVector{N, Float64}} where {N}
-)::Float64
+@doc nothing function alpine1(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Alpine1 function
@@ -483,9 +481,7 @@ end
     return sum(abs(xx[i] * sin(xx[i]) + 0.1 * xx[i]) for i in eachindex(xx))
 end
 
-@doc nothing function alpine2(
-    xx::Union{Vector{Float64}, StaticArraysCore.SVector{N, Float64}} where {N}
-)::Float64
+@doc nothing function alpine2(xx::AbstractVector)
     # =======================================================
     #   Not Rescaled
     #   Alpine2 function

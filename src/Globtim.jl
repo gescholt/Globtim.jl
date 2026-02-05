@@ -588,7 +588,14 @@ include("StandardExperiment.jl")
 using .StandardExperiment
 
 # Export StandardExperiment types and functions
-export run_standard_experiment, DegreeResult
+export run_standard_experiment, DegreeResult, solve_and_transform
+
+# SparsificationExperiment - polynomial sparsification analysis
+include("SparsificationExperiment.jl")
+using .SparsificationExperiment
+
+# Export SparsificationExperiment types and functions
+export SparsifiedVariant, SparsificationDegreeResult, run_sparsification_experiment
 
 # ExperimentCLI - experiment configuration (re-export for downstream packages)
 include("ExperimentCLI.jl")
