@@ -179,7 +179,8 @@ Execute standardized experiment with RAW critical point export only.
 This function now exports only raw critical points from HomotopyContinuation.
 
 # Arguments
-- `objective_function`: Function with signature f(point::Vector{Float64}) or f(point, params)
+- `objective_function`: Callable with signature f(point::Vector{Float64}) or f(point, params).
+  Accepts plain functions or callable structs (e.g., TolerantObjective).
   - 1-argument: f(p::Vector{Float64}) -> Float64 (auto-detected, e.g., Dynamic_objectives)
   - 2-argument: f(p::Vector{Float64}, params) -> Float64 (legacy, requires problem_params)
 - `objective_name`: Identifier for the objective function (e.g., "lv4d", "deuflhard_4d_q4").
@@ -249,7 +250,7 @@ result = run_standard_experiment(
 ```
 """
 function run_standard_experiment(;
-    objective_function::Function,
+    objective_function,
     objective_name::String,
     problem_params,
     bounds::Vector{Tuple{Float64, Float64}},
@@ -398,7 +399,7 @@ Process a single polynomial degree through the complete pipeline.
 
 # Arguments
 - `degree::Int`: Polynomial degree to process
-- `func::Function`: Resolved 1-argument objective function
+- `func`: Resolved 1-argument objective callable (Function or functor struct)
 - `TR`: Pre-computed tensor representation from `Globtim.test_input` (shared across degrees)
 - `bounds`: Vector of (lower, upper) tuples
 - `experiment_config`: Experiment parameters (basis, GN, etc.)
@@ -407,7 +408,7 @@ Process a single polynomial degree through the complete pipeline.
 """
 function process_single_degree(
     degree::Int,
-    func::Function,
+    func,
     TR,
     bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,

@@ -304,7 +304,7 @@ Fields:
 - `sample_range::Union{Float64,Vector{Float64},Nothing}`: Sampling radius around center (scalar or per dimension)
 - `reduce_samples::Union{Float64,Nothing}`: Sample reduction factor
 - `degree_max::Union{Int, Nothing}`: Maximum polynomial degree
-- `objective::Function`: Function to optimize
+- `objective`: Callable objective (Function or callable struct like TolerantObjective)
 """
 struct test_input
     dim::Int
@@ -316,15 +316,15 @@ struct test_input
     sample_range::Union{Float64, Vector{Float64}, Nothing}
     reduce_samples::Union{Float64, Nothing}
     degree_max::Union{Int, Nothing}
-    objective::Function
+    objective  # Any callable: Function, functor struct, etc.
 
     """
-        test_input(f::Function; kwargs...) -> test_input
+        test_input(f; kwargs...) -> test_input
 
     Construct a test_input object with the given objective function and parameters.
 
     # Arguments
-    - `f::Function`: The objective function to optimize
+    - `f`: The objective function to optimize (any callable)
 
     # Keyword Arguments
     - `dim::Int=2`: Problem dimension
@@ -361,7 +361,7 @@ struct test_input
     ```
     """
     TimerOutputs.@timeit _TO function test_input(
-        f::Function;
+        f;
         dim::Int = 2,
         center::AbstractVector{<:Real} = fill(0.0, dim),
         GN::Union{Int, Nothing} = nothing,
@@ -442,7 +442,7 @@ end
 Convenience constructor for test_input with default values.
 
 # Arguments
-- `f::Function`: Objective function to optimize
+- `f`: Objective function to optimize (any callable)
 - `n=2`: Problem dimension 
 - `center=fill(0.0,n)`: Center point
 - `tolerance=2e-3`: Convergence tolerance
@@ -455,7 +455,7 @@ Convenience constructor for test_input with default values.
 - `outputs=nothing`: Optional measured data
 """
 function create_test_input(
-    f::Function;
+    f;
     n::Int = 2,
     center::AbstractVector{Float64} = fill(0.0, n),
     tolerance::Float64 = 2e-3,
