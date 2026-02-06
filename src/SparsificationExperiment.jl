@@ -59,10 +59,14 @@ end
 Full + sparsified results for a single polynomial degree.
 The `full_*` fields mirror what `run_standard_experiment` produces for that degree.
 If `degree_results` from a prior experiment are provided, the full solve is reused.
+
+- `full_n_coeffs`: total number of coefficients = `binomial(n+d, d)` for total degree `d` in `n` dims
+- `full_n_nonzero_coeffs`: number of nonzero coefficients (support size) in the un-sparsified polynomial
 """
 struct SparsificationDegreeResult
     degree::Int
     full_n_coeffs::Int
+    full_n_nonzero_coeffs::Int
     full_critical_points::Vector{Vector{Float64}}  # in original domain coordinates
     full_solve_time::Float64
     l2_approx_error::Float64
@@ -144,7 +148,8 @@ function run_sparsification_experiment(;
         println(io, "\n  Degree $deg: constructing polynomial...")
         pol = Globtim.Constructor(TR, deg, basis=basis, normalized=false)
         n_total_coeffs = length(pol.coeffs)
-        println(io, "  $n_total_coeffs coefficients, L2 approx error = $(@sprintf("%.2e", pol.nrm))")
+        n_nonzero_coeffs = count(!iszero, pol.coeffs)
+        println(io, "  $n_total_coeffs coefficients ($n_nonzero_coeffs nonzero), L2 approx error = $(@sprintf("%.2e", pol.nrm))")
 
         # Full solve: reuse from degree_results if available, otherwise solve now
         full_cps, full_solve_time = if haskey(dr_by_degree, deg) && dr_by_degree[deg].status == "success"
@@ -186,7 +191,7 @@ function run_sparsification_experiment(;
         end
 
         push!(results, SparsificationDegreeResult(
-            deg, n_total_coeffs, full_cps, full_solve_time, pol.nrm, variants,
+            deg, n_total_coeffs, n_nonzero_coeffs, full_cps, full_solve_time, pol.nrm, variants,
         ))
     end
 

@@ -104,7 +104,12 @@ struct DegreeResult
 
     # Quality metrics
     l2_approx_error::Float64
+    relative_l2_error::Float64  # l2_approx_error / ||f||_L2 (dimensionless)
     condition_number::Float64
+
+    # Coefficient counts
+    n_total_coeffs::Int   # Total coefficients = binomial(n+d, d) for total degree d in n dims
+    support_size::Int     # Nonzero coefficients: count(!iszero, pol.coeffs)
 
     # Timing breakdown
     polynomial_construction_time::Float64
@@ -356,7 +361,8 @@ function run_standard_experiment(;
                 Vector{Vector{Float64}}(),  # critical_points (empty)
                 Vector{Float64}(),  # objective_values (empty)
                 nothing, nothing, nothing,  # No best estimate
-                NaN, NaN,  # Quality metrics
+                NaN, NaN, NaN,  # Quality metrics (l2, relative_l2, cond)
+                0, 0,  # n_total_coeffs, support_size (unknown for failed)
                 0.0, 0.0, 0.0, 0.0, degree_time,  # Timing
                 output_dir,
                 error_context  # Rich error context
@@ -427,6 +433,7 @@ function process_single_degree(
 
     timing["polynomial_construction_time"] = time() - poly_construction_start
     timing["l2_approx_error"] = pol.nrm
+    timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
 
     # Phase 2: Critical Point Solving + coordinate transformation
@@ -490,7 +497,8 @@ function process_single_degree(
         critical_points_array,
         objective_values,
         best_estimate, best_objective, recovery_error,
-        timing["l2_approx_error"], timing["condition_number"],
+        timing["l2_approx_error"], timing["relative_l2_error"], timing["condition_number"],
+        length(pol.coeffs), count(!iszero, pol.coeffs),
         timing["polynomial_construction_time"],
         timing["critical_point_solving_time"],
         timing["critical_point_processing_time"],
@@ -536,7 +544,12 @@ function create_experiment_summary(
 
             # Quality metrics
             "l2_approx_error" => result.l2_approx_error,
+            "relative_l2_error" => result.relative_l2_error,
             "condition_number" => result.condition_number,
+
+            # Coefficient counts
+            "n_total_coeffs" => result.n_total_coeffs,
+            "support_size" => result.support_size,
 
             # Timing breakdown
             "polynomial_construction_time" => result.polynomial_construction_time,
@@ -633,7 +646,10 @@ function sanitize_for_json(obj)
             "best_objective" => sanitize_for_json(obj.best_objective),
             "recovery_error" => sanitize_for_json(obj.recovery_error),
             "l2_approx_error" => sanitize_for_json(obj.l2_approx_error),
+            "relative_l2_error" => sanitize_for_json(obj.relative_l2_error),
             "condition_number" => sanitize_for_json(obj.condition_number),
+            "n_total_coeffs" => obj.n_total_coeffs,
+            "support_size" => obj.support_size,
             "polynomial_construction_time" => sanitize_for_json(obj.polynomial_construction_time),
             "critical_point_solving_time" => sanitize_for_json(obj.critical_point_solving_time),
             "critical_point_processing_time" => sanitize_for_json(obj.critical_point_processing_time),

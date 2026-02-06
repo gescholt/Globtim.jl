@@ -133,4 +133,5 @@ end
 # Active test files
 include("test_sparsification.jl")
 include("test_truncation.jl")
+include("test_relative_l2.jl")
 include("test_aqua.jl")

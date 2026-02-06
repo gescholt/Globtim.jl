@@ -146,6 +146,7 @@ export evaluate, gradient
 
 # Scaling utilities - internal use only
 # export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
+export relative_l2_error
 
 # Exact conversion and sparsification functions - only export main functions
 export to_exact_monomial_basis, sparsify_polynomial, exact_polynomial_coefficients

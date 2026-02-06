@@ -134,6 +134,7 @@ extract_*.jl
 fix_*.jl
 !scripts/fix_test_manifest.jl
 test_*.jl
+!test/test_*.jl
 verify_*.jl
 debug_*.jl
 *_debug.jl
