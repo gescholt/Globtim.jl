@@ -6,7 +6,7 @@
 name = "lotka_volterra_4d"
 dimension = 4
 true_parameters = [1.5, 3.0, 1.0, 1.0]
-initial_conditions = [1.0, 1.0]
+ic = [1.0, 1.0]
 
 [domain_config]
 strategy = "centered_at_true"

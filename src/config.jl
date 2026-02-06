@@ -216,7 +216,7 @@ struct ModelConfig
 
     # For synthetic data generation
     true_parameters::Union{Vector{Float64}, Nothing}
-    initial_conditions::Union{Vector{Float64}, Nothing}
+    ic::Union{Vector{Float64}, Nothing}
 
     # Optional: fixed parameters (not being optimized)
     fixed_parameters::Union{Dict{String, Float64}, Nothing}
