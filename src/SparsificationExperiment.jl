@@ -17,7 +17,7 @@ using Globtim
 
 results = run_sparsification_experiment(
     objective = my_func,
-    domain_bounds = [(-1.0, 1.0), (-1.0, 1.0)],
+    bounds = [(-1.0, 1.0), (-1.0, 1.0)],
     degree_range = 4:2:10,
     thresholds = [1e-5, 1e-4, 1e-3],
     threshold_labels = ["1e-5 (mild)", "1e-4 (moderate)", "1e-3 (aggressive)"],
@@ -71,7 +71,7 @@ end
 
 """
     run_sparsification_experiment(;
-        objective, domain_bounds, degree_range, thresholds, threshold_labels,
+        objective, bounds, degree_range, thresholds, threshold_labels,
         GN, basis=:chebyshev, degree_results=nothing, io=stdout
     ) -> Vector{SparsificationDegreeResult}
 
@@ -83,7 +83,7 @@ transformation pipeline is identical to `run_standard_experiment`.
 
 # Arguments
 - `objective::Function`: Objective function f(x) -> Float64
-- `domain_bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
+- `bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
 - `degree_range`: Polynomial degrees to analyze (e.g., `4:2:10`)
 - `thresholds::Vector{Float64}`: Sparsification thresholds (e.g., `[1e-5, 1e-4, 1e-3]`)
 - `threshold_labels::Vector{String}`: Human-readable labels for each threshold
@@ -105,7 +105,7 @@ or any other post-processing from GlobtimPostProcessing.
 """
 function run_sparsification_experiment(;
     objective::Function,
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64, Float64}},
     degree_range,
     thresholds::Vector{Float64},
     threshold_labels::Vector{String},
@@ -116,9 +116,9 @@ function run_sparsification_experiment(;
 )
     @assert length(thresholds) == length(threshold_labels) "thresholds and threshold_labels must have same length"
 
-    dimension = length(domain_bounds)
-    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
-    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
     # Build degree_results lookup for reuse (if provided)
     dr_by_degree = Dict{Int, Any}()
@@ -154,7 +154,7 @@ function run_sparsification_experiment(;
             (dr.critical_points, dr.critical_point_solving_time)
         else
             println(io, "  Solving full polynomial system...")
-            cps, st = Globtim.solve_and_transform(pol, domain_bounds)
+            cps, st = Globtim.solve_and_transform(pol, bounds)
             println(io, "  Full: $(length(cps)) CPs, solve time = $(@sprintf("%.2f", st))s")
             (cps, st)
         end
@@ -167,7 +167,7 @@ function run_sparsification_experiment(;
 
             sparse_result = Globtim.sparsify_polynomial(pol, threshold, mode=:relative)
             sparse_cps, sparse_solve_time = Globtim.solve_and_transform(
-                sparse_result.polynomial, domain_bounds
+                sparse_result.polynomial, bounds
             )
 
             sparsity_pct = 100.0 * (1.0 - sparse_result.sparsity)

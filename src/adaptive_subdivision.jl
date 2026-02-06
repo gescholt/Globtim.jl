@@ -932,14 +932,14 @@ if !@isdefined(CuArray)
 end
 
 """
-    adaptive_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
+    adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                     degree; kwargs...)
 
 Main adaptive refinement loop with parallel processing.
 
 # Arguments
 - `f`: Callable to approximate (any callable works, including `TolerantObjective`)
-- `initial_bounds`: Domain bounds as vector of (min, max) tuples
+- `bounds`: Domain bounds as vector of (min, max) tuples
 - `degree`: Polynomial degree (or degree specification)
 
 # Keyword Arguments
@@ -972,7 +972,7 @@ bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 tree = adaptive_refine(f, bounds, 4, l2_tolerance=1e-4, gpu=true)
 ```
 """
-function adaptive_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
+function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                          degree;
                          l2_tolerance::Float64=1e-6,
                          max_depth::Int=10,
@@ -993,7 +993,7 @@ function adaptive_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
     end
 
     # Initialize tree
-    tree = SubdivisionTree(initial_bounds)
+    tree = SubdivisionTree(bounds)
 
     # Notify phase callback that we're starting (single-phase refinement)
     if phase_callback !== nothing
@@ -1090,7 +1090,7 @@ end
 #==============================================================================#
 
 """
-    two_phase_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
+    two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                      degree; kwargs...)
 
 Two-phase adaptive refinement: coarse balancing pass, then accuracy refinement.
@@ -1100,7 +1100,7 @@ Phase 2 refines to meet the final tolerance.
 
 # Arguments
 - `f`: Callable to approximate (any callable works, including `TolerantObjective`)
-- `initial_bounds`: Domain bounds
+- `bounds`: Domain bounds
 - `degree`: Polynomial degree
 
 # Keyword Arguments
@@ -1120,7 +1120,7 @@ Phase 2 refines to meet the final tolerance.
 # Returns
 - SubdivisionTree with refined subdomains
 """
-function two_phase_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
+function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                           degree;
                           coarse_tolerance::Float64=1e-4,
                           fine_tolerance::Float64=1e-6,
@@ -1149,7 +1149,7 @@ function two_phase_refine(f, initial_bounds::Vector{Tuple{Float64, Float64}},
     end
 
     # Phase 1: Coarse balancing pass
-    tree = SubdivisionTree(initial_bounds)
+    tree = SubdivisionTree(bounds)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100

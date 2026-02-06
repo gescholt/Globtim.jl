@@ -127,7 +127,7 @@ println("""
         objective_function = my_objective,
         objective_name = "my_problem",
         problem_params = my_params,
-        domain_bounds = my_bounds,
+        bounds = my_bounds,
         experiment_config = parsed_config,
         output_dir = "$output_dir",
         metadata = config

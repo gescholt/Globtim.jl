@@ -41,7 +41,7 @@ using JSON3
                 objective_function = failing_objective,
                 objective_name = "test_failing_objective",
                 problem_params = (test_param = 42,),
-                domain_bounds = [(0.0, 1.0), (0.0, 1.0)],
+                bounds = [(0.0, 1.0), (0.0, 1.0)],
                 experiment_config = config,
                 output_dir = output_dir,
                 metadata = Dict("test_type" => "error_handling")

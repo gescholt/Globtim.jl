@@ -40,7 +40,7 @@ objective = p -> sum(p.^2)  # 1-arg function (auto-detected)
 result = run_standard_experiment(
     objective_function = objective,
     problem_params = nothing,  # Not needed for 1-arg functions
-    domain_bounds = [(-5.0, 5.0), (-5.0, 5.0)],
+    bounds = [(-5.0, 5.0), (-5.0, 5.0)],
     experiment_config = config,
     output_dir = output_dir,
     metadata = Dict("experiment_type" => "sphere_minimization")
@@ -122,7 +122,7 @@ struct DegreeResult
 end
 
 """
-    solve_and_transform(pol::ApproxPoly, domain_bounds) -> (critical_points, solve_time)
+    solve_and_transform(pol::ApproxPoly, bounds) -> (critical_points, solve_time)
 
 Solve a polynomial system via HomotopyContinuation and transform solutions from
 normalized [-1,1]^n coordinates to the original domain.
@@ -132,7 +132,7 @@ and `run_sparsification_experiment` (sparsified polynomial variants).
 
 # Arguments
 - `pol::ApproxPoly`: Polynomial approximation (full or sparsified)
-- `domain_bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
+- `bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
 
 # Returns
 - `critical_points::Vector{Vector{Float64}}`: Critical points in original domain coordinates
@@ -140,11 +140,11 @@ and `run_sparsification_experiment` (sparsified polynomial variants).
 """
 function solve_and_transform(
     pol,  # ApproxPoly — not typed to avoid import dependency
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64, Float64}},
 )
-    dimension = length(domain_bounds)
-    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
-    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
     # Solve polynomial system via HomotopyContinuation
     @polyvar x[1:dimension]
@@ -166,7 +166,7 @@ end
         objective_function::Function,
         objective_name::String,
         problem_params,
-        domain_bounds::Vector{Tuple{Float64, Float64}},
+        bounds::Vector{Tuple{Float64, Float64}},
         experiment_config,
         output_dir::String,
         metadata::Dict{String, Any} = Dict(),
@@ -186,7 +186,7 @@ This function now exports only raw critical points from HomotopyContinuation.
   Stored in `results_summary.json` under `experiment_definition.objective_name` to make
   experiment outputs self-describing for parameter sweep analysis.
 - `problem_params`: Problem-specific parameters (only for 2-arg functions)
-- `domain_bounds`: Vector of (min, max) tuples for each dimension
+- `bounds`: Vector of (min, max) tuples for each dimension
 - `experiment_config`: ExperimentParams from ExperimentCLI (GN, degree_range, max_time, domain_size)
 - `output_dir`: Output directory path (from DrWatson, --output-dir, or hierarchical path)
 - `metadata`: Additional metadata for results_summary.json (system_type, params, etc.)
@@ -222,7 +222,7 @@ result_raw = run_standard_experiment(
     objective_function = my_objective,
     objective_name = "my_problem",
     problem_params = nothing,
-    domain_bounds = bounds,
+    bounds = bounds,
     experiment_config = config,
     output_dir = "results/my_experiment"
 )
@@ -241,7 +241,7 @@ result = run_standard_experiment(
     objective_function = p -> sum(p.^2),
     objective_name = "quadratic_test",
     problem_params = nothing,
-    domain_bounds = [(0.5, 1.5), (1.5, 2.5), (2.5, 3.5), (3.5, 4.5)],
+    bounds = [(0.5, 1.5), (1.5, 2.5), (2.5, 3.5), (3.5, 4.5)],
     experiment_config = parse_experiment_args(ARGS),
     output_dir = "hpc_results/my_experiment",
     metadata = Dict("experiment_type" => "parameter_recovery")
@@ -252,15 +252,15 @@ function run_standard_experiment(;
     objective_function::Function,
     objective_name::String,
     problem_params,
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
     metadata::Dict{String, Any} = Dict(),
     true_params::Union{Vector{Float64}, Nothing} = nothing
 )
     # Validate inputs
-    dimension = length(domain_bounds)
-    @assert dimension == length(domain_bounds) "Dimension mismatch"
+    dimension = length(bounds)
+    @assert dimension == length(bounds) "Dimension mismatch"
 
     # NOTE: Output path validation disabled - using static relative paths ../globtim_results
     # validate_output_configuration()
@@ -274,9 +274,9 @@ function run_standard_experiment(;
     mkpath(output_dir)
 
     # Pre-compute domain geometry (invariant across degrees)
-    dimension = length(domain_bounds)
-    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
-    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
     # Detect function signature and create wrapper if needed
     # Support both 1-arg (Dynamic_objectives pattern) and 2-arg (legacy pattern)
@@ -322,7 +322,7 @@ function run_standard_experiment(;
                 degree,
                 func,
                 TR,
-                domain_bounds,
+                bounds,
                 experiment_config,
                 output_dir,
                 true_params
@@ -341,7 +341,7 @@ function run_standard_experiment(;
                 "error_type" => string(typeof(e)),
                 "stacktrace" => string.(stacktrace(catch_backtrace())),
                 "degree" => degree,
-                "dimension" => length(domain_bounds),
+                "dimension" => length(bounds),
                 "GN" => experiment_config.GN,
                 "basis" => string(experiment_config.basis),
                 "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
@@ -380,7 +380,7 @@ function run_standard_experiment(;
         total_time,
         success_rate;
         objective_name = objective_name,
-        domain_bounds = domain_bounds,
+        bounds = bounds,
         true_params = true_params
     )
 
@@ -391,7 +391,7 @@ function run_standard_experiment(;
 end
 
 """
-    process_single_degree(degree, func, TR, domain_bounds,
+    process_single_degree(degree, func, TR, bounds,
                          experiment_config, output_dir, true_params) -> DegreeResult
 
 Process a single polynomial degree through the complete pipeline.
@@ -400,7 +400,7 @@ Process a single polynomial degree through the complete pipeline.
 - `degree::Int`: Polynomial degree to process
 - `func::Function`: Resolved 1-argument objective function
 - `TR`: Pre-computed tensor representation from `Globtim.test_input` (shared across degrees)
-- `domain_bounds`: Vector of (lower, upper) tuples
+- `bounds`: Vector of (lower, upper) tuples
 - `experiment_config`: Experiment parameters (basis, GN, etc.)
 - `output_dir`: Directory for CSV output
 - `true_params`: Known true parameters (optional, for recovery error)
@@ -409,14 +409,14 @@ function process_single_degree(
     degree::Int,
     func::Function,
     TR,
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
     true_params::Union{Vector{Float64}, Nothing}
 )
-    dimension = length(domain_bounds)
-    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
-    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
     timing = Dict{String, Float64}()
 
     # Phase 1: Polynomial Construction (TR is pre-computed, only Constructor is degree-dependent)
@@ -429,7 +429,7 @@ function process_single_degree(
     timing["condition_number"] = pol.cond_vandermonde
 
     # Phase 2: Critical Point Solving + coordinate transformation
-    critical_points_array, solve_time = solve_and_transform(pol, domain_bounds)
+    critical_points_array, solve_time = solve_and_transform(pol, bounds)
     n_critical_points = length(critical_points_array)
     timing["critical_point_solving_time"] = solve_time
 
@@ -516,7 +516,7 @@ function create_experiment_summary(
     total_time::Float64,
     success_rate::Float64;
     objective_name::String,
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64, Float64}},
     true_params::Union{Vector{Float64}, Nothing} = nothing,
 )
     # Build results_summary dict
@@ -556,8 +556,8 @@ function create_experiment_summary(
     # Experiment definition: what problem was solved
     experiment_definition = Dict{String, Any}(
         "objective_name" => objective_name,
-        "dimension"      => length(domain_bounds),
-        "domain_bounds"  => [[lb, ub] for (lb, ub) in domain_bounds],
+        "dimension"      => length(bounds),
+        "bounds"         => [[lb, ub] for (lb, ub) in bounds],
         "true_params"    => true_params,
     )
 

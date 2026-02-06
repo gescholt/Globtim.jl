@@ -64,7 +64,7 @@ problem_params = (target = true_params,)
 
 # Domain bounds (centered around true parameters)
 domain_radius = config.domain_size
-domain_bounds = [
+bounds = [
     (true_params[i] - domain_radius, true_params[i] + domain_radius)
     for i in 1:4
 ]
@@ -100,7 +100,7 @@ result = run_standard_experiment(
     objective_function = example_objective,
     objective_name = objective_name,
     problem_params = problem_params,
-    domain_bounds = domain_bounds,
+    bounds = bounds,
     experiment_config = config,
     output_dir = output_dir,
     metadata = Dict(
