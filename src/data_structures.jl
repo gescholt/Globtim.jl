@@ -537,29 +537,7 @@ struct CriticalPointAnalysisResult
     end
 end
 
-# ================================================================================
-# Deprecated Aliases for Backward Compatibility
-# ================================================================================
-
-# These aliases maintain compatibility with code that uses old type names.
-# They will emit deprecation warnings when used.
-
-"""
-    AdaptiveCSVResult
-
-DEPRECATED: Use CSVLoadResult instead.
-This alias is maintained for backward compatibility and will be removed in a future version.
-"""
-const AdaptiveCSVResult = CSVLoadResult
-Base.@deprecate_binding AdaptiveCSVResult CSVLoadResult
-
-# Note: ProcessResult is NOT aliased here because it conflicts with
-# ProcessResult in adaptive_subdivision.jl which has a different structure.
-# Users should migrate to PolynomialApproximationResult or CriticalPointAnalysisResult
-# based on their use case.
-
 # Export the data structures
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
 export ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult
 export PolynomialApproximationResult, CriticalPointAnalysisResult
-export AdaptiveCSVResult  # Deprecated alias for CSVLoadResult

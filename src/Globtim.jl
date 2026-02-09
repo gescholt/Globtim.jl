@@ -371,9 +371,6 @@ export analyze_critical_points_with_tables,
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
 export ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult
 export PolynomialApproximationResult, CriticalPointAnalysisResult
-# Deprecated alias (will be removed in future versions)
-export AdaptiveCSVResult
-
 # Subdomain management functions - only export main functions
 export generate_4d_orthant_centers, create_orthant_test_inputs
 # Internal orthant helpers - not exported
