@@ -332,15 +332,11 @@ export EnhancedMetrics
 # CairoMakie extension plotting functions (available when CairoMakie is loaded)
 # These are stub functions - actual implementations in extension
 # export plot_convergence_analysis,
-#     capture_histogram,
-#     create_legend_figure,
 #     plot_discrete_l2,
 #     plot_convergence_captured,
 #     plot_filtered_y_distances,
 #     cairo_plot_polyapprox_levelset,
-#     plot_distance_statistics,
-#     histogram_enhanced,
-#     histogram_minimizers_only
+#     plot_distance_statistics
 
 # GLMakie extension plotting functions (available when GLMakie is loaded)
 # These are stub functions - actual implementations in extension
@@ -422,14 +418,11 @@ export FunctionValueError, ErrorMetrics, compute_function_value_errors
 # These will be properly implemented when CairoMakie is loaded
 function cairo_plot_polyapprox_levelset end
 function plot_convergence_analysis end
-function capture_histogram end
-function create_legend_figure end
 function plot_discrete_l2 end
 function plot_convergence_captured end
 function plot_filtered_y_distances end
 function plot_distance_statistics end
-function histogram_enhanced end
-function histogram_minimizers_only end
+
 
 # Type definitions for GLMakie extension
 # These types need to be defined in the main module to be exportable

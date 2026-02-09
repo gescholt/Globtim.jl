@@ -39,6 +39,5 @@ track_distance_to_solutions = false
 track_performance_metrics = true
 
 [output_settings]
-save_intermediate = false
 output_dir = "hpc_results"
 result_format = "json"

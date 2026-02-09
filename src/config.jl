@@ -145,7 +145,6 @@ end
 Settings for experiment output.
 """
 struct OutputSettings
-    save_intermediate::Bool
     output_dir::String
     result_format::String
 end
