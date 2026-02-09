@@ -26,6 +26,7 @@ module ExperimentCLI
 export parse_experiment_args, ExperimentParams, validate_params
 
 using Printf
+using TOML
 
 """
     ExperimentParams
@@ -145,12 +146,18 @@ Parse degree range from string format: "4:8" or "4" (single degree)
 function parse_degree_range(s::String)
     if occursin(":", s)
         parts = split(s, ":")
-        if length(parts) != 2
-            error("Invalid degree range format: '$s'. Expected 'start:end', got $(length(parts)) parts")
+        if length(parts) == 2
+            start_deg = parse(Int, strip(parts[1]))
+            end_deg = parse(Int, strip(parts[2]))
+            return start_deg:end_deg
+        elseif length(parts) == 3
+            start_deg = parse(Int, strip(parts[1]))
+            step_deg = parse(Int, strip(parts[2]))
+            end_deg = parse(Int, strip(parts[3]))
+            return start_deg:step_deg:end_deg
+        else
+            error("Invalid degree range format: '$s'. Expected 'start:end' or 'start:step:end'")
         end
-        start_deg = parse(Int, strip(parts[1]))
-        end_deg = parse(Int, strip(parts[2]))
-        return start_deg:end_deg
     else
         # Single degree
         deg = parse(Int, strip(s))
@@ -328,12 +335,46 @@ function parse_experiment_args(
     valid_keys = Set([:degrees, :domain, :gn, :maxtime, :outputdir, :output_dir,
                       :enablegradients, :enable_gradients,
                       :enablehessians, :enable_hessians,
-                      :enablebfgs, :enable_bfgs])
+                      :enablebfgs, :enable_bfgs,
+                      :config, :basis])
     unrecognized = setdiff(Set(keys(named_args)), valid_keys)
     if !isempty(unrecognized)
         error("Unrecognized named arguments: $(join(sort([string(k) for k in unrecognized]), ", "))\n" *
-              "Valid arguments: --degrees, --degree-range, --domain, --domain-size, --GN, --max-time, --maxtime, " *
-              "--enable-gradients, --enable-hessians, --enable-bfgs")
+              "Valid arguments: --config, --degrees, --degree-range, --domain, --domain-size, --GN, --max-time, --maxtime, " *
+              "--basis, --enable-gradients, --enable-hessians, --enable-bfgs")
+    end
+
+    # If --config is specified, load TOML file as base defaults (CLI args override)
+    if haskey(named_args, :config)
+        config_path = named_args[:config]
+        isfile(config_path) || error("Config file not found: $config_path")
+        toml = TOML.parsefile(config_path)
+
+        # Extract polynomial section values as defaults
+        poly = get(toml, "polynomial", Dict())
+        if haskey(poly, "GN") && !haskey(named_args, :gn)
+            named_args[:gn] = string(Int(poly["GN"]))
+        end
+        if haskey(poly, "degree_range") && !haskey(named_args, :degrees)
+            dr = poly["degree_range"]
+            if length(dr) == 3
+                named_args[:degrees] = "$(dr[1]):$(dr[2]):$(dr[3])"
+            elseif length(dr) == 2
+                named_args[:degrees] = "$(dr[1]):$(dr[2])"
+            end
+        end
+        if haskey(poly, "basis") && !haskey(named_args, :basis)
+            named_args[:basis] = string(poly["basis"])
+        end
+
+        # Extract domain section
+        dom = get(toml, "domain", Dict())
+        if haskey(dom, "radius") && !haskey(named_args, :domain)
+            named_args[:domain] = string(Float64(dom["radius"]))
+        end
+
+        # Remove :config from named_args so it doesn't interfere with downstream parsing
+        delete!(named_args, :config)
     end
 
     # Helper to get value with priority: named > positional > env > defaults
@@ -416,12 +457,16 @@ function parse_experiment_args(
     enable_hessians = get_param(:enablehessians, nothing, "ENABLE_HESSIANS", parse_bool)
     enable_bfgs = get_param(:enablebfgs, nothing, "ENABLE_BFGS", parse_bool)
 
+    # Parse basis (string -> passed through to ExperimentParams which converts to Symbol)
+    basis = get_param(:basis, nothing, "BASIS", identity)
+
     # Build kwargs dict: start with provided defaults, then override with parsed values
     kwargs = Dict{Symbol, Any}(pairs(defaults))
     if domain_size !== nothing; kwargs[:domain_size] = domain_size; end
     if GN !== nothing; kwargs[:GN] = GN; end
     if degree_range !== nothing; kwargs[:degree_range] = degree_range; end
     if max_time !== nothing; kwargs[:max_time] = max_time; end
+    if basis !== nothing; kwargs[:basis] = basis; end
     if enable_gradients !== nothing; kwargs[:enable_gradient_computation] = enable_gradients; end
     if enable_hessians !== nothing; kwargs[:enable_hessian_computation] = enable_hessians; end
     if enable_bfgs !== nothing; kwargs[:enable_bfgs_refinement] = enable_bfgs; end

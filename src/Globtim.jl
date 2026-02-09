@@ -595,6 +595,10 @@ using .ExperimentCLI
 # Export ExperimentCLI types and functions (enables `using Globtim: ExperimentParams`)
 export ExperimentParams, parse_experiment_args, validate_params
 
+# TOML experiment pipeline configuration (bead 70e)
+include("config_loader.jl")
+export ExperimentPipelineConfig, load_experiment_config, config_to_experiment_params
+
 # ErrorCategorization - systematic error analysis (Issue #37)
 # Note: ErrorCategorization.jl is already included by validation.jl (line 36)
 using .ErrorCategorization
