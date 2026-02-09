@@ -55,6 +55,7 @@ struct ExperimentPipelineConfig
     solver_method::Union{Nothing, String}
     solver_abstol::Union{Nothing, Float64}
     solver_reltol::Union{Nothing, Float64}
+    solver_numpoints::Union{Nothing, Int}
 
     # [refinement] — optional post-processing
     refinement_enabled::Bool
@@ -208,6 +209,10 @@ function validate_experiment_toml(d::Dict)
     if haskey(sol, "reltol")
         (sol["reltol"] isa Number && sol["reltol"] > 0) || push!(errors, "[solver] reltol must be positive")
     end
+    if haskey(sol, "numpoints")
+        np = sol["numpoints"]
+        (np isa Integer && 5 <= np <= 1000) || push!(errors, "[solver] numpoints must be an integer in [5, 1000], got: $np")
+    end
 
     # --- [refinement] (optional) ---
     if haskey(ref, "method")
@@ -295,6 +300,7 @@ function load_experiment_config(path::String)
     solver_method = haskey(sol, "method") ? String(sol["method"]) : nothing
     solver_abstol = haskey(sol, "abstol") ? Float64(sol["abstol"]) : nothing
     solver_reltol = haskey(sol, "reltol") ? Float64(sol["reltol"]) : nothing
+    solver_numpoints = haskey(sol, "numpoints") ? Int(sol["numpoints"]) : nothing
 
     # Parse refinement
     refinement_enabled = get(ref, "enabled", false)::Bool
@@ -327,6 +333,7 @@ function load_experiment_config(path::String)
         solver_method,
         solver_abstol,
         solver_reltol,
+        solver_numpoints,
         # [refinement]
         refinement_enabled,
         refinement_method,
