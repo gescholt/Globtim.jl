@@ -1217,9 +1217,14 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     end
 
     # Phase 2: Accuracy refinement
-    # Move all converged leaves back to active for re-evaluation at fine tolerance
-    append!(tree.active_leaves, tree.converged_leaves)
-    empty!(tree.converged_leaves)
+    # Only re-activate leaves whose l2_error exceeds fine_tolerance;
+    # leaves already below fine_tolerance from Phase 1 stay converged.
+    needs_reeval = filter(id -> tree.subdomains[id].l2_error > fine_tolerance, tree.converged_leaves)
+    already_fine = filter(id -> tree.subdomains[id].l2_error <= fine_tolerance, tree.converged_leaves)
+    append!(tree.active_leaves, needs_reeval)
+    tree.converged_leaves = already_fine
+
+    verbose && length(already_fine) > 0 && println("  Skipping $(length(already_fine)) leaves already below fine_tolerance")
 
     phase2_iter = 0
     while !isempty(tree.active_leaves) && phase2_iter < 100
