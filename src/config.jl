@@ -81,6 +81,7 @@ end
     print_validation_errors(result::ValidationResult)
 
 Print validation errors in a readable format.
+Handles errors as generic objects — prints string representation of each error.
 """
 function print_validation_errors(result::ValidationResult)
     if result.success
@@ -92,11 +93,7 @@ function print_validation_errors(result::ValidationResult)
     println()
 
     for err in result.errors
-        println("  Field: $(err.field)")
-        println("  Error: $(err.message)")
-        if !isnothing(err.value)
-            println("  Value: $(err.value)")
-        end
+        println("  Error: $(string(err))")
         println()
     end
 end
