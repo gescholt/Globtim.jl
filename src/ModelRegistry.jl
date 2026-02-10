@@ -620,7 +620,7 @@ function register_benchmark_functions!()
     register_benchmark("deuflhard", :Deuflhard, 2,
         "Deuflhard function - polynomial test function")
 
-    register_benchmark("rastrigin", :Rastringin, 2,
+    register_benchmark("rastrigin", :Rastrigin, 2,
         "Rastrigin function - highly multimodal with regularly distributed local minima")
 end
 

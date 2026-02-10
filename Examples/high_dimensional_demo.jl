@@ -6,11 +6,11 @@ using DynamicPolynomials
 using DataFrames
 using Printf
 
-# 1. 3D Rastringin function
-println("1. 3D Rastringin Function")
+# 1. 3D Rastrigin function
+println("1. 3D Rastrigin Function")
 println("="^50)
 
-f_3d = Rastringin
+f_3d = Rastrigin
 TR_3d = test_input(f_3d, dim=3, center=zeros(3), sample_range=2.0)
 println("   Domain: [-2, 2]³")
 

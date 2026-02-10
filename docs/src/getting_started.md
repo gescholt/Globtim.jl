@@ -119,7 +119,7 @@ pol = Constructor(TR, 8, precision=AdaptivePrecision, verbose=0)
 | Function | Dimension | Description |
 |----------|-----------|-------------|
 | `Deuflhard` | 2D | Challenging with multiple minima |
-| `Rastringin` | nD | Classic multimodal benchmark |
+| `Rastrigin` | nD | Classic multimodal benchmark |
 | `HolderTable` | 2D | 4 symmetric global minima |
 | `tref_3d` | 3D | Highly oscillatory |
 | `Beale`, `Rosenbrock`, `Branin` | 2D | Standard benchmarks |

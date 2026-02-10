@@ -205,7 +205,7 @@ Float64Precision, AdaptivePrecision, RationalPrecision, BigFloatPrecision
 `tref_3d`
 
 ### n-Dimensional Functions
-`Rastringin`, `alpine1`, `alpine2`, `Csendes`
+`Rastrigin`, `alpine1`, `alpine2`, `Csendes`
 
 ---
 
