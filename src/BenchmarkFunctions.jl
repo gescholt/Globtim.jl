@@ -35,7 +35,7 @@ These functions have numerous local optima, testing global search capability:
 - `Ackley`: Highly multimodal with exponential and cosine terms
 - `Griewank`: Many regularly distributed local minima
 - `Schwefel`: Deceptive function with distant global optimum
-- `Rastringin`: Regular grid of local minima
+- `Rastrigin`: Regular grid of local minima
 - `Levy`: Steep ridges with many local minima
 - `Michalewicz`: Steep ridges controlled by parameter m
 - `StyblinskiTang`: Scalable multimodal function
@@ -78,7 +78,7 @@ f_val = Sphere([1.0, 2.0, 3.0])  # Returns 14.0
 f_val = Rosenbrock([1.0, 1.0])  # Returns 0.0 (global minimum)
 
 # Test a highly multimodal function
-f_val = Rastringin([0.0, 0.0])  # Returns 0.0 (global minimum)
+f_val = Rastrigin([0.0, 0.0])  # Returns 0.0 (global minimum)
 
 # Create test input for optimization
 TR = test_input(Griewank, dim=5, center=zeros(5), sample_range=600.0)
@@ -110,7 +110,7 @@ const BOWL_SHAPED_FUNCTIONS = [
 ]
 
 const MULTIMODAL_FUNCTIONS = [
-    :Ackley, :Griewank, :Schwefel, :Rastringin, :Levy,
+    :Ackley, :Griewank, :Schwefel, :Rastrigin, :Levy,
     :Michalewicz, :StyblinskiTang, :shubert, :dejong5
 ]
 
@@ -130,7 +130,7 @@ const TWO_D_FUNCTIONS = [
 const HIGHER_D_FUNCTIONS = [
     :Sphere, :Rosenbrock, :Griewank, :Schwefel, :Levy, :Zakharov,
     :Michalewicz, :StyblinskiTang, :SumOfDifferentPowers, :Trid,
-    :RotatedHyperEllipsoid, :Powell, :Ackley, :Rastringin, :alpine1, :alpine2
+    :RotatedHyperEllipsoid, :Powell, :Ackley, :Rastrigin, :alpine1, :alpine2
 ]
 
 """

@@ -492,14 +492,14 @@ end
 end
 
 """
-    Rastringin(x::AbstractVector) -> Float64
+    Rastrigin(x::AbstractVector) -> Float64
 
 Rastrigin function - a highly multimodal n-dimensional test function.
 
 The Rastrigin function is characterized by a large number of local minima arranged
 in a regular grid pattern, with a unique global minimum at the origin.
 
-f(x) = ∑_{i=1}^n [x_i² - 10cos(2πx_i)]
+f(x) = 10n + ∑_{i=1}^n [x_i² - 10cos(2πx_i)]
 
 # Arguments
 - `x::AbstractVector`: n-dimensional point
@@ -517,20 +517,21 @@ f(x) = ∑_{i=1}^n [x_i² - 10cos(2πx_i)]
 # Examples
 ```julia
 # 2D Rastrigin
-f_val = Rastringin([1.0, 1.0])
+f_val = Rastrigin([1.0, 1.0])
 
 # 10D optimization problem
-TR = test_input(Rastringin, dim=10, center=zeros(10), sample_range=5.12)
+TR = test_input(Rastrigin, dim=10, center=zeros(10), sample_range=5.12)
 ```
 """
-function Rastringin(x::AbstractVector)
+function Rastrigin(x::AbstractVector)
     # =======================================================
-    #   Not Rescaled
-    #   Rastringin function
-    #   Domain: [-5.12, 5.12]^ndim.
+    #   Standard Rastrigin function
+    #   f(x) = 10n + Σ [x_i² - 10cos(2πx_i)]
+    #   Domain: [-5.12, 5.12]^ndim
+    #   Global minimum: f(0, ..., 0) = 0
     # =======================================================
     ndim = length(x)
-    return sum(x[i]^2 - 10 * cos(2 * pi * x[i]) for i in 1:ndim)
+    return 10 * ndim + sum(x[i]^2 - 10 * cos(2 * pi * x[i]) for i in 1:ndim)
 end
 
 # ======================================================= Essential Benchmark Functions from Jamil & Yang 2013 =======================================================
@@ -1478,3 +1479,329 @@ function Powell(x::AbstractVector)
 
     return result
 end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Machine-readable function registry for benchmark experiments
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    FunctionRegistryEntry
+
+Machine-readable metadata for a benchmark optimization function.
+
+# Fields
+- `name::String`: Display name for the function
+- `default_bounds::Tuple{Float64,Float64}`: Default per-dimension bounds (same for all dims)
+- `global_min_location::Function`: `n::Int -> Vector{Float64}` returning the global min location
+- `global_min_value::Union{Float64, Function}`: Function value at the global minimum.
+  If `Float64`, the value is dimension-independent. If `Function`, it takes `n::Int -> Float64`
+  to compute the dimension-dependent minimum value (`NaN` when no closed-form is known).
+- `properties::Vector{Symbol}`: Properties like `:multimodal`, `:separable`, `:non_separable`, etc.
+- `min_dim::Int`: Minimum supported dimension
+- `max_dim::Union{Int, Nothing}`: Maximum supported dimension, or `nothing` for no upper limit.
+  Functions with `:fixed_dim` property should set this to enforce dimension constraints.
+
+# Usage
+```julia
+entry = FUNCTION_REGISTRY[Levy]
+bounds_3d = [entry.default_bounds for _ in 1:3]
+x_star = entry.global_min_location(3)
+```
+"""
+const FunctionRegistryEntry = @NamedTuple{
+    name::String,
+    default_bounds::Tuple{Float64,Float64},
+    global_min_location::Function,
+    global_min_value::Union{Float64, Function},
+    properties::Vector{Symbol},
+    min_dim::Int,
+    max_dim::Union{Int, Nothing},
+}
+
+"""
+    FUNCTION_REGISTRY
+
+Dict mapping benchmark function objects to their machine-readable metadata.
+Covers all n-dimensional benchmark functions in LibFunctions.jl.
+
+# Example
+```julia
+entry = FUNCTION_REGISTRY[Levy]
+println(entry.name)                    # "Levy"
+println(entry.default_bounds)          # (-10.0, 10.0)
+println(entry.global_min_location(3))  # [1.0, 1.0, 1.0]
+println(entry.global_min_value)        # 0.0
+```
+"""
+const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
+    # ── Multimodal functions ──────────────────────────────────────────────
+    Ackley => (
+        name = "Ackley",
+        default_bounds = (-5.0, 5.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Levy => (
+        name = "Levy",
+        default_bounds = (-10.0, 10.0),
+        global_min_location = n -> ones(n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Griewank => (
+        name = "Griewank",
+        default_bounds = (-600.0, 600.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Schwefel => (
+        name = "Schwefel",
+        default_bounds = (-500.0, 500.0),
+        global_min_location = n -> fill(420.9687, n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :non_separable, :deceptive],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Rastrigin => (
+        name = "Rastrigin",
+        default_bounds = (-5.12, 5.12),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Michalewicz => (
+        name = "Michalewicz",
+        default_bounds = (0.0, Float64(π)),
+        global_min_location = n -> begin
+            # Approximate known locations per dimension (from literature)
+            locs_1d = [2.20291, 1.57080, 1.28499, 1.10570, 0.98470,
+                       0.89284, 0.82033, 0.76048, 0.70955, 0.66537]
+            return [i <= length(locs_1d) ? locs_1d[i] : π / 2 for i in 1:n]
+        end,
+        # No closed-form for arbitrary dimension; tabulated from literature
+        global_min_value = n -> get(
+            Dict(2 => -1.8013, 5 => -4.6877, 10 => -9.6602),
+            n, NaN
+        ),
+        properties = [:multimodal, :non_separable, :steep_ridges],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    StyblinskiTang => (
+        name = "StyblinskiTang",
+        default_bounds = (-5.0, 5.0),
+        global_min_location = n -> fill(-2.903534, n),
+        global_min_value = n -> -39.16599 * n,  # per-dimension contribution × n
+        properties = [:multimodal, :separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    alpine1 => (
+        name = "Alpine1",
+        default_bounds = (-10.0, 10.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    alpine2 => (
+        name = "Alpine2",
+        default_bounds = (0.0, 10.0),
+        global_min_location = n -> fill(7.917, n),
+        # No closed-form for arbitrary dimension; tabulated from literature
+        global_min_value = n -> get(
+            Dict(2 => -6.1295, 3 => -18.4519),
+            n, NaN
+        ),
+        properties = [:multimodal, :separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+
+    # ── Bowl-shaped / unimodal functions ──────────────────────────────────
+    Sphere => (
+        name = "Sphere",
+        default_bounds = (-5.12, 5.12),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:unimodal, :convex, :separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Rosenbrock => (
+        name = "Rosenbrock",
+        default_bounds = (-5.0, 10.0),
+        global_min_location = n -> ones(n),
+        global_min_value = 0.0,
+        properties = [:unimodal, :non_convex, :non_separable, :narrow_valley],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Zakharov => (
+        name = "Zakharov",
+        default_bounds = (-5.0, 10.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:unimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    SumOfDifferentPowers => (
+        name = "SumOfDifferentPowers",
+        default_bounds = (-1.0, 1.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:unimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Trid => (
+        name = "Trid",
+        default_bounds = (-9.0, 9.0),  # n² for n=3; conservative default
+        global_min_location = n -> [Float64(i * (n + 1 - i)) for i in 1:n],
+        global_min_value = n -> -n * (n + 4) * (n - 1) / 6,
+        properties = [:unimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    RotatedHyperEllipsoid => (
+        name = "RotatedHyperEllipsoid",
+        default_bounds = (-65.536, 65.536),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:unimodal, :non_separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+    Powell => (
+        name = "Powell",
+        default_bounds = (-4.0, 5.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:multimodal, :non_separable],
+        min_dim = 4,  # requires dim % 4 == 0
+        max_dim = nothing,
+    ),
+    Csendes => (
+        name = "Csendes",
+        default_bounds = (-1.0, 1.0),
+        global_min_location = n -> zeros(n),
+        global_min_value = 0.0,
+        properties = [:unimodal, :separable],
+        min_dim = 2,
+        max_dim = nothing,
+    ),
+)
+
+# ── Fixed-dimension benchmark functions ──
+
+push!(FUNCTION_REGISTRY,
+    Deuflhard => FunctionRegistryEntry(
+        name = "Deuflhard",
+        default_bounds = (-5.0, 5.0),
+        global_min_location = n -> error("Deuflhard global minimum is not closed-form; use Newton refinement"),
+        global_min_value = NaN,  # multiple CPs, no closed-form global min
+        properties = [:multimodal, :nonseparable, :fixed_dim],
+        min_dim = 2,
+        max_dim = 2,  # hardcoded 2D function (uses xx[1], xx[2] only)
+    ),
+)
+
+"""
+    get_benchmark_config(func::Function, dim::Int; bounds=nothing) -> NamedTuple
+
+Build a benchmark configuration from the function registry for use in experiment scripts.
+
+Returns a NamedTuple with: `name`, `objective`, `bounds`, `description`, `global_min`,
+`global_min_value`. The `global_min_value` is always resolved to a `Float64` (or `NaN`
+if no closed-form value is known for the given dimension).
+
+Errors if `dim` is outside the `[min_dim, max_dim]` range for the function.
+
+# Arguments
+- `func::Function`: Benchmark function (must be in `FUNCTION_REGISTRY`)
+- `dim::Int`: Problem dimension (must satisfy `min_dim <= dim <= max_dim`)
+- `bounds`: Optional custom bounds as `Vector{Tuple{Float64,Float64}}`.
+  If `nothing`, uses `default_bounds` from the registry replicated to `dim` dimensions.
+
+# Example
+```julia
+bench = get_benchmark_config(Levy, 3)
+# bench.name == "levy"
+# bench.bounds == [(-10.0, 10.0), (-10.0, 10.0), (-10.0, 10.0)]
+# bench.global_min == [1.0, 1.0, 1.0]
+```
+"""
+function get_benchmark_config(func::Function, dim::Int; bounds = nothing)
+    haskey(FUNCTION_REGISTRY, func) || error("Function $(func) not found in FUNCTION_REGISTRY")
+    entry = FUNCTION_REGISTRY[func]
+    dim >= entry.min_dim || error("$(entry.name) requires at least $(entry.min_dim) dimensions, got $dim")
+    if entry.max_dim !== nothing && dim > entry.max_dim
+        error("$(entry.name) supports at most $(entry.max_dim) dimensions, got $dim")
+    end
+
+    actual_bounds = bounds !== nothing ? bounds : [entry.default_bounds for _ in 1:dim]
+    min_val = entry.global_min_value isa Function ? entry.global_min_value(dim) : entry.global_min_value
+    return (
+        name = lowercase(entry.name),
+        objective = func,
+        bounds = actual_bounds,
+        description = "$(entry.name) $(dim)D",
+        global_min = entry.global_min_location(dim),
+        global_min_value = min_val,
+    )
+end
+
+"""
+    get_benchmark_config_by_name(name::String, dim::Int; bounds = nothing)
+
+Look up a benchmark function by its string name (case-insensitive) and return
+an experiment-ready config NamedTuple. This is the TOML pipeline entry point —
+TOML configs specify functions as strings, not Julia function references.
+
+Errors with the list of known function names if `name` is not found.
+
+# Example
+```julia
+bench = get_benchmark_config_by_name("Levy", 3)
+# bench.objective == Levy
+# bench.bounds == [(-10.0, 10.0), (-10.0, 10.0), (-10.0, 10.0)]
+```
+"""
+function get_benchmark_config_by_name(name::String, dim::Int; bounds = nothing)
+    name_lower = lowercase(name)
+    for (func, entry) in FUNCTION_REGISTRY
+        if lowercase(entry.name) == name_lower
+            return get_benchmark_config(func, dim; bounds = bounds)
+        end
+    end
+    known = sort([entry.name for entry in values(FUNCTION_REGISTRY)])
+    error("Analytical function \"$name\" not found in FUNCTION_REGISTRY. " *
+          "Known functions: $(join(known, ", "))")
+end
+
+"""
+    known_analytical_function_names() -> Vector{String}
+
+Return sorted list of all function names in FUNCTION_REGISTRY.
+Used by TOML validation to check analytical_function field.
+"""
+function known_analytical_function_names()
+    return sort([entry.name for entry in values(FUNCTION_REGISTRY)])
+end
+
+# Export registry
+export FUNCTION_REGISTRY, FunctionRegistryEntry, get_benchmark_config,
+       get_benchmark_config_by_name, known_analytical_function_names

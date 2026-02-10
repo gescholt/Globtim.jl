@@ -94,7 +94,7 @@ echo ""
 # Check for key benchmark functions
 echo -e "${YELLOW}3. Checking Benchmark Function Definitions...${NC}"
 
-benchmark_functions=("Sphere" "Rosenbrock" "Zakharov" "Griewank" "Rastringin")
+benchmark_functions=("Sphere" "Rosenbrock" "Zakharov" "Griewank" "Rastrigin")
 for func in "${benchmark_functions[@]}"; do
     if grep -q ":$func =>" src/HPC/BenchmarkConfig.jl; then
         echo -e "   ${GREEN}✓${NC} $func function defined"

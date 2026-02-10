@@ -68,7 +68,7 @@ export test_input,
     alpine1,
     alpine2,
     GaussianParams,
-    Rastringin,
+    Rastrigin,
     Deuflhard_4d,
     # New benchmark functions from Jamil & Yang 2013
     Sphere,

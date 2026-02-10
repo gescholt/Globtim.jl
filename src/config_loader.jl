@@ -64,6 +64,14 @@ struct ExperimentPipelineConfig
     refinement_gradient_method::Union{Nothing, String}
     refinement_gradient_tolerance::Union{Nothing, Float64}
 
+    # [analysis] — optional CP validation (Newton on ∇f=0, Hessian classification)
+    analysis_enabled::Bool
+    analysis_gradient_method::Union{Nothing, String}
+    analysis_newton_tol::Union{Nothing, Float64}
+    analysis_newton_max_iterations::Union{Nothing, Int}
+    analysis_hessian_tol::Union{Nothing, Float64}
+    analysis_dedup_fraction::Union{Nothing, Float64}
+
     # [output]
     output_dir::Union{Nothing, String}
 end
@@ -107,6 +115,12 @@ function validate_experiment_toml(d::Dict)
     sol = get(d, "solver", Dict())
     ref = get(d, "refinement", Dict())
 
+    # --- [domain] mode flags (needed early for cross-validation) ---
+    has_radius = haskey(dom, "radius")
+    has_radii  = haskey(dom, "radii")
+    has_bounds = haskey(dom, "bounds")
+    n_domain_modes = count([has_radius, has_radii, has_bounds])
+
     # --- [experiment] ---
     haskey(exp, "name") || push!(errors, "[experiment] missing required field 'name'")
 
@@ -123,14 +137,26 @@ function validate_experiment_toml(d::Dict)
         haskey(mod, "entry_name")     || push!(errors, "[model] catalogue mode requires 'entry_name'")
     elseif has_analytical
         haskey(mod, "dimension") || push!(errors, "[model] analytical mode requires 'dimension'")
+        # Validate function name against FUNCTION_REGISTRY
+        if haskey(mod, "analytical_function")
+            known = known_analytical_function_names()
+            fname = mod["analytical_function"]
+            if !(lowercase(fname) in [lowercase(n) for n in known])
+                push!(errors, "[model] unknown analytical_function \"$fname\". Known: $(join(known, ", "))")
+            end
+        end
+    end
+
+    # Cross-validate bounds dimension matches declared dimension
+    if has_analytical && haskey(mod, "dimension") && has_bounds
+        dim = mod["dimension"]
+        b = dom["bounds"]
+        if b isa AbstractVector && length(b) != dim
+            push!(errors, "[domain] bounds has $(length(b)) entries but [model] dimension is $dim")
+        end
     end
 
     # --- [domain] mode validation ---
-    has_radius = haskey(dom, "radius")
-    has_radii  = haskey(dom, "radii")
-    has_bounds = haskey(dom, "bounds")
-    n_domain_modes = count([has_radius, has_radii, has_bounds])
-
     if n_domain_modes == 0 && !has_catalogue
         push!(errors, "[domain] must specify one of: radius, radii, or bounds (required for analytical models)")
     elseif n_domain_modes > 1
@@ -212,6 +238,31 @@ function validate_experiment_toml(d::Dict)
     if haskey(sol, "numpoints")
         np = sol["numpoints"]
         (np isa Integer && 5 <= np <= 1000) || push!(errors, "[solver] numpoints must be an integer in [5, 1000], got: $np")
+    end
+
+    # --- [analysis] (optional — Newton CP validation) ---
+    ana = get(d, "analysis", Dict())
+    if haskey(ana, "gradient_method")
+        ana["gradient_method"] in KNOWN_GRADIENT_METHODS || push!(errors,
+            "[analysis] unknown gradient_method '$(ana["gradient_method"])'. Known: $(join(sort(collect(KNOWN_GRADIENT_METHODS)), ", "))")
+    end
+    if haskey(ana, "newton_tol")
+        (ana["newton_tol"] isa Number && ana["newton_tol"] > 0) || push!(errors,
+            "[analysis] newton_tol must be positive")
+    end
+    if haskey(ana, "newton_max_iterations")
+        nmi = ana["newton_max_iterations"]
+        (nmi isa Integer && nmi > 0) || push!(errors,
+            "[analysis] newton_max_iterations must be a positive integer, got: $nmi")
+    end
+    if haskey(ana, "hessian_tol")
+        (ana["hessian_tol"] isa Number && ana["hessian_tol"] > 0) || push!(errors,
+            "[analysis] hessian_tol must be positive")
+    end
+    if haskey(ana, "dedup_fraction")
+        df = ana["dedup_fraction"]
+        (df isa Number && 0 < df < 1) || push!(errors,
+            "[analysis] dedup_fraction must be in (0, 1), got: $df")
     end
 
     # --- [refinement] (optional) ---
@@ -309,6 +360,15 @@ function load_experiment_config(path::String)
     refinement_gradient_method = haskey(ref, "gradient_method") ? String(ref["gradient_method"]) : nothing
     refinement_gradient_tolerance = haskey(ref, "gradient_tolerance") ? Float64(ref["gradient_tolerance"]) : nothing
 
+    # Parse analysis
+    ana = get(d, "analysis", Dict())
+    analysis_enabled = get(ana, "enabled", false)::Bool
+    analysis_gradient_method = haskey(ana, "gradient_method") ? String(ana["gradient_method"]) : nothing
+    analysis_newton_tol = haskey(ana, "newton_tol") ? Float64(ana["newton_tol"]) : nothing
+    analysis_newton_max_iterations = haskey(ana, "newton_max_iterations") ? Int(ana["newton_max_iterations"]) : nothing
+    analysis_hessian_tol = haskey(ana, "hessian_tol") ? Float64(ana["hessian_tol"]) : nothing
+    analysis_dedup_fraction = haskey(ana, "dedup_fraction") ? Float64(ana["dedup_fraction"]) : nothing
+
     # Parse output
     output_dir = haskey(out, "dir") ? String(out["dir"]) : nothing
 
@@ -340,6 +400,13 @@ function load_experiment_config(path::String)
         refinement_max_time,
         refinement_gradient_method,
         refinement_gradient_tolerance,
+        # [analysis]
+        analysis_enabled,
+        analysis_gradient_method,
+        analysis_newton_tol,
+        analysis_newton_max_iterations,
+        analysis_hessian_tol,
+        analysis_dedup_fraction,
         # [output]
         output_dir,
     )
