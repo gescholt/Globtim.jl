@@ -1493,12 +1493,11 @@ Machine-readable metadata for a benchmark optimization function.
 - `name::String`: Display name for the function
 - `default_bounds::Tuple{Float64,Float64}`: Default per-dimension bounds (same for all dims)
 - `global_min_location::Function`: `n::Int -> Vector{Float64}` returning the global min location
-- `global_min_value::Union{Float64, Function}`: Function value at the global minimum.
-  If `Float64`, the value is dimension-independent. If `Function`, it takes `n::Int -> Float64`
-  to compute the dimension-dependent minimum value (`NaN` when no closed-form is known).
+- `global_min_value::Function`: `n::Int -> Float64` returning the global minimum value for
+  dimension `n`. Returns `NaN` when no closed-form is known for that dimension.
 - `properties::Vector{Symbol}`: Properties like `:multimodal`, `:separable`, `:non_separable`, etc.
 - `min_dim::Int`: Minimum supported dimension
-- `max_dim::Union{Int, Nothing}`: Maximum supported dimension, or `nothing` for no upper limit.
+- `max_dim::Int`: Maximum supported dimension. Use `typemax(Int)` for no upper limit.
   Functions with `:fixed_dim` property should set this to enforce dimension constraints.
 
 # Usage
@@ -1506,16 +1505,17 @@ Machine-readable metadata for a benchmark optimization function.
 entry = FUNCTION_REGISTRY[Levy]
 bounds_3d = [entry.default_bounds for _ in 1:3]
 x_star = entry.global_min_location(3)
+f_star = entry.global_min_value(3)
 ```
 """
 const FunctionRegistryEntry = @NamedTuple{
     name::String,
     default_bounds::Tuple{Float64,Float64},
     global_min_location::Function,
-    global_min_value::Union{Float64, Function},
+    global_min_value::Function,
     properties::Vector{Symbol},
     min_dim::Int,
-    max_dim::Union{Int, Nothing},
+    max_dim::Int,
 }
 
 """
@@ -1530,7 +1530,7 @@ entry = FUNCTION_REGISTRY[Levy]
 println(entry.name)                    # "Levy"
 println(entry.default_bounds)          # (-10.0, 10.0)
 println(entry.global_min_location(3))  # [1.0, 1.0, 1.0]
-println(entry.global_min_value)        # 0.0
+println(entry.global_min_value(3))     # 0.0
 ```
 """
 const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
@@ -1539,46 +1539,46 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         name = "Ackley",
         default_bounds = (-5.0, 5.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Levy => (
         name = "Levy",
         default_bounds = (-10.0, 10.0),
         global_min_location = n -> ones(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Griewank => (
         name = "Griewank",
         default_bounds = (-600.0, 600.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Schwefel => (
         name = "Schwefel",
         default_bounds = (-500.0, 500.0),
         global_min_location = n -> fill(420.9687, n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :non_separable, :deceptive],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Rastrigin => (
         name = "Rastrigin",
         default_bounds = (-5.12, 5.12),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Michalewicz => (
         name = "Michalewicz",
@@ -1596,7 +1596,7 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         ),
         properties = [:multimodal, :non_separable, :steep_ridges],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     StyblinskiTang => (
         name = "StyblinskiTang",
@@ -1605,16 +1605,16 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         global_min_value = n -> -39.16599 * n,  # per-dimension contribution × n
         properties = [:multimodal, :separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     alpine1 => (
         name = "Alpine1",
         default_bounds = (-10.0, 10.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     alpine2 => (
         name = "Alpine2",
@@ -1627,7 +1627,7 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         ),
         properties = [:multimodal, :separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
 
     # ── Bowl-shaped / unimodal functions ──────────────────────────────────
@@ -1635,37 +1635,37 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         name = "Sphere",
         default_bounds = (-5.12, 5.12),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:unimodal, :convex, :separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Rosenbrock => (
         name = "Rosenbrock",
         default_bounds = (-5.0, 10.0),
         global_min_location = n -> ones(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:unimodal, :non_convex, :non_separable, :narrow_valley],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Zakharov => (
         name = "Zakharov",
         default_bounds = (-5.0, 10.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:unimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     SumOfDifferentPowers => (
         name = "SumOfDifferentPowers",
         default_bounds = (-1.0, 1.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:unimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Trid => (
         name = "Trid",
@@ -1674,45 +1674,45 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         global_min_value = n -> -n * (n + 4) * (n - 1) / 6,
         properties = [:unimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     RotatedHyperEllipsoid => (
         name = "RotatedHyperEllipsoid",
         default_bounds = (-65.536, 65.536),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:unimodal, :non_separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Powell => (
         name = "Powell",
         default_bounds = (-4.0, 5.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:multimodal, :non_separable],
         min_dim = 4,  # requires dim % 4 == 0
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
     Csendes => (
         name = "Csendes",
         default_bounds = (-1.0, 1.0),
         global_min_location = n -> zeros(n),
-        global_min_value = 0.0,
+        global_min_value = _ -> 0.0,
         properties = [:unimodal, :separable],
         min_dim = 2,
-        max_dim = nothing,
+        max_dim = typemax(Int),
     ),
 )
 
 # ── Fixed-dimension benchmark functions ──
 
 push!(FUNCTION_REGISTRY,
-    Deuflhard => FunctionRegistryEntry(
+    Deuflhard => (
         name = "Deuflhard",
         default_bounds = (-5.0, 5.0),
         global_min_location = n -> error("Deuflhard global minimum is not closed-form; use Newton refinement"),
-        global_min_value = NaN,  # multiple CPs, no closed-form global min
+        global_min_value = _ -> NaN,  # multiple CPs, no closed-form global min
         properties = [:multimodal, :nonseparable, :fixed_dim],
         min_dim = 2,
         max_dim = 2,  # hardcoded 2D function (uses xx[1], xx[2] only)
@@ -1748,19 +1748,16 @@ function get_benchmark_config(func::Function, dim::Int; bounds = nothing)
     haskey(FUNCTION_REGISTRY, func) || error("Function $(func) not found in FUNCTION_REGISTRY")
     entry = FUNCTION_REGISTRY[func]
     dim >= entry.min_dim || error("$(entry.name) requires at least $(entry.min_dim) dimensions, got $dim")
-    if entry.max_dim !== nothing && dim > entry.max_dim
-        error("$(entry.name) supports at most $(entry.max_dim) dimensions, got $dim")
-    end
+    dim <= entry.max_dim || error("$(entry.name) supports at most $(entry.max_dim) dimensions, got $dim")
 
     actual_bounds = bounds !== nothing ? bounds : [entry.default_bounds for _ in 1:dim]
-    min_val = entry.global_min_value isa Function ? entry.global_min_value(dim) : entry.global_min_value
     return (
         name = lowercase(entry.name),
         objective = func,
         bounds = actual_bounds,
         description = "$(entry.name) $(dim)D",
         global_min = entry.global_min_location(dim),
-        global_min_value = min_val,
+        global_min_value = entry.global_min_value(dim),
     )
 end
 
