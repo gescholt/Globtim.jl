@@ -291,6 +291,39 @@ function validate_experiment_toml(d::Dict)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Path Resolution
+# ═══════════════════════════════════════════════════════════════════════════════
+
+const _RESULTS_PREFIX = "globtim_results" * Base.Filesystem.path_separator
+
+"""
+    _resolve_config_path(p, config_dir) -> Union{String, Nothing}
+
+Resolve a relative path from a TOML config to an absolute path.
+
+- `nothing` passes through unchanged
+- Absolute paths pass through unchanged
+- Paths starting with `"globtim_results/"` are resolved via `get_results_root()`
+  (respects `GLOBTIM_RESULTS_ROOT` env var)
+- Other relative paths are resolved relative to `config_dir` (the TOML file's directory)
+"""
+function _resolve_config_path(p::Nothing, ::AbstractString)
+    return nothing
+end
+
+function _resolve_config_path(p::AbstractString, config_dir::AbstractString)
+    isabspath(p) && return p
+
+    if startswith(p, _RESULTS_PREFIX)
+        # "globtim_results/lv4d_catalogue.jsonl" → get_results_root() * "/lv4d_catalogue.jsonl"
+        return joinpath(get_results_root(), p[length(_RESULTS_PREFIX)+1:end])
+    end
+
+    # Other relative paths resolve relative to the TOML file's directory
+    return joinpath(config_dir, p)
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Parser
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -371,6 +404,16 @@ function load_experiment_config(path::String)
 
     # Parse output
     output_dir = haskey(out, "dir") ? String(out["dir"]) : nothing
+
+    # ── Resolve relative paths ──
+    # TOML configs use relative paths like "globtim_results/lv4d_catalogue.jsonl".
+    # These must be resolved to absolute paths so they work regardless of pwd().
+    # Paths under "globtim_results/" are resolved via PathManager.get_results_root()
+    # (which respects the GLOBTIM_RESULTS_ROOT env var). Other relative paths are
+    # resolved relative to the TOML file's directory.
+    config_dir = dirname(abspath(path))
+    catalogue_path = _resolve_config_path(catalogue_path, config_dir)
+    output_dir     = _resolve_config_path(output_dir, config_dir)
 
     return ExperimentPipelineConfig(
         # [experiment]
