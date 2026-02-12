@@ -173,6 +173,7 @@ export generate_anisotropic_grid
 export Subdomain, SubdivisionTree, TreeStatistics,
     adaptive_refine, two_phase_refine,
     estimate_subdomain_error, subdivide_domain,
+    compute_dimension_scores!,  # Shared dimension scoring for subdivision
     select_cut_dimension, find_optimal_cut_sparse,
     get_bounds, n_leaves, n_active, total_error, error_balance_ratio,
     dimension, volume,  # Subdomain utilities
@@ -246,12 +247,6 @@ include("safe_wrappers.jl") #Safe wrapper functions with error handling
 #   - ExperimentPathTracker.jl, ExperimentOutputOrganizer.jl, OutputPathManager.jl,
 #   - PathUtils.jl, ExperimentPaths.jl
 # All path management now unified in PathManager.jl
-# include("valley_detection.jl") #Valley detection and manifold following algorithms
-# include("conservative_valley_walking.jl") #Conservative valley walking with function value validation
-
-# Visualization removed - use GlobtimPlots package for all plotting
-# See docs/VISUALIZATION.md for migration guide
-# include("PostProcessing.jl") # DEPRECATED: Moved to globtimpostprocessing package (October 2025)
 include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
 
 # Export non-plotting functions that are always available
@@ -425,18 +420,6 @@ export enhanced_bfgs_refinement
 
 # Additional refine.jl functions - internal use only
 # export compute_gradients, analyze_basins
-
-# Valley detection and manifold following functions
-# TODO: These functions are not yet implemented - exports commented out
-# export ValleyDetectionConfig, ValleyInfo
-# export detect_valley_at_point, follow_valley_manifold, project_to_critical_manifold
-# export analyze_valleys_in_critical_points
-# export create_valley_test_function, create_ridge_test_function
-
-# Conservative valley walking functions
-# TODO: These functions are not yet implemented - exports commented out
-# export ConservativeValleyConfig, ConservativeValleyStep
-# export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
 
 # Function value error analysis - only export main types and functions
 export FunctionValueError, ErrorMetrics, compute_function_value_errors

@@ -279,6 +279,58 @@ subdivide_midpoint(subdomain::Subdomain, dim::Int) = subdivide_domain(subdomain,
 #==============================================================================#
 
 """
+    compute_dimension_scores!(dim_scores::Vector{Float64}, residuals::Vector{Float64}, samples::Matrix{Float64}) -> Int
+
+Compute per-dimension residual variance scores for subdivision dimension selection.
+
+Scores each dimension by the mean variance of residuals along 1D slices
+(grouping by all other dimensions). Higher score = more benefit from
+subdividing along that dimension.
+
+# Arguments
+- `dim_scores`: Pre-allocated vector of length n_dim to fill with scores
+- `residuals`: Residuals (f_values - poly_values) at sample points
+- `samples`: Sample point matrix (n_samples × n_dim) in normalized coordinates
+
+# Returns
+- Index of dimension with highest score (argmax of dim_scores)
+
+# Side Effects
+- Fills `dim_scores` with computed scores
+"""
+function compute_dimension_scores!(dim_scores::Vector{Float64}, residuals::Vector{Float64}, samples::Matrix{Float64})
+    n_dim = size(samples, 2)
+    @assert length(dim_scores) == n_dim "dim_scores length ($(length(dim_scores))) must match sample dimensions ($n_dim)"
+    @assert length(residuals) == size(samples, 1) "residuals length ($(length(residuals))) must match number of samples ($(size(samples, 1)))"
+
+    for d in 1:n_dim
+        other_dims = setdiff(1:n_dim, d)
+
+        # Group samples by coordinates in other dimensions
+        groups = Dict{Vector{Float64}, Vector{Int}}()
+        for i in 1:size(samples, 1)
+            key = round.(samples[i, other_dims], digits=10)
+            if !haskey(groups, key)
+                groups[key] = Int[]
+            end
+            push!(groups[key], i)
+        end
+
+        # Compute variance of residuals within each group (along dimension d)
+        vars = Float64[]
+        for indices in values(groups)
+            if length(indices) > 1
+                push!(vars, var(residuals[indices]))
+            end
+        end
+
+        dim_scores[d] = isempty(vars) ? 0.0 : mean(vars)
+    end
+
+    return argmax(dim_scores)
+end
+
+"""
     select_cut_dimension(subdomain::Subdomain)
 
 Select which dimension to cut based on statistical analysis of approximation residuals.
@@ -311,62 +363,9 @@ function select_cut_dimension(subdomain::Subdomain)
     # Compute residuals
     residuals = subdomain.f_values .- poly_values
 
-    # Compute per-dimension "difficulty" scores
-    # Score: mean variance of residuals along dimension d (keeping other dims fixed)
-    # High variance = function varies unpredictably in that direction = good cut candidate
+    # Score dimensions using shared algorithm
     dim_scores = zeros(n_dim)
-
-    for d in 1:n_dim
-        # Get unique coordinates in dimension d
-        d_unique = sort(unique(subdomain.samples[:, d]))
-
-        # For each unique value in other dimensions, compute variance of residuals along d
-        # We approximate this by grouping by the "complementary" dimension for 2D case
-        # For higher D, we use all unique values in dimension d and average variances
-
-        if n_dim == 2
-            # For 2D: group by the other dimension and compute variance along d
-            other_d = 3 - d  # Switch between 1 and 2
-            other_unique = sort(unique(subdomain.samples[:, other_d]))
-
-            vars = Float64[]
-            for other_val in other_unique
-                mask = isapprox.(subdomain.samples[:, other_d], other_val)
-                if sum(mask) > 1  # Need at least 2 points for variance
-                    push!(vars, var(residuals[mask]))
-                end
-            end
-            dim_scores[d] = isempty(vars) ? 0.0 : mean(vars)
-        else
-            # For nD tensor grids: group by all OTHER dimensions, measure variance along d
-            # Points that share coordinates in all dims except d form a 1D "slice" along d
-            samples = subdomain.samples
-            other_dims = setdiff(1:n_dim, d)
-
-            # Group points by their coordinates in other dimensions
-            # Use rounded keys to handle floating point comparison
-            groups = Dict{Vector{Float64}, Vector{Int}}()
-            for i in 1:size(samples, 1)
-                key = round.(samples[i, other_dims], digits=10)
-                if !haskey(groups, key)
-                    groups[key] = Int[]
-                end
-                push!(groups[key], i)
-            end
-
-            # Compute variance of residuals within each group (along dimension d)
-            vars = Float64[]
-            for indices in values(groups)
-                if length(indices) > 1
-                    push!(vars, var(residuals[indices]))
-                end
-            end
-            dim_scores[d] = isempty(vars) ? 0.0 : mean(vars)
-        end
-    end
-
-    # Return dimension with highest score
-    return argmax(dim_scores)
+    return compute_dimension_scores!(dim_scores, residuals, subdomain.samples)
 end
 
 """
