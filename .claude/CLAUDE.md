@@ -59,7 +59,6 @@ This package must remain lightweight and suitable for:
 
 ✅ **Allowed Dependencies:**
 - LinearAlgebra, Statistics - Standard library math
-- DifferentialEquations, OrdinaryDiffEq - ODE solving
 - HomotopyContinuation, DynamicPolynomials - Polynomial systems
 - Optim - Optimization algorithms
 - PolyChaos - Polynomial chaos expansion
@@ -67,6 +66,11 @@ This package must remain lightweight and suitable for:
 - DataFrames, CSV, JSON3, JLD2 - Data management
 - DrWatson - Scientific project management
 - TOML - Configuration parsing
+
+⚠️ **Removed Dependencies (Feb 2026 cleanup):**
+- DifferentialEquations, OrdinaryDiffEq, ModelingToolkit - ODE solving belongs in Dynamic_objectives
+- Dagger - DaggerWorkerContext.jl was never included in module
+- ArgParse, MAT, JuliaFormatter, ModelContextProtocol - never used in src/
 
 ## What DOES NOT belong in globtimcore
 
