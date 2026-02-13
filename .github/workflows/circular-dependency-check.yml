@@ -84,19 +84,21 @@ jobs:
       run: |
         echo "📊 Generating dependency validation report..."
         julia --project=. -e "
-          using Pkg;
+          import Pkg.TOML
 
           println(\"\\n📋 DEPENDENCY VALIDATION REPORT\");
           println(\"=\"^50);
 
-          # Project info
-          project = Pkg.project();
-          println(\"📦 Package: \$(project.name) v\$(project.version)\");
+          # Parse Project.toml directly for full access to all sections
+          toml = TOML.parsefile(\"Project.toml\");
 
-          # Dependency counts
-          deps = length(project.dependencies);
-          weakdeps = haskey(project.extras, \"weakdeps\") ? length(project.extras[\"weakdeps\"]) : 0;
-          extensions = haskey(project.extras, \"extensions\") ? length(project.extras[\"extensions\"]) : 0;
+          name = get(toml, \"name\", \"unknown\");
+          version = get(toml, \"version\", \"unknown\");
+          println(\"📦 Package: \$name v\$version\");
+
+          deps = length(get(toml, \"deps\", Dict()));
+          weakdeps = length(get(toml, \"weakdeps\", Dict()));
+          extensions = length(get(toml, \"extensions\", Dict()));
 
           println(\"📊 Dependencies: \$deps regular, \$weakdeps weak, \$extensions extensions\");
 
