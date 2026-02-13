@@ -108,7 +108,7 @@ TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectang
 
 ## Visualization
 
-For plotting critical points and convergence analysis, use the **globtimplots** package:
+For plotting critical points and convergence analysis, use the [GlobtimPlots](https://github.com/gescholt/globtimplots) package:
 
 ```julia
 using GlobtimPlots
@@ -116,7 +116,9 @@ fig = plot_critical_points(df_enhanced)
 fig = plot_convergence(results)
 ```
 
-See `globtimplots` documentation for available plot types.
+See the [GlobtimPlots documentation](globtimplots.md) for available plot types.
+
+For post-experiment analysis (refinement, parameter recovery, campaign comparison), use [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing).
 
 ---
 
