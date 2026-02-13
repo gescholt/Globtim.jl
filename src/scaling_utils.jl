@@ -113,6 +113,26 @@ function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, basis::Symbol, 
 end
 
 """
+    relative_l2_error(pol::ApproxPoly) -> Float64
+
+Compute the relative L2 approximation error: `||f - p||_L2 / ||f||_L2`.
+
+The absolute L2 error (`pol.nrm`) is a quadrature-weighted norm of the residual
+on [-1,1]^n. This function normalizes it by the same weighted norm of the function
+values, giving a dimensionless ratio in [0, 1] for a good approximation.
+
+Returns `NaN` if the function norm is zero (constant zero function).
+"""
+function relative_l2_error(pol::ApproxPoly)
+    dim = size(pol.grid, 2)
+    # Grid has (GN+1)^dim points, so GN = round(N^(1/dim)) - 1
+    GN = round(Int, pol.N^(1/dim)) - 1
+    weights = compute_quadrature_weights(pol.basis, GN, dim)
+    norm_F = sqrt(sum(abs2.(pol.z) .* weights))
+    return norm_F > 0 ? pol.nrm / norm_F : NaN
+end
+
+"""
     transform_coordinates(scale_factor, grid, center)
 
 Type-stable coordinate transformation for visualization.

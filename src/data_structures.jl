@@ -282,5 +282,262 @@ struct BFGSResult
     optimization_time::Float64
 end
 
+# ================================================================================
+# Canonical Result Types for Validation and Error Handling
+# ================================================================================
+
+"""
+    ValidationResult{T}
+
+Canonical validation result structure with type parameter for validated data.
+Unifies validation results across the codebase.
+
+# Fields
+- `success::Bool`: Whether validation succeeded
+- `data::Union{T, Nothing}`: Validated data (Nothing if validation failed)
+- `errors::Vector`: Validation errors encountered
+- `warnings::Vector{String}`: Non-critical warnings
+- `quality_score::Float64`: Quality score (0-100)
+- `metadata::Dict{String, Any}`: Additional metadata
+
+# Type Parameter
+- `T`: Type of the validated data
+"""
+struct ValidationResult{T}
+    success::Bool
+    data::Union{T, Nothing}
+    errors::Vector  # Generic to support different error types
+    warnings::Vector{String}
+    quality_score::Float64
+    metadata::Dict{String, Any}
+
+    function ValidationResult{T}(
+        success::Bool,
+        data::Union{T, Nothing},
+        errors::Vector = [],
+        warnings::Vector{String} = String[],
+        quality_score::Float64 = 100.0,
+        metadata::Dict{String, Any} = Dict{String, Any}()
+    ) where T
+        @assert 0.0 <= quality_score <= 100.0 "Quality score must be between 0 and 100"
+        new{T}(success, data, errors, warnings, quality_score, metadata)
+    end
+end
+
+"""
+    CSVLoadResult
+
+Result structure for CSV loading operations with defensive error handling.
+
+# Fields
+- `success::Bool`: Whether the CSV load succeeded
+- `data::Union{DataFrame, Nothing}`: Loaded DataFrame (Nothing if failed)
+- `warnings::Vector{String}`: Non-critical warnings during load
+- `error::Union{String, Nothing}`: Error message if load failed
+- `file::String`: Path to the CSV file
+- `load_time::Float64`: Time taken to load (seconds)
+- `metadata::Dict{String, Any}`: Additional load metadata (format, conversion info, etc.)
+"""
+struct CSVLoadResult
+    success::Bool
+    data::Union{DataFrame, Nothing}
+    warnings::Vector{String}
+    error::Union{String, Nothing}
+    file::String
+    load_time::Float64
+    metadata::Dict{String, Any}
+
+    function CSVLoadResult(
+        success::Bool,
+        data::Union{DataFrame, Nothing},
+        warnings::Vector{String} = String[],
+        error::Union{String, Nothing} = nothing,
+        file::String = "",
+        load_time::Float64 = 0.0,
+        metadata::Dict{String, Any} = Dict{String, Any}()
+    )
+        new(success, data, warnings, error, file, load_time, metadata)
+    end
+end
+
+"""
+    BoundaryResult
+
+Result from validation boundary checks in pipeline execution.
+
+# Fields
+- `success::Bool`: Whether the boundary check passed
+- `boundary_name::String`: Name of the boundary that was checked
+- `validation_time::Float64`: Time taken for validation (seconds)
+- `errors::Vector`: Errors encountered during validation
+- `warnings::Vector{String}`: Non-critical warnings
+- `recovery_actions::Vector{String}`: Suggested recovery actions if failed
+- `metadata::Dict{String, Any}`: Additional boundary check metadata
+"""
+struct BoundaryResult
+    success::Bool
+    boundary_name::String
+    validation_time::Float64
+    errors::Vector  # Generic to support different error types
+    warnings::Vector{String}
+    recovery_actions::Vector{String}
+    metadata::Dict{String, Any}
+
+    function BoundaryResult(
+        success::Bool,
+        boundary_name::String,
+        validation_time::Float64 = 0.0,
+        errors::Vector = [],
+        warnings::Vector{String} = String[],
+        recovery_actions::Vector{String} = String[],
+        metadata::Dict{String, Any} = Dict{String, Any}()
+    )
+        @assert validation_time >= 0.0 "Validation time must be non-negative"
+        new(success, boundary_name, validation_time, errors, warnings, recovery_actions, metadata)
+    end
+end
+
+"""
+    DefenseResult
+
+Comprehensive result from defense-in-depth validation across multiple boundaries.
+
+# Fields
+- `overall_status::String`: Overall validation status ("passed", "failed", "warning")
+- `validation_time::Float64`: Total validation time (seconds)
+- `boundary_results::Vector{BoundaryResult}`: Results from each boundary check
+- `csv_result::Union{CSVLoadResult, Nothing}`: CSV load result if applicable
+- `validation_result::Union{ValidationResult, Nothing}`: Validation result if applicable
+- `error_category::Union{Dict{String, Any}, Nothing}`: Categorized errors
+- `actionable_steps::Vector{String}`: Actionable steps for user
+- `critical_failures::Vector{String}`: Critical failures that block execution
+- `metadata::Dict{String, Any}`: Additional defense metadata
+"""
+struct DefenseResult
+    overall_status::String
+    validation_time::Float64
+    boundary_results::Vector{BoundaryResult}
+    csv_result::Union{CSVLoadResult, Nothing}
+    validation_result::Union{ValidationResult, Nothing}
+    error_category::Union{Dict{String, Any}, Nothing}
+    actionable_steps::Vector{String}
+    critical_failures::Vector{String}
+    metadata::Dict{String, Any}
+
+    function DefenseResult(
+        overall_status::String,
+        validation_time::Float64 = 0.0,
+        boundary_results::Vector{BoundaryResult} = BoundaryResult[],
+        csv_result::Union{CSVLoadResult, Nothing} = nothing,
+        validation_result::Union{ValidationResult, Nothing} = nothing,
+        error_category::Union{Dict{String, Any}, Nothing} = nothing,
+        actionable_steps::Vector{String} = String[],
+        critical_failures::Vector{String} = String[],
+        metadata::Dict{String, Any} = Dict{String, Any}()
+    )
+        @assert overall_status in ["passed", "failed", "warning"] "Status must be 'passed', 'failed', or 'warning'"
+        @assert validation_time >= 0.0 "Validation time must be non-negative"
+        new(overall_status, validation_time, boundary_results, csv_result, validation_result,
+            error_category, actionable_steps, critical_failures, metadata)
+    end
+end
+
+"""
+    PolynomialApproximationResult
+
+Canonical result structure for polynomial approximation operations.
+Captures coefficients, quality metrics, and computation metadata.
+
+# Fields
+- `coefficients::Vector{Float64}`: Polynomial coefficients
+- `condition_number::Float64`: Condition number of the Vandermonde matrix
+- `l2_error::Float64`: L² approximation error
+- `computation_time::Float64`: Time taken for approximation (seconds)
+- `degree::Int`: Polynomial degree used
+- `basis::Symbol`: Basis type used (:chebyshev, :legendre, etc.)
+- `sample_count::Int`: Number of samples used
+- `metadata::Dict{String, Any}`: Additional approximation metadata
+"""
+struct PolynomialApproximationResult
+    coefficients::Vector{Float64}
+    condition_number::Float64
+    l2_error::Float64
+    computation_time::Float64
+    degree::Int
+    basis::Symbol
+    sample_count::Int
+    metadata::Dict{String, Any}
+
+    function PolynomialApproximationResult(
+        coefficients::Vector{Float64},
+        condition_number::Float64,
+        l2_error::Float64,
+        computation_time::Float64,
+        degree::Int,
+        basis::Symbol,
+        sample_count::Int,
+        metadata::Dict{String, Any} = Dict{String, Any}()
+    )
+        @assert !isempty(coefficients) "Coefficient vector cannot be empty"
+        @assert condition_number >= 0.0 "Condition number must be non-negative"
+        @assert l2_error >= 0.0 "L² error must be non-negative"
+        @assert computation_time >= 0.0 "Computation time must be non-negative"
+        @assert degree >= 1 "Polynomial degree must be positive"
+        @assert sample_count >= 1 "Sample count must be positive"
+        new(coefficients, condition_number, l2_error, computation_time, degree, basis, sample_count, metadata)
+    end
+end
+
+"""
+    CriticalPointAnalysisResult
+
+Canonical result structure for critical point analysis.
+Captures critical points, classification, and quality metrics.
+
+# Fields
+- `critical_points::DataFrame`: DataFrame containing critical points and their properties
+- `minima_count::Int`: Number of local minima found
+- `maxima_count::Int`: Number of local maxima found
+- `saddle_count::Int`: Number of saddle points found
+- `global_minimum::Union{Vector{Float64}, Nothing}`: Global minimum location (if found)
+- `global_minimum_value::Union{Float64, Nothing}`: Global minimum value (if found)
+- `convergence_rate::Float64`: Convergence rate of BFGS refinement
+- `computation_time::Float64`: Total computation time (seconds)
+- `metadata::Dict{String, Any}`: Additional analysis metadata
+"""
+struct CriticalPointAnalysisResult
+    critical_points::DataFrame
+    minima_count::Int
+    maxima_count::Int
+    saddle_count::Int
+    global_minimum::Union{Vector{Float64}, Nothing}
+    global_minimum_value::Union{Float64, Nothing}
+    convergence_rate::Float64
+    computation_time::Float64
+    metadata::Dict{String, Any}
+
+    function CriticalPointAnalysisResult(
+        critical_points::DataFrame,
+        minima_count::Int,
+        maxima_count::Int,
+        saddle_count::Int,
+        global_minimum::Union{Vector{Float64}, Nothing} = nothing,
+        global_minimum_value::Union{Float64, Nothing} = nothing,
+        convergence_rate::Float64 = 0.0,
+        computation_time::Float64 = 0.0,
+        metadata::Dict{String, Any} = Dict{String, Any}()
+    )
+        @assert minima_count >= 0 "Minima count must be non-negative"
+        @assert maxima_count >= 0 "Maxima count must be non-negative"
+        @assert saddle_count >= 0 "Saddle count must be non-negative"
+        @assert 0.0 <= convergence_rate <= 1.0 "Convergence rate must be between 0 and 1"
+        @assert computation_time >= 0.0 "Computation time must be non-negative"
+        new(critical_points, minima_count, maxima_count, saddle_count,
+            global_minimum, global_minimum_value, convergence_rate, computation_time, metadata)
+    end
+end
+
 # Export the data structures
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
+export ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult
+export PolynomialApproximationResult, CriticalPointAnalysisResult

@@ -7,7 +7,7 @@ makedocs(
     repo = "github.com/gescholt/Globtim.jl",
     format = Documenter.HTML(
         repolink = "https://github.com/gescholt/Globtim.jl",
-        canonical = "https://gescholt.github.io/Globtim.jl/stable/",
+        canonical = "https://gescholt.github.io/Globtim.jl/dev/",
         edit_link = "main",
         assets = String[]
     ),

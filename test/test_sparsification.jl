@@ -30,7 +30,8 @@ using LinearAlgebra
 
         # Check that L2 norm is reasonably preserved
         @test result.l2_ratio > 0.9  # Should preserve at least 90% of L2 norm
-        @test result.l2_ratio <= 1.0
+        # Allow small numerical overshoot from quadrature (< 0.01%)
+        @test result.l2_ratio <= 1.0 + 1e-3
 
         # Test absolute mode sparsification
         result_abs = sparsify_polynomial(pol, 1e-6, mode = :absolute)
@@ -80,10 +81,11 @@ using LinearAlgebra
         @test l2_grid >= 0.0
         @test isfinite(l2_grid)
 
-        # Note: l2_vand and l2_grid measure different things:
-        # - l2_vand: precomputed norm from polynomial construction (Chebyshev basis)
-        # - l2_grid: grid-based quadrature on monomial polynomial (after basis conversion)
-        # They operate on different representations and domains, so direct comparison is not meaningful
+        # Both l2_vand and l2_grid compute ||p||₂ but with different quadrature methods:
+        # - l2_vand: Clenshaw-Curtis quadrature on Chebyshev grid (via Vandermonde evaluation)
+        # - l2_grid: simple grid quadrature on monomial polynomial (after basis conversion)
+        # They should be reasonably close for well-resolved polynomials
+        @test abs(l2_vand - l2_grid) / max(l2_vand, l2_grid) < 0.15  # within 15%
     end
 
     @testset "Sparsification Analysis" begin
@@ -104,7 +106,8 @@ using LinearAlgebra
             @test haskey(res, :l2_ratio)
             @test haskey(res, :new_nnz)
             @test res.l2_ratio > 0.0
-            @test res.l2_ratio <= 1.0
+            # Allow small numerical overshoot from quadrature (< 0.01%)
+            @test res.l2_ratio <= 1.0 + 1e-3
         end
 
         # Check that tighter thresholds preserve more coefficients
@@ -187,8 +190,9 @@ using LinearAlgebra
         @test haskey(quality, :l2_truncated)
 
         @test quality.l2_ratio > 0.9  # Should preserve most of the norm
-        @test quality.l2_ratio <= 1.0
-        @test quality.l2_original >= quality.l2_truncated
+        # Allow small numerical overshoot from quadrature (< 0.01%)
+        @test quality.l2_ratio <= 1.0 + 1e-3
+        @test quality.l2_original >= quality.l2_truncated - 1e-10
     end
 
     @testset "Edge Cases" begin

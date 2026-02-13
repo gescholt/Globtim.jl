@@ -119,7 +119,7 @@ pol = Constructor(TR, 8, precision=AdaptivePrecision, verbose=0)
 | Function | Dimension | Description |
 |----------|-----------|-------------|
 | `Deuflhard` | 2D | Challenging with multiple minima |
-| `Rastringin` | nD | Classic multimodal benchmark |
+| `Rastrigin` | nD | Classic multimodal benchmark |
 | `HolderTable` | 2D | 4 symmetric global minima |
 | `tref_3d` | 3D | Highly oscillatory |
 | `Beale`, `Rosenbrock`, `Branin` | 2D | Standard benchmarks |
@@ -139,4 +139,6 @@ TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 - [Core Algorithm](core_algorithm.md) - Mathematical foundations
 - [Critical Point Analysis](critical_point_analysis.md) - Advanced refinement
 - [Sparsification](sparsification.md) - Polynomial complexity reduction
+- [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing) - Refine critical points to high accuracy, campaign analysis
+- [GlobtimPlots](globtimplots.md) - Visualize experiments and results
 - [API Reference](api_reference.md) - Complete function documentation

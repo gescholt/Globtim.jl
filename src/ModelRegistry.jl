@@ -1,7 +1,7 @@
 """
 ModelRegistry.jl
 
-Centralized registry for ODE models and benchmark functions used in globtimcore.
+Centralized registry for ODE models and benchmark functions used in globtim.
 Provides a unified API for querying, validating, and retrieving model definitions.
 
 # Example Usage
@@ -620,7 +620,7 @@ function register_benchmark_functions!()
     register_benchmark("deuflhard", :Deuflhard, 2,
         "Deuflhard function - polynomial test function")
 
-    register_benchmark("rastrigin", :Rastringin, 2,
+    register_benchmark("rastrigin", :Rastrigin, 2,
         "Rastrigin function - highly multimodal with regularly distributed local minima")
 end
 

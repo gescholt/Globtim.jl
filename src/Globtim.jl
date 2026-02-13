@@ -68,7 +68,7 @@ export test_input,
     alpine1,
     alpine2,
     GaussianParams,
-    Rastringin,
+    Rastrigin,
     Deuflhard_4d,
     # New benchmark functions from Jamil & Yang 2013
     Sphere,
@@ -112,8 +112,6 @@ export test_input,
     subdivide_domain,
     solve_and_parse,
     analyze_critical_points,
-    load_function_params,
-    FunctionParameters,
     generate_grid_small_n,
     simple_lambda_vandermonde,
     process_crit_pts, # Function previously giving trouble in test,
@@ -146,6 +144,7 @@ export evaluate, gradient
 
 # Scaling utilities - internal use only
 # export scale_point, get_scale_factor_type, transform_coordinates, compute_norm
+export relative_l2_error
 
 # Exact conversion and sparsification functions - only export main functions
 export to_exact_monomial_basis, sparsify_polynomial, exact_polynomial_coefficients
@@ -195,6 +194,21 @@ export GlobtimError,
 # export ComputationProgress, update_progress!, with_progress_monitoring
 # export validate_test_input_parameters, validate_constructor_parameters, create_error_context, log_error_details
 
+# Validation framework - consolidated from ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration
+export ValidationError, DataValidationError, PipelineBoundaryError
+export FilenameContaminationError, ParameterRangeError, SchemaValidationError, ContentValidationError
+export DataLoadError, DataQualityError, DataProductionError
+export StageTransitionError, InterfaceCompatibilityError, ResourceBoundaryError, FileSystemBoundaryError
+export DEFENSE_SUCCESS, DEFENSE_WARNING, DEFENSE_ERROR, DEFENSE_CRITICAL
+export PipelineBoundary, HPC_JOB_BOUNDARY, DATA_PROCESSING_BOUNDARY, VISUALIZATION_BOUNDARY, FILE_OPERATION_BOUNDARY
+export chain_validation, validate_column_type, safe_read_csv
+export detect_filename_contamination, validate_parameter_ranges, validate_experiment_output_strict
+export save_experiment_results_safe, load_and_validate_experiment_data, verify_written_data
+export validate_stage_transition, detect_interface_issues, validate_pipeline_connection
+export enhanced_pipeline_validation, validate_hpc_pipeline_stage
+export format_validation_error, format_boundary_error
+export create_validation_report, create_boundary_report, create_defense_report
+
 # Safe wrapper functions - keep main workflow functions only
 export safe_test_input, safe_constructor, safe_globtim_workflow
 export print_timing_breakdown
@@ -202,8 +216,6 @@ export print_timing_breakdown
 # export safe_solve_polynomial_system, safe_analyze_critical_points
 # export diagnose_globtim_setup
 
-include("config.jl")
-include("ConfigValidation.jl") #JSON schema validation for experiment configs
 include("LibFunctions.jl") #list of test functions.
 include("BenchmarkFunctions.jl") #benchmark function categorization and utilities.
 include("Structures.jl") # list of structures used in the code.
@@ -223,6 +235,7 @@ include("msolve_system.jl") #polynomial system solving with Msolve.
 include("hom_solve.jl") #polynomial system solving with homotopy Continuation. 
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
 include("data_structures.jl") #Enhanced data structures for multi-tolerance analysis
+include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
 include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
@@ -236,17 +249,8 @@ include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
 include("error_handling.jl") #Comprehensive error handling framework
+include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 include("safe_wrappers.jl") #Safe wrapper functions with error handling
-# Note: Legacy path modules removed (Issue #192 Phase 5):
-#   - ExperimentPathTracker.jl, ExperimentOutputOrganizer.jl, OutputPathManager.jl,
-#   - PathUtils.jl, ExperimentPaths.jl
-# All path management now unified in PathManager.jl
-# include("valley_detection.jl") #Valley detection and manifold following algorithms
-# include("conservative_valley_walking.jl") #Conservative valley walking with function value validation
-
-# Visualization removed - use GlobtimPlots package for all plotting
-# See docs/VISUALIZATION.md for migration guide
-# include("PostProcessing.jl") # DEPRECATED: Moved to globtimpostprocessing package (October 2025)
 include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
 
 # Export non-plotting functions that are always available
@@ -326,15 +330,11 @@ export EnhancedMetrics
 # CairoMakie extension plotting functions (available when CairoMakie is loaded)
 # These are stub functions - actual implementations in extension
 # export plot_convergence_analysis,
-#     capture_histogram,
-#     create_legend_figure,
 #     plot_discrete_l2,
 #     plot_convergence_captured,
 #     plot_filtered_y_distances,
 #     cairo_plot_polyapprox_levelset,
-#     plot_distance_statistics,
-#     histogram_enhanced,
-#     histogram_minimizers_only
+#     plot_distance_statistics
 
 # GLMakie extension plotting functions (available when GLMakie is loaded)
 # These are stub functions - actual implementations in extension
@@ -347,12 +347,12 @@ export EnhancedMetrics
 #     plot_level_set,
 #     create_level_set_visualization,
 #     create_level_set_animation,
-#     LevelSetData,
-#     VisualizationParameters,
 #     prepare_level_set_data,
 #     to_makie_format,
 #     plot_raw_vs_refined_eigenvalues
-# Note: LevelSetData and VisualizationParameters types are still defined below
+
+# Level set data types (canonical definitions, used by globtimplots)
+export LevelSetData, VisualizationParameters
 
 # Phase 3: Enhanced statistical tables and analysis - export main functions
 export analyze_critical_points_with_tables,
@@ -365,9 +365,10 @@ export analyze_critical_points_with_tables,
     render_console_table,
     render_comparative_table
 
-# Enhanced data structures
+# Enhanced data structures - canonical result types
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
-
+export ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult
+export PolynomialApproximationResult, CriticalPointAnalysisResult
 # Subdomain management functions - only export main functions
 export generate_4d_orthant_centers, create_orthant_test_inputs
 # Internal orthant helpers - not exported
@@ -398,11 +399,6 @@ export enhanced_bfgs_refinement
 # export analyze_valleys_in_critical_points
 # export create_valley_test_function, create_ridge_test_function
 
-# Conservative valley walking functions
-# TODO: These functions are not yet implemented - exports commented out
-# export ConservativeValleyConfig, ConservativeValleyStep
-# export conservative_valley_walk, validate_valley_point, explore_valley_manifold_conservative
-
 # Function value error analysis - only export main types and functions
 export FunctionValueError, ErrorMetrics, compute_function_value_errors
 # Internal error analysis helpers - not exported
@@ -417,14 +413,11 @@ export FunctionValueError, ErrorMetrics, compute_function_value_errors
 # These will be properly implemented when CairoMakie is loaded
 function cairo_plot_polyapprox_levelset end
 function plot_convergence_analysis end
-function capture_histogram end
-function create_legend_figure end
 function plot_discrete_l2 end
 function plot_convergence_captured end
 function plot_filtered_y_distances end
 function plot_distance_statistics end
-function histogram_enhanced end
-function histogram_minimizers_only end
+
 
 # Type definitions for GLMakie extension
 # These types need to be defined in the main module to be exportable
@@ -584,7 +577,14 @@ include("StandardExperiment.jl")
 using .StandardExperiment
 
 # Export StandardExperiment types and functions
-export run_standard_experiment, DegreeResult
+export run_standard_experiment, DegreeResult, solve_and_transform
+
+# SparsificationExperiment - polynomial sparsification analysis
+include("SparsificationExperiment.jl")
+using .SparsificationExperiment
+
+# Export SparsificationExperiment types and functions
+export SparsifiedVariant, SparsificationDegreeResult, run_sparsification_experiment
 
 # ExperimentCLI - experiment configuration (re-export for downstream packages)
 include("ExperimentCLI.jl")
@@ -593,8 +593,12 @@ using .ExperimentCLI
 # Export ExperimentCLI types and functions (enables `using Globtim: ExperimentParams`)
 export ExperimentParams, parse_experiment_args, validate_params
 
+# TOML experiment pipeline configuration (bead 70e)
+include("config_loader.jl")
+export ExperimentPipelineConfig, load_experiment_config, config_to_experiment_params
+
 # ErrorCategorization - systematic error analysis (Issue #37)
-include("ErrorCategorization.jl")
+# Note: ErrorCategorization.jl is already included by validation.jl (line 36)
 using .ErrorCategorization
 
 # Export ErrorCategorization types and functions

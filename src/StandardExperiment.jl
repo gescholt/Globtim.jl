@@ -6,7 +6,7 @@ This module now exports ONLY raw critical points from HomotopyContinuation.
 
 Provides standardized experiment execution that:
 - Eliminates code duplication across experiment templates
-- Exports raw critical points to CSV (no refinement in globtimcore)
+- Exports raw critical points to CSV (no refinement in globtim)
 - Integrates with existing infrastructure (hooks, CLI, DrWatson)
 - Supports 1-arg and 2-arg objective functions (auto-detection)
 - Captures rich error context for post-processing analysis
@@ -40,7 +40,7 @@ objective = p -> sum(p.^2)  # 1-arg function (auto-detected)
 result = run_standard_experiment(
     objective_function = objective,
     problem_params = nothing,  # Not needed for 1-arg functions
-    domain_bounds = [(-5.0, 5.0), (-5.0, 5.0)],
+    bounds = [(-5.0, 5.0), (-5.0, 5.0)],
     experiment_config = config,
     output_dir = output_dir,
     metadata = Dict("experiment_type" => "sphere_minimization")
@@ -72,7 +72,7 @@ using DrWatson
 using JLD2
 using LinearAlgebra
 
-export run_standard_experiment, DegreeResult
+export run_standard_experiment, DegreeResult, solve_and_transform
 
 # Import PathManager module (Issue #192, Unified Path Management)
 # PathManager consolidates PathUtils, OutputPathManager, ExperimentPaths, etc.
@@ -104,7 +104,12 @@ struct DegreeResult
 
     # Quality metrics
     l2_approx_error::Float64
+    relative_l2_error::Float64  # l2_approx_error / ||f||_L2 (dimensionless)
     condition_number::Float64
+
+    # Coefficient counts
+    n_total_coeffs::Int   # Total coefficients = binomial(n+d, d) for total degree d in n dims
+    support_size::Int     # Nonzero coefficients: count(!iszero, pol.coeffs)
 
     # Timing breakdown
     polynomial_construction_time::Float64
@@ -122,10 +127,51 @@ struct DegreeResult
 end
 
 """
+    solve_and_transform(pol::ApproxPoly, bounds) -> (critical_points, solve_time)
+
+Solve a polynomial system via HomotopyContinuation and transform solutions from
+normalized [-1,1]^n coordinates to the original domain.
+
+This is the shared kernel used by both `run_standard_experiment` (full polynomials)
+and `run_sparsification_experiment` (sparsified polynomial variants).
+
+# Arguments
+- `pol::ApproxPoly`: Polynomial approximation (full or sparsified)
+- `bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
+
+# Returns
+- `critical_points::Vector{Vector{Float64}}`: Critical points in original domain coordinates
+- `solve_time::Float64`: Wall-clock time for HC solve (seconds)
+"""
+function solve_and_transform(
+    pol,  # ApproxPoly — not typed to avoid import dependency
+    bounds::Vector{Tuple{Float64, Float64}},
+)
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
+
+    # Solve polynomial system via HomotopyContinuation
+    @polyvar x[1:dimension]
+    solve_time = @elapsed begin
+        raw_critical_points = Globtim.solve_polynomial_system_from_approx(x, pol)
+    end
+
+    # Transform from normalized [-1,1]^n to original domain coordinates
+    critical_points = [
+        sample_range .* [pt[i] for i in 1:dimension] .+ center
+        for pt in raw_critical_points
+    ]
+
+    return critical_points, solve_time
+end
+
+"""
     run_standard_experiment(;
         objective_function::Function,
+        objective_name::String,
         problem_params,
-        domain_bounds::Vector{Tuple{Float64, Float64}},
+        bounds::Vector{Tuple{Float64, Float64}},
         experiment_config,
         output_dir::String,
         metadata::Dict{String, Any} = Dict(),
@@ -138,11 +184,15 @@ Execute standardized experiment with RAW critical point export only.
 This function now exports only raw critical points from HomotopyContinuation.
 
 # Arguments
-- `objective_function`: Function with signature f(point::Vector{Float64}) or f(point, params)
+- `objective_function`: Callable with signature f(point::Vector{Float64}) or f(point, params).
+  Accepts plain functions or callable structs (e.g., TolerantObjective).
   - 1-argument: f(p::Vector{Float64}) -> Float64 (auto-detected, e.g., Dynamic_objectives)
   - 2-argument: f(p::Vector{Float64}, params) -> Float64 (legacy, requires problem_params)
+- `objective_name`: Identifier for the objective function (e.g., "lv4d", "deuflhard_4d_q4").
+  Stored in `results_summary.json` under `experiment_definition.objective_name` to make
+  experiment outputs self-describing for parameter sweep analysis.
 - `problem_params`: Problem-specific parameters (only for 2-arg functions)
-- `domain_bounds`: Vector of (min, max) tuples for each dimension
+- `bounds`: Vector of (min, max) tuples for each dimension
 - `experiment_config`: ExperimentParams from ExperimentCLI (GN, degree_range, max_time, domain_size)
 - `output_dir`: Output directory path (from DrWatson, --output-dir, or hierarchical path)
 - `metadata`: Additional metadata for results_summary.json (system_type, params, etc.)
@@ -173,13 +223,20 @@ To refine critical points, use globtimpostprocessing:
 ```julia
 using Globtim, GlobtimPostProcessing
 
-# Step 1: Run experiment (globtimcore)
-result_raw = run_standard_experiment(objective, bounds, config)
+# Step 1: Run experiment (globtim)
+result_raw = run_standard_experiment(
+    objective_function = my_objective,
+    objective_name = "my_problem",
+    problem_params = nothing,
+    bounds = bounds,
+    experiment_config = config,
+    output_dir = "results/my_experiment"
+)
 
 # Step 2: Refine (globtimpostprocessing)
 result_refined = refine_experiment_results(
     result_raw[:output_dir],
-    objective,
+    my_objective,
     ode_refinement_config()
 )
 ```
@@ -187,9 +244,10 @@ result_refined = refine_experiment_results(
 # Example
 ```julia
 result = run_standard_experiment(
-    objective_function = p -> sum(p.^2),  # 1-arg function (auto-detected)
+    objective_function = p -> sum(p.^2),
+    objective_name = "quadratic_test",
     problem_params = nothing,
-    domain_bounds = [(0.5, 1.5), (1.5, 2.5), (2.5, 3.5), (3.5, 4.5)],
+    bounds = [(0.5, 1.5), (1.5, 2.5), (2.5, 3.5), (3.5, 4.5)],
     experiment_config = parse_experiment_args(ARGS),
     output_dir = "hpc_results/my_experiment",
     metadata = Dict("experiment_type" => "parameter_recovery")
@@ -197,17 +255,18 @@ result = run_standard_experiment(
 ```
 """
 function run_standard_experiment(;
-    objective_function::Function,
+    objective_function,
+    objective_name::String,
     problem_params,
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
     metadata::Dict{String, Any} = Dict(),
     true_params::Union{Vector{Float64}, Nothing} = nothing
 )
     # Validate inputs
-    dimension = length(domain_bounds)
-    @assert dimension == length(domain_bounds) "Dimension mismatch"
+    dimension = length(bounds)
+    @assert dimension == length(bounds) "Dimension mismatch"
 
     # NOTE: Output path validation disabled - using static relative paths ../globtim_results
     # validate_output_configuration()
@@ -220,6 +279,43 @@ function run_standard_experiment(;
 
     mkpath(output_dir)
 
+    # Pre-compute domain geometry (invariant across degrees)
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
+
+    # Detect function signature and create wrapper if needed
+    # Support both 1-arg (Dynamic_objectives pattern) and 2-arg (legacy pattern)
+    method_sig = first(methods(objective_function)).sig
+    while method_sig isa UnionAll
+        method_sig = method_sig.body
+    end
+    n_args = length(method_sig.parameters) - 1
+
+    func = if n_args == 1
+        if problem_params !== nothing
+            @warn "problem_params provided but objective_function takes 1 argument - ignoring params"
+        end
+        objective_function
+    elseif n_args == 2
+        if problem_params === nothing
+            error("2-argument objective function requires problem_params")
+        end
+        x -> objective_function(x, problem_params)
+    else
+        error("Objective function must accept 1 or 2 arguments, got $n_args")
+    end
+
+    # Build tensor representation ONCE (evaluates objective on GN^dimension grid points)
+    # This is invariant across degrees — only Constructor depends on degree.
+    TR = Globtim.test_input(
+        func,
+        dim = dimension,
+        center = center,
+        GN = experiment_config.GN,
+        sample_range = sample_range
+    )
+
     # Process each degree
     degree_results = DegreeResult[]
     total_critical_points = 0
@@ -230,9 +326,9 @@ function run_standard_experiment(;
         try
             result = process_single_degree(
                 degree,
-                objective_function,
-                problem_params,
-                domain_bounds,
+                func,
+                TR,
+                bounds,
                 experiment_config,
                 output_dir,
                 true_params
@@ -251,7 +347,7 @@ function run_standard_experiment(;
                 "error_type" => string(typeof(e)),
                 "stacktrace" => string.(stacktrace(catch_backtrace())),
                 "degree" => degree,
-                "dimension" => length(domain_bounds),
+                "dimension" => length(bounds),
                 "GN" => experiment_config.GN,
                 "basis" => string(experiment_config.basis),
                 "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
@@ -265,7 +361,8 @@ function run_standard_experiment(;
                 Vector{Vector{Float64}}(),  # critical_points (empty)
                 Vector{Float64}(),  # objective_values (empty)
                 nothing, nothing, nothing,  # No best estimate
-                NaN, NaN,  # Quality metrics
+                NaN, NaN, NaN,  # Quality metrics (l2, relative_l2, cond)
+                0, 0,  # n_total_coeffs, support_size (unknown for failed)
                 0.0, 0.0, 0.0, 0.0, degree_time,  # Timing
                 output_dir,
                 error_context  # Rich error context
@@ -280,7 +377,7 @@ function run_standard_experiment(;
     success_count = count(r -> r.status == "success", degree_results)
     success_rate = success_count / length(degree_results)
 
-    # Create experiment summary (Schema v1.1.0)
+    # Create experiment summary (Schema v3.0.0)
     experiment_summary = create_experiment_summary(
         degree_results,
         experiment_config,
@@ -288,7 +385,10 @@ function run_standard_experiment(;
         metadata,
         total_critical_points,
         total_time,
-        success_rate
+        success_rate;
+        objective_name = objective_name,
+        bounds = bounds,
+        true_params = true_params
     )
 
     # Save experiment summary
@@ -298,93 +398,48 @@ function run_standard_experiment(;
 end
 
 """
-    process_single_degree(degree, objective_function, problem_params, domain_bounds,
+    process_single_degree(degree, func, TR, bounds,
                          experiment_config, output_dir, true_params) -> DegreeResult
 
 Process a single polynomial degree through the complete pipeline.
+
+# Arguments
+- `degree::Int`: Polynomial degree to process
+- `func`: Resolved 1-argument objective callable (Function or functor struct)
+- `TR`: Pre-computed tensor representation from `Globtim.test_input` (shared across degrees)
+- `bounds`: Vector of (lower, upper) tuples
+- `experiment_config`: Experiment parameters (basis, GN, etc.)
+- `output_dir`: Directory for CSV output
+- `true_params`: Known true parameters (optional, for recovery error)
 """
 function process_single_degree(
     degree::Int,
-    objective_function::Function,
-    problem_params,
-    domain_bounds::Vector{Tuple{Float64, Float64}},
+    func,
+    TR,
+    bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
     true_params::Union{Vector{Float64}, Nothing}
 )
-    dimension = length(domain_bounds)
+    dimension = length(bounds)
+    center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
+    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
     timing = Dict{String, Float64}()
 
-    # Phase 1: Polynomial Construction
+    # Phase 1: Polynomial Construction (TR is pre-computed, only Constructor is degree-dependent)
     poly_construction_start = time()
 
-    # Compute center and sample_range from domain_bounds
-    center = [(bounds[1] + bounds[2]) / 2 for bounds in domain_bounds]
-    sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in domain_bounds]
-
-    # Detect function signature and create wrapper if needed
-    # Support both 1-arg (Dynamic_objectives pattern) and 2-arg (legacy pattern)
-    method_sig = first(methods(objective_function)).sig
-    # Handle UnionAll types (generic functions with type parameters)
-    while method_sig isa UnionAll
-        method_sig = method_sig.body
-    end
-    n_args = length(method_sig.parameters) - 1
-
-    func = if n_args == 1
-        # 1-argument function (e.g., Dynamic_objectives)
-        if problem_params !== nothing
-            @warn "problem_params provided but objective_function takes 1 argument - ignoring params"
-        end
-        objective_function
-    elseif n_args == 2
-        # 2-argument function (legacy pattern)
-        if problem_params === nothing
-            error("2-argument objective function requires problem_params")
-        end
-        x -> objective_function(x, problem_params)
-    else
-        error("Objective function must accept 1 or 2 arguments, got $n_args")
-    end
-
-    # Build tensor representation (this evaluates objective on GN^dimension grid points)
-    grid_evals_start = time()
-    TR = Globtim.test_input(
-        func,
-        dim = dimension,
-        center = center,
-        GN = experiment_config.GN,
-        sample_range = sample_range
-    )
-    grid_evals_time = time() - grid_evals_start
-    n_grid_points = experiment_config.GN^dimension
-
-    # Construct polynomial approximation
     pol = Globtim.Constructor(TR, degree, basis = experiment_config.basis, normalized = false)
 
     timing["polynomial_construction_time"] = time() - poly_construction_start
     timing["l2_approx_error"] = pol.nrm
+    timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
 
-    # Phase 2: Critical Point Solving
-    solve_start = time()
-
-    @polyvar x[1:dimension]
-    raw_critical_points = Globtim.solve_polynomial_system(
-        x, dimension, degree, pol.coeffs,
-        basis = experiment_config.basis,
-        normalized = false
-    )
-
-    # Convert to array of arrays (normalized [-1,1] coordinates)
-    critical_points_normalized = [[pt[i] for i in 1:dimension] for pt in raw_critical_points]
-
-    timing["critical_point_solving_time"] = time() - solve_start
-
-    # Phase 3: Use raw critical points (refinement moved to globtimpostprocessing)
-    processing_start = time()
-
-    n_critical_points = length(critical_points_normalized)
+    # Phase 2: Critical Point Solving + coordinate transformation
+    critical_points_array, solve_time = solve_and_transform(pol, bounds)
+    n_critical_points = length(critical_points_array)
+    timing["critical_point_solving_time"] = solve_time
 
     # CRITICAL FIX (Issue #111): ERROR if no critical points found
     if n_critical_points == 0
@@ -393,12 +448,8 @@ function process_single_degree(
 
     println("Found $n_critical_points raw critical points at degree $degree")
 
-    # Transform critical points from normalized [-1,1] to original domain coordinates
-    # x_original = sample_range .* x_normalized + center
-    critical_points_array = [
-        sample_range .* cp + center
-        for cp in critical_points_normalized
-    ]
+    # Phase 3: Use raw critical points (refinement moved to globtimpostprocessing)
+    processing_start = time()
 
     # Compute objective values at critical points (in original coordinates)
     objective_values = [func(critical_points_array[i]) for i in 1:n_critical_points]
@@ -446,7 +497,8 @@ function process_single_degree(
         critical_points_array,
         objective_values,
         best_estimate, best_objective, recovery_error,
-        timing["l2_approx_error"], timing["condition_number"],
+        timing["l2_approx_error"], timing["relative_l2_error"], timing["condition_number"],
+        length(pol.coeffs), count(!iszero, pol.coeffs),
         timing["polynomial_construction_time"],
         timing["critical_point_solving_time"],
         timing["critical_point_processing_time"],
@@ -458,7 +510,11 @@ function process_single_degree(
 end
 
 """
-Create experiment summary (Phase 2: simplified for raw critical points only).
+Create experiment summary (Schema v3.0.0: full experiment definition).
+
+Stores the complete experiment definition — objective identity, domain, solver config —
+alongside per-degree results. This makes experiment outputs self-describing for
+parameter sweep analysis across multiple batches.
 """
 function create_experiment_summary(
     degree_results::Vector{DegreeResult},
@@ -467,7 +523,10 @@ function create_experiment_summary(
     metadata::Dict{String, Any},
     total_critical_points::Int,
     total_time::Float64,
-    success_rate::Float64
+    success_rate::Float64;
+    objective_name::String,
+    bounds::Vector{Tuple{Float64, Float64}},
+    true_params::Union{Vector{Float64}, Nothing} = nothing,
 )
     # Build results_summary dict
     results_summary = Dict{String, Any}()
@@ -485,7 +544,12 @@ function create_experiment_summary(
 
             # Quality metrics
             "l2_approx_error" => result.l2_approx_error,
+            "relative_l2_error" => result.relative_l2_error,
             "condition_number" => result.condition_number,
+
+            # Coefficient counts
+            "n_total_coeffs" => result.n_total_coeffs,
+            "support_size" => result.support_size,
 
             # Timing breakdown
             "polynomial_construction_time" => result.polynomial_construction_time,
@@ -503,7 +567,27 @@ function create_experiment_summary(
         )
     end
 
-    # Build parameter dict for DrWatson
+    # Experiment definition: what problem was solved
+    experiment_definition = Dict{String, Any}(
+        "objective_name" => objective_name,
+        "dimension"      => length(bounds),
+        "bounds"         => [[lb, ub] for (lb, ub) in bounds],
+        "true_params"    => true_params,
+    )
+
+    # Solver config: how it was solved (full ExperimentParams)
+    solver_config = Dict{String, Any}(
+        "GN"             => experiment_config.GN,
+        "degree_range"   => collect(experiment_config.degree_range),
+        "domain_size"    => experiment_config.domain_size,
+        "max_time"       => experiment_config.max_time,
+        "basis"          => string(experiment_config.basis),
+        "optim_f_tol"    => experiment_config.optim_f_tol,
+        "optim_x_tol"    => experiment_config.optim_x_tol,
+        "max_iterations" => experiment_config.max_iterations,
+    )
+
+    # Legacy params_dict for backward compatibility with PipelineRegistry
     GN = experiment_config.GN
     degree_range = collect(experiment_config.degree_range)
     domain_size_param = experiment_config.domain_size
@@ -516,6 +600,8 @@ function create_experiment_summary(
 
     summary = @dict(
         experiment_id,
+        experiment_definition,
+        solver_config,
         params_dict,
         results_summary,
         total_critical_points,
@@ -524,24 +610,17 @@ function create_experiment_summary(
         output_dir
     )
 
-    # Add metadata (convert String keys to Symbol keys for consistency)
-    for (key, value) in metadata
-        summary[Symbol(key)] = value
+    # Add user-provided metadata
+    if !isempty(metadata)
+        summary[:user_metadata] = metadata
     end
 
-    # Add schema version and computed statistics
-    # Phase 2: Simplified schema (raw critical points only, no refinement)
-    summary[:schema_version] = "2.0.0"
+    # Schema version and computed statistics
+    summary[:schema_version] = "3.0.0"
     summary[:degrees_processed] = length(degree_results)
     summary[:success_rate] = success_rate
-    summary[:degree_results] = degree_results  # Include degree results array
+    summary[:degree_results] = degree_results
     summary[:total_critical_points] = total_critical_points
-
-    # Store objective_name if present in metadata (Issue #174)
-    # This facilitates hierarchical path reconstruction and analysis
-    if haskey(metadata, "objective_name")
-        summary[:objective_name] = metadata["objective_name"]
-    end
 
     return summary
 end
@@ -567,7 +646,10 @@ function sanitize_for_json(obj)
             "best_objective" => sanitize_for_json(obj.best_objective),
             "recovery_error" => sanitize_for_json(obj.recovery_error),
             "l2_approx_error" => sanitize_for_json(obj.l2_approx_error),
+            "relative_l2_error" => sanitize_for_json(obj.relative_l2_error),
             "condition_number" => sanitize_for_json(obj.condition_number),
+            "n_total_coeffs" => obj.n_total_coeffs,
+            "support_size" => obj.support_size,
             "polynomial_construction_time" => sanitize_for_json(obj.polynomial_construction_time),
             "critical_point_solving_time" => sanitize_for_json(obj.critical_point_solving_time),
             "critical_point_processing_time" => sanitize_for_json(obj.critical_point_processing_time),
@@ -600,7 +682,7 @@ function save_experiment_summary(summary::Dict, output_dir::String)
     # Save JLD2 with Git provenance (DrWatson) - convert symbols to strings for JLD2
     jld2_path = joinpath(output_dir, "results_summary.jld2")
     summary_for_jld2 = Dict{String, Any}(string(k) => v for (k, v) in summary)
-    tagsave(jld2_path, summary_for_jld2)
+    tagsave(jld2_path, summary_for_jld2; warn=false)
 end
 
 """

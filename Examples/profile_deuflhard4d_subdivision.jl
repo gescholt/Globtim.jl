@@ -234,5 +234,131 @@ function analyze_single_subdomain_overhead(bounds, degree)
     @printf("  V condition number: %.2e\n", cond(V))
 end
 
+#==============================================================================#
+#                   ODE-BASED OBJECTIVE: TOLERANCE COMPARISON                   #
+#==============================================================================#
+
+"""
+Compare adaptive subdivision performance on an ODE objective function (LV 2D)
+at coarse (1e-4) vs tight (1e-10) ODE tolerances.
+
+This demonstrates the p5j feature: coarse tolerances during early subdivision
+phases provide significant speedup with minimal accuracy loss.
+"""
+function ode_tolerance_comparison()
+    println()
+    println("=" ^ 70)
+    println("ODE Tolerance Comparison: Adaptive Subdivision on LV 2D")
+    println("=" ^ 70)
+    println()
+
+    using Dynamic_objectives
+    using OrdinaryDiffEq: Vern9, Tsit5
+
+    # Set up LV 2D model
+    model, params, states, outputs = define_lotka_volterra_2D_model_v3_two_outputs()
+    p_true = [1.0, 0.5]
+    ic = [1.0, 0.5]
+    bounds_2d = [(0.0, 3.0), (0.0, 2.0)]
+
+    # Tolerance regimes to compare
+    tolerance_configs = [
+        (name="tight",  abstol=1e-10, reltol=1e-10),
+        (name="medium", abstol=1e-8,  reltol=1e-8),
+        (name="coarse", abstol=1e-6,  reltol=1e-6),
+        (name="loose",  abstol=1e-4,  reltol=1e-4),
+    ]
+
+    for cfg in tolerance_configs
+        println("-" ^ 70)
+        @printf("ODE Tolerance: %s (abstol=%.0e, reltol=%.0e)\n",
+                cfg.name, cfg.abstol, cfg.reltol)
+
+        # Create objective at this tolerance
+        obj = make_error_distance(
+            model, outputs, ic, p_true,
+            [0.0, 20.0], 30,
+            L2_norm;
+            return_inf_on_error=true,
+            abstol=cfg.abstol,
+            reltol=cfg.reltol
+        )
+
+        reset_counters!()
+        f_profiled = make_profiled(obj)
+
+        total_time = @elapsed begin
+            tree = adaptive_refine(f_profiled, bounds_2d, 4,
+                l2_tolerance=1e-4,
+                max_depth=3,
+                max_leaves=32,
+                optimize_cuts=false,
+                parallel=false,
+                verbose=false)
+        end
+
+        @printf("  Total time:     %7.2f s\n", total_time)
+        @printf("  ODE evals:      %7d\n", EVAL_COUNT[])
+        @printf("  Eval time:      %7.3f s  (%.1f%%)\n",
+                EVAL_TIME[], 100.0 * EVAL_TIME[] / max(total_time, 1e-10))
+        @printf("  Avg eval time:  %7.1f ms\n",
+                1e3 * EVAL_TIME[] / max(EVAL_COUNT[], 1))
+        @printf("  Leaves: %d (converged: %d, active: %d)\n",
+                n_leaves(tree), length(tree.converged_leaves), length(tree.active_leaves))
+        @printf("  Total L2 error: %.6f\n", Globtim.total_error(tree))
+        println()
+    end
+
+    # Demonstrate TolerantObjective with phase_callback
+    println("-" ^ 70)
+    println("TolerantObjective + phase_callback demo:")
+    println()
+
+    tol_obj = TolerantObjective(
+        model, outputs, ic, p_true,
+        [0.0, 20.0], 30,
+        L2_norm;
+        return_inf_on_error=true,
+        abstol=1e-10,
+        reltol=1e-10
+    )
+
+    function tol_phase_callback(f, phase, iter)
+        if phase == :coarse
+            set_tolerance!(f, 1e-4)
+            println("  [phase_callback] Phase 1 (coarse): switched to tol=1e-4")
+        elseif phase == :fine
+            set_tolerance!(f, 1e-10)
+            println("  [phase_callback] Phase 2 (fine): switched to tol=1e-10")
+        end
+    end
+
+    reset_counters!()
+    f_profiled_tol = make_profiled(tol_obj)
+
+    total_time = @elapsed begin
+        tree = two_phase_refine(f_profiled_tol, bounds_2d, 4,
+            coarse_tolerance=1e-3,
+            fine_tolerance=1e-5,
+            max_depth=3,
+            max_leaves=32,
+            parallel=false,
+            verbose=true,
+            phase_callback=tol_phase_callback)
+    end
+
+    @printf("\n  Two-phase with adaptive tolerances:\n")
+    @printf("    Total time:     %7.2f s\n", total_time)
+    @printf("    ODE evals:      %7d\n", EVAL_COUNT[])
+    @printf("    Eval time:      %7.3f s\n", EVAL_TIME[])
+    @printf("    Leaves: %d (converged: %d, active: %d)\n",
+            n_leaves(tree), length(tree.converged_leaves), length(tree.active_leaves))
+    @printf("    Total L2 error: %.6f\n", Globtim.total_error(tree))
+    println()
+end
+
 # Run
 main()
+
+# Run ODE tolerance comparison
+ode_tolerance_comparison()

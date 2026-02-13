@@ -5,7 +5,7 @@ Unified Cluster Results Visualization Interface
 Consolidates all cluster data workflows:
 1. Data collection from cluster (SSH/local)
 2. Text-based ASCII analysis
-3. Cairo plot generation (via globtimcore/src/graphs_cairo.jl)
+3. Cairo plot generation (via globtimplots/src/analysis_plots.jl)
 
 Usage:
     # Interactive mode - select experiment and visualization type
@@ -25,7 +25,7 @@ Dependencies:
     - ParameterRecoveryAnalysis: Compute convergence metrics and distances
     - TextVisualization: ASCII-based terminal visualization
     - ComparisonAnalysis: Experiment discovery
-    - Plot generation: globtimcore/src/graphs_cairo.jl (optional)
+    - Plot generation: globtimplots/src/analysis_plots.jl (optional)
     - Collection: EnvironmentUtils, PostProcessing modules (optional)
 """
 

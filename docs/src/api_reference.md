@@ -205,7 +205,7 @@ Float64Precision, AdaptivePrecision, RationalPrecision, BigFloatPrecision
 `tref_3d`
 
 ### n-Dimensional Functions
-`Rastringin`, `alpine1`, `alpine2`, `Csendes`
+`Rastrigin`, `alpine1`, `alpine2`, `Csendes`
 
 ---
 
@@ -215,3 +215,10 @@ Float64Precision, AdaptivePrecision, RationalPrecision, BigFloatPrecision
 julia> ?test_input
 julia> ?analyze_critical_points
 ```
+
+---
+
+## See Also
+
+- [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing) - Refinement, gradient validation, parameter recovery, campaign analysis
+- [GlobtimPlots](https://github.com/gescholt/globtimplots) - Visualization functions for experiments and campaigns

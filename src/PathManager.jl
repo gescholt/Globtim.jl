@@ -53,7 +53,7 @@ config = PathConfig()
 
 # Explicit configuration
 config = PathConfig(
-    project_root="/path/to/globtimcore",
+    project_root="/path/to/globtim",
     results_root="/path/to/results",
     environment=:local
 )
@@ -148,7 +148,7 @@ Can be overridden by setting `GLOBTIM_ROOT` environment variable.
 
 # Example
 ```julia
-root = get_project_root()  # "/Users/user/globtimcore"
+root = get_project_root()  # "/Users/user/globtim"
 ```
 
 # Environment Variables
@@ -317,7 +317,7 @@ Get absolute path to src/ directory within the project.
 
 # Example
 ```julia
-src = get_src_dir()  # "/Users/user/globtimcore/src"
+src = get_src_dir()  # "/Users/user/globtim/src"
 ```
 """
 function get_src_dir()::String
@@ -334,7 +334,7 @@ Get absolute path to Examples/ directory within the project.
 
 # Example
 ```julia
-examples = get_examples_dir()  # "/Users/user/globtimcore/Examples"
+examples = get_examples_dir()  # "/Users/user/globtim/Examples"
 ```
 """
 function get_examples_dir()::String
