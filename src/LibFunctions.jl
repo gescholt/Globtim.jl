@@ -1710,7 +1710,7 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
 push!(FUNCTION_REGISTRY,
     Deuflhard => (
         name = "Deuflhard",
-        default_bounds = (-5.0, 5.0),
+        default_bounds = (-1.2, 1.2),
         global_min_location = _ -> nothing,  # not closed-form; use Newton refinement
         global_min_value = _ -> NaN,  # multiple CPs, no closed-form global min
         properties = [:multimodal, :nonseparable, :fixed_dim],
