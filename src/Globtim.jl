@@ -336,22 +336,7 @@ export EnhancedMetrics
 #     cairo_plot_polyapprox_levelset,
 #     plot_distance_statistics
 
-# GLMakie extension plotting functions (available when GLMakie is loaded)
-# These are stub functions - actual implementations in extension
-# export plot_polyapprox_3d,
-#     plot_polyapprox_rotate,
-#     plot_polyapprox_levelset,
-#     plot_polyapprox_flyover,
-#     plot_polyapprox_animate,
-#     plot_polyapprox_animate2,
-#     plot_level_set,
-#     create_level_set_visualization,
-#     create_level_set_animation,
-#     prepare_level_set_data,
-#     to_makie_format,
-#     plot_raw_vs_refined_eigenvalues
-
-# Level set data types (canonical definitions, used by globtimplots)
+# Level set data types (canonical definitions, used by GlobtimPlots)
 export LevelSetData, VisualizationParameters
 
 # Phase 3: Enhanced statistical tables and analysis - export main functions
@@ -484,57 +469,7 @@ end
 # Convenience constructor
 VisualizationParameters(; kwargs...) = VisualizationParameters{Float64}(; kwargs...)
 
-# Stub functions for plotting functionality that's now in GlobtimPlots
-# These stubs allow old code to compile but will error at runtime with helpful messages
-# directing users to use GlobtimPlots instead
-function plot_polyapprox_3d(args...; kwargs...)
-    error("plot_polyapprox_3d has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_polyapprox_rotate(args...; kwargs...)
-    error("plot_polyapprox_rotate has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_polyapprox_levelset(args...; kwargs...)
-    error("plot_polyapprox_levelset has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_polyapprox_flyover(args...; kwargs...)
-    error("plot_polyapprox_flyover has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_polyapprox_animate(args...; kwargs...)
-    error("plot_polyapprox_animate has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_polyapprox_animate2(args...; kwargs...)
-    error("plot_polyapprox_animate2 has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_level_set(args...; kwargs...)
-    error("plot_level_set has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function create_level_set_visualization(args...; kwargs...)
-    error("create_level_set_visualization has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function create_level_set_animation(args...; kwargs...)
-    error("create_level_set_animation has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function prepare_level_set_data(args...; kwargs...)
-    error("prepare_level_set_data has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function to_makie_format(args...; kwargs...)
-    error("to_makie_format has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_raw_vs_refined_eigenvalues(args...; kwargs...)
-    error("plot_raw_vs_refined_eigenvalues has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_error_function_2D_with_critical_points(args...; kwargs...)
-    error("plot_error_function_2D_with_critical_points has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_polyapprox_levelset_2D(args...; kwargs...)
-    error("plot_polyapprox_levelset_2D has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_error_function_1D_with_critical_points(args...; kwargs...)
-    error("plot_error_function_1D_with_critical_points has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
-function plot_error_function_2D_with_critical_points_with_outputs(args...; kwargs...)
-    error("plot_error_function_2D_with_critical_points_with_outputs has been moved to GlobtimPlots. Please use: using GlobtimPlots")
-end
+
 
 # Include PolynomialImports module for robust @polyvar support
 include("PolynomialImports.jl")
