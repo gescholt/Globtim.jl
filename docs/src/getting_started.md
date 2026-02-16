@@ -139,4 +139,6 @@ TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 - [Core Algorithm](core_algorithm.md) - Mathematical foundations
 - [Critical Point Analysis](critical_point_analysis.md) - Advanced refinement
 - [Sparsification](sparsification.md) - Polynomial complexity reduction
+- [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing) - Refine critical points to high accuracy, campaign analysis
+- [GlobtimPlots](globtimplots.md) - Visualize experiments and results
 - [API Reference](api_reference.md) - Complete function documentation

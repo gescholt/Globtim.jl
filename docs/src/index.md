@@ -53,3 +53,23 @@ julia --project=. examples/quick_subdivision_demo.jl
 This tests adaptive subdivision on multiple functions (sphere, Rosenbrock, Rastrigin) and shows the algorithm's behavior.
 
 For a detailed walkthrough, see [Getting Started](getting_started.md).
+
+## Ecosystem
+
+Globtim is part of a three-package ecosystem for global optimization:
+
+| Package | Description | Repository |
+|:--------|:------------|:-----------|
+| **Globtim** | Core polynomial approximation and critical point finding | [GitHub](https://github.com/gescholt/Globtim.jl) |
+| **[GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing)** | Refinement, validation, parameter recovery, campaign analysis | [GitHub](https://github.com/gescholt/globtimpostprocessing) |
+| **[GlobtimPlots](https://github.com/gescholt/globtimplots)** | Visualization (CairoMakie/GLMakie) for experiments and campaigns | [GitHub](https://github.com/gescholt/globtimplots) |
+
+```
+Globtim (experiments) -> GlobtimPostProcessing (analysis) -> GlobtimPlots (visualization)
+```
+
+Install companion packages:
+```julia
+pkg> add GlobtimPostProcessing
+pkg> add GlobtimPlots
+```

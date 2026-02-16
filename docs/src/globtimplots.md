@@ -2,13 +2,21 @@
 
 GlobtimPlots is Globtim's visualization layer - a Makie wrapper providing custom plotting functions for polynomial approximation and critical point analysis.
 
+**Repository**: [github.com/gescholt/globtimplots](https://github.com/gescholt/globtimplots)
+
+## Installation
+
+```julia
+pkg> add GlobtimPlots
+```
+
 ## Package Role
 
-GlobtimPlots is **not a standalone package**. It is designed specifically for Globtim visualization needs:
+GlobtimPlots provides visualization for the Globtim ecosystem:
 
 - **Makie wrapper** - Uses CairoMakie/GLMakie as the backend for all plots
 - **Globtim-specific** - Provides plot recipes tailored to polynomial approximation workflows
-- **Future integration** - Will become an actual dependency of Globtim when the API stabilizes
+- **Depends on** [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing) for data types and analysis results
 
 **Pipeline**: Globtim (experiments) → GlobtimPostProcessing (analysis) → GlobtimPlots (visualization)
 
