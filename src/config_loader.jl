@@ -30,51 +30,53 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 - `[refinement]`: post-processing refinement (optional)
 - `[output]`: output_dir (optional)
 """
-struct ExperimentPipelineConfig
+Base.@kwdef struct ExperimentPipelineConfig
     # [experiment]
     name::String
-    description::String
+    description::String = ""
 
     # [model] — exactly one mode: catalogue XOR analytical
-    catalogue_path::Union{Nothing, String}
-    entry_name::Union{Nothing, String}
-    analytical_function::Union{Nothing, String}
-    dimension::Union{Nothing, Int}
+    catalogue_path::Union{Nothing, String} = nothing
+    entry_name::Union{Nothing, String} = nothing
+    analytical_function::Union{Nothing, String} = nothing
+    dimension::Union{Nothing, Int} = nothing
 
     # [domain] — exactly one mode: radius XOR radii XOR bounds
-    radius::Union{Nothing, Float64}
-    radii::Union{Nothing, Vector{Float64}}
-    bounds::Union{Nothing, Vector{Tuple{Float64, Float64}}}
+    radius::Union{Nothing, Float64} = nothing
+    radii::Union{Nothing, Vector{Float64}} = nothing
+    bounds::Union{Nothing, Vector{Tuple{Float64, Float64}}} = nothing
 
     # [polynomial]
     GN::Int
     degree_range::StepRange{Int, Int}
-    basis::Symbol
+    basis::Symbol = :chebyshev
 
     # [solver] — optional ODE overrides
-    solver_method::Union{Nothing, String}
-    solver_abstol::Union{Nothing, Float64}
-    solver_reltol::Union{Nothing, Float64}
-    solver_numpoints::Union{Nothing, Int}
+    solver_method::Union{Nothing, String} = nothing
+    solver_abstol::Union{Nothing, Float64} = nothing
+    solver_reltol::Union{Nothing, Float64} = nothing
+    solver_numpoints::Union{Nothing, Int} = nothing
 
     # [refinement] — optional post-processing
-    refinement_enabled::Bool
-    refinement_method::Union{Nothing, String}
-    refinement_max_time::Union{Nothing, Float64}
-    refinement_gradient_method::Union{Nothing, String}
-    refinement_gradient_tolerance::Union{Nothing, Float64}
+    refinement_enabled::Bool = false
+    refinement_method::Union{Nothing, String} = nothing
+    refinement_max_time::Union{Nothing, Float64} = nothing
+    refinement_gradient_method::Union{Nothing, String} = nothing
+    refinement_gradient_tolerance::Union{Nothing, Float64} = nothing
 
     # [analysis] — optional CP validation (Newton on ∇f=0, Hessian classification)
-    analysis_enabled::Bool
-    analysis_gradient_method::Union{Nothing, String}
-    analysis_newton_tol::Union{Nothing, Float64}
-    analysis_newton_max_iterations::Union{Nothing, Int}
-    analysis_hessian_tol::Union{Nothing, Float64}
-    analysis_dedup_fraction::Union{Nothing, Float64}
-    analysis_top_k::Union{Nothing, Int}
+    analysis_enabled::Bool = false
+    analysis_gradient_method::Union{Nothing, String} = nothing
+    analysis_newton_tol::Union{Nothing, Float64} = nothing
+    analysis_newton_max_iterations::Union{Nothing, Int} = nothing
+    analysis_hessian_tol::Union{Nothing, Float64} = nothing
+    analysis_dedup_fraction::Union{Nothing, Float64} = nothing
+    analysis_top_k::Union{Nothing, Int} = nothing
+    analysis_accept_tol::Union{Nothing, Float64} = nothing
+    analysis_f_accept_tol::Union{Nothing, Float64} = nothing
 
     # [output]
-    output_dir::Union{Nothing, String}
+    output_dir::Union{Nothing, String} = nothing
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -265,6 +267,14 @@ function validate_experiment_toml(d::Dict)
         (df isa Number && 0 < df < 1) || push!(errors,
             "[analysis] dedup_fraction must be in (0, 1), got: $df")
     end
+    if haskey(ana, "accept_tol")
+        (ana["accept_tol"] isa Number && ana["accept_tol"] > 0) || push!(errors,
+            "[analysis] accept_tol must be positive")
+    end
+    if haskey(ana, "f_accept_tol")
+        (ana["f_accept_tol"] isa Number && ana["f_accept_tol"] > 0) || push!(errors,
+            "[analysis] f_accept_tol must be positive")
+    end
 
     # --- [refinement] (optional) ---
     if haskey(ref, "method")
@@ -417,44 +427,50 @@ function load_experiment_config(path::String)
     catalogue_path = _resolve_config_path(catalogue_path, config_dir)
     output_dir     = _resolve_config_path(output_dir, config_dir)
 
+    # Parse analysis accept tolerances
+    analysis_accept_tol = haskey(ana, "accept_tol") ? Float64(ana["accept_tol"]) : nothing
+    analysis_f_accept_tol = haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
+
     return ExperimentPipelineConfig(
         # [experiment]
-        String(exp["name"]),
-        String(get(exp, "description", "")),
+        name = String(exp["name"]),
+        description = String(get(exp, "description", "")),
         # [model]
-        catalogue_path,
-        entry_name,
-        analytical_function,
-        model_dimension,
+        catalogue_path = catalogue_path,
+        entry_name = entry_name,
+        analytical_function = analytical_function,
+        dimension = model_dimension,
         # [domain]
-        radius,
-        radii,
-        bounds,
+        radius = radius,
+        radii = radii,
+        bounds = bounds,
         # [polynomial]
-        Int(poly["GN"]),
-        degree_range,
-        basis,
+        GN = Int(poly["GN"]),
+        degree_range = degree_range,
+        basis = basis,
         # [solver]
-        solver_method,
-        solver_abstol,
-        solver_reltol,
-        solver_numpoints,
+        solver_method = solver_method,
+        solver_abstol = solver_abstol,
+        solver_reltol = solver_reltol,
+        solver_numpoints = solver_numpoints,
         # [refinement]
-        refinement_enabled,
-        refinement_method,
-        refinement_max_time,
-        refinement_gradient_method,
-        refinement_gradient_tolerance,
+        refinement_enabled = refinement_enabled,
+        refinement_method = refinement_method,
+        refinement_max_time = refinement_max_time,
+        refinement_gradient_method = refinement_gradient_method,
+        refinement_gradient_tolerance = refinement_gradient_tolerance,
         # [analysis]
-        analysis_enabled,
-        analysis_gradient_method,
-        analysis_newton_tol,
-        analysis_newton_max_iterations,
-        analysis_hessian_tol,
-        analysis_dedup_fraction,
-        analysis_top_k,
+        analysis_enabled = analysis_enabled,
+        analysis_gradient_method = analysis_gradient_method,
+        analysis_newton_tol = analysis_newton_tol,
+        analysis_newton_max_iterations = analysis_newton_max_iterations,
+        analysis_hessian_tol = analysis_hessian_tol,
+        analysis_dedup_fraction = analysis_dedup_fraction,
+        analysis_top_k = analysis_top_k,
+        analysis_accept_tol = analysis_accept_tol,
+        analysis_f_accept_tol = analysis_f_accept_tol,
         # [output]
-        output_dir,
+        output_dir = output_dir,
     )
 end
 
