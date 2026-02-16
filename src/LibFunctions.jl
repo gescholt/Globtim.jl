@@ -1711,7 +1711,7 @@ push!(FUNCTION_REGISTRY,
     Deuflhard => (
         name = "Deuflhard",
         default_bounds = (-5.0, 5.0),
-        global_min_location = n -> error("Deuflhard global minimum is not closed-form; use Newton refinement"),
+        global_min_location = _ -> nothing,  # not closed-form; use Newton refinement
         global_min_value = _ -> NaN,  # multiple CPs, no closed-form global min
         properties = [:multimodal, :nonseparable, :fixed_dim],
         min_dim = 2,
@@ -1725,8 +1725,8 @@ push!(FUNCTION_REGISTRY,
 Build a benchmark configuration from the function registry for use in experiment scripts.
 
 Returns a NamedTuple with: `name`, `objective`, `bounds`, `description`, `global_min`,
-`global_min_value`. The `global_min_value` is always resolved to a `Float64` (or `NaN`
-if no closed-form value is known for the given dimension).
+`global_min_value`. Fields `global_min` is `nothing` and `global_min_value` is `NaN`
+when no closed-form global minimum is known (e.g. Deuflhard).
 
 Errors if `dim` is outside the `[min_dim, max_dim]` range for the function.
 
