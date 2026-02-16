@@ -71,6 +71,7 @@ struct ExperimentPipelineConfig
     analysis_newton_max_iterations::Union{Nothing, Int}
     analysis_hessian_tol::Union{Nothing, Float64}
     analysis_dedup_fraction::Union{Nothing, Float64}
+    analysis_top_k::Union{Nothing, Int}
 
     # [output]
     output_dir::Union{Nothing, String}
@@ -401,6 +402,7 @@ function load_experiment_config(path::String)
     analysis_newton_max_iterations = haskey(ana, "newton_max_iterations") ? Int(ana["newton_max_iterations"]) : nothing
     analysis_hessian_tol = haskey(ana, "hessian_tol") ? Float64(ana["hessian_tol"]) : nothing
     analysis_dedup_fraction = haskey(ana, "dedup_fraction") ? Float64(ana["dedup_fraction"]) : nothing
+    analysis_top_k = haskey(ana, "top_k") ? Int(ana["top_k"]) : nothing
 
     # Parse output
     output_dir = haskey(out, "dir") ? String(out["dir"]) : nothing
@@ -450,6 +452,7 @@ function load_experiment_config(path::String)
         analysis_newton_max_iterations,
         analysis_hessian_tol,
         analysis_dedup_fraction,
+        analysis_top_k,
         # [output]
         output_dir,
     )
