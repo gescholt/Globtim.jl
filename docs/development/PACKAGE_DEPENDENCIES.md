@@ -198,7 +198,6 @@ The weak dependency system is compatible with package bundling for HPC deploymen
 ## Future Development
 
 ### Planned Extensions
-- **GlobtimHPCExt**: HPC-specific utilities and cluster integration
 - **GlobtimBenchmarkExt**: Advanced benchmarking and profiling tools
 - **GlobtimParallelExt**: Parallel computing extensions
 
