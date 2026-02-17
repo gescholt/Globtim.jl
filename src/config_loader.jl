@@ -24,6 +24,7 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 
 - `[experiment]`: name, description
 - `[model]`: catalogue_path + entry_name (ODE) OR analytical_function + dimension (built-in)
+  Optional: time_interval (override catalogue default, catalogue mode only)
 - `[domain]`: radius (symmetric) OR radii (anisotropic) OR bounds (explicit)
 - `[polynomial]`: GN, degree_range, basis
 - `[solver]`: ODE solver overrides (optional)
@@ -40,6 +41,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     entry_name::Union{Nothing, String} = nothing
     analytical_function::Union{Nothing, String} = nothing
     dimension::Union{Nothing, Int} = nothing
+    time_interval::Union{Nothing, Vector{Float64}} = nothing  # override catalogue default
 
     # [domain] — exactly one mode: radius XOR radii XOR bounds
     radius::Union{Nothing, Float64} = nothing
@@ -147,6 +149,22 @@ function validate_experiment_toml(d::Dict)
             fname = mod["analytical_function"]
             if !(lowercase(fname) in [lowercase(n) for n in known])
                 push!(errors, "[model] unknown analytical_function \"$fname\". Known: $(join(known, ", "))")
+            end
+        end
+    end
+
+    # Validate time_interval override (only valid in catalogue mode)
+    if haskey(mod, "time_interval")
+        if has_analytical
+            push!(errors, "[model] time_interval is only valid in catalogue mode, not with analytical_function")
+        else
+            ti = mod["time_interval"]
+            if !(ti isa AbstractVector && length(ti) == 2)
+                push!(errors, "[model] time_interval must be [start, end], got: $ti")
+            elseif !(ti[1] isa Number && ti[2] isa Number)
+                push!(errors, "[model] time_interval values must be numbers")
+            elseif ti[2] <= ti[1]
+                push!(errors, "[model] time_interval end ($(ti[2])) must be > start ($(ti[1]))")
             end
         end
     end
@@ -391,6 +409,7 @@ function load_experiment_config(path::String)
     entry_name         = haskey(mod, "entry_name") ? String(mod["entry_name"]) : nothing
     analytical_function = haskey(mod, "analytical_function") ? String(mod["analytical_function"]) : nothing
     model_dimension    = haskey(mod, "dimension") ? Int(mod["dimension"]) : nothing
+    time_interval      = haskey(mod, "time_interval") ? Float64.(mod["time_interval"]) : nothing
 
     # Parse solver overrides
     solver_method = haskey(sol, "method") ? String(sol["method"]) : nothing
@@ -442,6 +461,7 @@ function load_experiment_config(path::String)
         entry_name = entry_name,
         analytical_function = analytical_function,
         dimension = model_dimension,
+        time_interval = time_interval,
         # [domain]
         radius = radius,
         radii = radii,
