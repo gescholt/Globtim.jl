@@ -190,7 +190,7 @@ export GlobtimError,
 # Internal validation functions - not exported
 # export validate_dimension, validate_polynomial_degree, validate_sample_count, validate_center_vector, validate_sample_range
 # export validate_objective_function, check_matrix_conditioning, validate_polynomial_coefficients
-# export check_memory_usage, estimate_computation_complexity, suggest_parameter_adjustments, safe_execute_with_fallback
+# export check_memory_usage, estimate_computation_complexity
 # export ComputationProgress, update_progress!, with_progress_monitoring
 # export validate_test_input_parameters, validate_constructor_parameters, create_error_context, log_error_details
 
@@ -209,12 +209,7 @@ export enhanced_pipeline_validation, validate_hpc_pipeline_stage
 export format_validation_error, format_boundary_error
 export create_validation_report, create_boundary_report, create_defense_report
 
-# Safe wrapper functions - keep main workflow functions only
-export safe_test_input, safe_constructor, safe_globtim_workflow
 export print_timing_breakdown
-# Internal safe wrappers - not exported
-# export safe_solve_polynomial_system, safe_analyze_critical_points
-# export diagnose_globtim_setup
 
 include("LibFunctions.jl") #list of test functions.
 include("BenchmarkFunctions.jl") #benchmark function categorization and utilities.
@@ -250,7 +245,7 @@ include("anisotropic_grids.jl") #Anisotropic grid generation
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
-include("safe_wrappers.jl") #Safe wrapper functions with error handling
+# safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
 include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
 
 # Export non-plotting functions that are always available

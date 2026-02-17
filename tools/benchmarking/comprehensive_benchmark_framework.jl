@@ -260,18 +260,26 @@ function execute_comprehensive_benchmark(
     construction_start = time()
     
     try
-        # Use safe_globtim_workflow for robust execution
-        globtim_results = safe_globtim_workflow(
-            f,
-            dim = enhanced_func.dimension,
-            center = center,
-            sample_range = domain_size,
-            degree = degree,
-            GN = sample_count,
-            enable_hessian = enable_hessian,
-            basis = :chebyshev,
-            precision = Float64Precision,
-            max_retries = 3
+        # Direct API calls (no fallback wrappers)
+        dim = enhanced_func.dimension
+        TR = test_input(f; dim=dim, center=center, sample_range=domain_size, GN=sample_count)
+        pol = Constructor(TR, degree; basis=:chebyshev, precision=Float64Precision)
+        @polyvar x[1:dim]
+        solutions = solve_polynomial_system(x, pol)
+        df_critical = process_crit_pts(solutions, f, TR)
+        df_enhanced = DataFrame()
+        df_min = DataFrame()
+        if nrow(df_critical) > 0
+            df_enhanced, df_min = analyze_critical_points(f, df_critical, TR; enable_hessian=enable_hessian)
+        else
+            df_enhanced = df_critical
+        end
+        globtim_results = (
+            test_input = TR,
+            polynomial = pol,
+            critical_points = df_critical,
+            critical_points_enhanced = df_enhanced,
+            minima = df_min,
         )
         
         construction_time = time() - construction_start
