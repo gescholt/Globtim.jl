@@ -1,5 +1,3 @@
-# Sasha: This files seems not Revise-able.
-
 # Import ForwardDiff for enhanced BFGS functionality
 using ForwardDiff
 using Logging
@@ -389,6 +387,223 @@ computations include robust error handling for numerical stability.
 
 See also: `compute_hessians`, `classify_critical_points`, `process_crit_pts`
 """
+
+# ============================================================================
+# Helper functions extracted from analyze_critical_points
+# ============================================================================
+
+"""
+    _refine_critical_points!(df, df_min, f, TR, n_dims; kwargs...)
+
+Run NelderMead optimization from each critical point to find nearby minimizers.
+Updates `df` in-place with refined coordinates and populates `df_min` with unique minimizers.
+"""
+function _refine_critical_points!(
+    df::DataFrame, df_min::DataFrame, f, TR::TestInput, n_dims::Int;
+    max_iters_in_optim::Int=100, tol_dist::Float64=0.025,
+    bfgs_f_abstol::Float64=1e-8, bfgs_x_abstol::Float64=0.0, verbose::Bool=true
+)
+    for i in 1:nrow(df)
+        try
+            verbose && println("Processing point $i of $(nrow(df))")
+            x0 = [df[i, Symbol("x$j")] for j in 1:n_dims]
+
+            res = Logging.with_logger(Logging.NullLogger()) do
+                Optim.optimize(
+                    f, x0, Optim.NelderMead(),
+                    Optim.Options(show_trace=false, iterations=max_iters_in_optim,
+                                  f_tol=bfgs_f_abstol, x_tol=bfgs_x_abstol)
+                )
+            end
+
+            minimizer = Optim.minimizer(res)
+            min_value = Optim.minimum(res)
+            steps = res.iterations
+            optim_converged = Optim.converged(res)
+
+            within_bounds = if isa(TR.sample_range, Number)
+                all(abs.(minimizer .- TR.center[1:n_dims]) .<= TR.sample_range)
+            else
+                all(abs.(minimizer[j] - TR.center[j]) <= TR.sample_range[j] for j in 1:n_dims)
+            end
+            converged = optim_converged && within_bounds
+
+            if verbose
+                green_check = "\e[32m✓\e[0m"; red_cross = "\e[31m✗\e[0m"
+                println(
+                    converged ? "Optimization has converged within bounds: $green_check" :
+                    "Optimization status: $red_cross" *
+                    (optim_converged ? " (outside bounds)" : " (did not converge)")
+                )
+            end
+
+            for j in 1:n_dims
+                df[i, Symbol("y$j")] = minimizer[j]
+            end
+            df[i, :steps] = steps
+            df[i, :converged] = converged
+
+            distance = norm([df[i, Symbol("x$j")] - minimizer[j] for j in 1:n_dims])
+            df[i, :close] = distance < tol_dist
+
+            !within_bounds && continue
+
+            # Check if minimizer is unique
+            is_new = true
+            for j in 1:nrow(df_min)
+                if norm([df_min[j, Symbol("x$k")] - minimizer[k] for k in 1:n_dims]) < tol_dist
+                    is_new = false
+                    break
+                end
+            end
+
+            if is_new
+                is_captured = any(
+                    norm([df[k, Symbol("x$j")] - minimizer[j] for j in 1:n_dims]) < tol_dist
+                    for k in 1:nrow(df)
+                )
+                new_row = Dict{Symbol, Any}()
+                for j in 1:n_dims
+                    new_row[Symbol("x$j")] = minimizer[j]
+                end
+                new_row[:value] = min_value
+                new_row[:captured] = is_captured
+                push!(df_min, new_row)
+            end
+        catch e
+            verbose && println("Error processing point $i: $e")
+            for j in 1:n_dims
+                df[i, Symbol("y$j")] = NaN
+            end
+            df[i, :close] = false
+            df[i, :steps] = -1
+            df[i, :converged] = false
+        end
+    end
+end
+
+"""
+    _compute_enhanced_statistics!(df, df_min, f, TR, n_dims; kwargs...)
+
+Compute spatial regions, function value clusters, nearest neighbors,
+gradient norms, and basin analysis. Updates `df` and `df_min` in-place.
+"""
+function _compute_enhanced_statistics!(
+    df::DataFrame, df_min::DataFrame, f, TR::TestInput, n_dims::Int;
+    tol_dist::Float64=0.025, enable_gradient_computation::Bool=true, verbose::Bool=true
+)
+    verbose && println("\n=== Computing Enhanced Statistics ===")
+
+    verbose && println("Computing spatial regions...")
+    df[!, :region_id] = assign_spatial_regions(df, TR)
+
+    verbose && println("Clustering function values...")
+    df[!, :function_value_cluster] = cluster_function_values(df.z)
+
+    verbose && println("Computing nearest neighbor distances...")
+    df[!, :nearest_neighbor_dist] = compute_nearest_neighbors(df, n_dims)
+
+    if enable_gradient_computation
+        verbose && println("Computing gradient norms at critical points...")
+        points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
+        for i in 1:n_dims
+            points_matrix[:, i] = df[!, Symbol("x$i")]
+        end
+        df[!, :gradient_norm] = compute_gradients(f, points_matrix)
+    else
+        verbose && println("Gradient computation disabled")
+        df[!, :gradient_norm] = fill(NaN, nrow(df))
+    end
+
+    if nrow(df_min) > 0
+        verbose && println("Analyzing basins of attraction...")
+        basin_sizes, avg_steps, region_coverage_counts =
+            analyze_basins(df, df_min, n_dims, tol_dist)
+        df_min[!, :basin_points] = basin_sizes
+        df_min[!, :average_convergence_steps] = avg_steps
+        df_min[!, :region_coverage_count] = region_coverage_counts
+
+        verbose && println("Computing gradient norms at minimizers...")
+        min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
+        for i in 1:n_dims
+            min_points[:, i] = df_min[!, Symbol("x$i")]
+        end
+        df_min[!, :gradient_norm_at_min] = compute_gradients(f, min_points)
+    end
+
+    verbose && println("Enhanced statistics computed successfully!")
+end
+
+"""
+    _compute_hessian_analysis!(df, df_min, f, n_dims; kwargs...)
+
+Compute Hessian matrices, eigenvalues, critical point classification,
+and related statistics. Updates `df` and `df_min` in-place.
+"""
+function _compute_hessian_analysis!(
+    df::DataFrame, df_min::DataFrame, f, n_dims::Int;
+    hessian_tol_zero::Float64=1e-8, verbose::Bool=true
+)
+    verbose && println("\n=== Computing Complete Hessian Analysis ===")
+
+    verbose && println("Computing Hessian matrices...")
+    points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
+    for i in 1:n_dims
+        points_matrix[:, i] = df[!, Symbol("x$i")]
+    end
+    @debug "analyze_critical_points: points_matrix size: $(size(points_matrix))"
+    hessians = compute_hessians(f, points_matrix)
+
+    verbose && println("Computing all eigenvalues...")
+    all_eigenvalues = store_all_eigenvalues(hessians)
+
+    verbose && println("Classifying critical points...")
+    classifications = classify_critical_points(hessians, tol_zero=hessian_tol_zero)
+    @debug "analyze_critical_points: Classifications: $classifications"
+    df[!, :critical_point_type] = classifications
+
+    verbose && println("Extracting critical eigenvalues...")
+    smallest_pos_eigenvals, largest_neg_eigenvals =
+        extract_critical_eigenvalues(classifications, all_eigenvalues)
+    df[!, :smallest_positive_eigenval] = smallest_pos_eigenvals
+    df[!, :largest_negative_eigenval] = largest_neg_eigenvals
+
+    verbose && println("Computing Hessian norms...")
+    df[!, :hessian_norm] = compute_hessian_norms(hessians)
+
+    verbose && println("Computing eigenvalue statistics...")
+    eigenvalue_stats = compute_eigenvalue_stats(hessians)
+    for col in names(eigenvalue_stats)
+        df[!, Symbol("hessian_$col")] = eigenvalue_stats[!, col]
+    end
+
+    if nrow(df_min) > 0
+        verbose && println("Computing Hessian analysis for minimizers...")
+        min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
+        for i in 1:n_dims
+            min_points[:, i] = df_min[!, Symbol("x$i")]
+        end
+        min_hessians = compute_hessians(f, min_points)
+        min_all_eigenvalues = store_all_eigenvalues(min_hessians)
+        min_classifications = classify_critical_points(min_hessians, tol_zero=hessian_tol_zero)
+        min_smallest_pos, min_largest_neg =
+            extract_critical_eigenvalues(min_classifications, min_all_eigenvalues)
+
+        df_min[!, :critical_point_type] = min_classifications
+        df_min[!, :smallest_positive_eigenval] = min_smallest_pos
+        df_min[!, :largest_negative_eigenval] = min_largest_neg
+        df_min[!, :hessian_norm] = compute_hessian_norms(min_hessians)
+        min_eigenvalue_stats = compute_eigenvalue_stats(min_hessians)
+        for col in names(min_eigenvalue_stats)
+            df_min[!, Symbol("hessian_$col")] = min_eigenvalue_stats[!, col]
+        end
+    end
+
+    verbose && println("Hessian analysis complete!")
+end
+
+# ============================================================================
+
 TimerOutputs.@timeit _TO function analyze_critical_points(
     f::Function,
     df::DataFrame,
@@ -404,11 +619,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     bfgs_f_abstol = 1e-8,
     bfgs_x_abstol = 0.0
 )
-    n_dims = count(col -> startswith(string(col), "x"), names(df))  # Count x-columns
-
-    # ANSI escape codes for colored output
-    green_check = "\e[32m✓\e[0m"
-    red_cross = "\e[31m✗\e[0m"
+    n_dims = count(col -> startswith(string(col), "x"), names(df))
 
     # Initialize result columns
     for i in 1:n_dims
@@ -426,113 +637,12 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     df_min = DataFrame([name => Float64[] for name in min_cols[1:(end - 1)]])
     df_min[!, :captured] = Bool[]
 
+    # Stage 1: Refinement
     if enable_bfgs_refinement
-        for i in 1:nrow(df)
-            try
-                verbose && println("Processing point $i of $(nrow(df))")
-
-                # Extract starting point
-                x0 = [df[i, Symbol("x$j")] for j in 1:n_dims]
-
-                # Optimization (with ODE warning suppression)
-                # Using NelderMead (gradient-free) for robustness with ODE-based objectives
-                res = Logging.with_logger(Logging.NullLogger()) do
-                    Optim.optimize(
-                        f,
-                        x0,
-                        Optim.NelderMead(),
-                        Optim.Options(
-                            show_trace = false,
-                            iterations = max_iters_in_optim,
-                            f_tol = bfgs_f_abstol,
-                            x_tol = bfgs_x_abstol
-                        )
-                    )
-                end
-
-                minimizer = Optim.minimizer(res)
-                min_value = Optim.minimum(res)
-                steps = res.iterations
-                optim_converged = Optim.converged(res)
-
-                # Check if minimizer is within bounds - handle both scalar and vector scaling
-                within_bounds = if isa(TR.sample_range, Number)
-                    # Scalar sample_range case
-                    all(abs.(minimizer .- TR.center[1:n_dims]) .<= TR.sample_range)
-                else
-                    # Vector sample_range case
-                    all(abs.(minimizer[j] - TR.center[j]) <= TR.sample_range[j] for j in 1:n_dims)
-                end
-
-                # Only mark as converged if both optimization converged AND within bounds
-                converged = optim_converged && within_bounds
-
-                # Print status with appropriate symbol
-                if verbose
-                    println(
-                        converged ? "Optimization has converged within bounds: $green_check" :
-                        "Optimization status: $red_cross" *
-                        (optim_converged ? " (outside bounds)" : " (did not converge)")
-                    )
-                end
-
-                # Update df results
-                for j in 1:n_dims
-                    df[i, Symbol("y$j")] = minimizer[j]
-                end
-                df[i, :steps] = steps
-                df[i, :converged] = converged  # Updated to use new converged status
-
-                # Check if minimizer is close to starting point
-                distance = norm([df[i, Symbol("x$j")] - minimizer[j] for j in 1:n_dims])
-                df[i, :close] = distance < tol_dist
-
-                # Skip adding to df_min if outside bounds
-                !within_bounds && continue
-
-                # Check if the minimizer is new
-                is_new = true
-                for j in 1:nrow(df_min)
-                    if norm([df_min[j, Symbol("x$k")] - minimizer[k] for k in 1:n_dims]) <
-                       tol_dist
-                        is_new = false
-                        break
-                    end
-                end
-
-                # Add new unique minimizer
-                if is_new
-                    # Check if minimizer is captured by any initial point
-                    is_captured = any(
-                        norm([df[k, Symbol("x$j")] - minimizer[j] for j in 1:n_dims]) <
-                        tol_dist
-                        for k in 1:nrow(df)
-                    )
-
-                    # Create new row for df_min
-                    new_row = Dict{Symbol, Any}()
-                    for j in 1:n_dims
-                        new_row[Symbol("x$j")] = minimizer[j]
-                    end
-                    new_row[:value] = min_value
-                    new_row[:captured] = is_captured
-
-                    push!(df_min, new_row)
-                end
-
-            catch e
-                verbose && println("Error processing point $i: $e")
-                # Handle errors in df
-                for j in 1:n_dims
-                    df[i, Symbol("y$j")] = NaN
-                end
-                df[i, :close] = false
-                df[i, :steps] = -1
-                df[i, :converged] = false
-            end
-        end
+        _refine_critical_points!(df, df_min, f, TR, n_dims;
+            max_iters_in_optim, tol_dist=Float64(tol_dist),
+            bfgs_f_abstol=Float64(bfgs_f_abstol), bfgs_x_abstol=Float64(bfgs_x_abstol), verbose)
     else
-        # Skip BFGS refinement: use raw points as results
         verbose && println("BFGS refinement disabled, using raw critical points")
         for i in 1:nrow(df)
             for j in 1:n_dims
@@ -544,179 +654,14 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
         end
     end
 
-    # === Enhanced Statistics Collection ===
-    if verbose
-        println("\n=== Computing Enhanced Statistics ===")
-    end
+    # Stage 2: Enhanced statistics
+    _compute_enhanced_statistics!(df, df_min, f, TR, n_dims;
+        tol_dist=Float64(tol_dist), enable_gradient_computation, verbose)
 
-    # 1. Spatial region analysis
-    if verbose
-        println("Computing spatial regions...")
-    end
-    region_ids = assign_spatial_regions(df, TR)
-    df[!, :region_id] = region_ids
-
-    # 2. Function value clustering  
-    if verbose
-        println("Clustering function values...")
-    end
-    cluster_ids = cluster_function_values(df.z)
-    df[!, :function_value_cluster] = cluster_ids
-
-    # 3. Nearest neighbor distances
-    if verbose
-        println("Computing nearest neighbor distances...")
-    end
-    nn_distances = compute_nearest_neighbors(df, n_dims)
-    df[!, :nearest_neighbor_dist] = nn_distances
-
-    # 4. Gradient norms at critical points
-    if enable_gradient_computation
-        if verbose
-            println("Computing gradient norms at critical points...")
-        end
-        points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
-        for i in 1:n_dims
-            points_matrix[:, i] = df[!, Symbol("x$i")]
-        end
-        grad_norms = compute_gradients(f, points_matrix)
-        df[!, :gradient_norm] = grad_norms
-    else
-        if verbose
-            println("Gradient computation disabled")
-        end
-        df[!, :gradient_norm] = fill(NaN, nrow(df))
-    end
-
-    # 5. Basin analysis for df_min (only if we have minimizers)
-    if nrow(df_min) > 0
-        if verbose
-            println("Analyzing basins of attraction...")
-        end
-        basin_sizes, avg_steps, region_coverage_counts =
-            analyze_basins(df, df_min, n_dims, tol_dist)
-        df_min[!, :basin_points] = basin_sizes
-        df_min[!, :average_convergence_steps] = avg_steps
-        df_min[!, :region_coverage_count] = region_coverage_counts
-
-        # 6. Gradient norms at minimizers
-        if verbose
-            println("Computing gradient norms at minimizers...")
-        end
-        min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
-        for i in 1:n_dims
-            min_points[:, i] = df_min[!, Symbol("x$i")]
-        end
-        min_grad_norms = compute_gradients(f, min_points)
-        df_min[!, :gradient_norm_at_min] = min_grad_norms
-    end
-
-    if verbose
-        println("Enhanced statistics computed successfully!")
-        println(
-            "New df columns: region_id, function_value_cluster, nearest_neighbor_dist, gradient_norm"
-        )
-        if nrow(df_min) > 0
-            println(
-                "New df_min columns: basin_points, average_convergence_steps, region_coverage_count, gradient_norm_at_min"
-            )
-        end
-    end
-
-    # === Complete Hessian Analysis ===
+    # Stage 3: Hessian analysis
     if enable_hessian
-        if verbose
-            println("\n=== Computing Complete Hessian Analysis ===")
-        end
-
-        # 1. Compute Hessian matrices at critical points
-        if verbose
-            println("Computing Hessian matrices...")
-        end
-        points_matrix = Matrix{Float64}(undef, nrow(df), n_dims)
-        for i in 1:n_dims
-            points_matrix[:, i] = df[!, Symbol("x$i")]
-        end
-        @debug "analyze_critical_points: points_matrix size: $(size(points_matrix))"
-        @debug "analyze_critical_points: First few points: $(points_matrix[1:min(3, nrow(df)), :])"
-        hessians = compute_hessians(f, points_matrix)
-
-        # 2. Store all eigenvalues
-        if verbose
-            println("Computing all eigenvalues...")
-        end
-        all_eigenvalues = store_all_eigenvalues(hessians)
-
-        # 3. Classify critical points
-        if verbose
-            println("Classifying critical points...")
-        end
-        classifications = classify_critical_points(hessians, tol_zero = hessian_tol_zero)
-        @debug "analyze_critical_points: Classifications: $classifications"
-        @debug "analyze_critical_points: Classification counts: $([(c, count(==(c), classifications)) for c in unique(classifications)])"
-        df[!, :critical_point_type] = classifications
-
-        # 4. Extract critical eigenvalues for minima/maxima
-        if verbose
-            println("Extracting critical eigenvalues...")
-        end
-        smallest_pos_eigenvals, largest_neg_eigenvals =
-            extract_critical_eigenvalues(classifications, all_eigenvalues)
-        df[!, :smallest_positive_eigenval] = smallest_pos_eigenvals
-        df[!, :largest_negative_eigenval] = largest_neg_eigenvals
-
-        # 5. Compute Hessian norms
-        if verbose
-            println("Computing Hessian norms...")
-        end
-        hessian_norms = compute_hessian_norms(hessians)
-        df[!, :hessian_norm] = hessian_norms
-
-        # 6. Compute standard eigenvalue statistics
-        if verbose
-            println("Computing eigenvalue statistics...")
-        end
-        eigenvalue_stats = compute_eigenvalue_stats(hessians)
-        for col in names(eigenvalue_stats)
-            df[!, Symbol("hessian_$col")] = eigenvalue_stats[!, col]
-        end
-
-        # 7. Hessian analysis for minimizers (if any)
-        if nrow(df_min) > 0
-            if verbose
-                println("Computing Hessian analysis for minimizers...")
-            end
-            min_points = Matrix{Float64}(undef, nrow(df_min), n_dims)
-            for i in 1:n_dims
-                min_points[:, i] = df_min[!, Symbol("x$i")]
-            end
-            min_hessians = compute_hessians(f, min_points)
-            min_all_eigenvalues = store_all_eigenvalues(min_hessians)
-            min_classifications =
-                classify_critical_points(min_hessians, tol_zero = hessian_tol_zero)
-            min_smallest_pos, min_largest_neg =
-                extract_critical_eigenvalues(min_classifications, min_all_eigenvalues)
-            min_hessian_norms = compute_hessian_norms(min_hessians)
-            min_eigenvalue_stats = compute_eigenvalue_stats(min_hessians)
-
-            df_min[!, :critical_point_type] = min_classifications
-            df_min[!, :smallest_positive_eigenval] = min_smallest_pos
-            df_min[!, :largest_negative_eigenval] = min_largest_neg
-            df_min[!, :hessian_norm] = min_hessian_norms
-            for col in names(min_eigenvalue_stats)
-                df_min[!, Symbol("hessian_$col")] = min_eigenvalue_stats[!, col]
-            end
-        end
-
-        if verbose
-            println("Hessian analysis complete!")
-            println(
-                "New df columns: critical_point_type, smallest_positive_eigenval, largest_negative_eigenval, hessian_norm, hessian_*"
-            )
-            if nrow(df_min) > 0
-                println("New df_min columns: same Hessian-based columns as df")
-            end
-        end
+        _compute_hessian_analysis!(df, df_min, f, n_dims;
+            hessian_tol_zero=Float64(hessian_tol_zero), verbose)
     end
 
     return df, df_min
