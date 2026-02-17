@@ -6,6 +6,28 @@ for robust polynomial approximation and critical point analysis.
 """
 
 # ============================================================================
+# NAMED CONSTANTS (replacing magic numbers throughout this file)
+# ============================================================================
+
+"""Maximum polynomial degree before triggering memory/complexity warnings."""
+const MAX_SAFE_DEGREE = 8
+
+"""Maximum Vandermonde memory threshold in MB before rejecting degree."""
+const MAX_VANDERMONDE_MEMORY_MB = 1000  # 1 GB
+
+"""Maximum sample range before warning about numerical issues."""
+const MAX_SAMPLE_RANGE = 1000
+
+"""Memory feasibility threshold in MB for complexity estimation."""
+const MAX_FEASIBLE_MEMORY_MB = 2000  # 2 GB
+
+"""Time feasibility threshold in seconds for construction estimation."""
+const MAX_FEASIBLE_CONSTRUCTION_TIME_S = 300  # 5 minutes
+
+"""Polynomial term count threshold for complexity warnings."""
+const MAX_POLYNOMIAL_TERMS_WARNING = 200
+
+# ============================================================================
 # ERROR TYPE HIERARCHY
 # ============================================================================
 
@@ -239,7 +261,7 @@ Validate polynomial degree against sample count and computational limits.
 # Throws
 - `InputValidationError`: If degree is invalid
 """
-function validate_polynomial_degree(degree::Int, sample_count::Int)
+function validate_polynomial_degree(degree::Int, sample_count::Int; dim::Int=4)
     if degree < 1
         throw(
             InputValidationError(
@@ -249,25 +271,21 @@ function validate_polynomial_degree(degree::Int, sample_count::Int)
         )
     end
 
-    # More conservative degree limits based on dimension
-    max_safe_degree = 8  # Conservative default
-    if degree > max_safe_degree
+    if degree > MAX_SAFE_DEGREE
         throw(
             InputValidationError(
-                "degree", degree, "degree ≤ $max_safe_degree",
-                "High degrees (>$max_safe_degree) may cause memory exhaustion. For degree $degree, consider domain decomposition or contact developers."
+                "degree", degree, "degree ≤ $MAX_SAFE_DEGREE",
+                "High degrees (>$MAX_SAFE_DEGREE) may cause memory exhaustion. For degree $degree, consider domain decomposition or contact developers."
             )
         )
     end
 
-    # Estimate number of polynomial terms more accurately
-    # For multivariate polynomials: C(degree + dim, dim) terms
-    # Use a conservative estimate assuming 4D for safety
-    estimated_coeffs = binomial(degree + 4, 4)
+    # Estimate number of polynomial terms: C(degree + dim, dim)
+    estimated_coeffs = binomial(degree + dim, dim)
 
     # Check if this will cause memory issues
     estimated_memory_mb = estimated_coeffs * sample_count * 8 / 1024^2  # 8 bytes per Float64
-    if estimated_memory_mb > 1000  # > 1GB for Vandermonde matrix
+    if estimated_memory_mb > MAX_VANDERMONDE_MEMORY_MB
         throw(
             InputValidationError(
                 "degree", degree, "memory-safe degree",
@@ -382,7 +400,7 @@ function validate_sample_range(sample_range::Float64)
         )
     end
 
-    if sample_range > 1000
+    if sample_range > MAX_SAMPLE_RANGE
         throw(
             InputValidationError(
                 "sample_range", sample_range, "reasonable range (≤ 1000)",
@@ -721,12 +739,12 @@ function estimate_computation_complexity(dim::Int, degree::Int, sample_count::In
         "system_complexity" => system_complexity,
         "estimated_time_s" => estimated_construction_time_s,
         "warnings" => String[],
-        "memory_feasible" => total_memory_mb < 2000,  # < 2GB
-        "time_feasible" => estimated_construction_time_s < 300  # < 5 minutes
+        "memory_feasible" => total_memory_mb < MAX_FEASIBLE_MEMORY_MB,
+        "time_feasible" => estimated_construction_time_s < MAX_FEASIBLE_CONSTRUCTION_TIME_S
     )
 
     # Add warnings for potentially expensive operations
-    if estimated_terms > 200  # Much more conservative
+    if estimated_terms > MAX_POLYNOMIAL_TERMS_WARNING
         push!(complexity_info["warnings"],
             "High polynomial complexity ($estimated_terms terms). Degree $degree in $(dim)D may be too high."
         )
@@ -998,7 +1016,7 @@ function create_error_context(operation::String, params::Dict{String, Any})
         "operation" => operation,
         "timestamp" => Dates.now(),
         "julia_version" => string(VERSION),
-        "globtim_version" => "1.1.2"  # Update as needed
+        "globtim_version" => string(pkgversion(Globtim))
     )
 
     # Add relevant parameters
