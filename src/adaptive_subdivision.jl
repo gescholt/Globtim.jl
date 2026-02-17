@@ -522,7 +522,7 @@ function construct_polynomial_on_subdomain(::Function, subdomain::Subdomain,
     # Create ApproxPoly with anisotropic scale_factor
     return ApproxPoly{Float64}(
         coeffs,
-        Lambda,
+        Lambda.data,
         d_spec,
         nrm,
         size(samples, 1),
@@ -900,7 +900,7 @@ function process_subdomains_gpu(
         # Create ApproxPoly and cache in subdomain
         nrm = sqrt(sum(abs2.(poly_values)) * weight)
         pol = ApproxPoly{Float64}(
-            coeffs, Lambda, (:one_d_for_all, degree), nrm,
+            coeffs, Lambda.data, (:one_d_for_all, degree), nrm,
             n_points, subdomain.half_widths, subdomain.center,
             collect(grids[idx]'), f_vals, basis,
             Float64Precision, true, false, NaN  # cond skipped for GPU path

@@ -38,6 +38,8 @@ const _TO = TimerOutputs.TimerOutput()
 # Exported functions and variables
 export test_input,
     ApproxPoly,
+    DegreeSpec,
+    SupportMatrix,
     camel,
     CrossInTray,
     Deuflhard,

@@ -29,10 +29,18 @@ The `ApproxPoly` struct is used to store the results of a polynomial approximati
 
 The type parameter `S` makes the scale_factor field type-stable, eliminating runtime dispatch when accessing it.
 """
+"""Type alias for the degree specification in ApproxPoly.
+Either a bare Int (legacy) or a tuple like (:one_d_for_all, 6) or (:one_d_per_dim, [4, 6])."""
+const DegreeSpec = Union{Int, Tuple{Symbol, Int}, Tuple{Symbol, Vector{Int}}}
+
+"""Type alias for the support matrix in ApproxPoly.
+Nothing for legacy constructors, or an integer matrix (possibly transposed) for the lambda matrix."""
+const SupportMatrix = Union{Nothing, AbstractMatrix{Int}}
+
 struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     coeffs::Vector{T}
-    support::Any
-    degree::Any
+    support::SupportMatrix
+    degree::DegreeSpec
     nrm::Float64
     N::Int
     scale_factor::S
