@@ -52,16 +52,12 @@ export TestInput,
     tref_3d,
     Ackley,
     camel_3,
-    camel,
     shubert,
     dejong5,
     easom,
     init_gaussian_params,
     rand_gaussian,
     HolderTable,
-    CrossInTray,
-    Deuflhard,
-    noisy_Deuflhard,
     old_alpine1,
     shubert_4d,
     camel_4d,
@@ -376,12 +372,7 @@ export enhanced_bfgs_refinement
 # Additional refine.jl functions - internal use only
 # export compute_gradients, analyze_basins
 
-# Valley detection and manifold following functions
-# TODO: These functions are not yet implemented - exports commented out
-# export ValleyDetectionConfig, ValleyInfo
-# export detect_valley_at_point, follow_valley_manifold, project_to_critical_manifold
-# export analyze_valleys_in_critical_points
-# export create_valley_test_function, create_ridge_test_function
+# Valley detection is implemented in GlobtimPostProcessing.ValleyWalking
 
 # Function value error analysis - only export main types and functions
 export FunctionValueError, ErrorMetrics, compute_function_value_errors
