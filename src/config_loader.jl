@@ -74,6 +74,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     analysis_top_k::Union{Nothing, Int} = nothing
     analysis_accept_tol::Union{Nothing, Float64} = nothing
     analysis_f_accept_tol::Union{Nothing, Float64} = nothing
+    analysis_valley_walking::Bool = false
 
     # [output]
     output_dir::Union{Nothing, String} = nothing
@@ -427,9 +428,10 @@ function load_experiment_config(path::String)
     catalogue_path = _resolve_config_path(catalogue_path, config_dir)
     output_dir     = _resolve_config_path(output_dir, config_dir)
 
-    # Parse analysis accept tolerances
+    # Parse analysis accept tolerances and valley walking
     analysis_accept_tol = haskey(ana, "accept_tol") ? Float64(ana["accept_tol"]) : nothing
     analysis_f_accept_tol = haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
+    analysis_valley_walking = Bool(get(ana, "valley_walking", false))
 
     return ExperimentPipelineConfig(
         # [experiment]
@@ -469,6 +471,7 @@ function load_experiment_config(path::String)
         analysis_top_k = analysis_top_k,
         analysis_accept_tol = analysis_accept_tol,
         analysis_f_accept_tol = analysis_f_accept_tol,
+        analysis_valley_walking = analysis_valley_walking,
         # [output]
         output_dir = output_dir,
     )
