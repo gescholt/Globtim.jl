@@ -587,7 +587,6 @@ function create_experiment_summary(
         "max_iterations" => experiment_config.max_iterations,
     )
 
-    # Legacy params_dict for backward compatibility with PipelineRegistry
     GN = experiment_config.GN
     degree_range = collect(experiment_config.degree_range)
     domain_size_param = experiment_config.domain_size
