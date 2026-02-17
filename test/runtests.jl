@@ -3,13 +3,13 @@ using Globtim
 
 # Add this diagnostic code near the top of your test file
 println("Checking if Constructor is defined: ", isdefined(Globtim, :Constructor))
-println("Checking if test_input is defined: ", isdefined(Globtim, :test_input))
+println("Checking if TestInput is defined: ", isdefined(Globtim, :TestInput))
 println("Checking if process_crit_pts is defined: ", isdefined(Globtim, :process_crit_pts))
 
-# You're already using Constructor and test_input in your test, so they should be defined
+# You're already using Constructor and TestInput in your test, so they should be defined
 println(
     "Names exported from Globtim: ",
-    filter(name -> string(name) ∈ ["Constructor", "test_input"], names(Globtim))
+    filter(name -> string(name) ∈ ["Constructor", "TestInput"], names(Globtim))
 )
 
 # CSV is required for tests - no fallback
@@ -36,7 +36,7 @@ using ProgressLogging
     println("Number of samples: ", SMPL^n)
 
     # Create test input
-    TR = test_input(
+    TR = TestInput(
         f,
         dim = n,
         center = [0.0, 0.0],

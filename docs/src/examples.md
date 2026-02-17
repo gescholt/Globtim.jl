@@ -49,7 +49,7 @@ Visual examples of Globtim finding critical points on standard benchmark functio
 
 | Step | API Call |
 |------|----------|
-| 1. Define problem | `test_input(f, dim=2, center=[0.0,0.0], sample_range=1.2)` |
+| 1. Define problem | `TestInput(f, dim=2, center=[0.0,0.0], sample_range=1.2)` |
 | 2. Build polynomial | `Constructor(TR, degree)` |
 | 3. Find critical pts | `solve_polynomial_system(x, pol)` |
 | 4. Process solutions | `process_crit_pts(solutions, f, TR)` |
@@ -100,8 +100,8 @@ Export options: `write_tables_to_csv()`, `write_tables_to_markdown()`, `write_ta
 Test different domain sizes to find all critical points:
 
 ```julia
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)      # uniform
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectangular
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=r)      # uniform
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectangular
 ```
 
 ---
@@ -138,7 +138,7 @@ Works with functions like `sin`, `cos` that expect scalar input:
 
 ```julia
 f = x -> sin(3x) + 0.1*x^2
-TR = test_input(f, dim=1, center=[0.0], sample_range=π)
+TR = TestInput(f, dim=1, center=[0.0], sample_range=π)
 ```
 
 ---

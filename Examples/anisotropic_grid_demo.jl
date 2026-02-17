@@ -144,7 +144,7 @@ println("-"^40)
 
 # Function with different scales
 f_poly = x -> exp(-100 * x[1]^2 - x[2]^2)
-TR = test_input(f_poly, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+TR = TestInput(f_poly, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
 
 # Traditional isotropic approximation
 println("\nIsotropic polynomial approximation:")

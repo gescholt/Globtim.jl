@@ -10,7 +10,7 @@ using LinearAlgebra
     @testset "Basic Sparsification" begin
         # Create a simple 1D polynomial approximation
         f = x -> sin(3 * x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 10, basis = :chebyshev)
 
         # Test relative mode sparsification
@@ -42,7 +42,7 @@ using LinearAlgebra
     @testset "Coefficient Preservation" begin
         # Create polynomial
         f = x -> 1 / (1 + 25 * x[1]^2)  # Runge function
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 15, basis = :chebyshev)
 
         # Sparsify with preservation of first 3 coefficients
@@ -57,7 +57,7 @@ using LinearAlgebra
     @testset "L²-Norm Computation Methods" begin
         # Create polynomial
         f = x -> exp(-x[1]^2)
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 8, basis = :chebyshev)
 
         # Test Vandermonde-based L2 norm
@@ -91,7 +91,7 @@ using LinearAlgebra
     @testset "Sparsification Analysis" begin
         # Create polynomial
         f = x -> cos(2 * x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 12, basis = :chebyshev)
 
         # Analyze sparsification tradeoffs
@@ -117,7 +117,7 @@ using LinearAlgebra
     @testset "Approximation Error Tradeoff" begin
         # Create polynomial
         f = x -> sin(π * x[1])
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 10, basis = :chebyshev)
 
         # Analyze approximation error
@@ -140,7 +140,7 @@ using LinearAlgebra
     @testset "Exact Monomial Conversion" begin
         # Create 1D polynomial
         f = x -> x[1]^2 + 0.5 * x[1]
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 5, basis = :chebyshev)
 
         # Convert to monomial basis
@@ -156,7 +156,7 @@ using LinearAlgebra
 
         # Create 2D polynomial
         f2 = x -> x[1]^2 + x[2]^2
-        TR2 = test_input(f2, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+        TR2 = TestInput(f2, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
         pol2 = Constructor(TR2, 4, basis = :chebyshev)
 
         # Convert to monomial basis
@@ -170,7 +170,7 @@ using LinearAlgebra
     @testset "Verify Truncation Quality" begin
         # Create polynomial
         f = x -> exp(-x[1]^2)
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 10, basis = :chebyshev)
 
         # Create sparse version
@@ -198,7 +198,7 @@ using LinearAlgebra
     @testset "Edge Cases" begin
         # Test with very small polynomial
         f = x -> x[1]
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 2, basis = :chebyshev)
 
         # Sparsify with very aggressive threshold

@@ -178,7 +178,7 @@ println()
 println("""
 Next steps in parameter recovery workflow:
   1. Create error function: make_error_distance(..., p_true, ...)
-  2. Sample domain: test_input(..., center=p_center, sample_range=domain_size)
+  2. Sample domain: TestInput(..., center=p_center, sample_range=domain_size)
   3. Build polynomial: Constructor(TR, (:one_d_for_all, degree))
   4. Find critical points: solve_polynomial_system(...)
   5. Verify recovery: check if any critical point ≈ p_true

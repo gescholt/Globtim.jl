@@ -309,44 +309,44 @@ function lambda_vandermonde(
 end
 
 """
-    subdivide_domain(T::test_input)::Vector{test_input}
+    subdivide_domain(T::TestInput)::Vector{TestInput}
 
 Subdivide a test input domain into 2ⁿ smaller subdomains, where n is the dimension of the input space.
 
 # Arguments
-- `T::test_input`: The original test input domain to be subdivided.
+- `T::TestInput`: The original test input domain to be subdivided.
 
 # Returns
-- `Vector{test_input}`: A vector containing 2ⁿ new test_input objects, each representing a subdomain.
+- `Vector{TestInput}`: A vector containing 2ⁿ new TestInput objects, each representing a subdomain.
 
 # Details
 The function performs the following operations:
 1. Splits the original domain into 2ⁿ subdomains by dividing the sample range by 2
 2. For each subdomain:
    - Creates a new center point by shifting the original center along each dimension
-   - Preserves all other parameters from the original test_input
+   - Preserves all other parameters from the original TestInput
    - Maintains precision parameters (alpha, delta) if they exist
 
 # Properties
 - The sample range of each subdomain is half of the original sample range
 - The new center points are positioned at ±sample_range from the original center in each dimension
-- All other parameters (GN, tolerance, reduce_samples, degree_max) are inherited from the original test_input
+- All other parameters (GN, tolerance, reduce_samples, degree_max) are inherited from the original TestInput
 
 # Example
 ```julia
 # Create an original test input for a 2D domain
-original = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+original = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
 
 # Subdivide the domain
 subdomains = subdivide_domain(original)
-# Returns 4 test_input objects (2² = 4) with centers at:
+# Returns 4 TestInput objects (2² = 4) with centers at:
 # [-1.0, -1.0], [-1.0, 1.0], [1.0, -1.0], [1.0, 1.0]
 # and sample_range = 0.5
 ```
 """
-function subdivide_domain(T::test_input)::Vector{test_input}
+function subdivide_domain(T::TestInput)::Vector{TestInput}
     n = T.dim
-    subdivided_inputs = Vector{test_input}()
+    subdivided_inputs = Vector{TestInput}()
     new_scale = isnothing(T.sample_range) ? nothing : T.sample_range / 2
 
     for i in 0:(2^n - 1)
@@ -365,10 +365,10 @@ function subdivide_domain(T::test_input)::Vector{test_input}
         alpha = isnothing(T.prec) ? nothing : T.prec[1]
         delta = isnothing(T.prec) ? nothing : T.prec[2]
 
-        # Create new test_input using keyword arguments
+        # Create new TestInput using keyword arguments
         push!(
             subdivided_inputs,
-            test_input(
+            TestInput(
                 T.objective;  # first positional argument is the function
                 dim = n,
                 center = new_center,

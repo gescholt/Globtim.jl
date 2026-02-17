@@ -197,13 +197,13 @@ using DynamicPolynomials
                 return (θ[1] - 1.0)^2 + (θ[2] - 0.5)^2  # Simple quadratic with minimum at [1.0, 0.5]
             end
 
-            # Generate test input similar to test_input function
+            # Generate test input similar to TestInput function
             n = 2
             center = [1.0, 0.5]
             GN = 9  # 3^2 total samples
             sample_range = 1.0
 
-            # Create sample points manually to avoid test_input dependency
+            # Create sample points manually to avoid TestInput dependency
             samples_per_dim = Int(round(GN^(1 / n)))
             sample_points = []
             sample_values = []

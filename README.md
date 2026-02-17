@@ -35,7 +35,7 @@ using Globtim, DynamicPolynomials
 f = Deuflhard  # Built-in test function
 
 # Define domain: center and sampling range
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 
 # Create polynomial approximation (degree 8)
 pol = Constructor(TR, 8, precision=AdaptivePrecision)
@@ -95,7 +95,7 @@ f = Deuflhard  # Built-in function
 
 ### 2. Set Up Domain
 ```julia
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 ```
 
 ### 3. Create Polynomial Approximation

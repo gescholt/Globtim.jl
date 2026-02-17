@@ -2,19 +2,19 @@
     process_crit_pts(
         real_pts::Vector{<:AbstractVector},
         f::Function,
-        TR::test_input;
+        TR::TestInput;
         skip_filtering::Bool = false,
         kwargs...
     )::DataFrame
 
 Process critical points in n-dimensional space and return a DataFrame.
 Points are automatically filtered to the [-1,1]^n hypercube (unless skip_filtering is true)
-and transformed according to the test_input parameters.
+and transformed according to the TestInput parameters.
 
 # Arguments
 - `real_pts`: Vector of points in n-dimensional space
 - `f`: Function to evaluate at each point
-- `TR`: test_input struct containing dimension, center, and sample range information
+- `TR`: TestInput struct containing dimension, center, and sample range information
 - `skip_filtering`: If true, skips the [-1,1] bounds filtering (default: false)
 - `kwargs...`: Additional arguments for future extensions
 
@@ -24,7 +24,7 @@ and transformed according to the test_input parameters.
 function process_crit_pts(
     real_pts::Vector{<:AbstractVector},
     f::Function,
-    TR::test_input;
+    TR::TestInput;
     skip_filtering::Bool = false,
     kwargs...
 )::DataFrame
@@ -58,7 +58,7 @@ function process_crit_pts(
         return DataFrame(result)
     end
 
-    # Transform points using test_input parameters with support for per-coordinate scaling
+    # Transform points using TestInput parameters with support for per-coordinate scaling
     center_vec = Vector(TR.center)
 
     # Create points_to_process based on sample_range type
@@ -124,7 +124,7 @@ function process_crit_pts(
 end
 
 """
-    msolve_parser(file_path::String, f::Function, TR::test_input; skip_filtering::Bool=false)::DataFrame
+    msolve_parser(file_path::String, f::Function, TR::TestInput; skip_filtering::Bool=false)::DataFrame
 
 Parse msolve output file containing critical points in rational number format.
 
@@ -151,7 +151,7 @@ Where coordinates are given as exact rational numbers:
 # Arguments
 - `file_path`: Path to msolve output file
 - `f`: Function to evaluate at critical points
-- `TR`: test_input struct with dimension, center, and sample range
+- `TR`: TestInput struct with dimension, center, and sample range
 - `skip_filtering`: If true, skips [-1,1] bounds filtering
 
 # Returns
@@ -163,7 +163,7 @@ Currently only supports 2D problems. Higher dimensions require different parsing
 function msolve_parser(
     file_path::String,
     f::Function,
-    TR::test_input;
+    TR::TestInput;
     skip_filtering::Bool = false
 )::DataFrame
     total_time = @elapsed begin

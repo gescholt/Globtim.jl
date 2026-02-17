@@ -92,7 +92,7 @@ Package extensions provide conditional functionality that is only available when
 ```julia
 # Core functionality always available
 using Globtim
-TR = test_input(camel, dim=2)
+TR = TestInput(camel, dim=2)
 pol = Constructor(TR, 8)
 
 # Optional plotting - only if CairoMakie is available

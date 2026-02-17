@@ -69,7 +69,7 @@ mkpath(OUTPUT_DIR)
 println("Step 1: Grid Generation")
 println("-"^80)
 
-TR = test_input(f,
+TR = TestInput(f,
     dim = n,
     center = center,
     GN = SMPL,

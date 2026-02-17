@@ -15,7 +15,7 @@ f1 = x -> sin(3x) + 0.1 * x^2
 println("\n1. Function: f(x) = sin(3x) + 0.1*x²")
 println("   Domain: [-π, π]")
 
-TR1 = test_input(f1, dim=1, center=[0.0], sample_range=π)
+TR1 = TestInput(f1, dim=1, center=[0.0], sample_range=π)
 pol1 = Constructor(TR1, 12)
 @printf("   Polynomial degree: 12, L2-error: %.2e\n", pol1.nrm)
 
@@ -37,7 +37,7 @@ println("\n2. Built-in function: f(x) = sin(x)")
 println("   Domain: [-2π, 2π]")
 
 f2 = x -> sin(x)
-TR2 = test_input(f2, dim=1, center=[0.0], sample_range=2π)
+TR2 = TestInput(f2, dim=1, center=[0.0], sample_range=2π)
 pol2 = Constructor(TR2, 15)
 @printf("   Polynomial degree: 15, L2-error: %.2e\n", pol2.nrm)
 
@@ -59,7 +59,7 @@ println("\n3. Runge function: f(x) = 1/(1 + 25x²)")
 println("   Domain: [-1, 1]")
 
 f3 = x -> 1 / (1 + 25 * x^2)
-TR3 = test_input(f3, dim=1, center=[0.0], sample_range=1.0)
+TR3 = TestInput(f3, dim=1, center=[0.0], sample_range=1.0)
 pol3 = Constructor(TR3, 20)
 @printf("   Polynomial degree: 20, L2-error: %.2e\n", pol3.nrm)
 

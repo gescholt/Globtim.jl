@@ -58,7 +58,7 @@ function execute_single_tolerance_analysis(
     verbose && @info "Setting up test input" tolerance = tolerance
 
     # Create test input with specified tolerance
-    TR = test_input(
+    TR = TestInput(
         f,
         dim = 4,
         center = center,

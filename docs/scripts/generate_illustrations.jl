@@ -25,7 +25,7 @@ Run Globtim pipeline to find critical points of function f.
 Returns a DataFrame with critical point locations and types.
 """
 function find_critical_points(f, domain_center, domain_range; degree=10, GN=100)
-    TR = test_input(f, dim=2, center=domain_center, GN=GN, sample_range=domain_range)
+    TR = TestInput(f, dim=2, center=domain_center, GN=GN, sample_range=domain_range)
     pol = Constructor(TR, degree, verbose=0)
     @polyvar x[1:2]
     solutions = solve_polynomial_system(x, pol)

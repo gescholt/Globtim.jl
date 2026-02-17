@@ -46,7 +46,7 @@ n = 3
 @polyvar(x[1:n]); # Define polynomial ring
 p_center = p_true + [0.10, 0.0, 0.0]
 d = 10
-TR = test_input(error_func, dim = n, center = p_center, GN = 40, sample_range = 0.25);
+TR = TestInput(error_func, dim = n, center = p_center, GN = 40, sample_range = 0.25);
 
 # Chebyshev
 pol_cheb = Constructor(TR, d, basis = :chebyshev, precision = RationalPrecision)

@@ -400,7 +400,7 @@ function create_error_recovery_tester()
     function test_error_recovery(
         primary_func::Function,
         fallback_func::Function,
-        test_input
+        TestInput
     )
         primary_result = nothing
         primary_error = nothing
@@ -409,7 +409,7 @@ function create_error_recovery_tester()
 
         # Test primary function
         try
-            primary_result = primary_func(test_input)
+            primary_result = primary_func(TestInput)
         catch e
             primary_error = e
         end
@@ -417,7 +417,7 @@ function create_error_recovery_tester()
         # Test fallback function if primary failed
         if primary_error !== nothing
             try
-                fallback_result = fallback_func(test_input)
+                fallback_result = fallback_func(TestInput)
             catch e
                 fallback_error = e
             end

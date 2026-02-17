@@ -158,7 +158,7 @@ end
         pol::ApproxPoly,
         x,
         f::Function,
-        TR::test_input;
+        TR::TestInput;
         basis = :chebyshev,
         threads::Int = 10,
         verbose::Bool = false,
@@ -171,7 +171,7 @@ Solve a polynomial system using msolve and parse the results into a DataFrame.
 - `pol`: ApproxPoly object containing the polynomial approximation
 - `x`: Variables for the polynomial system
 - `f`: Original function for evaluating solutions
-- `TR`: test_input object containing problem parameters
+- `TR`: TestInput object containing problem parameters
 - `basis`: Type of basis (:chebyshev or :legendre) (default: :chebyshev)
 - `threads`: Number of threads for msolve to use (default: 10)
 - `verbose`: Whether to print debug information (default: false)
@@ -184,7 +184,7 @@ function solve_and_parse(
     pol::ApproxPoly,
     x,
     f::Function,
-    TR::test_input;
+    TR::TestInput;
     basis = :chebyshev,
     threads::Int = 10,
     verbose::Bool = false,

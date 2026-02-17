@@ -16,7 +16,7 @@ println("="^50)
 
 # Test function with multiple scales
 f = x -> exp(-x[1]^2 - x[2]^2) + 0.1 * sin(5 * π * x[1]) * cos(3 * π * x[2])
-TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
+TR = TestInput(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0, tolerance = nothing)
 
 println("\n📊 Step 1: Polynomial Construction")
 println("Function: exp(-x₁² - x₂²) + 0.1*sin(5πx₁)*cos(3πx₂)")

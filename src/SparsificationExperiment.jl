@@ -134,7 +134,7 @@ function run_sparsification_experiment(;
 
     # Build tensor representation ONCE (invariant across degrees)
     println(io, "  Building tensor representation ($(GN)^$(dimension) = $(GN^dimension) grid points)...")
-    TR = Globtim.test_input(
+    TR = Globtim.TestInput(
         objective,
         dim = dimension,
         center = center,

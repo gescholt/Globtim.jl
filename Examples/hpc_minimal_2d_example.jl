@@ -161,7 +161,7 @@ if globtim_loaded
     try
         # Step 1: Create test input
         println("📈 Step 1: Creating test input...")
-        TR = Globtim.test_input(
+        TR = Globtim.TestInput(
             simple_2d_function,
             dim = 2,
             center = [1.0, -0.5],

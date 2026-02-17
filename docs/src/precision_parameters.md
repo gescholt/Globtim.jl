@@ -108,7 +108,7 @@ println("Coefficient type: $(eltype(pol.coeffs))")  # BigFloat
 ```julia
 # Test function with known exact representation
 f_exact = x -> x[1]^2 + x[2]^2
-TR = test_input(f_exact, dim=2, center=[0.0, 0.0], sample_range=1.0)
+TR = TestInput(f_exact, dim=2, center=[0.0, 0.0], sample_range=1.0)
 
 # Compare approximation errors
 precisions = [Float64Precision, AdaptivePrecision, RationalPrecision, BigFloatPrecision]
@@ -224,7 +224,7 @@ end
 ```julia
 # High-dimensional optimization
 f_6d = x -> sum(x.^2) + 0.1*prod(sin.(π*x))
-TR_6d = test_input(f_6d, dim=6, center=zeros(6), sample_range=1.0)
+TR_6d = TestInput(f_6d, dim=6, center=zeros(6), sample_range=1.0)
 pol_6d = Constructor(TR_6d, 4, precision=AdaptivePrecision)
 ```
 
@@ -295,7 +295,7 @@ pol = Constructor(TR, 8, precision=recommended)
 function optimize_8d_with_precision()
     # Define 8D test function
     f_8d = x -> sum(x.^2) + 0.1*sum(sin.(5*π*x)) + 0.01*prod(x[1:4])
-    TR_8d = test_input(f_8d, dim=8, center=zeros(8), sample_range=1.0)
+    TR_8d = TestInput(f_8d, dim=8, center=zeros(8), sample_range=1.0)
 
     # Use AdaptivePrecision for accuracy
     println("Creating 8D polynomial with AdaptivePrecision...")
@@ -422,7 +422,7 @@ end
 # Convert between precision types
 function convert_precision(pol_source, target_precision)
     # Extract problem specification
-    TR = pol_source.test_input  # If available
+    TR = pol_source.TestInput  # If available
     degree = pol_source.degree  # If available
 
     # Recreate with target precision
@@ -454,7 +454,7 @@ end
 ```julia
 # Adaptive precision selection based on problem characteristics
 function smart_precision_selection(f, dim, degree, sample_range)
-    TR = test_input(f, dim=dim, center=zeros(dim), sample_range=sample_range)
+    TR = TestInput(f, dim=dim, center=zeros(dim), sample_range=sample_range)
 
     # Quick Float64 test to assess problem difficulty
     pol_test = Constructor(TR, min(degree, 4), precision=Float64Precision, verbose=0)
@@ -502,7 +502,7 @@ When processing many problems where speed matters:
 function batch_optimize(functions, degrees)
     results = []
     for (f, deg) in zip(functions, degrees)
-        TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+        TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
         pol = Constructor(TR, deg, precision=Float64Precision)  # Fast
         push!(results, pol.nrm)
     end
@@ -516,7 +516,7 @@ Combine precision and sparsification for optimal results:
 ```julia
 # Best practice workflow
 function optimal_workflow(f, dim, degree)
-    TR = test_input(f, dim=dim, center=zeros(dim), sample_range=1.0)
+    TR = TestInput(f, dim=dim, center=zeros(dim), sample_range=1.0)
 
     # Step 1: Create with AdaptivePrecision
     pol = Constructor(TR, degree, precision=AdaptivePrecision)

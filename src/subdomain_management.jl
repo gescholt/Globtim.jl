@@ -53,7 +53,7 @@ Create test inputs for all 16 orthants in 4D with optional overlap.
 - `overlap_factor::Float64`: Overlap factor (0.1 = 10% overlap)
 
 # Returns
-- `Vector{test_input}`: 16 test inputs for orthant subdomains
+- `Vector{TestInput}`: 16 test inputs for orthant subdomains
 """
 function create_orthant_test_inputs(
     f::Function,
@@ -66,10 +66,10 @@ function create_orthant_test_inputs(
     orthant_centers = generate_4d_orthant_centers(base_center, base_range)
     subdomain_range = base_range / 2 * (1 + overlap_factor)
 
-    test_inputs = test_input[]
+    test_inputs = TestInput[]
 
     for (i, center) in enumerate(orthant_centers)
-        TR = test_input(
+        TR = TestInput(
             f,
             dim = 4,
             center = center,

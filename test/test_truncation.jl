@@ -88,7 +88,7 @@ using LinearAlgebra
     @testset "Analyze Truncation Impact" begin
         # Create a polynomial from Globtim approximation
         f = x -> sin(2 * x[1]) * cos(3 * x[2])
-        TR = test_input(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 2, center = [0.0, 0.0], sample_range = 1.0)
         pol = Constructor(TR, 8, basis = :chebyshev)
 
         # Convert to monomial
@@ -126,7 +126,7 @@ using LinearAlgebra
     @testset "Complete Workflow" begin
         # Test the complete workflow from the documentation
         f = x -> 1 / (1 + 25 * x[1]^2)  # Runge function
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 20, basis = :chebyshev)
 
         # Analyze sparsification options
@@ -195,7 +195,7 @@ using LinearAlgebra
     @testset "L² Computation Methods Consistency" begin
         # Ensure different L² computation methods give valid results
         f = x -> x[1]^2 - 0.5
-        TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
         pol = Constructor(TR, 6, basis = :chebyshev)
 
         # Vandermonde-based

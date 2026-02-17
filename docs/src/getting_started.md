@@ -10,7 +10,7 @@ The typical Globtim workflow consists of five steps:
 
 | Step | Function | Purpose |
 |------|----------|---------|
-| 1 | `test_input(f, dim=2, ...)` | Define problem domain |
+| 1 | `TestInput(f, dim=2, ...)` | Define problem domain |
 | 2 | `Constructor(TR, degree)` | Build polynomial approximation |
 | 3 | `solve_polynomial_system(x, pol)` | Find critical points |
 | 4 | `process_crit_pts(solutions, f, TR)` | Filter to valid solutions |
@@ -19,7 +19,7 @@ The typical Globtim workflow consists of five steps:
 ### 1. Define the Problem
 
 ```julia
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 ```
 
 ### 2. Find Critical Points
@@ -43,12 +43,12 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
 **Uniform scaling** (square/cube domain):
 ```julia
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)  # [-1,1]²
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.0)  # [-1,1]²
 ```
 
 **Non-uniform scaling** (rectangular domain):
 ```julia
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # [-2,2]×[-1,1]
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # [-2,2]×[-1,1]
 ```
 
 **See:** `Examples/domain_sweep_demo.jl`
@@ -127,7 +127,7 @@ pol = Constructor(TR, 8, precision=AdaptivePrecision, verbose=0)
 **Usage:**
 ```julia
 f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 ```
 
 ---

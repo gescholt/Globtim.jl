@@ -11,7 +11,7 @@ println("1. 3D Rastrigin Function")
 println("="^50)
 
 f_3d = Rastrigin
-TR_3d = test_input(f_3d, dim=3, center=zeros(3), sample_range=2.0)
+TR_3d = TestInput(f_3d, dim=3, center=zeros(3), sample_range=2.0)
 println("   Domain: [-2, 2]³")
 
 println("\n2. Building 3D polynomial approximation...")
@@ -38,7 +38,7 @@ println("5. 4D Custom Function")
 println("="^50)
 
 f_4d = x -> sum(x.^2) + 0.1 * prod(sin.(5 * pi .* x))
-TR_4d = test_input(f_4d, dim=4, center=zeros(4), sample_range=1.0)
+TR_4d = TestInput(f_4d, dim=4, center=zeros(4), sample_range=1.0)
 println("   f(x) = sum(x^2) + 0.1*prod(sin(5π*x))")
 println("   Domain: [-1, 1]⁴")
 

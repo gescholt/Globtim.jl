@@ -219,7 +219,7 @@ Convert a polynomial from orthogonal basis (Chebyshev/Legendre) to monomial basi
 
 # Example
 ```julia
-TR = test_input(x -> sin(x[1]), dim=1, center=[0.0], sample_range=1.0)
+TR = TestInput(x -> sin(x[1]), dim=1, center=[0.0], sample_range=1.0)
 pol = Constructor(TR, 10, basis=:chebyshev)
 @polyvar x
 mono_poly = to_exact_monomial_basis(pol, variables=[x])
@@ -295,7 +295,7 @@ function exact_polynomial_coefficients(
     precision = Float64Precision
 )
     # Create test input
-    TR = test_input(
+    TR = TestInput(
         f,
         dim = dim,
         center = center,

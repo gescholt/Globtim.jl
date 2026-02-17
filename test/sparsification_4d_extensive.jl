@@ -13,7 +13,7 @@ println("="^70)
 
 # Test 1: 4D Shubert Function
 println("\n1. Testing 4D Shubert Function...")
-TR1 = test_input(shubert_4d, dim = 4, center = zeros(4), sample_range = 5.0)
+TR1 = TestInput(shubert_4d, dim = 4, center = zeros(4), sample_range = 5.0)
 
 degrees = [4, 5, 6, 7]  # Memory-limited: degree 8+ requires >10GB RAM in 4D
 println("\nSparsification analysis across polynomial degrees:")
@@ -38,7 +38,7 @@ end
 
 # Test 2: 4D Deuflhard Function
 println("\n2. Testing 4D Deuflhard Function...")
-TR2 = test_input(Deuflhard_4d, dim = 4, center = zeros(4), sample_range = 1.0)
+TR2 = TestInput(Deuflhard_4d, dim = 4, center = zeros(4), sample_range = 1.0)
 pol2 = Constructor(TR2, 7, basis = :chebyshev)  # Reduced from 8 to save memory
 
 println("\nOriginal polynomial:")
@@ -67,7 +67,7 @@ end
 
 # Test 3: 4D Camel Function
 println("\n3. Testing 4D Camel Function...")
-TR3 = test_input(camel_4d, dim = 4, center = zeros(4), sample_range = 2.0)
+TR3 = TestInput(camel_4d, dim = 4, center = zeros(4), sample_range = 2.0)
 pol3 = Constructor(TR3, 7, basis = :chebyshev)
 
 # Convert to monomial and analyze structure
@@ -107,7 +107,7 @@ println("  Conservative: $(round(quality_conservative.l2_ratio*100, digits=2))%"
 # Test 4: 4D Gaussian Product
 println("\n4. Testing 4D Gaussian Product...")
 f4 = x -> exp(-(x[1]^2 + x[2]^2 + x[3]^2 + x[4]^2) / 2)
-TR4 = test_input(f4, dim = 4, center = zeros(4), sample_range = 1.5)
+TR4 = TestInput(f4, dim = 4, center = zeros(4), sample_range = 1.5)
 pol4 = Constructor(TR4, 7, basis = :chebyshev)  # Reduced from 10 to save memory
 
 println("\nPolynomial degree: 7")
@@ -136,7 +136,7 @@ end
 # Test 5: 4D Truncation Analysis with Monomial Form
 println("\n5. Testing 4D Truncation Analysis...")
 f5 = x -> sin(x[1]) * cos(x[2]) * sin(x[3]) * cos(x[4])
-TR5 = test_input(f5, dim = 4, center = zeros(4), sample_range = π)
+TR5 = TestInput(f5, dim = 4, center = zeros(4), sample_range = π)
 pol5 = Constructor(TR5, 8, basis = :chebyshev)
 
 @polyvar y[1:4]
@@ -164,7 +164,7 @@ end
 # Test 6: 4D L2-Norm Computation Consistency
 println("\n6. Testing 4D L2-Norm Computation Consistency...")
 f6 = x -> 1 / (1 + 2 * (x[1]^2 + x[2]^2 + x[3]^2 + x[4]^2))
-TR6 = test_input(f6, dim = 4, center = zeros(4), sample_range = 1.0)
+TR6 = TestInput(f6, dim = 4, center = zeros(4), sample_range = 1.0)
 pol6 = Constructor(TR6, 6, basis = :chebyshev)
 
 # Method 1: Vandermonde
@@ -191,7 +191,7 @@ println("\nL2-norm computation methods:")
 # Test 7: 4D High-Degree Polynomial Sparsification
 println("\n7. Testing 4D High-Degree Polynomial Sparsification...")
 f7 = x -> cos(x[1] + x[2]) * exp(-0.5 * (x[3]^2 + x[4]^2))
-TR7 = test_input(f7, dim = 4, center = zeros(4), sample_range = 1.0)
+TR7 = TestInput(f7, dim = 4, center = zeros(4), sample_range = 1.0)
 
 println("\nComparing moderate-degree polynomials (memory-limited):")
 println("Degree | Coeffs | NNZ Original | After 1e-4 | Reduction% | L2 Ratio")
@@ -216,7 +216,7 @@ end
 # Test 8: 4D Coefficient Importance Ranking
 println("\n8. Testing 4D Coefficient Importance Ranking...")
 f8 = x -> x[1]^2 + 2 * x[2]^2 + 0.5 * x[3]^2 + 0.1 * x[4]^2 + 0.05 * x[1] * x[2] * x[3] * x[4]
-TR8 = test_input(f8, dim = 4, center = zeros(4), sample_range = 1.0)
+TR8 = TestInput(f8, dim = 4, center = zeros(4), sample_range = 1.0)
 pol8 = Constructor(TR8, 8, basis = :chebyshev)
 
 # Find most important coefficients
@@ -247,7 +247,7 @@ println("  Top coefficients preserved: $(all(idx ∉ result_selective.zeroed_ind
 # Test 9: 4D Monomial L2 Contributions
 println("\n9. Analyzing 4D Monomial L2 Contributions...")
 f9 = x -> 3 * x[1]^2 + 2 * x[2]^2 + x[3]^2 + 0.5 * x[4]^2
-TR9 = test_input(f9, dim = 4, center = zeros(4), sample_range = 1.0)
+TR9 = TestInput(f9, dim = 4, center = zeros(4), sample_range = 1.0)
 pol9 = Constructor(TR9, 6, basis = :chebyshev)
 
 @polyvar w[1:4]
@@ -272,7 +272,7 @@ end
 # Test 10: 4D Complete Workflow Validation
 println("\n10. Complete 4D Workflow Validation...")
 f10 = x -> exp(-sum(x .^ 2) / 4) * cos(sum(x))
-TR10 = test_input(f10, dim = 4, center = zeros(4), sample_range = 1.0)
+TR10 = TestInput(f10, dim = 4, center = zeros(4), sample_range = 1.0)
 pol10 = Constructor(TR10, 7, basis = :chebyshev)  # Reduced from 10 to save memory
 
 println("\nWorkflow: Approximate → Sparsify → Convert → Verify")

@@ -262,7 +262,7 @@ function execute_comprehensive_benchmark(
     try
         # Direct API calls (no fallback wrappers)
         dim = enhanced_func.dimension
-        TR = test_input(f; dim=dim, center=center, sample_range=domain_size, GN=sample_count)
+        TR = TestInput(f; dim=dim, center=center, sample_range=domain_size, GN=sample_count)
         pol = Constructor(TR, degree; basis=:chebyshev, precision=Float64Precision)
         @polyvar x[1:dim]
         solutions = solve_polynomial_system(x, pol)
@@ -275,7 +275,7 @@ function execute_comprehensive_benchmark(
             df_enhanced = df_critical
         end
         globtim_results = (
-            test_input = TR,
+            TestInput = TR,
             polynomial = pol,
             critical_points = df_critical,
             critical_points_enhanced = df_enhanced,

@@ -29,7 +29,7 @@ comprehensive statistical tables for detailed critical point analysis.
 # Arguments
 - `f`: Objective function
 - `df`: Critical points DataFrame from process_crit_pts
-- `TR`: test_input structure
+- `TR`: TestInput structure
 - `enable_hessian::Bool=true`: Enable Phase 2 Hessian analysis  
 - `enable_valley_detection::Bool=false`: Enable valley detection analysis
 - `show_tables::Bool=true`: Display statistical tables

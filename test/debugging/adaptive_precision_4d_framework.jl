@@ -179,13 +179,13 @@ const COMPREHENSIVE_CONFIG = (
 """
     create_4d_test_input(func_name, config; kwargs...)
 
-Create a test_input for 4D function testing with specified configuration.
+Create a TestInput for 4D function testing with specified configuration.
 """
 function create_4d_test_input(func_name::Symbol, config;
     samples = config.samples[1],
     kwargs...)
     func = TEST_FUNCTIONS_4D[func_name]
-    return test_input(
+    return TestInput(
         func,
         dim = 4,
         center = config.center,
@@ -1755,7 +1755,7 @@ function benchmark_cached_construction(
     pol_standard = construct_4d_polynomial(TR_standard, degree, AdaptivePrecision)
     standard_time = time() - start_time
 
-    # Create a cached version of test_input (conceptual - would need integration with Globtim)
+    # Create a cached version of TestInput (conceptual - would need integration with Globtim)
     # For now, we'll simulate the benefit by measuring cache hit rates
 
     println("\n📈 Cache Performance Analysis:")

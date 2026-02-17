@@ -49,7 +49,7 @@ CairoMakie.activate!()
 
 # 1. Run experiment
 f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 pol = Constructor(TR, 8)
 
 @polyvar x[1:2]

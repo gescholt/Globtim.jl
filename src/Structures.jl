@@ -213,7 +213,7 @@ get_scale_factor(p::ApproxPoly) = p.scale_factor
 get_center(p::ApproxPoly) = p.center
 
 """
-   struct test_input
+   struct TestInput
 
 Container for test parameters and objective function.
 
@@ -229,7 +229,7 @@ Fields:
 - `degree_max::Union{Int, Nothing}`: Maximum polynomial degree
 - `objective`: Callable objective (Function or callable struct like TolerantObjective)
 """
-struct test_input
+struct TestInput
     dim::Int
     center::Vector{Float64}
     GN::Union{Int, Nothing}
@@ -242,9 +242,9 @@ struct test_input
     objective  # Any callable: Function, functor struct, etc.
 
     """
-        test_input(f; kwargs...) -> test_input
+        TestInput(f; kwargs...) -> TestInput
 
-    Construct a test_input object with the given objective function and parameters.
+    Construct a TestInput object with the given objective function and parameters.
 
     # Arguments
     - `f`: The objective function to optimize (any callable)
@@ -263,7 +263,7 @@ struct test_input
     - `outputs::Union{Nothing,AbstractVector{<:Real}}=nothing`: Optional measured data passed to objective function
 
     # Returns
-    - `test_input`: A new test_input struct containing the problem specification
+    - `TestInput`: A new TestInput struct containing the problem specification
 
     # Notes
     - If both `alpha` and `delta` are provided, they are combined into a precision tuple
@@ -274,16 +274,16 @@ struct test_input
     # Examples
     ```julia
     # Basic usage with default parameters
-    T = test_input(x -> sum(x.^2))
+    T = TestInput(x -> sum(x.^2))
 
     # Custom parameters with higher dimension
-    T = test_input(rosenbrock, dim=10, center=ones(10), tolerance=1e-4)
+    T = TestInput(rosenbrock, dim=10, center=ones(10), tolerance=1e-4)
 
     # With model and data for parameter estimation
-    T = test_input(loss_function, model=my_model, outputs=measured_data)
+    T = TestInput(loss_function, model=my_model, outputs=measured_data)
     ```
     """
-    TimerOutputs.@timeit _TO function test_input(
+    TimerOutputs.@timeit _TO function TestInput(
         f;
         dim::Int = 2,
         center::AbstractVector{<:Real} = fill(0.0, dim),
@@ -359,10 +359,13 @@ struct test_input
     end
 end
 
-"""
-   create_test_input(f::Function; kwargs...)::test_input
+"""Deprecated alias for TestInput. Use TestInput instead."""
+const test_input = TestInput
 
-Convenience constructor for test_input with default values.
+"""
+   create_test_input(f::Function; kwargs...)::TestInput
+
+Convenience constructor for TestInput with default values.
 
 # Arguments
 - `f`: Objective function to optimize (any callable)
@@ -389,8 +392,8 @@ function create_test_input(
     degree_max::Int = 6,
     model::Union{Nothing, Any} = nothing,
     outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
-)::test_input
-    return test_input(
+)::TestInput
+    return TestInput(
         f;
         dim = n,
         center = center,

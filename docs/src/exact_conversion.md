@@ -33,7 +33,7 @@ using Globtim
 using DynamicPolynomials
 
 # Create a polynomial approximation
-TR = test_input(x -> sin(π*x[1])*cos(π*x[2]), dim=2, center=[0.0, 0.0], sample_range=1.0)
+TR = TestInput(x -> sin(π*x[1])*cos(π*x[2]), dim=2, center=[0.0, 0.0], sample_range=1.0)
 pol = Constructor(TR, 8, basis=:chebyshev, precision=RationalPrecision)
 
 # Convert to monomial basis
@@ -92,7 +92,7 @@ using DynamicPolynomials
 f = x -> exp(-x[1]^2 - x[2]^2)
 
 # Create test input
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
 
 # Construct polynomial with rational coefficients
 pol = Constructor(TR, 6, basis=:legendre, precision=RationalPrecision)

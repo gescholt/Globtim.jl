@@ -25,7 +25,7 @@ function run_benchmarks()
     # Benchmark 1: 2D Deuflhard optimization
     println("  📊 Benchmark 1: 2D Deuflhard")
     f = Deuflhard
-    TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+    TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
     
     times = Float64[]
     for i in 1:MIN_SAMPLES
@@ -48,7 +48,7 @@ function run_benchmarks()
     
     # Benchmark 2: 3D optimization with higher degree
     println("  📊 Benchmark 2: 3D Higher Degree")
-    TR3 = test_input(f, dim=3, center=zeros(3), sample_range=1.2)
+    TR3 = TestInput(f, dim=3, center=zeros(3), sample_range=1.2)
     
     times = Float64[]
     for i in 1:MIN_SAMPLES

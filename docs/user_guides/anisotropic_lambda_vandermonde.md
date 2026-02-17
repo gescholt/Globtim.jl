@@ -40,7 +40,7 @@ println("Approximation error: ", pol.nrm)
 
 ```julia
 # Create test input
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
 
 # Traditional usage (isotropic)
 pol_iso = Constructor(TR, 10)

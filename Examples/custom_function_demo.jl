@@ -17,7 +17,7 @@ println("   This function has 4 minima near (±1, ±1)")
 
 # 2. Create test input specification
 println("\n2. Setting up problem...")
-TR = test_input(my_objective, dim=2, center=[0.0, 0.0], sample_range=2.0)
+TR = TestInput(my_objective, dim=2, center=[0.0, 0.0], sample_range=2.0)
 println("   Domain: [-2, 2] × [-2, 2]")
 
 # 3. Build polynomial approximation

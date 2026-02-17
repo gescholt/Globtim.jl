@@ -21,7 +21,7 @@ println("Lotka-Volterra 4D: dim=$n, degree=$d, samples=$SMPL, total=$(SMPL^n) po
 
 # Step 1: Grid Generation and Sampling
 println("Step 1: Grid generation...")
-TR = test_input(f,
+TR = TestInput(f,
     dim = n,
     center = center,
     GN = SMPL,

@@ -152,10 +152,10 @@ Higher degrees improve approximation but increase cost:
 The `sample_range` parameter controls the search domain:
 ```julia
 # Symmetric domain
-TR = test_input(f, dim=2, center=[0,0], sample_range=1.0)
+TR = TestInput(f, dim=2, center=[0,0], sample_range=1.0)
 
 # Asymmetric domain  
-TR = test_input(f, dim=2, center=[0,0], sample_range=[2.0, 1.0])
+TR = TestInput(f, dim=2, center=[0,0], sample_range=[2.0, 1.0])
 ```
 
 ### Tolerance Settings

@@ -902,7 +902,7 @@ end
     validate_test_input_parameters(f::Function, dim::Int, center::Vector{Float64},
                                   sample_range::Float64, GN::Int)
 
-Comprehensive validation of all test_input parameters.
+Comprehensive validation of all TestInput parameters.
 
 # Arguments
 - `f::Function`: Objective function
@@ -935,13 +935,13 @@ function validate_test_input_parameters(f::Function, dim::Int, center::Vector{Fl
 end
 
 """
-    validate_constructor_parameters(TR::test_input, degree::Int;
+    validate_constructor_parameters(TR::TestInput, degree::Int;
                                    basis::Symbol=:chebyshev, precision::PrecisionType=RationalPrecision)
 
 Comprehensive validation of Constructor parameters.
 
 # Arguments
-- `TR::test_input`: Test input structure
+- `TR::TestInput`: Test input structure
 - `degree::Int`: Polynomial degree
 - `basis::Symbol=:chebyshev`: Polynomial basis
 - `precision::PrecisionType=RationalPrecision`: Precision type
@@ -949,7 +949,7 @@ Comprehensive validation of Constructor parameters.
 # Throws
 - `InputValidationError`: If any parameter is invalid
 """
-function validate_constructor_parameters(TR::test_input, degree::Int;
+function validate_constructor_parameters(TR::TestInput, degree::Int;
     basis::Symbol = :chebyshev, precision::PrecisionType = RationalPrecision)
     validate_polynomial_degree(degree, TR.GN)
 

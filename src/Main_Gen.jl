@@ -10,7 +10,7 @@ Print detailed timing breakdown from TimerOutputs for polynomial construction.
 
 # Example
 ```julia
-result = Constructor(test_input)
+result = Constructor(TestInput)
 print_timing_breakdown()
 ```
 """
@@ -342,7 +342,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
 end
 
 """
-    Constructor(T::test_input, degree; kwargs...) -> ApproxPoly
+    Constructor(T::TestInput, degree; kwargs...) -> ApproxPoly
 
 Construct a polynomial approximation of the objective function using discrete least squares.
 
@@ -351,7 +351,7 @@ samples the objective on a tensorized grid of Chebyshev or Legendre nodes and fi
 polynomial of the specified degree.
 
 # Arguments
-- `T::test_input`: Test input specification containing the objective function and domain
+- `T::TestInput`: Test input specification containing the objective function and domain
 - `degree::Int`: Maximum degree of the polynomial approximation
 
 # Keyword Arguments
@@ -379,13 +379,13 @@ polynomial of the specified degree.
 ```julia
 # 1D function example with scalar input
 f1 = x -> sin(x)
-TR = test_input(f1, dim=1, center=[0.0], sample_range=10.0)
+TR = TestInput(f1, dim=1, center=[0.0], sample_range=10.0)
 pol = Constructor(TR, 8)
 println("L2-norm error: ", pol.nrm)
 
 # Basic usage with default Chebyshev basis
 f = Deuflhard
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.0)
 pol = Constructor(TR, 8)
 println("L2-norm error: ", pol.nrm)
 
@@ -403,7 +403,7 @@ pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid pro
 """
 # Update the Constructor function to pass through the vector scale_factor and support grids
 TimerOutputs.@timeit _TO function Constructor(
-    T::test_input,
+    T::TestInput,
     degree;
     verbose = 0,
     basis::Symbol = :chebyshev,

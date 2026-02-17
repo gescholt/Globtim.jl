@@ -3,7 +3,7 @@
     n = 2
     scale_factor = 7.0 / 5.0
 
-    TR = test_input(
+    TR = TestInput(
         Deuflhard,
         dim = n,
         center = [0.0, 0.0],

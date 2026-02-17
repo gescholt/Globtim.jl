@@ -308,7 +308,7 @@ function run_standard_experiment(;
 
     # Build tensor representation ONCE (evaluates objective on GN^dimension grid points)
     # This is invariant across degrees — only Constructor depends on degree.
-    TR = Globtim.test_input(
+    TR = Globtim.TestInput(
         func,
         dim = dimension,
         center = center,
@@ -406,7 +406,7 @@ Process a single polynomial degree through the complete pipeline.
 # Arguments
 - `degree::Int`: Polynomial degree to process
 - `func`: Resolved 1-argument objective callable (Function or functor struct)
-- `TR`: Pre-computed tensor representation from `Globtim.test_input` (shared across degrees)
+- `TR`: Pre-computed tensor representation from `Globtim.TestInput` (shared across degrees)
 - `bounds`: Vector of (lower, upper) tuples
 - `experiment_config`: Experiment parameters (basis, GN, etc.)
 - `output_dir`: Directory for CSV output

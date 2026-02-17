@@ -10,7 +10,7 @@ f = x -> 1 / (1 + 25 * x[1]^2)  # Runge function
 
 # Create polynomial approximation
 println("1. Creating polynomial approximation...")
-TR = test_input(f, dim = 1, center = [0.0], sample_range = 1.0)
+TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
 pol = Constructor(TR, 20, basis = :chebyshev)
 println("   Polynomial degree: 20")
 println("   Approximation L2-norm error: $(pol.nrm)")

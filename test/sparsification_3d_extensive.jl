@@ -13,7 +13,7 @@ println("="^70)
 # Test 1: 3D Product of Trigonometric Functions
 println("\n1. Testing 3D Trigonometric Product...")
 f1 = x -> sin(2 * x[1]) * cos(3 * x[2]) * sin(x[3])
-TR1 = test_input(f1, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR1 = TestInput(f1, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 
 degrees = [6, 8, 10, 12]
 println("\nAnalyzing different polynomial degrees:")
@@ -37,7 +37,7 @@ end
 # Test 2: 3D Gaussian-like Function
 println("\n2. Testing 3D Gaussian-like Function...")
 f2 = x -> exp(-(x[1]^2 + x[2]^2 + x[3]^2))
-TR2 = test_input(f2, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR2 = TestInput(f2, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol2 = Constructor(TR2, 10, basis = :chebyshev)
 
 println("\nSparsification analysis with multiple thresholds:")
@@ -60,7 +60,7 @@ end
 # Test 3: 3D Polynomial with Known Structure
 println("\n3. Testing 3D Polynomial with Known Structure...")
 f3 = x -> x[1]^2 + x[2]^2 + x[3]^2 + 0.1 * x[1] * x[2] + 0.05 * x[2] * x[3]
-TR3 = test_input(f3, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR3 = TestInput(f3, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol3 = Constructor(TR3, 8, basis = :chebyshev)
 
 println("\nOriginal polynomial: $(length(pol3.coeffs)) coefficients")
@@ -88,7 +88,7 @@ println("  Verified L2 ratio: $(round(quality.l2_ratio*100, digits=2))%")
 # Test 4: 3D Approximation Error Analysis
 println("\n4. Testing 3D Approximation Error Tradeoff...")
 f4 = x -> 1 / (1 + 5 * (x[1]^2 + x[2]^2 + x[3]^2))
-TR4 = test_input(f4, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR4 = TestInput(f4, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol4 = Constructor(TR4, 8, basis = :chebyshev)
 
 println("\nOriginal approximation error: $(pol4.nrm)")
@@ -113,7 +113,7 @@ end
 # Test 5: 3D Truncation Analysis on Monomial Form
 println("\n5. Testing 3D Truncation Analysis...")
 f5 = x -> sin(x[1] + x[2]) * exp(-x[3]^2 / 2)
-TR5 = test_input(f5, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR5 = TestInput(f5, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol5 = Constructor(TR5, 10, basis = :chebyshev)
 
 @polyvar y[1:3]
@@ -139,7 +139,7 @@ end
 # Test 6: 3D L2-Norm Computation Method Comparison
 println("\n6. Comparing 3D L2-Norm Computation Methods...")
 f6 = x -> cos(x[1]) * cos(x[2]) * cos(x[3])
-TR6 = test_input(f6, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR6 = TestInput(f6, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol6 = Constructor(TR6, 8, basis = :chebyshev)
 
 # Method 1: Vandermonde
@@ -164,7 +164,7 @@ println("\nL2-norm computation methods:")
 # Test 7: 3D Coefficient Preservation
 println("\n7. Testing 3D Coefficient Preservation...")
 f7 = x -> x[1]^3 + x[2]^3 + x[3]^3 + x[1] * x[2] * x[3]
-TR7 = test_input(f7, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR7 = TestInput(f7, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol7 = Constructor(TR7, 8, basis = :chebyshev)
 
 # Find indices of largest coefficients
@@ -193,7 +193,7 @@ println("  All preserved coefficients intact: $preserved_intact")
 # Test 8: 3D Monomial L2 Contributions
 println("\n8. Analyzing 3D Monomial L2 Contributions...")
 f8 = x -> 2 * x[1]^2 + 3 * x[2]^2 + x[3]^2 + 0.5 * x[1] * x[2]
-TR8 = test_input(f8, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
+TR8 = TestInput(f8, dim = 3, center = [0.0, 0.0, 0.0], sample_range = 1.0)
 pol8 = Constructor(TR8, 6, basis = :chebyshev)
 
 @polyvar w[1:3]

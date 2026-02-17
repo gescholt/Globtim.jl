@@ -36,7 +36,8 @@ import HomotopyContinuation: solve, real_solutions, System
 const _TO = TimerOutputs.TimerOutput()
 
 # Exported functions and variables
-export test_input,
+export TestInput,
+    test_input,  # deprecated alias, will be removed
     ApproxPoly,
     DegreeSpec,
     SupportMatrix,

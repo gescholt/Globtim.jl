@@ -24,7 +24,7 @@ println("Range    | Critical Pts | Minima | Global Min Value")
 println("---------|--------------|--------|------------------")
 
 for r in domain_ranges
-    TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=r)
+    TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=r)
     pol = Constructor(TR, degree)
 
     @polyvar x[1:2]
@@ -50,7 +50,7 @@ println("\n" * "="^50)
 println("Non-uniform Domain Example")
 println("="^50)
 
-TR_rect = test_input(f, dim=2, center=[0.0, 0.0], sample_range=[8.5, 10.0])
+TR_rect = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[8.5, 10.0])
 pol_rect = Constructor(TR_rect, degree)
 
 @polyvar x[1:2]

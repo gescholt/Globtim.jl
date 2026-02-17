@@ -5,7 +5,7 @@ using ForwardDiff
 using Logging
 
 """
-    assign_spatial_regions(df::DataFrame, TR::test_input, n_regions_per_dim::Int=5)::Vector{Int}
+    assign_spatial_regions(df::DataFrame, TR::TestInput, n_regions_per_dim::Int=5)::Vector{Int}
 
 Assign spatial region IDs to critical points for convergence analysis.
 
@@ -17,7 +17,7 @@ Vector{Int}: Region ID (1 to n_regions_per_dim^n) for each point in df
 """
 function assign_spatial_regions(
     df::DataFrame,
-    TR::test_input,
+    TR::TestInput,
     n_regions_per_dim::Int = 5
 )::Vector{Int}
     n_dims = count(col -> startswith(string(col), "x"), names(df))
@@ -295,7 +295,7 @@ function points_in_range(df::DataFrame, TR, value_range::Float64)
 end
 
 """
-    analyze_critical_points(f::Function, df::DataFrame, TR::test_input; kwargs...)
+    analyze_critical_points(f::Function, df::DataFrame, TR::TestInput; kwargs...)
 
 Comprehensive critical point analysis with enhanced statistics and optional Hessian-based classification.
 
@@ -308,7 +308,7 @@ This function performs detailed analysis of critical points found by polynomial 
 # Arguments
 - `f::Function`: The objective function to analyze
 - `df::DataFrame`: DataFrame containing critical points with columns x1, x2, ..., xn, z
-- `TR::test_input`: Test input specification containing domain information
+- `TR::TestInput`: Test input specification containing domain information
 
 # Keyword Arguments
 - `tol_dist=0.025`: Distance tolerance for clustering critical points
@@ -364,7 +364,7 @@ When enabled, adds comprehensive Hessian-based analysis:
 
 # Basic usage with full analysis
 # f(x) = x[1]^2 + x[2]^2
-# TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+# TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
 # pol = Constructor(TR, 8)
 # @polyvar x[1:2]
 # crit_pts = solve_polynomial_system(x, 2, 8, pol.coeffs)
@@ -392,7 +392,7 @@ See also: `compute_hessians`, `classify_critical_points`, `process_crit_pts`
 TimerOutputs.@timeit _TO function analyze_critical_points(
     f::Function,
     df::DataFrame,
-    TR::test_input;
+    TR::TestInput;
     tol_dist = 0.025,
     verbose = true,
     max_iters_in_optim = 100,

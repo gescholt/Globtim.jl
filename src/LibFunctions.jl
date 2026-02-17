@@ -283,7 +283,7 @@ f(x,y) = -|sin(x)cos(y)exp(|1 - √(x² + y²)/π|)|
 f_val = HolderTable([8.0, 9.0])
 
 # Find all four global minima
-TR = test_input(HolderTable, dim=2, center=[0.0, 0.0], sample_range=10.0)
+TR = TestInput(HolderTable, dim=2, center=[0.0, 0.0], sample_range=10.0)
 ```
 """
 function HolderTable(xx::AbstractVector)
@@ -343,7 +343,7 @@ f(x,y) = (exp(x² + y²) - 3)² + (x + y - sin(3(x + y)))²
 f_val = Deuflhard([0.0, 0.0])
 
 # Use in optimization
-TR = test_input(Deuflhard, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(Deuflhard, dim=2, center=[0.0, 0.0], sample_range=1.2)
 ```
 """
 function Deuflhard(xx::AbstractVector)
@@ -399,7 +399,7 @@ f(x,y,z) = exp(sin(50x)) + sin(60exp(y))sin(60z) + sin(70sin(x))cos(10z) +
 f_val = tref_3d([0.0, 0.0, 0.0])
 
 # 3D optimization
-TR = test_input(tref_3d, dim=3, center=[0.0, 0.0, 0.0], sample_range=1.0)
+TR = TestInput(tref_3d, dim=3, center=[0.0, 0.0, 0.0], sample_range=1.0)
 ```
 """
 function tref_3d(x::AbstractVector)
@@ -520,7 +520,7 @@ f(x) = 10n + ∑_{i=1}^n [x_i² - 10cos(2πx_i)]
 f_val = Rastrigin([1.0, 1.0])
 
 # 10D optimization problem
-TR = test_input(Rastrigin, dim=10, center=zeros(10), sample_range=5.12)
+TR = TestInput(Rastrigin, dim=10, center=zeros(10), sample_range=5.12)
 ```
 """
 function Rastrigin(x::AbstractVector)
@@ -571,7 +571,7 @@ f(x) = Σᵢ₌₁ⁿ xᵢ²
 f_val = Sphere([1.0, 1.0])  # Returns 2.0
 
 # 10D optimization problem
-TR = test_input(Sphere, dim=10, center=zeros(10), sample_range=5.12)
+TR = TestInput(Sphere, dim=10, center=zeros(10), sample_range=5.12)
 ```
 
 # References
@@ -617,7 +617,7 @@ f(x) = Σᵢ₌₁ⁿ⁻¹ [100(xᵢ₊₁ - xᵢ²)² + (1 - xᵢ)²]
 f_val = Rosenbrock([1.0, 1.0])  # Returns 0.0
 
 # Higher dimensional case
-TR = test_input(Rosenbrock, dim=5, center=ones(5), sample_range=2.048)
+TR = TestInput(Rosenbrock, dim=5, center=ones(5), sample_range=2.048)
 ```
 
 # References
@@ -669,7 +669,7 @@ f(x) = 1 + (1/4000)Σᵢ₌₁ⁿ xᵢ² - Πᵢ₌₁ⁿ cos(xᵢ/√i)
 f_val = Griewank([0.0, 0.0])  # Returns 0.0
 
 # Higher dimensional case
-TR = test_input(Griewank, dim=10, center=zeros(10), sample_range=600.0)
+TR = TestInput(Griewank, dim=10, center=zeros(10), sample_range=600.0)
 ```
 
 # References
@@ -718,7 +718,7 @@ f(x) = 418.9829n - Σᵢ₌₁ⁿ xᵢ sin(√|xᵢ|)
 f_val = Schwefel([420.9687, 420.9687])  # ≈ 0.0
 
 # Test optimization
-TR = test_input(Schwefel, dim=5, center=fill(420.9687, 5), sample_range=500.0)
+TR = TestInput(Schwefel, dim=5, center=fill(420.9687, 5), sample_range=500.0)
 ```
 
 # References
@@ -767,7 +767,7 @@ where wᵢ = 1 + (xᵢ - 1)/4
 f_val = Levy([1.0, 1.0])  # Returns 0.0
 
 # Higher dimensional case
-TR = test_input(Levy, dim=5, center=ones(5), sample_range=10.0)
+TR = TestInput(Levy, dim=5, center=ones(5), sample_range=10.0)
 ```
 
 # References
@@ -821,7 +821,7 @@ f(x) = Σᵢ₌₁ⁿ xᵢ² + (Σᵢ₌₁ⁿ 0.5i·xᵢ)² + (Σᵢ₌₁ⁿ 0
 f_val = Zakharov([0.0, 0.0])  # Returns 0.0
 
 # Higher dimensional case (becomes more challenging)
-TR = test_input(Zakharov, dim=10, center=zeros(10), sample_range=5.0)
+TR = TestInput(Zakharov, dim=10, center=zeros(10), sample_range=5.0)
 ```
 
 # References
@@ -876,7 +876,7 @@ f(x,y) = (1.5 - x + xy)² + (2.25 - x + xy²)² + (2.625 - x + xy³)²
 f_val = Beale([3.0, 0.5])  # Returns 0.0
 
 # Test optimization
-TR = test_input(Beale, dim=2, center=[3.0, 0.5], sample_range=4.5)
+TR = TestInput(Beale, dim=2, center=[3.0, 0.5], sample_range=4.5)
 ```
 
 # References
@@ -929,7 +929,7 @@ f(x,y) = (x + 2y - 7)² + (2x + y - 5)²
 f_val = Booth([1.0, 3.0])  # Returns 0.0
 
 # Test optimization
-TR = test_input(Booth, dim=2, center=[1.0, 3.0], sample_range=10.0)
+TR = TestInput(Booth, dim=2, center=[1.0, 3.0], sample_range=10.0)
 ```
 
 # References
@@ -981,7 +981,7 @@ f(x,y) = a(y - bx² + cx - r)² + s(1-t)cos(x) + s
 f_val = Branin([π, 2.275])  # ≈ 0.397887
 
 # Test optimization
-TR = test_input(Branin, dim=2, center=[π, 2.275], sample_range=7.5)
+TR = TestInput(Branin, dim=2, center=[π, 2.275], sample_range=7.5)
 ```
 
 # References
@@ -1040,7 +1040,7 @@ f(x,y) = [1 + (x + y + 1)²(19 - 14x + 3x² - 14y + 6xy + 3y²)] ×
 f_val = GoldsteinPrice([0.0, -1.0])  # Returns 3.0
 
 # Test optimization
-TR = test_input(GoldsteinPrice, dim=2, center=[0.0, -1.0], sample_range=2.0)
+TR = TestInput(GoldsteinPrice, dim=2, center=[0.0, -1.0], sample_range=2.0)
 ```
 
 # References
@@ -1099,7 +1099,7 @@ f(x,y) = 0.26(x² + y²) - 0.48xy
 f_val = Matyas([0.0, 0.0])  # Returns 0.0
 
 # Test optimization
-TR = test_input(Matyas, dim=2, center=[0.0, 0.0], sample_range=10.0)
+TR = TestInput(Matyas, dim=2, center=[0.0, 0.0], sample_range=10.0)
 ```
 
 # References
@@ -1148,7 +1148,7 @@ f(x,y) = sin(x + y) + (x - y)² - 1.5x + 2.5y + 1
 f_val = McCormick([-0.54719, -1.54719])  # ≈ -1.9133
 
 # Test optimization
-TR = test_input(McCormick, dim=2, center=[-0.54719, -1.54719], sample_range=2.75)
+TR = TestInput(McCormick, dim=2, center=[-0.54719, -1.54719], sample_range=2.75)
 ```
 
 # References
@@ -1207,7 +1207,7 @@ f_val = Michalewicz([2.20, 1.57])  # ≈ -1.8013
 f_val = Michalewicz(rand(5) * π, m=5)
 
 # Test optimization
-TR = test_input(Michalewicz, dim=5, center=fill(π/2, 5), sample_range=π/2)
+TR = TestInput(Michalewicz, dim=5, center=fill(π/2, 5), sample_range=π/2)
 ```
 
 # References
@@ -1254,7 +1254,7 @@ f(x) = 0.5 Σᵢ₌₁ⁿ (xᵢ⁴ - 16xᵢ² + 5xᵢ)
 f_val = StyblinskiTang([-2.903534, -2.903534])  # ≈ -78.33198
 
 # Higher dimensional case
-TR = test_input(StyblinskiTang, dim=5, center=fill(-2.903534, 5), sample_range=5.0)
+TR = TestInput(StyblinskiTang, dim=5, center=fill(-2.903534, 5), sample_range=5.0)
 ```
 
 # References
@@ -1299,7 +1299,7 @@ f(x) = Σᵢ₌₁ⁿ |xᵢ|^(i+1)
 f_val = SumOfDifferentPowers([0.0, 0.0, 0.0])  # Returns 0.0
 
 # Test optimization
-TR = test_input(SumOfDifferentPowers, dim=5, center=zeros(5), sample_range=1.0)
+TR = TestInput(SumOfDifferentPowers, dim=5, center=zeros(5), sample_range=1.0)
 ```
 
 # References
@@ -1353,7 +1353,7 @@ x_opt = [i * (n + 1 - i) for i in 1:n]
 f_val = Trid(x_opt)  # Should return -n(n+4)(n-1)/6
 
 # Test optimization
-TR = test_input(Trid, dim=4, center=[4.0, 6.0, 6.0, 4.0], sample_range=16.0)
+TR = TestInput(Trid, dim=4, center=[4.0, 6.0, 6.0, 4.0], sample_range=16.0)
 ```
 
 # References
@@ -1406,7 +1406,7 @@ f(x) = Σᵢ₌₁ⁿ (Σⱼ₌₁ⁱ xⱼ)²
 f_val = RotatedHyperEllipsoid([0.0, 0.0, 0.0])  # Returns 0.0
 
 # Test optimization
-TR = test_input(RotatedHyperEllipsoid, dim=5, center=zeros(5), sample_range=65.536)
+TR = TestInput(RotatedHyperEllipsoid, dim=5, center=zeros(5), sample_range=65.536)
 ```
 
 # References
@@ -1455,7 +1455,7 @@ f_val = Powell([0.0, 0.0, 0.0, 0.0])  # Returns 0.0
 f_val = Powell(zeros(8))
 
 # Test optimization
-TR = test_input(Powell, dim=8, center=zeros(8), sample_range=4.5)
+TR = TestInput(Powell, dim=8, center=zeros(8), sample_range=4.5)
 ```
 
 # References

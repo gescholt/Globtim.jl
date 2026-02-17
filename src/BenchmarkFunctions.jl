@@ -81,7 +81,7 @@ f_val = Rosenbrock([1.0, 1.0])  # Returns 0.0 (global minimum)
 f_val = Rastrigin([0.0, 0.0])  # Returns 0.0 (global minimum)
 
 # Create test input for optimization
-TR = test_input(Griewank, dim=5, center=zeros(5), sample_range=600.0)
+TR = TestInput(Griewank, dim=5, center=zeros(5), sample_range=600.0)
 pol = Constructor(TR, 6)  # Construct polynomial approximation
 ```
 

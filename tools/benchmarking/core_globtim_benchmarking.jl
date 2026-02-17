@@ -31,7 +31,7 @@ using Distributions
 # ============================================================================
 
 """Essential test input structure"""
-@with_kw struct test_input
+@with_kw struct TestInput
     f::Function
     dim::Int
     center::Vector{Float64}
@@ -170,7 +170,7 @@ end
 # ============================================================================
 
 """Generate samples for polynomial approximation"""
-function generate_samples(TR::test_input)
+function generate_samples(TR::TestInput)
     samples = Vector{Tuple{Vector{Float64}, Float64}}()
     
     for i in 1:TR.GN
@@ -184,7 +184,7 @@ function generate_samples(TR::test_input)
 end
 
 """Simplified polynomial constructor (core functionality)"""
-function construct_polynomial_approximation(TR::test_input)
+function construct_polynomial_approximation(TR::TestInput)
     start_time = time()
     
     # Generate samples
@@ -234,7 +234,7 @@ function construct_polynomial_approximation(TR::test_input)
 end
 
 """Find critical points using polynomial system solving"""
-function find_critical_points(TR::test_input, pol::ApproxPoly)
+function find_critical_points(TR::TestInput, pol::ApproxPoly)
     # Create polynomial variables
     @polyvar x[1:TR.dim]
     
@@ -400,7 +400,7 @@ function run_core_globtim_benchmark(function_name::String, parameter_set_name::S
     println()
 
     # Create test input
-    TR = test_input(
+    TR = TestInput(
         f = func_info.func,
         dim = func_info.dimension,
         center = func_info.recommended_center,
@@ -601,7 +601,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
 end
 
 # Export core functionality
-export test_input, ApproxPoly, BenchmarkResult, EnhancedBenchmarkFunction
+export TestInput, ApproxPoly, BenchmarkResult, EnhancedBenchmarkFunction
 export create_benchmark_library, construct_polynomial_approximation
 export find_critical_points, refine_critical_points, analyze_hessians
 export compute_distance_analysis, run_core_globtim_benchmark

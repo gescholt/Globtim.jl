@@ -22,7 +22,7 @@ using DynamicPolynomials
 
 # Create a polynomial approximation
 f = x -> sin(3*x[1])
-TR = test_input(f, dim=1, center=[0.0], sample_range=1.0)
+TR = TestInput(f, dim=1, center=[0.0], sample_range=1.0)
 pol = Constructor(TR, 10, basis=:chebyshev)
 
 # Convert to exact monomial basis
@@ -116,7 +116,7 @@ using DynamicPolynomials
 
 # 1. Define function and create approximation
 f = x -> 1/(1 + 25*x[1]^2)  # Runge function
-TR = test_input(f, dim=1, center=[0.0], sample_range=1.0)
+TR = TestInput(f, dim=1, center=[0.0], sample_range=1.0)
 pol = Constructor(TR, 20, basis=:chebyshev)
 
 # 2. Analyze sparsification options

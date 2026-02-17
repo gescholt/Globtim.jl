@@ -66,7 +66,7 @@ function run_single_benchmark(
     # Phase 1: Baseline Construction
     if verbose; println("Phase 1: Baseline construction..."); end
 
-    TR = test_input(f, dim=dim, center=zeros(dim), sample_range=1.0)
+    TR = TestInput(f, dim=dim, center=zeros(dim), sample_range=1.0)
 
     t_baseline = @elapsed begin
         pol_baseline = Constructor(TR, degree, basis=:chebyshev, verbose=0)

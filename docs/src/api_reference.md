@@ -6,11 +6,11 @@
 
 ### Problem Setup
 
-#### `test_input`
+#### `TestInput`
 Create test input specification for optimization problems.
 
 ```julia
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 ```
 
 #### `Constructor`
@@ -18,13 +18,13 @@ Build polynomial approximation with precision control.
 
 **Signature:**
 ```julia
-Constructor(T::test_input, degree; precision=AdaptivePrecision, basis=:chebyshev, verbose=0, grid=nothing)
+Constructor(T::TestInput, degree; precision=AdaptivePrecision, basis=:chebyshev, verbose=0, grid=nothing)
 ```
 
 **Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `T` | `test_input` | Problem specification |
+| `T` | `TestInput` | Problem specification |
 | `degree` | `Int` | Polynomial degree |
 | `precision` | `PrecisionType` | `Float64Precision`, `AdaptivePrecision`, `RationalPrecision`, `BigFloatPrecision` |
 | `basis` | `Symbol` | `:chebyshev` or `:legendre` |
@@ -181,7 +181,7 @@ truncated, stats = truncate_polynomial_adaptive(mono_poly, analysis.suggested_th
 
 | Type | Description |
 |------|-------------|
-| `test_input` | Problem specification |
+| `TestInput` | Problem specification |
 | `ApproxPoly` | Polynomial approximation with `coeffs`, `nrm`, `precision` |
 | `BFGSConfig` | BFGS configuration |
 | `BFGSResult` | BFGS results |
@@ -212,7 +212,7 @@ Float64Precision, AdaptivePrecision, RationalPrecision, BigFloatPrecision
 ## Help System
 
 ```julia
-julia> ?test_input
+julia> ?TestInput
 julia> ?analyze_critical_points
 ```
 

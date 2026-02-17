@@ -108,7 +108,7 @@ Same as the main `solve_polynomial_system` method.
 # Example
 ```julia
 f = x -> sin(x)
-TR = test_input(f, dim=1, center=[0.0], sample_range=10.)
+TR = TestInput(f, dim=1, center=[0.0], sample_range=10.)
 pol = Constructor(TR, 8)
 @polyvar x
 solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
@@ -336,7 +336,7 @@ ApproxPoly objects, as it ensures consistent parameter handling.
 # Examples
 ```julia
 f = x -> sin(x[1]^2 + x[2]^2)
-TR = test_input(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
+TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=2.0)
 pol = Constructor(TR, 8)
 @polyvar x[1:2]
 

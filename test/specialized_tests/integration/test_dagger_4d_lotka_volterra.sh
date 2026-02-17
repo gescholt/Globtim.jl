@@ -243,7 +243,7 @@ for degree in degrees
 
     try
         # Create test input with safe parameters
-        TR = test_input(objective_4d, domain, GN=GN, tolerance=nothing)
+        TR = TestInput(objective_4d, domain, GN=GN, tolerance=nothing)
         println("  Test input created: $(size(TR.grid_points)) grid points")
 
         # Create polynomial approximation
