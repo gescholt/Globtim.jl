@@ -268,12 +268,7 @@ function construct_legendre_approx(
 )
     n = length(x_vars)  # number of variables
 
-    # Handle backward compatibility: convert integer degree to tuple format
-    degree_tuple = if isa(degree, Int)
-        (:one_d_for_all, degree)
-    else
-        degree
-    end
+    degree_tuple = normalize_degree(degree)
 
     # Generate multi-index set for given degree
     lambda = SupportGen(n, degree_tuple).data

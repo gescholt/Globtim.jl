@@ -37,6 +37,15 @@ const DegreeSpec = Union{Int, Tuple{Symbol, Int}, Tuple{Symbol, Vector{Int}}}
 Nothing for legacy constructors, or an integer matrix (possibly transposed) for the lambda matrix."""
 const SupportMatrix = Union{Nothing, AbstractMatrix{Int}}
 
+"""
+    normalize_degree(d) -> DegreeSpec
+
+Convert a bare integer degree to the canonical tuple format (:one_d_for_all, d).
+If already a tuple, returns it unchanged.
+"""
+normalize_degree(d::Int)::DegreeSpec = (:one_d_for_all, d)
+normalize_degree(d::Tuple)::DegreeSpec = d
+
 struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     coeffs::Vector{T}
     support::SupportMatrix
@@ -53,65 +62,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     power_of_two_denom::Bool
     cond_vandermonde::Float64
 
-    # Original constructor (backward compatibility) - scalar scale_factor
-    # Defaults center to zeros for backward compatibility
-    function ApproxPoly{T}(
-        coeffs::Vector{T},
-        degree,
-        nrm::Float64,
-        N::Int,
-        scale_factor::Float64,
-        grid::Matrix{Float64},
-        z::Vector{Float64}
-    ) where {T <: Number}
-        new{T, Float64}(
-            coeffs,
-            nothing,
-            degree,
-            nrm,
-            N,
-            scale_factor,
-            zeros(size(grid, 2)),  # Default center to zeros
-            grid,
-            z,
-            :chebyshev,
-            RationalPrecision,
-            true,
-            false,
-            1.0
-        )
-    end
-
-    # Vector scale_factor constructor (backward compatibility)
-    # Defaults center to zeros for backward compatibility
-    function ApproxPoly{T}(
-        coeffs::Vector{T},
-        degree,
-        nrm::Float64,
-        N::Int,
-        scale_factor::Vector{Float64},
-        grid::Matrix{Float64},
-        z::Vector{Float64}
-    ) where {T <: Number}
-        new{T, Vector{Float64}}(
-            coeffs,
-            nothing,
-            degree,
-            nrm,
-            N,
-            scale_factor,
-            zeros(size(grid, 2)),  # Default center to zeros
-            grid,
-            z,
-            :chebyshev,
-            RationalPrecision,
-            true,
-            false,
-            1.0
-        )
-    end
-
-    # Extended constructor with basis parameters (scalar scale_factor)
+    # Canonical constructor (scalar scale_factor)
     function ApproxPoly{T}(
         coeffs::Vector{T},
         support,
@@ -146,7 +97,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         )
     end
 
-    # Extended constructor with basis parameters (vector scale_factor)
+    # Canonical constructor (vector scale_factor)
     function ApproxPoly{T}(
         coeffs::Vector{T},
         support,
@@ -165,42 +116,6 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
     ) where {T <: Number}
         new{T, Vector{Float64}}(
             coeffs,
-            support,
-            degree,
-            nrm,
-            N,
-            scale_factor,
-            center,
-            grid,
-            z,
-            basis,
-            precision,
-            normalized,
-            power_of_two_denom,
-            cond_vandermonde
-        )
-    end
-
-    # Constructor from solver result
-    function ApproxPoly{T}(
-        sol,
-        support,
-        degree,
-        nrm::Float64,
-        N::Int,
-        scale_factor::Union{Float64, Vector{Float64}},
-        center::Vector{Float64},
-        grid::Matrix{Float64},
-        z::Vector{Float64};
-        basis::Symbol = :chebyshev,
-        precision::PrecisionType = RationalPrecision,
-        normalized::Bool = true,
-        power_of_two_denom::Bool = false,
-        cond_vandermonde::Float64 = 1.0
-    ) where {T <: Number}
-        S = typeof(scale_factor)
-        new{T, S}(
-            sol.u,
             support,
             degree,
             nrm,

@@ -201,12 +201,7 @@ function main_nd(
     power_of_two_denom::Bool = false,
     verbose::Bool = false
 )
-    # Handle backward compatibility: convert integer degree to tuple format
-    degree = if isa(d, Int)
-        (:one_d_for_all, d)
-    else
-        d
-    end
+    degree = normalize_degree(d)
 
     # For backwards compatibility
     bigint = (precision == RationalPrecision)
