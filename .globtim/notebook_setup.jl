@@ -15,7 +15,8 @@ for pkg in ("globtimplots", "globtimpostprocessing", "Dynamic_objectives")
     if isdir(pkg_path)
         try
             Pkg.develop(path=pkg_path)
-        catch
+        catch e
+            @warn "Failed to dev-link $pkg" exception=(e, catch_backtrace())
         end
     end
 end

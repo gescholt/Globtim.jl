@@ -670,7 +670,8 @@ function register_sar_functions!()
             try
                 @eval Main using SARCostFunction
                 sar_available = true
-            catch
+            catch e
+                @debug "SARCostFunction import failed" exception=(e, catch_backtrace())
                 pop!(LOAD_PATH)
             end
         else

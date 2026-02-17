@@ -130,8 +130,10 @@ function compute_function_value_errors(
                     grad_norm_theo = norm(grad_theo)
                     grad_comp = ForwardDiff.gradient(f, comp_pt)
                     grad_norm_comp = norm(grad_comp)
-                catch
-                    # Gradient computation failed, use default values
+                catch e
+                    @debug "Gradient computation failed" exception=(e, catch_backtrace())
+                    grad_norm_theo = NaN
+                    grad_norm_comp = NaN
                 end
             end
 

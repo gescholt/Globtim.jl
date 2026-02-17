@@ -382,7 +382,8 @@ function can_run_precision_tests()
         return isdefined(Globtim, :_convert_value) &&
                isdefined(Globtim, :construct_orthopoly_polynomial) &&
                isdefined(Globtim, :solve_polynomial_system)
-    catch
+    catch e
+        @debug "Precision test dependencies check failed" exception=(e, catch_backtrace())
         return false
     end
 end

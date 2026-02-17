@@ -833,8 +833,9 @@ function enhanced_bfgs_refinement(
         # Note: NelderMead doesn't compute gradients, so we compute it separately if needed
         grad = try
             ForwardDiff.gradient(objective_function, refined_point)
-        catch
-            fill(NaN, length(refined_point))  # Return NaN gradient if computation fails
+        catch e
+            @warn "Gradient computation failed after refinement" exception=(e, catch_backtrace())
+            fill(NaN, length(refined_point))
         end
 
         # Determine convergence reason

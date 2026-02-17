@@ -17,8 +17,8 @@ if isfile("test/Project.toml")
     Pkg.activate("test")
     try
         using Aqua
-    catch
-        println("📦 Installing Aqua.jl...")
+    catch e
+        @info "Installing Aqua.jl..." exception=(e, catch_backtrace())
         Pkg.add("Aqua")
         using Aqua
     end
@@ -27,8 +27,8 @@ else
     Pkg.activate(".")
     try
         using Aqua
-    catch
-        println("📦 Adding Aqua.jl temporarily...")
+    catch e
+        @info "Adding Aqua.jl temporarily..." exception=(e, catch_backtrace())
         Pkg.add("Aqua")
         using Aqua
     end

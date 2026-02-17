@@ -365,7 +365,8 @@ function analyze_benchmark_results(
             try
                 grad = ForwardDiff.gradient(enhanced_func.func, point)
                 push!(gradient_norms, norm(grad))
-            catch
+            catch e
+                @warn "Gradient computation failed" point exception=(e, catch_backtrace())
                 push!(gradient_norms, Inf)
             end
 

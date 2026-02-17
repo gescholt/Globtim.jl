@@ -27,8 +27,8 @@ println("📦 Checking for Aqua.jl...")
 try
     import Aqua
     println("✅ Aqua.jl already available")
-catch
-    println("📦 Adding Aqua.jl temporarily...")
+catch e
+    @info "Adding Aqua.jl temporarily..." exception=(e, catch_backtrace())
     Pkg.add("Aqua")
 end
 

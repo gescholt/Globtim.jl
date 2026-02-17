@@ -28,8 +28,8 @@ if isfile(test_project_file)
     try
         using Aqua
         println("✅ Aqua.jl is available in test environment")
-    catch
-        println("📦 Adding Aqua.jl to test environment...")
+    catch e
+        @info "Aqua.jl not found, installing..." exception=(e, catch_backtrace())
         Pkg.add("Aqua")
         println("✅ Aqua.jl added successfully")
     end
@@ -54,8 +54,8 @@ else
     try
         using Aqua
         println("✅ Aqua.jl already available")
-    catch
-        println("📦 Adding Aqua.jl...")
+    catch e
+        @info "Aqua.jl not found, installing..." exception=(e, catch_backtrace())
         Pkg.add("Aqua")
         println("✅ Aqua.jl added successfully")
     end

@@ -452,7 +452,8 @@ function run_core_globtim_benchmark(function_name::String, parameter_set_name::S
                     try
                         grad = ForwardDiff.gradient(func_info.func, pt)
                         push!(gradient_norms, norm(grad))
-                    catch
+                    catch e
+                        @warn "Gradient computation failed" pt exception=(e, catch_backtrace())
                         push!(gradient_norms, Inf)
                     end
                 end

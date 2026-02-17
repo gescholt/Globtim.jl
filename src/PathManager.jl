@@ -1001,7 +1001,8 @@ function _is_writable(path::String)::Bool
         touch(test_file)
         rm(test_file)
         return true
-    catch
+    catch e
+        @debug "Directory not writable" path exception=(e, catch_backtrace())
         return false
     end
 end

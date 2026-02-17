@@ -175,7 +175,8 @@ Get the current git commit hash. Returns "unknown" if not in a git repository.
 function get_git_commit_hash()
     try
         return readchomp(`git rev-parse HEAD`)
-    catch
+    catch e
+        @debug "Could not get git commit hash" exception=(e, catch_backtrace())
         return "unknown"
     end
 end
@@ -188,7 +189,8 @@ Get the current git branch name. Returns "unknown" if not in a git repository.
 function get_git_branch()
     try
         return readchomp(`git rev-parse --abbrev-ref HEAD`)
-    catch
+    catch e
+        @debug "Could not get git branch" exception=(e, catch_backtrace())
         return "unknown"
     end
 end

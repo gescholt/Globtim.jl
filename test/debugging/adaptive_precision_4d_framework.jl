@@ -37,7 +37,8 @@ import Pkg
 const BENCHMARKTOOLS_AVAILABLE = try
     using BenchmarkTools
     true
-catch
+catch e
+    @debug "BenchmarkTools not available" exception=(e, catch_backtrace())
     false
 end
 
