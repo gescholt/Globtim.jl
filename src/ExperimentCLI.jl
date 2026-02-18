@@ -49,6 +49,10 @@ struct ExperimentParams
     enable_hessian_computation::Bool
     enable_bfgs_refinement::Bool
 
+    # Optional coefficient truncation (passed through from ExperimentPipelineConfig)
+    truncation_threshold::Union{Nothing, Float64}
+    truncation_mode::Symbol
+
     function ExperimentParams(;
         domain_size::Real = 0.1,
         GN::Integer = 5,
@@ -60,7 +64,9 @@ struct ExperimentParams
         max_iterations::Integer = 300,
         enable_gradient_computation::Bool = true,
         enable_hessian_computation::Bool = true,
-        enable_bfgs_refinement::Bool = true
+        enable_bfgs_refinement::Bool = true,
+        truncation_threshold::Union{Nothing, Real} = nothing,
+        truncation_mode::Union{Symbol, String} = :relative
     )
         # Parse degree_range if string
         if degree_range isa String
@@ -78,6 +84,10 @@ struct ExperimentParams
         # Validate parameters
         validate_params(domain_size, GN, degree_range, max_time)
 
+        # Convert truncation_mode to Symbol if String
+        trunc_mode_sym = truncation_mode isa String ? Symbol(truncation_mode) : truncation_mode
+        trunc_thresh = truncation_threshold === nothing ? nothing : Float64(truncation_threshold)
+
         new(
             Float64(domain_size),
             Int(GN),
@@ -89,7 +99,9 @@ struct ExperimentParams
             Int(max_iterations),
             enable_gradient_computation,
             enable_hessian_computation,
-            enable_bfgs_refinement
+            enable_bfgs_refinement,
+            trunc_thresh,
+            trunc_mode_sym
         )
     end
 end
@@ -111,7 +123,9 @@ function ConstructionBase.setproperties(obj::ExperimentParams, patch::NamedTuple
         max_iterations = obj.max_iterations,
         enable_gradient_computation = obj.enable_gradient_computation,
         enable_hessian_computation = obj.enable_hessian_computation,
-        enable_bfgs_refinement = obj.enable_bfgs_refinement
+        enable_bfgs_refinement = obj.enable_bfgs_refinement,
+        truncation_threshold = obj.truncation_threshold,
+        truncation_mode = obj.truncation_mode
     )
 
     # Merge patch into current values
@@ -133,7 +147,9 @@ Base.pairs(p::ExperimentParams) = (
     max_iterations = p.max_iterations,
     enable_gradient_computation = p.enable_gradient_computation,
     enable_hessian_computation = p.enable_hessian_computation,
-    enable_bfgs_refinement = p.enable_bfgs_refinement
+    enable_bfgs_refinement = p.enable_bfgs_refinement,
+    truncation_threshold = p.truncation_threshold,
+    truncation_mode = p.truncation_mode
 )
 
 Base.getindex(p::ExperimentParams, key::Symbol) = getfield(p, key)

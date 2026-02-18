@@ -42,11 +42,13 @@ Base.@kwdef struct ExperimentPipelineConfig
     analytical_function::Union{Nothing, String} = nothing
     dimension::Union{Nothing, Int} = nothing
     time_interval::Union{Nothing, Vector{Float64}} = nothing  # override catalogue default
+    p_true::Union{Nothing, Vector{Float64}} = nothing         # override catalogue p_true
 
     # [domain] — exactly one mode: radius XOR radii XOR bounds
     radius::Union{Nothing, Float64} = nothing
     radii::Union{Nothing, Vector{Float64}} = nothing
     bounds::Union{Nothing, Vector{Tuple{Float64, Float64}}} = nothing
+    p_center::Union{Nothing, Vector{Float64}} = nothing       # domain center (default: p_true)
 
     # [polynomial]
     GN::Int
@@ -152,6 +154,32 @@ function validate_experiment_toml(d::Dict)
             if !(lowercase(fname) in [lowercase(n) for n in known])
                 push!(errors, "[model] unknown analytical_function \"$fname\". Known: $(join(known, ", "))")
             end
+        end
+    end
+
+    # Validate p_true (only valid in catalogue mode)
+    if haskey(mod, "p_true")
+        if has_analytical
+            push!(errors, "[model] p_true is only valid in catalogue mode, not with analytical_function")
+        else
+            pt = mod["p_true"]
+            if !(pt isa AbstractVector && all(x -> x isa Number, pt))
+                push!(errors, "[model] p_true must be a numeric array, got: $pt")
+            end
+        end
+    end
+
+    # Validate p_center (only meaningful with radius/radii domain modes)
+    if haskey(dom, "p_center")
+        pc = dom["p_center"]
+        if !(pc isa AbstractVector && all(x -> x isa Number, pc))
+            push!(errors, "[domain] p_center must be a numeric array, got: $pc")
+        end
+        if has_bounds
+            push!(errors, "[domain] p_center is not used with explicit bounds (bounds already define the domain)")
+        end
+        if !has_radius && !has_radii && !has_catalogue
+            push!(errors, "[domain] p_center requires radius or radii to define the domain")
         end
     end
 
@@ -425,6 +453,10 @@ function load_experiment_config(path::String)
     analytical_function = haskey(mod, "analytical_function") ? String(mod["analytical_function"]) : nothing
     model_dimension    = haskey(mod, "dimension") ? Int(mod["dimension"]) : nothing
     time_interval      = haskey(mod, "time_interval") ? Float64.(mod["time_interval"]) : nothing
+    p_true             = haskey(mod, "p_true") ? Float64.(mod["p_true"]) : nothing
+
+    # Parse p_center from [domain]
+    p_center = haskey(dom, "p_center") ? Float64.(dom["p_center"]) : nothing
 
     # Parse solver overrides
     solver_method = haskey(sol, "method") ? String(sol["method"]) : nothing
@@ -477,10 +509,12 @@ function load_experiment_config(path::String)
         analytical_function = analytical_function,
         dimension = model_dimension,
         time_interval = time_interval,
+        p_true = p_true,
         # [domain]
         radius = radius,
         radii = radii,
         bounds = bounds,
+        p_center = p_center,
         # [polynomial]
         GN = Int(poly["GN"]),
         degree_range = degree_range,
@@ -534,6 +568,8 @@ function config_to_experiment_params(config::ExperimentPipelineConfig)
         enable_gradient_computation = !is_ode,
         enable_hessian_computation = !is_ode,
         enable_bfgs_refinement = !is_ode,
+        truncation_threshold = config.truncation_threshold,
+        truncation_mode = config.truncation_mode,
     )
 end
 
