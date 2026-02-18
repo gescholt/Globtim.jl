@@ -192,8 +192,6 @@ function validate_params(domain_size::Real, GN::Integer, degree_range::AbstractR
     # Domain size validation
     if domain_size <= 0.0
         push!(errors, "domain_size must be positive, got $(domain_size)")
-    elseif domain_size > 10.0
-        push!(errors, "domain_size must be ≤ 10.0, got $(domain_size)")
     end
 
     # GN validation

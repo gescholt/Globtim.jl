@@ -20,7 +20,7 @@ using DataFrames
 using DynamicPolynomials
 # using HomotopyContinuation
 using LinearAlgebra
-using ProgressLogging
+
 
 
 

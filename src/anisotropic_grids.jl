@@ -2,7 +2,6 @@
 # Support for anisotropic grids with different number of points per dimension
 
 using StaticArrays
-using IterTools
 
 """
     generate_anisotropic_grid(grid_sizes::Vector{Int}; basis=:chebyshev)

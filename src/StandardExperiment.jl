@@ -74,12 +74,6 @@ using LinearAlgebra
 
 export run_standard_experiment, DegreeResult, solve_and_transform
 
-# Import PathManager module (Issue #192, Unified Path Management)
-# PathManager consolidates PathUtils, OutputPathManager, ExperimentPaths, etc.
-# Phase 5 complete: Old modules deprecated, StandardExperiment now uses only PathManager.
-if !isdefined(Main, :PathManager)
-    include(joinpath(@__DIR__, "PathManager.jl"))
-end
 using .PathManager
 
 """
@@ -264,19 +258,6 @@ function run_standard_experiment(;
     metadata::Dict{String, Any} = Dict(),
     true_params::Union{Vector{Float64}, Nothing} = nothing
 )
-    # Validate inputs
-    dimension = length(bounds)
-    @assert dimension == length(bounds) "Dimension mismatch"
-
-    # NOTE: Output path validation disabled - using static relative paths ../globtim_results
-    # validate_output_configuration()
-
-    # Check for legacy path patterns and warn (optional)
-    # legacy_warning = get_legacy_path_warning(output_dir)
-    # if !isempty(legacy_warning)
-    #     @warn legacy_warning
-    # end
-
     mkpath(output_dir)
 
     # Pre-compute domain geometry (invariant across degrees)

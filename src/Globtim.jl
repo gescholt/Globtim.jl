@@ -9,16 +9,12 @@ using MultivariatePolynomials
 using Random
 using StaticArrays
 using Statistics
-using SpecialFunctions
 using TimerOutputs
 using DataFrames
 using Optim
-using Parameters
 using Dates
 using LinearSolve
 using DataStructures
-using IterTools
-using ProgressLogging
 using PolyChaos
 using TOML
 
@@ -127,7 +123,7 @@ export symbolic_legendre, evaluate_legendre, get_legendre_coeffs, construct_lege
 
 # Chebyshev polynomial functions
 export symbolic_chebyshev,
-    evaluate_chebyshev, get_chebyshev_coeffs, construct_chebyshev_approx
+    evaluate_chebyshev, get_chebyshev_coeffs
 
 # Unified orthogonal polynomial interface
 export symbolic_orthopoly,
