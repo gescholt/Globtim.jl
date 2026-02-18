@@ -25,6 +25,7 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 - `[experiment]`: name, description
 - `[model]`: catalogue_path + entry_name (ODE) OR analytical_function + dimension (built-in)
   Optional: time_interval (override catalogue default, catalogue mode only)
+  Optional: sample_times (explicit time sample points, overrides time_interval + numpoints)
 - `[domain]`: radius (symmetric) OR radii (anisotropic) OR bounds (explicit)
 - `[polynomial]`: GN, degree_range, basis, truncation_threshold (opt-in), truncation_mode
 - `[solver]`: ODE solver overrides (optional)
@@ -42,6 +43,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     analytical_function::Union{Nothing, String} = nothing
     dimension::Union{Nothing, Int} = nothing
     time_interval::Union{Nothing, Vector{Float64}} = nothing  # override catalogue default
+    sample_times::Union{Nothing, Vector{Float64}} = nothing   # explicit time sample points (overrides time_interval + numpoints)
     p_true::Union{Nothing, Vector{Float64}} = nothing         # override catalogue p_true
 
     # [domain] — exactly one mode: radius XOR radii XOR bounds
@@ -195,6 +197,30 @@ function validate_experiment_toml(d::Dict)
                 push!(errors, "[model] time_interval values must be numbers")
             elseif ti[2] <= ti[1]
                 push!(errors, "[model] time_interval end ($(ti[2])) must be > start ($(ti[1]))")
+            end
+        end
+    end
+
+    # Validate sample_times (only valid in catalogue mode, conflicts with time_interval)
+    if haskey(mod, "sample_times")
+        if has_analytical
+            push!(errors, "[model] sample_times is only valid in catalogue mode, not with analytical_function")
+        elseif haskey(mod, "time_interval")
+            push!(errors, "[model] cannot specify both sample_times and time_interval (sample_times implies the time interval)")
+        else
+            st = mod["sample_times"]
+            if !(st isa AbstractVector && length(st) >= 2)
+                push!(errors, "[model] sample_times must be an array with at least 2 time points, got: $st")
+            elseif !all(x -> x isa Number, st)
+                push!(errors, "[model] sample_times values must be numbers")
+            else
+                st_sorted = sort(Float64.(st))
+                if st_sorted != Float64.(st)
+                    push!(errors, "[model] sample_times must be in ascending order")
+                end
+                if st_sorted[end] <= st_sorted[1]
+                    push!(errors, "[model] sample_times must span a non-zero time interval")
+                end
             end
         end
     end
@@ -453,6 +479,7 @@ function load_experiment_config(path::String)
     analytical_function = haskey(mod, "analytical_function") ? String(mod["analytical_function"]) : nothing
     model_dimension    = haskey(mod, "dimension") ? Int(mod["dimension"]) : nothing
     time_interval      = haskey(mod, "time_interval") ? Float64.(mod["time_interval"]) : nothing
+    sample_times       = haskey(mod, "sample_times") ? Float64.(mod["sample_times"]) : nothing
     p_true             = haskey(mod, "p_true") ? Float64.(mod["p_true"]) : nothing
 
     # Parse p_center from [domain]
@@ -509,6 +536,7 @@ function load_experiment_config(path::String)
         analytical_function = analytical_function,
         dimension = model_dimension,
         time_interval = time_interval,
+        sample_times = sample_times,
         p_true = p_true,
         # [domain]
         radius = radius,
