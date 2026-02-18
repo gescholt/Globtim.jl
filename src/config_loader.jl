@@ -26,7 +26,7 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 - `[model]`: catalogue_path + entry_name (ODE) OR analytical_function + dimension (built-in)
   Optional: time_interval (override catalogue default, catalogue mode only)
 - `[domain]`: radius (symmetric) OR radii (anisotropic) OR bounds (explicit)
-- `[polynomial]`: GN, degree_range, basis
+- `[polynomial]`: GN, degree_range, basis, truncation_threshold (opt-in), truncation_mode
 - `[solver]`: ODE solver overrides (optional)
 - `[refinement]`: post-processing refinement (optional)
 - `[output]`: output_dir (optional)
@@ -52,6 +52,8 @@ Base.@kwdef struct ExperimentPipelineConfig
     GN::Int
     degree_range::StepRange{Int, Int}
     basis::Symbol = :chebyshev
+    truncation_threshold::Union{Nothing, Float64} = nothing  # opt-in coefficient truncation
+    truncation_mode::Symbol = :relative                      # :relative or :absolute
 
     # [solver] — optional ODE overrides
     solver_method::Union{Nothing, String} = nothing
@@ -229,8 +231,8 @@ function validate_experiment_toml(d::Dict)
         else
             if any(x -> !(x isa Integer), dr)
                 push!(errors, "[polynomial] degree_range values must be integers")
-            elseif dr[1] < 1 || dr[3] > 30
-                push!(errors, "[polynomial] degree_range values must be in [1, 30], got: $dr")
+            elseif dr[1] < 1 || dr[3] > 50
+                push!(errors, "[polynomial] degree_range values must be in [1, 50], got: $dr")
             elseif dr[1] > dr[3]
                 push!(errors, "[polynomial] degree_range start ($(dr[1])) must be <= stop ($(dr[3]))")
             elseif dr[2] < 1
@@ -244,6 +246,15 @@ function validate_experiment_toml(d::Dict)
     if haskey(poly, "basis")
         b = poly["basis"]
         b in ["chebyshev", "legendre"] || push!(errors, "[polynomial] basis must be 'chebyshev' or 'legendre', got: '$b'")
+    end
+
+    if haskey(poly, "truncation_threshold")
+        t = poly["truncation_threshold"]
+        (t isa Number && t > 0) || push!(errors, "[polynomial] truncation_threshold must be positive, got: $t")
+    end
+    if haskey(poly, "truncation_mode")
+        m = poly["truncation_mode"]
+        m in ["relative", "absolute"] || push!(errors, "[polynomial] truncation_mode must be 'relative' or 'absolute', got: '$m'")
     end
 
     # --- [solver] (optional) ---
@@ -392,6 +403,10 @@ function load_experiment_config(path::String)
     # Parse basis
     basis = Symbol(get(poly, "basis", "chebyshev"))
 
+    # Parse truncation (optional)
+    truncation_threshold = haskey(poly, "truncation_threshold") ? Float64(poly["truncation_threshold"]) : nothing
+    truncation_mode = Symbol(get(poly, "truncation_mode", "relative"))
+
     # Parse domain
     radius = nothing
     radii  = nothing
@@ -470,6 +485,8 @@ function load_experiment_config(path::String)
         GN = Int(poly["GN"]),
         degree_range = degree_range,
         basis = basis,
+        truncation_threshold = truncation_threshold,
+        truncation_mode = truncation_mode,
         # [solver]
         solver_method = solver_method,
         solver_abstol = solver_abstol,

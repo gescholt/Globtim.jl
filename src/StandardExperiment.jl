@@ -436,6 +436,22 @@ function process_single_degree(
     timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
 
+    # Phase 1b: Optional coefficient truncation
+    if experiment_config.truncation_threshold !== nothing
+        sparse_result = Globtim.sparsify_polynomial(
+            pol, experiment_config.truncation_threshold,
+            mode = experiment_config.truncation_mode
+        )
+        println("  Truncation (threshold=$(experiment_config.truncation_threshold), " *
+                "mode=$(experiment_config.truncation_mode)): " *
+                "$(sparse_result.original_nnz) → $(sparse_result.new_nnz) coefficients " *
+                "(L² ratio: $(round(sparse_result.l2_ratio, digits=6)))")
+        pol = sparse_result.polynomial
+        timing["truncation_original_nnz"] = Float64(sparse_result.original_nnz)
+        timing["truncation_new_nnz"] = Float64(sparse_result.new_nnz)
+        timing["truncation_l2_ratio"] = sparse_result.l2_ratio
+    end
+
     # Phase 2: Critical Point Solving + coordinate transformation
     critical_points_array, solve_time = solve_and_transform(pol, bounds)
     n_critical_points = length(critical_points_array)
