@@ -198,25 +198,10 @@ end
 """
     hash_manifest_file() -> String
 
-Compute SHA256 hash of Manifest.toml for dependency tracking.
-Returns "no_manifest" if Manifest.toml doesn't exist.
+Placeholder for dependency tracking. Returns "no_manifest" since
+Manifest.toml is not shipped with the package.
 """
 function hash_manifest_file()
-    # Try to find Manifest.toml in typical locations
-    possible_paths = [
-        joinpath(@__DIR__, "..", "Manifest.toml"),  # Package root
-        joinpath(pwd(), "Manifest.toml"),            # Current directory
-        "Manifest.toml"                              # Direct path
-    ]
-
-    for path in possible_paths
-        if isfile(path)
-            # Load SHA on demand (it's in parent module's dependencies)
-            sha_mod = Base.require(Main, :SHA)
-            return bytes2hex(sha_mod.sha256(read(path)))
-        end
-    end
-
     return "no_manifest"
 end
 
