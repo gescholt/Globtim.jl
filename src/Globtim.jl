@@ -246,14 +246,6 @@ include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
 
-# Data I/O functions from GlobtimDataExt (available when CSV, DataFrames are loaded)
-export load_data, save_data, create_results_dataframe
-
-# Stub functions that will be implemented by GlobtimDataExt
-function load_data end
-function save_data end
-function create_results_dataframe end
-
 # GPU acceleration stub functions - implemented by GlobtimCUDAExt when CUDA.jl is loaded
 """
     gpu_available() -> Bool

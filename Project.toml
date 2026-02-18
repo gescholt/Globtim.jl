@@ -32,21 +32,16 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [weakdeps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 
 [extensions]
-GlobtimAnalysisExt = ["Clustering", "Distributions"]
 GlobtimCUDAExt = ["CUDA"]
 
 [compat]
 CSV = "0.10.15"
 CUDA = "5"
-Clustering = "0.15"
 ConstructionBase = "1"
 DataFrames = "1.6"
 Dates = "1"
-Distributions = "0.25"
 DrWatson = "2.19.1"
 DynamicPolynomials = "0.6"
 ForwardDiff = "=0.10.39, 1"

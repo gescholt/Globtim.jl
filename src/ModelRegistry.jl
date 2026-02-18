@@ -644,79 +644,13 @@ function clear_registry!()
 end
 
 # ============================================================================
-# Model Registration: SAR Imaging Functions
-# ============================================================================
-
-"""
-Register SAR (Synthetic Aperture Radar) imaging cost functions
-
-Note: Requires SARCostFunction module to be loaded. This is a Julia port
-of MATLAB ionospheric phase screen compensation code.
-
-The SAR cost function minimizes:
-  - L4 norm (contrast enhancement)
-  - Regularization on phase screen derivatives
-
-Parameters: 12D (6 complex Fourier coefficients → 12 real parameters)
-"""
-function register_sar_functions!()
-    # Check if SARCostFunction is available in the Julia load path
-    # This is typically at /Users/ghscholt/GlobalOptim/matlab/julia/SARCostFunction
-    sar_available = false
-    try
-        # Try to find and load SARCostFunction if not already loaded
-        if !isdefined(Main, :SARCostFunction)
-            push!(LOAD_PATH, joinpath(@__DIR__, "../../matlab/julia/SARCostFunction/src"))
-            try
-                @eval Main using SARCostFunction
-                sar_available = true
-            catch e
-                @debug "SARCostFunction import failed" exception=(e, catch_backtrace())
-                pop!(LOAD_PATH)
-            end
-        else
-            sar_available = true
-        end
-    catch e
-        @debug "SARCostFunction not available: $e"
-        return
-    end
-
-    if !sar_available
-        return
-    end
-
-    # Wrapper function that returns a callable matching registry interface
-    function sar_cost_function_wrapper()
-        # Return a function that takes a parameter vector and returns cost
-        # This wrapper adapts the SAR interface to the standard registry interface
-        return Main.SARCostFunction.cost_from_control_vars
-    end
-
-    register_model!(ModelInfo(
-        name = "sar_ionospheric_compensation",
-        aliases = ["sar", "sar_imaging", "ionospheric_sar"],
-        dimension = 12,
-        num_parameters = 12,  # 6 complex amplitudes = 12 real parameters (p1,q1,...,p6,q6)
-        num_states = 0,
-        num_outputs = 2,  # l4norm and regularization
-        category = :benchmark,
-        subcategory = :imaging,
-        requires_inputs = true,  # Requires UscStruct and Setup
-        definition_function = sar_cost_function_wrapper,
-        description = "SAR ionospheric phase screen compensation via Fourier series (12D: 6 complex coefficients). Minimizes -L4_norm + regularization for image quality."
-    ))
-end
-
-# ============================================================================
 # Module Initialization
 # ============================================================================
 
 """
 Initialize the model registry by registering all models from:
-- Dynamic_objectives package (ODE models)
+- Dynamic_objectives package (ODE models, when loaded via Main)
 - src/LibFunctions.jl (benchmark functions)
-- matlab/julia/SARCostFunction (SAR imaging)
 """
 function __init__()
     try
@@ -729,12 +663,6 @@ function __init__()
         register_benchmark_functions!()
     catch e
         @warn "Failed to register benchmark functions: $e"
-    end
-
-    try
-        register_sar_functions!()
-    catch e
-        @debug "Failed to register SAR functions (this is expected if SARCostFunction is not available): $e"
     end
 
     n_total = length(unique([info.name for info in values(MODELS)]))
