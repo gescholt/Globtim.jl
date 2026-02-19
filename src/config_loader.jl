@@ -517,7 +517,7 @@ function load_experiment_config(path::String)
     # Paths under "globtim_results/" are resolved via PathManager.get_results_root()
     # (which respects the GLOBTIM_RESULTS_ROOT env var). Other relative paths are
     # resolved relative to the TOML file's directory.
-    config_dir = dirname(abspath(path))
+    config_dir = dirname(realpath(path))  # realpath: resolve symlinks so copied/linked TOMLs find their relative paths
     catalogue_path = _resolve_config_path(catalogue_path, config_dir)
     output_dir     = _resolve_config_path(output_dir, config_dir)
 
