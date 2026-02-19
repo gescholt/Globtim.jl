@@ -32,7 +32,6 @@ const _TO = TimerOutputs.TimerOutput()
 
 # Exported functions and variables
 export TestInput,
-    test_input,  # deprecated alias, will be removed
     ApproxPoly,
     DegreeSpec,
     SupportMatrix,

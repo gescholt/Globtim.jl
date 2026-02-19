@@ -360,7 +360,7 @@ function analyze_experiment_errors(results::Vector{<:Dict})::DataFrame
         # Build context for classification
         context = Dict{String, Any}(
             "experiment_id" => experiment_id,
-            "computation_time" => get(result, "computation_time", 0.0),
+            "computation_time" => get(result, "total_computation_time", 0.0),
             "degree" => get(result, "degree", 0),
             "domain_range" => get(result, "domain_range", 0.0),
             "result_index" => idx

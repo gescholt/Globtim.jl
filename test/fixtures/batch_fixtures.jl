@@ -62,7 +62,7 @@ function generate_test_results_summary(; degrees=3:5, schema_version="1.1.0")
             "critical_points_raw" => 6,
             "critical_points_refined" => 6,
             "L2_norm" => rand() * 1e-6,  # Random small error
-            "computation_time" => rand() * 10.0,
+            "total_computation_time" => rand() * 10.0,
             "refinement_stats" => Dict(
                 "converged" => 6,
                 "failed" => 0,
@@ -128,7 +128,7 @@ function create_test_results_dir(manifest::Dict, complete_exps::Vector{Int}; deg
         # Generate CSV files for each degree
         for deg in degrees
             df = generate_test_critical_points(degree=deg)
-            CSV.write(joinpath(exp_dir, "critical_points_deg_$deg.csv"), df)
+            CSV.write(joinpath(exp_dir, "critical_points_raw_deg_$deg.csv"), df)
         end
     end
 
@@ -238,7 +238,7 @@ function setup_complete_test_batch(; n_experiments=3,
         # Generate CSV files
         for deg in degrees
             df = generate_test_critical_points(degree=deg)
-            CSV.write(joinpath(exp_dir, "critical_points_deg_$deg.csv"), df)
+            CSV.write(joinpath(exp_dir, "critical_points_raw_deg_$deg.csv"), df)
         end
     end
 

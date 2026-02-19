@@ -115,9 +115,8 @@ struct DegreeResult
     # Output location
     output_dir::String
 
-    # Error information (if failed)
-    # Can be String (legacy), Dict{String,Any} (rich context), or Nothing (success)
-    error::Union{String, Dict{String, Any}, Nothing}
+    # Error information (if failed): Dict{String,Any} with rich context, or Nothing (success)
+    error::Union{Dict{String, Any}, Nothing}
 end
 
 """
@@ -337,7 +336,7 @@ function run_standard_experiment(;
                 "GN" => experiment_config.GN,
                 "basis" => string(experiment_config.basis),
                 "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
-                "computation_time" => degree_time
+                "total_computation_time" => degree_time
             )
 
             # Create failed result
@@ -567,7 +566,6 @@ function create_experiment_summary(
             "critical_point_processing_time" => result.critical_point_processing_time,
             "file_io_time" => result.file_io_time,
             "total_computation_time" => result.total_computation_time,
-            "computation_time" => result.total_computation_time,  # Backwards compatibility
 
             # Output location
             "output_dir" => result.output_dir,
@@ -665,7 +663,7 @@ function sanitize_for_json(obj)
             "file_io_time" => sanitize_for_json(obj.file_io_time),
             "total_computation_time" => sanitize_for_json(obj.total_computation_time),
             "output_dir" => obj.output_dir,
-            "error" => sanitize_for_json(obj.error)  # Handle both String and Dict errors
+            "error" => sanitize_for_json(obj.error)
         )
     elseif obj isa Float64 || obj isa Float32
         if isnan(obj) || isinf(obj)

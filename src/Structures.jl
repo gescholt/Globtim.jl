@@ -359,9 +359,6 @@ struct TestInput
     end
 end
 
-# Deprecated alias for TestInput. Use TestInput instead.
-const test_input = TestInput
-
 """
    create_test_input(f::Function; kwargs...)::TestInput
 
