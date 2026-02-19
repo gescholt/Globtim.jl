@@ -1,11 +1,11 @@
-# GlobTim Package Dependencies
+# Globtim Package Dependencies
 
 **Last Updated**: August 21, 2025  
 **Architecture**: Core + Weak Dependencies with Package Extensions
 
 ## Current Dependency Architecture
 
-GlobTim uses Julia's modern weak dependency system (Julia 1.9+) with package extensions for conditional loading of optional features.
+Globtim uses Julia's modern weak dependency system (Julia 1.9+) with package extensions for conditional loading of optional features.
 
 ### Core Dependencies (Always Loaded)
 
@@ -16,50 +16,37 @@ Core dependencies are always loaded when `using Globtim` is executed. These pack
 - **ForwardDiff** (v0.10): Automatic differentiation for gradient and Hessian computations
 - **HomotopyContinuation** (v2.15): Polynomial system solving for critical point finding
 - **LinearAlgebra**: Standard library for matrix operations
+- **LinearSolve** (v3.25): Linear system solving
 - **MultivariatePolynomials** (v0.5): Abstract interface for polynomial systems
+- **Optim** (v1.13): BFGS optimization for critical point refinement
+- **PolyChaos** (v0.2.11): Polynomial chaos expansion utilities
 - **StaticArrays** (v1.9): Performance-critical array operations
 - **Statistics**: Standard library for statistical functions
+- **StatsBase** (v0.34): Statistical utilities
 - **Random**: Standard library for random number generation
 
-#### Computational Utilities
-- **SpecialFunctions** (v2.4): Mathematical special functions
-- **LinearSolve** (v3.25): Linear system solving
-- **PolyChaos** (v0.2.11): Polynomial chaos expansion utilities
-
-#### Essential Data Processing
+#### Data Processing & I/O
+- **CSV** (v0.10): CSV file reading/writing for data import/export
+- **ConstructionBase** (v1): Type construction utilities
 - **DataFrames** (v1.6): Critical point analysis and result organization
-- **DataStructures** (v0.18): Advanced data structures
-- **IterTools** (v1.10): Iteration utilities
-- **Optim** (v1.13): BFGS optimization for critical point refinement
-- **Parameters** (v0.12): Type-safe parameter handling
+- **DrWatson** (v2.19): Scientific project management and data handling
+- **JLD2** (v0.6): Julia data file format for saving/loading results
+- **JSON** (v0.21): JSON parsing and generation
+- **JSON3** (v1.14): High-performance JSON handling
 
 #### Monitoring and Utilities
-- **TimerOutputs** (v0.5): Performance monitoring throughout the package
 - **Dates**: Standard library for timestamp handling
-- **ProgressLogging** (v0.1): Progress reporting
+- **Logging**: Standard library for logging
+- **Printf**: Standard library for formatted output
+- **TimerOutputs** (v0.5): Performance monitoring throughout the package
+- **TOML** (v1): Configuration file parsing
 
 ### Weak Dependencies (Conditional Loading)
 
 Weak dependencies are only loaded when explicitly imported by the user and when the corresponding package is available.
 
-#### Visualization (Optional)
-- **CairoMakie** (v0.11): Static plotting backend
-- **GLMakie** (v0.9): Interactive 3D plotting backend
-- **Makie** (v0.20): Core plotting interface
-- **Colors** (v0.12): Color manipulation for plots
-
-#### Data I/O (Optional)
-- **CSV** (v0.10): CSV file reading/writing for data import/export
-
-#### Advanced Analysis (Optional)
-- **Clustering** (v0.15): K-means clustering for critical point analysis
-- **Distributions** (v0.25): Statistical distributions for uncertainty quantification
-
-#### Development Tools (Optional)
-- **JuliaFormatter** (v1.0): Code formatting for development
-- **SHA** (v0.7.0): Hash functions for utility operations
-- **TOML** (v1): Configuration file parsing
-- **UUIDs** (v1.11.0): UUID generation utilities
+#### GPU Acceleration (Optional)
+- **CUDA** (v5): GPU acceleration for polynomial evaluation
 
 ## Package Extensions
 
@@ -67,25 +54,9 @@ Package extensions provide conditional functionality that is only available when
 
 ### Extension Modules
 
-#### GlobtimCairoMakieExt
-- **Trigger**: Loading `CairoMakie`
-- **Functions**: Static plotting functions for polynomial approximations and level sets
-
-#### GlobtimGLMakieExt  
-- **Trigger**: Loading `GLMakie`
-- **Functions**: Interactive 3D plotting, animations, and real-time visualization
-
-#### GlobtimDataExt
-- **Trigger**: Loading `CSV`
-- **Functions**: CSV data import/export utilities
-
-#### GlobtimAnalysisExt
-- **Trigger**: Loading both `Clustering` and `Distributions`
-- **Functions**: Advanced statistical analysis and clustering methods
-
-#### GlobtimDevExt
-- **Trigger**: Loading `JuliaFormatter`
-- **Functions**: Development workflow utilities
+#### GlobtimCUDAExt
+- **Trigger**: Loading `CUDA`
+- **Functions**: GPU-accelerated polynomial evaluation and grid operations
 
 ### Extension Usage Pattern
 
@@ -95,13 +66,9 @@ using Globtim
 TR = TestInput(camel, dim=2)
 pol = Constructor(TR, 8)
 
-# Optional plotting - only if CairoMakie is available
-using CairoMakie
-plot_convergence_analysis(results)  # Now available via extension
-
-# Optional data export - only if CSV is available  
-using CSV
-export_results_csv(results, "output.csv")  # Now available via extension
+# Optional GPU acceleration - only if CUDA is available
+using CUDA
+Globtim.gpu_available()  # Now available via extension
 ```
 
 ## Design Rationale
@@ -125,14 +92,14 @@ export_results_csv(results, "output.csv")  # Now available via extension
 - Used only through extensions or optional functions
 - Provide supplementary functionality
 - Can be conditionally loaded
-- Examples: CairoMakie, CSV, Clustering
+- Examples: CUDA
 
 ## Migration History
 
 The package was migrated from a monolithic dependency structure to the current weak dependency system in August 2025:
 
 - **Before**: 33 direct dependencies, all loaded at startup
-- **After**: 18 core dependencies + 8 weak dependencies with extensions
+- **After**: Core dependencies + 1 weak dependency (CUDA) with extension
 - **Benefits**: Faster startup, better HPC compatibility, modular functionality
 
 ## Usage Guidelines
@@ -146,18 +113,11 @@ using Globtim
 # No plotting or advanced analysis
 ```
 
-#### With Plotting
+#### With GPU Acceleration
 ```julia
 using Globtim
-using CairoMakie  # or GLMakie for 3D
-# Plotting functions now available via extensions
-```
-
-#### Full Functionality
-```julia
-using Globtim
-using CairoMakie, CSV, Clustering, Distributions
-# All functionality available
+using CUDA  # GPU extension loaded automatically
+Globtim.gpu_available()
 ```
 
 ### For Developers

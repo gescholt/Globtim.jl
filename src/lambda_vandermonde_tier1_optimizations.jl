@@ -1,5 +1,5 @@
 # lambda_vandermonde_tier1_optimizations.jl
-# Tier 1 Performance Optimizations for Vandermonde Matrix Construction (Issue #202)
+# Tier 1 Performance Optimizations for Vandermonde Matrix Construction
 #
 # This file contains progressive optimizations to the tensorized Vandermonde implementation:
 # 1. Loop Reordering: Column-major traversal for better cache locality

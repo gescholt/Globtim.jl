@@ -1,7 +1,11 @@
 #!/usr/bin/env julia
+# NOTE: These tests require specific HPC environment configuration. See ENV vars below.
+#
+# Required ENV variables:
+#   GLOBTIM_HPC_HOST (used for environment-sensitive test behavior)
 """
 Monitoring Test Suite Runner
-GlobTim Project - Issue #55 - Comprehensive Monitoring Test Suite
+Globtim Project - Comprehensive Monitoring Test Suite
 
 Purpose: Master test runner for all monitoring workflow variable scope tests
 Integrates all monitoring test suites and provides comprehensive coverage
@@ -14,7 +18,6 @@ Test Suite Organization:
 5. Performance benchmarking
 6. Cross-environment compatibility
 
-Author: Julia Test Architect Agent
 Date: September 9, 2025
 """
 
@@ -23,7 +26,7 @@ using Pkg
 using Dates
 
 println("="^80)
-println("GlobTim Monitoring Test Suite - Issue #55 Variable Scope Testing")
+println("Globtim Monitoring Test Suite - Variable Scope Testing")
 println("="^80)
 println("Purpose: Comprehensive testing for monitoring workflow variable scope issues")
 println("Critical: Prevents variable scope errors that cause monitoring failures")
@@ -49,7 +52,7 @@ println()
 test_results = Dict{String, Any}()
 test_start_time = now()
 
-@testset "GlobTim Monitoring Variable Scope Tests - Issue #55" begin
+@testset "Globtim Monitoring Variable Scope Tests" begin
 
     @testset "Core Variable Scope Detection" begin
         println("🔍 Running Core Variable Scope Tests...")
@@ -197,7 +200,8 @@ test_start_time = now()
 
                 # Performance tests may be environment-sensitive
                 # Allow them to fail without failing the entire suite in CI/HPC environments
-                if get(ENV, "CI", "false") == "true" || occursin("r04n02", gethostname())
+                hpc_host = get(ENV, "GLOBTIM_HPC_HOST", "")
+                if get(ENV, "CI", "false") == "true" || (!isempty(hpc_host) && occursin(hpc_host, gethostname()))
                     println(
                         "⚠️  Performance test failure in CI/HPC environment - continuing"
                     )
@@ -239,7 +243,7 @@ total_test_duration = test_end_time - test_start_time
 
 # Generate comprehensive test report
 println("\n" * "="^80)
-println("MONITORING TEST SUITE RESULTS - Issue #55")
+println("MONITORING TEST SUITE RESULTS")
 println("="^80)
 
 # Summary statistics
@@ -283,9 +287,9 @@ for (test_name, result) in test_results
     end
 end
 
-# Issue #55 specific analysis
+# Variable scope analysis
 println("\n" * "="^50)
-println("ISSUE #55 ANALYSIS:")
+println("VARIABLE SCOPE ANALYSIS:")
 println("="^50)
 
 println("\n🎯 VARIABLE SCOPE ISSUE DETECTION:")
@@ -317,7 +321,7 @@ else
     println("  ❌ Import dependency validation framework failed")
 end
 
-# Success criteria for Issue #55
+# Success criteria for monitoring variable scope
 success_criteria = [
     ("Variable scope detection", test_results["variable_scope"]["status"] == "passed"),
     ("Import validation", test_results["import_dependencies"]["status"] == "passed"),
@@ -330,7 +334,7 @@ success_criteria = [
 critical_success = all(criterion[2] for criterion in success_criteria)
 
 if critical_success
-    println("\n🎉 SUCCESS: Issue #55 monitoring framework is operational!")
+    println("\n🎉 SUCCESS: Monitoring variable scope framework is operational!")
     println("   All critical variable scope detection capabilities are working")
     println("   Framework ready to prevent monitoring failures in production")
 else
@@ -363,7 +367,7 @@ if skipped_tests > 0
 end
 
 println("\n🔗 INTEGRATION STATUS:")
-println("  ✅ Test framework integrated with existing GlobTim test structure")
+println("  ✅ Test framework integrated with existing Globtim test structure")
 println("  ✅ Cross-platform compatibility validated")
 println("  ✅ HPC environment simulation included")
 println("  ✅ Performance benchmarking framework established")
@@ -374,10 +378,10 @@ overall_success = critical_success && (failed_tests == 0)
 println("\n" * "="^80)
 if overall_success
     println("🏆 MONITORING TEST SUITE: COMPLETE SUCCESS")
-    println("   Issue #55 variable scope monitoring framework fully operational")
+    println("   Variable scope monitoring framework fully operational")
 else
     println("⚠️  MONITORING TEST SUITE: REQUIRES ATTENTION")
-    println("   Issue #55 framework partially operational - address failures")
+    println("   Variable scope framework partially operational - address failures")
 end
 println("="^80)
 

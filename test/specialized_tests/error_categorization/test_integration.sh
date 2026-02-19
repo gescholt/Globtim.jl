@@ -1,9 +1,16 @@
 #!/bin/bash
-
+# NOTE: This test requires experiment output data. See test_data_integration/ directory.
+#
 # Integration Test Suite for Error Categorization System
 # Tests integration with collect_cluster_experiments.jl and real experiment data
 
 set -euo pipefail
+
+# Timeout: kill this script if it runs longer than 120 seconds
+TIMEOUT_SECONDS="${GLOBTIM_TEST_TIMEOUT:-120}"
+( sleep "${TIMEOUT_SECONDS}" && echo "ERROR: Test timed out after ${TIMEOUT_SECONDS}s" >&2 && kill -TERM $$ 2>/dev/null ) &
+TIMEOUT_PID=$!
+trap 'kill ${TIMEOUT_PID} 2>/dev/null' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 PROJECT_DIR="${SCRIPT_DIR}/../.."
@@ -449,7 +456,7 @@ EOF
 # Main test execution
 main() {
     echo "=== Error Categorization Integration Test Suite ==="
-    echo "Issue #37: Enhanced Experiment Error Categorization System"
+    echo "Enhanced Experiment Error Categorization System"
     echo
 
     setup_test_env
@@ -472,11 +479,11 @@ main() {
 
     if [[ $TESTS_FAILED -eq 0 ]]; then
         echo -e "${GREEN}🎉 All integration tests passed!${NC}"
-        echo "Issue #37 implementation is ready for production use."
+        echo "Error categorization implementation is ready for production use."
         exit 0
     else
         echo -e "${RED}❌ Some integration tests failed!${NC}"
-        echo "Fix the failing tests before deploying Issue #37."
+        echo "Fix the failing tests before deploying error categorization."
         exit 1
     fi
 }

@@ -4,7 +4,7 @@ Error Categorization Module for Globtim.jl
 This module provides comprehensive error categorization, classification, and analysis
 capabilities for systematic distinction between interface bugs and mathematical failures.
 
-Created for Issue #37: Enhanced Experiment Error Categorization System
+Provides systematic distinction between interface bugs and mathematical failures.
 """
 
 module ErrorCategorization

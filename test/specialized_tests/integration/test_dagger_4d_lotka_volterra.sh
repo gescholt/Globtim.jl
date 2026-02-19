@@ -1,11 +1,18 @@
 #!/bin/bash
+# NOTE: This test requires a configured HPC environment with Dagger.jl support.
+#
 # Test Suite: 4D Lotka-Volterra with Dagger.jl Default Execution
-# Issue #48: Design Dagger.jl Integration with Existing Hook Orchestrator System
 #
 # Validates that Dagger.jl is the default execution method for 4D experiments
 # and provides comprehensive tracking capabilities for Lotka-Volterra parameter estimation
 
 set -euo pipefail
+
+# Timeout: kill this script if it runs longer than 600 seconds (10 min)
+TIMEOUT_SECONDS="${GLOBTIM_TEST_TIMEOUT:-600}"
+( sleep "${TIMEOUT_SECONDS}" && echo "ERROR: Test timed out after ${TIMEOUT_SECONDS}s" >&2 && kill -TERM $$ 2>/dev/null ) &
+TIMEOUT_PID=$!
+trap 'kill ${TIMEOUT_PID} 2>/dev/null' EXIT
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -201,7 +208,7 @@ println("🧪 4D Lotka-Volterra Dagger Test Started")
 println("Julia Version: $(VERSION)")
 println("Globtim loaded successfully")
 
-# Reduced test parameters (Issue #70 safe parameters)
+# Reduced test parameters (safe parameters for testing)
 GN = 6  # samples per dimension (safer than 12)
 domain_range = 0.05  # small domain for testing
 degrees = [6]  # single degree for quick test
@@ -429,7 +436,7 @@ main() {
 
     if run_4d_dagger_test; then
         print_test_summary
-        log_success "🎯 Issue #48 test validation completed successfully"
+        log_success "🎯 Dagger 4D test validation completed successfully"
         echo -e "${BOLD}${GREEN}✅ Dagger.jl is now the default for 4D experiments with excellent tracking capabilities${NC}"
         return 0
     else

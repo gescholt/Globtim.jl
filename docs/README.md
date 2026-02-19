@@ -12,14 +12,8 @@ Welcome to the comprehensive documentation for Globtim.jl - a Julia package for 
 - **[Precision Parameters](src/precision_parameters.md)** - Comprehensive guide to precision types and performance trade-offs
 
 ### For Developers
-- **[Development Guide](../DEVELOPMENT_GUIDE.md)** - Setup and contribution workflow
-- **[Package Dependencies](../PACKAGE_DEPENDENCIES.md)** - Complete dependency architecture and extension system
-- **[Project Management](project-management/)** - GitLab workflow and sprint process
-
-### For Contributors
-- **[Feature Roadmap](features/roadmap.md)** - Current and planned features
-- **[Development Patterns](development/)** - Implementation guidelines
-- **[Project Management](project-management/)** - Issue tracking and sprint planning
+- **[Package Dependencies](development/PACKAGE_DEPENDENCIES.md)** - Dependency architecture and extension system
+- **[Development Documentation](development/)** - Implementation guidelines and architecture
 
 ## 📚 Documentation Categories
 
@@ -38,33 +32,16 @@ The main user-facing documentation built with Documenter.jl:
 - **[Sparsification](src/sparsification.md)** - Polynomial complexity reduction
 - **[Grid Formats](src/grid_formats.md)** - Sampling grid specifications
 
-### Feature Documentation (`features/`)
-Detailed information about Globtim.jl capabilities:
-
-- **[Feature Roadmap](features/roadmap.md)** - Development status and future plans
-- **[Plotting Backends](features/plotting-backends.md)** - CairoMakie vs GLMakie usage
-
 ### Development Documentation (`development/`)
 Technical implementation details and development guides:
 
-- **[Implementation Roadmap](development/implementation_roadmap.md)**
-- **[Anisotropic Grid Integration](development/anisotropic_integration_roadmap.md)**
-- **[Extended Precision Implementation](development/extended_precision_implementation_plan.md)**
-- **[Test Coverage Matrix](development/test_coverage_matrix.md)**
-- **[Type Analysis Plan](development/type_analysis_plan.md)**
-
-### Project Management (`project-management/`)
-Workflow, processes, and project organization:
-
-- **[Overview](project-management/README.md)** - Quick reference and daily commands
-- **[GitLab Workflow](project-management/gitlab-workflow.md)** - Repository management and CI/CD
-- **[Sprint Process](project-management/sprint-process.md)** - Agile development process
-- **[Task Management](project-management/task-management.md)** - Issue tracking and epic management
-
-### HPC Documentation (`hpc/`)
-High-performance computing specific guides:
-
-- **[HPC Precision Optimization](hpc/precision_optimization_guide.md)** - Precision parameter recommendations for cluster usage
+- **[Package Dependencies](development/PACKAGE_DEPENDENCIES.md)** - Dependency architecture
+- **[Package Architecture Guidelines](development/PACKAGE_ARCHITECTURE_GUIDELINES.md)** - Architecture patterns
+- **[Conditional Loading](development/CONDITIONAL_LOADING_NO_FALLBACKS.md)** - No-fallback loading rules
+- **[Circular Dependency Prevention](development/CIRCULAR_DEPENDENCY_PREVENTION_RULES.md)** - Dependency rules
+- **[PolyVar Import Solution](development/POLYVAR_IMPORT_SOLUTION.md)** - DynamicPolynomials import patterns
+- **[ODE Warning Suppression](development/ODE_WARNING_SUPPRESSION.md)** - Warning handling
+- **[Warning Catalog](development/WARNING_CATALOG.md)** - Known warnings reference
 
 ### User Guides (`user_guides/`)
 Specialized guides for advanced usage:
@@ -72,13 +49,7 @@ Specialized guides for advanced usage:
 - **[Anisotropic Lambda Vandermonde](user_guides/anisotropic_lambda_vandermonde.md)**
 - **[Grid-Based MainGen](user_guides/grid_based_maingen.md)**
 
-### Archive (`archive/`)
-Historical documentation preserved for reference:
-
-- **[Archive Overview](archive/README.md)** - What's archived and why
-- Historical analysis documents and superseded documentation
-
-## 🎯 Documentation by Use Case
+## Documentation by Use Case
 
 ### I want to...
 
@@ -90,10 +61,8 @@ Historical documentation preserved for reference:
 5. Understand the [Core Algorithm](src/core_algorithm.md)
 
 #### **Contribute to Globtim.jl development**
-1. Read the [Development Guide](../DEVELOPMENT_GUIDE.md)
-2. Review [GitLab Workflow](project-management/gitlab-workflow.md)
-3. Check [Feature Roadmap](features/roadmap.md) for priorities
-4. Follow [Task Management](project-management/task-management.md) process
+1. Review [Development Documentation](development/) for guidelines
+2. Check [Package Dependencies](development/PACKAGE_DEPENDENCIES.md) for architecture
 
 #### **Understand the mathematical approach**
 1. Read [Core Algorithm](src/core_algorithm.md)
@@ -103,14 +72,12 @@ Historical documentation preserved for reference:
 
 #### **Create visualizations**
 1. Review [GlobtimPlots](src/globtimplots.md) guide
-2. Check [Plotting Backends](features/plotting-backends.md) for setup
-3. Study [Examples](src/examples.md) for plotting code
+2. Study [Examples](src/examples.md) for plotting code
 
 #### **Optimize performance**
 1. Learn [Precision Parameters](src/precision_parameters.md) for performance tuning
 2. Review [Sparsification](src/sparsification.md) techniques
-3. Check [HPC Precision Optimization](hpc/precision_optimization_guide.md) for cluster usage
-4. Study performance examples in [Examples](src/examples.md)
+3. Study performance examples in [Examples](src/examples.md)
 
 ## 🔧 Building Documentation
 
@@ -139,28 +106,24 @@ julia -e "using LiveServer; serve(dir=\"build\")"
 
 | Category | Status | Last Updated |
 |----------|--------|--------------|
-| Core Documentation | ✅ Complete | 2025-01 |
-| API Reference | ✅ Complete | 2025-01 |
-| Examples | ✅ Complete | 2025-01 |
-| Development Guides | ✅ Complete | 2025-01 |
-| Project Management | ✅ Complete | 2025-01 |
-| Feature Documentation | ✅ Complete | 2025-01 |
-| User Guides | 🟡 Partial | 2024-12 |
-| Advanced Topics | 🔴 Planned | TBD |
+| Core Documentation | Complete | 2025-01 |
+| API Reference | Complete | 2025-01 |
+| Examples | In Progress | 2025-01 |
+| Development Guides | Complete | 2025-01 |
+| User Guides | Partial | 2024-12 |
 
 ## 🤝 Contributing to Documentation
 
 ### Reporting Issues
-- Use GitLab issues with `Type::Documentation` label
+- Use GitHub Issues with `documentation` label
 - Specify which document and section needs improvement
 - Provide suggestions for improvement
 
 ### Contributing Changes
-1. Follow [GitLab Workflow](project-management/gitlab-workflow.md)
-2. Create feature branch for documentation changes
-3. Update relevant documentation files
-4. Test documentation builds locally
-5. Submit merge request with clear description
+1. Create a feature branch for documentation changes
+2. Update relevant documentation files
+3. Test documentation builds locally
+4. Submit a pull request with clear description
 
 ### Documentation Standards
 - Use clear, concise language

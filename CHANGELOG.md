@@ -4,20 +4,20 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [2.0.0] - 2025-12-18
 
-### Major Release: globtimcore Integration
+### Major Release: Globtim Integration
 
-This is a major release that replaces the previous Globtim implementation with globtimcore, bringing significant architectural improvements and new features.
+This is a major release with significant architectural improvements and new features.
 
 ### ⚡ Phase 2 - Refinement Migration (November 23, 2025) - BREAKING CHANGES
 
 **Status**: ✅ **COMPLETE** - All tests passing, Aqua.jl quality checks passing
 
-**Branch**: `claude/globtimcore-phase-2-01HFUkR2hn4nWUZQNkoDvVB3`
+**Branch**: `phase-2-refinement-migration`
 **Commits**: `44c601a` → `99e46c0` (6 commits)
 **Documentation**: `PHASE2_COMPLETION_SUMMARY.md`
 
 #### Overview
-Major architectural change removing all critical point refinement from globtimcore. Refinement is now handled by the globtimpostprocessing package as a separate post-processing step. This eliminates circular dependencies and simplifies the package architecture.
+Major architectural change removing all critical point refinement from Globtim. Refinement is now handled by the globtimpostprocessing package as a separate post-processing step. This eliminates circular dependencies and simplifies the package architecture.
 
 #### Breaking Changes
 
@@ -85,7 +85,7 @@ result_refined = refine_experiment_results(
    - Removed undefined exports
    - Added missing compat entries for Dynamic_objectives and Logging
 
-5. **99e46c0** - Critical Bug Fixes (User Contribution by @ghscholt)
+5. **99e46c0** - Critical Bug Fixes
    - **Circular Dependency**: Removed Dynamic_objectives from dependencies
    - **UnionAll Handling**: Fixed function signature detection for generic functions
    - **DataFrame Constructor**: Fixed MethodError in CSV export
@@ -94,7 +94,7 @@ result_refined = refine_experiment_results(
 
 **✅ Benefits**:
 - Eliminates circular dependencies (Globtim ↔ Dynamic_objectives)
-- Simplifies globtimcore (-606 lines of code)
+- Simplifies Globtim (-606 lines of code)
 - Clear separation of computation and post-processing
 - Enables independent development of refinement strategies
 - All tests passing (131 tests)
@@ -179,7 +179,7 @@ Total:                    131/131 passing ✅
 - **Deployment Script Deprecation**: Added clear deprecation notices to `submit_minimal_job.sh`, `submit_hpc_jobs.sh`, and `run_custom_hpc_test.sh` with guidance to use `robust_experiment_runner.sh`
 - **Template Cleanup**: Deprecated `globtim_custom.slurm.template` with legacy cluster designation
 - **Error Resolution**: Eliminated SLURM parsing errors ("i: command not found", "point: command not found", "value: command not found") from job logs
-- **Direct Execution Migration**: All active scripts now use tmux-based direct execution on r04n02, no functional SLURM dependencies remain
+- **Direct Execution Migration**: All active scripts now use tmux-based direct execution on compute nodes, no functional SLURM dependencies remain
 - **User Experience**: Clear guidance provided for users to migrate from legacy SLURM workflows to modern direct execution patterns
 
 ### 🚨 Package Management & Resource Issues RESOLVED (September 8, 2025)
@@ -191,7 +191,7 @@ Total:                    131/131 passing ✅
 - **Impact Resolution**: No longer blocks mathematical operations, all 4D Lotka-Volterra computations operational
 
 ### 🏆 HPC Hook System Integration SUCCESSFULLY RESOLVED (September 8, 2025)
-- **✅ ISSUE #58 CLOSED**: Complete resolution of all HPC Hook System failures on r04n02 node
+- **✅ ISSUE #58 CLOSED**: Complete resolution of all HPC Hook System failures on compute node
 - **Production Validation**: Full orchestrated pipeline completing successfully with proper lifecycle state transitions
 - **Lifecycle Manager Resolution**: Fixed invalid phase transition errors - proper initialization → validation → preparation → execution → monitoring → completion flow operational
 - **Environment-Aware Path Translation**: Hook orchestrator automatically translates paths between macOS development and HPC production environments
@@ -204,7 +204,7 @@ Total:                    131/131 passing ✅
 - **Result**: Strategic hook integration foundation fully operational and production-ready
 
 ### 🎨 Plotting System Resolution (September 7, 2025)
-- **GLMakie Extension Fully Resolved**: Complete resolution of all plotting functionality issues (GitLab #45)
+- **GLMakie Extension Fully Resolved**: Complete resolution of all plotting functionality issues
 - **Deuflhard Notebook Fix**: Resolved plotting function call requiring module prefix `Globtim.cairo_plot_polyapprox_levelset()`
 - **Documentation Updates**: Updated plotting backend documentation with proper usage patterns and module prefixes
 - **Contour Plot Functionality**: Confirmed CairoMakie plotting generates contour plots with critical points and minimizers
@@ -218,14 +218,14 @@ Total:                    131/131 passing ✅
 ### 🎯 PHASE 4: Advanced Project Management & Mathematical Refinement (September 1, 2025)
 - **Task Extraction Milestone Achieved**: Successfully extracted and classified 1,168 tasks from entire repository
 - **Comprehensive Task Analysis**: Automated categorization by status (1,033 not started, 113 completed, 21 in progress), priority (28 Critical, 18 High, 1,064 Medium, 58 Low), and epic classification
-- **GitLab Integration Preparation**: Tasks structured for deployment to GitLab visual tracking system with project boards and milestone management
+- **Issue Tracking Preparation**: Tasks structured for deployment to visual tracking system with project boards and milestone management
 - **Project Management Advancement**: Transitioned from infrastructure focus to advanced workflow management and mathematical algorithm excellence
 - **Epic Classification Complete**: Tasks organized across 7 major epics (mathematical-core, performance, test-framework, HPC deployment, visualization, documentation, advanced features)
 
-### 🚀 MAJOR INFRASTRUCTURE MODERNIZATION: Direct r04n02 Compute Node Access (September 1, 2025)
+### 🚀 MAJOR INFRASTRUCTURE MODERNIZATION: Direct Compute Node Access (September 1, 2025)
 - **Infrastructure Migration Completed**: Successfully migrated from legacy NFS-constrained workflow to direct HPC compute node access
-- **Direct SSH Access**: r04n02 compute node connection established and verified with SSH key authentication
-- **GitLab Integration**: Full Git operations working on compute node, repository cloned at `/tmp/globtim/`
+- **Direct SSH Access**: Compute node connection established and verified with SSH key authentication
+- **Git Integration**: Full Git operations working on compute node, repository cloned at `/tmp/globtim/`
 - **Security Hardening**: Implemented SSH key auth, workspace isolation, resource constraints, and principle of least privilege
 - **HPC Agent Modernized**: Updated `.claude/agents/hpc-cluster-operator.md` for dual workflow support (direct + legacy)
 - **Migration Documentation**: Created comprehensive `HPC_DIRECT_NODE_MIGRATION_PLAN.md` with complete implementation roadmap

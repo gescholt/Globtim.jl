@@ -1,5 +1,5 @@
 """
-DefensiveCSV Module - Issue #79 Implementation
+DefensiveCSV Module
 
 Provides defensive CSV loading functionality with comprehensive error boundaries
 for production HPC deployment and dashboard integration.
@@ -118,7 +118,7 @@ function defensive_csv_read(file_path::String;
             end
         end
 
-        # 5. Interface issue detection (Issue #79 specific)
+        # 5. Interface issue detection
         if detect_interface_issues
             # Check for common column naming issues
             if "val" in names(df) && !("z" in names(df))

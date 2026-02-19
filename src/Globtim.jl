@@ -216,7 +216,7 @@ include("l2_norm.jl") #measure error of approx.
 include("ApproxConstruct.jl") #construct Vandermonde like matrix.
 include("lambda_vandermonde_anisotropic.jl") # Enhanced anisotropic grid support
 include("lambda_vandermonde_tensorized.jl") # Optimized tensor-product grid support
-include("lambda_vandermonde_tier1_optimizations.jl") # Tier 1 performance optimizations (Issue #202)
+include("lambda_vandermonde_tier1_optimizations.jl") # Tier 1 performance optimizations
 include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
@@ -241,7 +241,7 @@ include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
-include("EnhancedMetrics.jl") #Enhanced statistics collection (Issue #128)
+include("EnhancedMetrics.jl") #Enhanced statistics collection
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
@@ -296,7 +296,7 @@ export discrete_l2_norm_riemann
 # Phase 2: Hessian analysis functions - only export main functions
 export compute_hessians, classify_critical_points, compute_eigenvalue_stats
 
-# Issue #128: Enhanced metrics collection - export module
+# Enhanced metrics collection - export module
 export EnhancedMetrics
 # Internal Hessian analysis helpers - not exported
 # export store_all_eigenvalues,
@@ -458,14 +458,14 @@ export @polyvar
 # Export polynomial import utilities
 export setup_polyvar, ensure_polyvar, create_polynomial_vars, test_polyvar_availability
 
-# ModelRegistry - centralized model indexing (Issue #191)
+# ModelRegistry - centralized model indexing
 include("ModelRegistry.jl")
 using .ModelRegistry
 
 # Export ModelRegistry types and functions
 export ModelInfo, get_model, list_models, validate_model_name, get_model_function, register_model!
 
-# PathManager - unified path management (Issue #192)
+# PathManager - unified path management
 include("PathManager.jl")
 using .PathManager
 
@@ -479,7 +479,7 @@ export PathConfig, reset_config!,
     ensure_directory, with_project_root,
     register_experiment, update_experiment_progress, finalize_experiment
 
-# Advanced Interactive Visualization Functions (Issue #50) - Core analysis
+# Advanced Interactive Visualization Functions - Core analysis
 # Visualization exports removed - all plotting functionality moved to GlobtimPlots package
 # For visualization, use: using GlobtimPlots
 # See docs/VISUALIZATION.md for complete migration guide
@@ -505,11 +505,11 @@ using .ExperimentCLI
 # Export ExperimentCLI types and functions (enables `using Globtim: ExperimentParams`)
 export ExperimentParams, parse_experiment_args, validate_params
 
-# TOML experiment pipeline configuration (bead 70e)
+# TOML experiment pipeline configuration
 include("config_loader.jl")
 export ExperimentPipelineConfig, load_experiment_config, config_to_experiment_params
 
-# ErrorCategorization - systematic error analysis (Issue #37)
+# ErrorCategorization - systematic error analysis
 # Note: ErrorCategorization.jl is already included by validation.jl (line 36)
 using .ErrorCategorization
 

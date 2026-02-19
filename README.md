@@ -171,8 +171,6 @@ refined = refine_experiment_results(
 
 Install: `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")`
 
-See [Examples/POST_PROCESSING_GUIDE.md](Examples/POST_PROCESSING_GUIDE.md) for detailed workflow.
-
 ### GlobtimPlots - Visualization
 
 Creates publication-quality figures and interactive visualizations from globtim and GlobtimPostProcessing results.
@@ -202,7 +200,6 @@ save("convergence.pdf", fig)
 - Convergence analysis plots (L2 error vs degree)
 - Critical point scatter and Hessian eigenvalue plots
 - Campaign comparison across experiments
-- RL training dashboards and policy evolution
 - Subdivision tree visualization
 - 1D polynomial approximation plots
 - Animation generation (flyover, rotation)
@@ -223,11 +220,7 @@ Globtim.jl/
 │   └── ...
 │
 ├── ext/                          # Package extensions
-│   ├── GlobtimCUDAExt.jl        # GPU acceleration
-│   └── GlobtimAnalysisExt.jl    # Clustering/statistics
-│
-├── Examples/                     # Usage examples
-│   └── Notebooks/               # Jupyter notebooks
+│   └── GlobtimCUDAExt.jl        # GPU acceleration
 │
 ├── test/                         # Test suite
 └── docs/                         # Documentation

@@ -357,7 +357,7 @@ end
     mean::Float64 = 0.0,
     stddev::Float64 = 5.0
 )
-    noise = rand(Distributions.Normal(mean, stddev))
+    noise = randn() * stddev + mean
     return Deuflhard(xx) + noise
 end
 

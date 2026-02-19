@@ -1,7 +1,7 @@
 # lambda_vandermonde_tensorized.jl
 # Optimized Vandermonde matrix construction for tensor-product grids
 # Eliminates dictionary lookup bottleneck by exploiting grid structure
-# Includes Tier 1 Optimization #2 from Issue #202: Chebyshev recurrence relation
+# Includes Tier 1 Optimization: Chebyshev recurrence relation
 
 """
     lambda_vandermonde_tensorized(Lambda::NamedTuple, S::Matrix{T};
@@ -18,7 +18,7 @@ For a tensor-product grid with GN points per dimension in n dimensions:
 - Grid point at row i corresponds to multi-index (i₁, i₂, ..., iₙ)
 - Each iₖ can be computed directly: iₖ = ((i-1) ÷ GN^(k-1)) % GN + 1
 - This eliminates all dictionary lookups (0 lookups vs N×m lookups in original)
-- Multi-threading parallelizes computation across columns (Issue #202 Tier 1 Opt #3)
+- Multi-threading parallelizes computation across columns
 
 # Performance
 - Original: ~240 ns per dictionary lookup
@@ -113,18 +113,18 @@ function lambda_vandermonde_tensorized(
             if T <: Rational || T <: Integer
                 # Exact computation using recurrence
                 if d == 1  # Log only once per call
-                    @debug "  🚀 Chebyshev evaluation: Using EXACT recurrence (Rational/Integer type)"
+                    @debug "  Chebyshev evaluation: using exact recurrence (Rational/Integer type)"
                 end
                 for degree in 0:max_degrees[d]
                     eval_cache_per_dim[d][degree] =
                         T[chebyshev_value_exact(degree, T(pt)) for pt in unique_points]
                 end
             else
-                # OPTIMIZATION #2 (Issue #202): Use recurrence relation instead of trig functions
+                # OPTIMIZATION: Use recurrence relation instead of trig functions
                 # Avoids expensive acos/cos calls by computing T_n(x) = 2x·T_{n-1}(x) - T_{n-2}(x)
                 # Expected speedup: 1.3x
                 if d == 1  # Log only once per call
-                    @debug "  🚀 Chebyshev evaluation: Using OPTIMIZED recurrence (Float type) - Issue #202 Tier 1 Opt #2"
+                    @debug "  Chebyshev evaluation: using optimized recurrence (Float type)"
                 end
 
                 # Pre-allocate all degree vectors
@@ -171,7 +171,7 @@ function lambda_vandermonde_tensorized(
     # Build Vandermonde matrix using direct array indexing
     # Key optimization: Pre-compute point indices for all (i, k) pairs ONCE
     # This eliminates dictionary lookups from the hot inner loop
-    @debug "  📊 Pre-computing point indices matrix ($n_points × $n_dim = $(n_points * n_dim) lookups)..."
+    @debug "  Pre-computing point indices matrix ($n_points × $n_dim = $(n_points * n_dim) lookups)..."
     point_indices_matrix = zeros(Int, n_points, n_dim)
     for i in 1:n_points
         for k in 1:n_dim
@@ -179,12 +179,12 @@ function lambda_vandermonde_tensorized(
             point_indices_matrix[i, k] = point_to_index_per_dim[k][point]
         end
     end
-    @debug "  ✓ Point indices matrix computed"
+    @debug "  Point indices matrix computed"
 
-    # Multi-threaded computation (Tier 1 Optimization #3 from Issue #202)
+    # Multi-threaded computation (Tier 1 Optimization #3)
     # Parallelizes computation across columns (j) for 4-5x speedup
     # Uses column-major traversal to match Julia's memory layout
-    @debug "  🔄 Computing Vandermonde matrix ($n_points × $m) with $(Threads.nthreads()) threads..."
+    @debug "  Computing Vandermonde matrix ($n_points × $m) with $(Threads.nthreads()) threads..."
     Threads.@threads for j in 1:m
         for i in 1:n_points
             P = one(T)
@@ -196,7 +196,7 @@ function lambda_vandermonde_tensorized(
             V[i, j] = P
         end
     end
-    @debug "  ✓ Vandermonde matrix computed"
+    @debug "  Vandermonde matrix computed"
 
     return V
 end

@@ -1,13 +1,13 @@
 """
-TOML Experiment Configuration Loader (Bead 70e)
+TOML Experiment Configuration Loader
 
 Parses TOML config files into `ExperimentPipelineConfig` for use with
-`run_standard_experiment()` and the Dynamic_objectives orchestrator.
+`run_standard_experiment()` and external ODE orchestrators.
 
-This module lives in Globtim (no Dynamic_objectives dependency).
-ODE-specific orchestration lives in Dynamic_objectives/src/globtim_integration.jl.
+This module lives in Globtim with no external dependencies.
+ODE-specific orchestration is handled by downstream packages.
 
-Created: 2026-02-09 (Bead 70e — Unified TOML Experiment Pipeline)
+Created: 2026-02-09
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════

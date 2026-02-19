@@ -1,7 +1,7 @@
 """
 EnhancedMetrics Module
 
-Implements comprehensive statistics collection for GlobTim experiments (Issue #128).
+Implements comprehensive statistics collection for Globtim experiments.
 Provides reproducibility metadata, mathematical quality metrics, convergence analysis,
 resource utilization tracking, and baseline comparison capabilities.
 
@@ -140,12 +140,12 @@ end
 """
     EnhancedExperimentMetrics
 
-Complete enhanced metrics for a GlobTim experiment.
+Complete enhanced metrics for a Globtim experiment.
 
 # Fields
 - `experiment_id::String`: Unique experiment identifier
 - `batch_id::Union{String, Nothing}`: Batch/campaign identifier
-- `gitlab_issue_id::Union{Int, Nothing}`: Associated GitLab issue ID
+- `issue_id::Union{Int, Nothing}`: Associated issue ID
 - `reproducibility::ReproducibilityMetadata`: Reproducibility metadata
 - `mathematical_quality::MathematicalQualityMetrics`: Mathematical quality metrics
 - `convergence::ConvergenceMetrics`: Convergence analysis
@@ -155,7 +155,7 @@ Complete enhanced metrics for a GlobTim experiment.
 struct EnhancedExperimentMetrics
     experiment_id::String
     batch_id::Union{String, Nothing}
-    gitlab_issue_id::Union{Int, Nothing}
+    issue_id::Union{Int, Nothing}
     reproducibility::ReproducibilityMetadata
     mathematical_quality::MathematicalQualityMetrics
     convergence::ConvergenceMetrics
@@ -481,20 +481,20 @@ end
         degrees=nothing,
         config=nothing,
         batch_id=nothing,
-        gitlab_issue_id=nothing
+        issue_id=nothing
     ) -> EnhancedExperimentMetrics
 
-Collect all enhanced metrics for a GlobTim experiment.
+Collect all enhanced metrics for a Globtim experiment.
 
 # Arguments
-- `polynomial`: ApproxPoly object from GlobTim
+- `polynomial`: ApproxPoly object from Globtim
 - `execution_time`: Total execution time in seconds
 - `critical_points_df`: DataFrame of critical points (optional)
 - `l2_norms_by_degree`: Vector of L2 norms across degrees (optional)
 - `degrees`: Vector of polynomial degrees tested (optional)
 - `config`: Experiment configuration (optional)
 - `batch_id`: Batch/campaign identifier (optional)
-- `gitlab_issue_id`: GitLab issue ID (optional)
+- `issue_id`: Associated issue ID (optional)
 
 # Returns
 - `EnhancedExperimentMetrics` with all collected metrics
@@ -507,7 +507,7 @@ function collect_enhanced_metrics(
     degrees=nothing,
     config=nothing,
     batch_id=nothing,
-    gitlab_issue_id=nothing
+    issue_id=nothing
 )
     # Generate experiment ID
     exp_id = generate_experiment_id(config)
@@ -571,7 +571,7 @@ function collect_enhanced_metrics(
     return EnhancedExperimentMetrics(
         exp_id,
         batch_id,
-        gitlab_issue_id,
+        issue_id,
         reproducibility,
         mathematical_quality,
         convergence,
@@ -593,7 +593,7 @@ function metrics_to_dict(metrics::EnhancedExperimentMetrics)
     return Dict{String, Any}(
         "experiment_id" => metrics.experiment_id,
         "batch_id" => metrics.batch_id,
-        "gitlab_issue_id" => metrics.gitlab_issue_id,
+        "issue_id" => metrics.issue_id,
         "reproducibility" => Dict{String, Any}(
             "git_commit" => metrics.reproducibility.git_commit,
             "git_branch" => metrics.reproducibility.git_branch,

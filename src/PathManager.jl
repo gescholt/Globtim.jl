@@ -1,5 +1,5 @@
 """
-PathManager.jl - Unified Path Management for GlobTim (Issue #192)
+PathManager.jl - Unified Path Management for Globtim
 
 Consolidates functionality from 5 overlapping modules into a single, cohesive API:
 - PathUtils.jl (project navigation)
@@ -15,7 +15,7 @@ Design Principles:
 4. Strict validation, fail fast on misconfiguration
 5. Security-first (prevent directory traversal)
 
-Created: 2025-10-22 (Issue #192 - Path Management Consolidation)
+Created: 2025-10-22
 """
 module PathManager
 
@@ -148,7 +148,7 @@ Can be overridden by setting `GLOBTIM_ROOT` environment variable.
 
 # Example
 ```julia
-root = get_project_root()  # "/Users/user/globtim"
+root = get_project_root()  # e.g. "/path/to/globtim"
 ```
 
 # Environment Variables
@@ -194,7 +194,7 @@ function _find_project_root()::String
                 Could not find project root (no Project.toml found).
                 Searched up to: $current
 
-                Hint: Make sure you are running from within the GlobTim project directory.
+                Hint: Make sure you are running from within the Globtim project directory.
                 Alternatively, set GLOBTIM_ROOT environment variable to the project root.
                 """)
         end
@@ -213,7 +213,7 @@ Get absolute path to results directory root.
 
 Determines where experiment results should be stored using precedence:
 1. `GLOBTIM_RESULTS_ROOT` environment variable (if set and valid)
-2. `GlobalOptim/globtim_results` (default fallback)
+2. `joinpath(pwd(), "globtim_results")` (default fallback)
 
 Directory is created if it doesn't exist. Write permissions are validated.
 
@@ -225,7 +225,7 @@ Directory is created if it doesn't exist. Write permissions are validated.
 
 # Example
 ```julia
-results_root = get_results_root()  # "/Users/user/GlobalOptim/globtim_results"
+results_root = get_results_root()  # e.g. "/path/to/globtim_results"
 batch_dir = joinpath(results_root, "lotka_volterra_4d")
 ```
 
@@ -274,17 +274,14 @@ function _find_results_root()::String
         return results_root
     end
 
-    # Fallback to GlobalOptim/globtim_results
-    project_root = _find_project_root()
-    parent_dir = dirname(project_root)  # GlobalOptim directory
-    results_root = joinpath(parent_dir, "globtim_results")
-    results_root = abspath(results_root)
+    # Default: use globtim_results under current working directory
+    results_root = abspath(joinpath(pwd(), "globtim_results"))
 
     # Create if doesn't exist
     if !isdir(results_root)
         try
             mkpath(results_root)
-            @info "Created default results root directory: $results_root"
+            @info "Created default results directory: $results_root (set GLOBTIM_RESULTS_ROOT to override)"
         catch e
             error("""
                 Cannot create default results directory: $results_root
@@ -317,7 +314,7 @@ Get absolute path to src/ directory within the project.
 
 # Example
 ```julia
-src = get_src_dir()  # "/Users/user/globtim/src"
+src = get_src_dir()  # e.g. "/path/to/globtim/src"
 ```
 """
 function get_src_dir()::String
@@ -334,7 +331,7 @@ Get absolute path to Examples/ directory within the project.
 
 # Example
 ```julia
-examples = get_examples_dir()  # "/Users/user/globtim/Examples"
+examples = get_examples_dir()  # e.g. "/path/to/globtim/Examples"
 ```
 """
 function get_examples_dir()::String

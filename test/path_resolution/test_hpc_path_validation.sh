@@ -1,9 +1,27 @@
 #!/bin/bash
-
+# NOTE: These tests require specific HPC environment configuration. See ENV vars below.
+#
+# Required ENV variables:
+#   GLOBTIM_HPC_USER, GLOBTIM_HPC_HOST, GLOBTIM_HPC_HOME, GLOBTIM_HPC_PROJECT
+#
 # test_hpc_path_validation.sh - Comprehensive Path Resolution Tests for Issue #51
 # Tests path validation, detection, and resolution for HPC environments
 
 set -euo pipefail
+
+# Timeout: kill this script if it runs longer than 60 seconds
+TIMEOUT_SECONDS="${GLOBTIM_TEST_TIMEOUT:-60}"
+( sleep "${TIMEOUT_SECONDS}" && echo "ERROR: Test timed out after ${TIMEOUT_SECONDS}s" >&2 && kill -TERM $$ 2>/dev/null ) &
+TIMEOUT_PID=$!
+trap 'kill ${TIMEOUT_PID} 2>/dev/null' EXIT
+
+# Validate required ENV variables
+for var in GLOBTIM_HPC_USER GLOBTIM_HPC_HOST GLOBTIM_HPC_HOME GLOBTIM_HPC_PROJECT; do
+    if [[ -z "${!var:-}" ]]; then
+        echo "ERROR: Required environment variable ${var} is not set." >&2
+        exit 1
+    fi
+done
 
 # Test configuration
 TEST_NAME="HPC Path Resolution Validation"
@@ -11,6 +29,11 @@ TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${TEST_DIR}/../.." && pwd)"
 TEMP_TEST_DIR="/tmp/test_path_resolution_$$"
 LOG_FILE="${TEMP_TEST_DIR}/test_results.log"
+
+HPC_USER="${GLOBTIM_HPC_USER}"
+HPC_HOST="${GLOBTIM_HPC_HOST}"
+HPC_HOME="${GLOBTIM_HPC_HOME}"
+HPC_PROJECT="${GLOBTIM_HPC_PROJECT}"
 
 # Test counters
 TOTAL_TESTS=0
@@ -25,13 +48,13 @@ log() {
 test_passed() {
     ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    log "✅ PASS: $1"
+    log "PASS: $1"
 }
 
 test_failed() {
     ((FAILED_TESTS++))
     ((TOTAL_TESTS++))
-    log "❌ FAIL: $1"
+    log "FAIL: $1"
     echo "   Details: $2" | tee -a "${LOG_FILE}"
 }
 
@@ -41,14 +64,13 @@ setup_test_environment() {
     mkdir -p "${TEMP_TEST_DIR}/mock_hpc"
     mkdir -p "${TEMP_TEST_DIR}/mock_local"
 
-    # Create mock directory structures
-    mkdir -p "${TEMP_TEST_DIR}/mock_hpc/home/scholten/globtimcore"
-    mkdir -p "${TEMP_TEST_DIR}/mock_hpc/home/globaloptim"  # Wrong path
-    mkdir -p "${TEMP_TEST_DIR}/mock_local/Users/user/globtimcore"
+    # Create mock directory structures using ENV-configured paths
+    mkdir -p "${TEMP_TEST_DIR}/mock_hpc${HPC_HOME}/globtim"
+    mkdir -p "${TEMP_TEST_DIR}/mock_local/Users/user/globtim"
 
     # Create mock files to simulate real structure
-    touch "${TEMP_TEST_DIR}/mock_hpc/home/scholten/globtimcore/Project.toml"
-    touch "${TEMP_TEST_DIR}/mock_local/Users/user/globtimcore/Project.toml"
+    touch "${TEMP_TEST_DIR}/mock_hpc${HPC_HOME}/globtim/Project.toml"
+    touch "${TEMP_TEST_DIR}/mock_local/Users/user/globtim/Project.toml"
 }
 
 cleanup_test_environment() {
@@ -61,15 +83,15 @@ test_path_detection() {
     log "Running Test 1: Path Detection and Validation"
 
     # Test correct path detection
-    local test_path="${TEMP_TEST_DIR}/mock_hpc/home/scholten/globtimcore"
+    local test_path="${TEMP_TEST_DIR}/mock_hpc${HPC_HOME}/globtim"
     if [[ -d "${test_path}" ]] && [[ -f "${test_path}/Project.toml" ]]; then
         test_passed "Correct HPC path detection"
     else
         test_failed "Correct HPC path detection" "Path ${test_path} not found or missing Project.toml"
     fi
 
-    # Test incorrect path rejection
-    local wrong_path="${TEMP_TEST_DIR}/mock_hpc/home/globaloptim/globtimcore"
+    # Test incorrect path rejection (a path we did NOT create)
+    local wrong_path="${TEMP_TEST_DIR}/mock_hpc/nonexistent/globtim"
     if [[ ! -f "${wrong_path}/Project.toml" ]]; then
         test_passed "Incorrect path rejection"
     else
@@ -84,8 +106,7 @@ test_hpc_path_resolution() {
     # Create path resolution function for testing
     resolve_hpc_path() {
         local base_paths=(
-            "/home/scholten/globtimcore"
-            "/home/globaloptim/globtimcore"
+            "${HPC_HOME}/globtim"
         )
 
         for path in "${base_paths[@]}"; do
@@ -102,7 +123,7 @@ test_hpc_path_resolution() {
 
     local resolved_path
     if resolved_path=$(resolve_hpc_path); then
-        if [[ "${resolved_path}" == "/home/scholten/globtimcore" ]]; then
+        if [[ "${resolved_path}" == "${HPC_HOME}/globtim" ]]; then
             test_passed "HPC path resolution function"
         else
             test_failed "HPC path resolution function" "Resolved wrong path: ${resolved_path}"
@@ -128,7 +149,7 @@ test_environment_detection() {
     }
 
     # Test HPC environment detection
-    (cd "${TEMP_TEST_DIR}/mock_hpc/home/scholten/globtimcore" && {
+    (cd "${TEMP_TEST_DIR}/mock_hpc${HPC_HOME}/globtim" && {
         local env_type
         env_type=$(detect_environment)
         if [[ "${env_type}" == "hpc" ]]; then
@@ -139,7 +160,7 @@ test_environment_detection() {
     })
 
     # Test local environment detection
-    (cd "${TEMP_TEST_DIR}/mock_local/Users/user/globtimcore" && {
+    (cd "${TEMP_TEST_DIR}/mock_local/Users/user/globtim" && {
         local env_type
         env_type=$(detect_environment)
         if [[ "${env_type}" == "local" ]]; then
@@ -170,14 +191,14 @@ test_ssh_path_validation() {
     }
 
     # Test valid SSH path
-    if validate_ssh_path "scholten" "r04n02" "/home/scholten/globtimcore"; then
+    if validate_ssh_path "${HPC_USER}" "${HPC_HOST}" "${HPC_HOME}/globtim"; then
         test_passed "Valid SSH path validation"
     else
         test_failed "Valid SSH path validation" "Valid path should pass validation"
     fi
 
     # Test invalid SSH path
-    if ! validate_ssh_path "scholten" "r04n02" "/home/globaloptim/globtimcore"; then
+    if ! validate_ssh_path "${HPC_USER}" "${HPC_HOST}" "/nonexistent/globtim"; then
         test_passed "Invalid SSH path rejection"
     else
         test_failed "Invalid SSH path rejection" "Invalid path should be rejected"
@@ -193,7 +214,7 @@ test_cross_environment_mapping() {
         local env="$1"
         case "${env}" in
             "hpc")
-                echo "/home/scholten/globtimcore"
+                echo "${HPC_HOME}/globtim"
                 ;;
             "local")
                 echo "${PROJECT_ROOT}"
@@ -207,10 +228,10 @@ test_cross_environment_mapping() {
     # Test HPC path mapping
     local hpc_path
     hpc_path=$(map_environment_paths "hpc")
-    if [[ "${hpc_path}" == "/home/scholten/globtimcore" ]]; then
+    if [[ "${hpc_path}" == "${HPC_HOME}/globtim" ]]; then
         test_passed "HPC path mapping"
     else
-        test_failed "HPC path mapping" "Expected '/home/scholten/globtimcore', got '${hpc_path}'"
+        test_failed "HPC path mapping" "Expected '${HPC_HOME}/globtim', got '${hpc_path}'"
     fi
 
     # Test local path mapping
@@ -229,11 +250,11 @@ test_config_path_resolution() {
 
     # Create mock configuration files
     mkdir -p "${TEMP_TEST_DIR}/config"
-    cat > "${TEMP_TEST_DIR}/config/hpc_paths.conf" << 'EOF'
+    cat > "${TEMP_TEST_DIR}/config/hpc_paths.conf" << EOF
 # HPC Path Configuration
-HPC_BASE_PATH="/home/scholten/globtimcore"
-HPC_USER="scholten"
-HPC_HOST="r04n02"
+HPC_BASE_PATH="${HPC_HOME}/globtim"
+HPC_USER="${HPC_USER}"
+HPC_HOST="${HPC_HOST}"
 EOF
 
     # Mock config reading function
@@ -249,10 +270,10 @@ EOF
 
     local config_path
     if config_path=$(read_hpc_config); then
-        if [[ "${config_path}" == "/home/scholten/globtimcore" ]]; then
+        if [[ "${config_path}" == "${HPC_HOME}/globtim" ]]; then
             test_passed "Configuration file path resolution"
         else
-            test_failed "Configuration file path resolution" "Expected '/home/scholten/globtimcore', got '${config_path}'"
+            test_failed "Configuration file path resolution" "Expected '${HPC_HOME}/globtim', got '${config_path}'"
         fi
     else
         test_failed "Configuration file path resolution" "Failed to read configuration file"
@@ -329,11 +350,11 @@ main() {
     log "Failed: ${FAILED_TESTS}"
 
     if [[ ${FAILED_TESTS} -eq 0 ]]; then
-        log "🎉 ALL TESTS PASSED"
+        log "ALL TESTS PASSED"
         cleanup_test_environment
         exit 0
     else
-        log "❌ ${FAILED_TESTS} TEST(S) FAILED"
+        log "${FAILED_TESTS} TEST(S) FAILED"
         log "Log file: ${LOG_FILE}"
         exit 1
     fi

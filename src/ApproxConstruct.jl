@@ -180,9 +180,9 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
                 end
             end
         else
-            # OPTIMIZATION: Use recurrence relation instead of trig functions (Issue #202 Tier 1 Opt #2)
+            # OPTIMIZATION: Use recurrence relation instead of trig functions
             # This matches the optimization in lambda_vandermonde_tensorized.jl
-            @info "  🚀 lambda_vandermonde_original: Using OPTIMIZED recurrence (Float type) - Issue #202 Tier 1 Opt #2"
+            @info "  🚀 lambda_vandermonde_original: Using OPTIMIZED recurrence (Float type)"
 
             # Pre-allocate all degree vectors
             for degree in 0:max_degree
@@ -286,24 +286,24 @@ function lambda_vandermonde(
     # Quick dimension check
     if size(S_matrix, 2) == 1
         # 1D case - always use original implementation
-        @debug "🔍 Vandermonde: Using ORIGINAL implementation (1D case)"
+        @debug "Vandermonde: Using original implementation (1D case)"
         return lambda_vandermonde_original(Lambda, S, basis = basis)
     end
 
     # Force tensorized if requested
     if force_tensorized
-        @debug "🔍 Vandermonde: Using TENSORIZED implementation (forced)"
+        @debug "Vandermonde: Using tensorized implementation (forced)"
         return lambda_vandermonde_tensorized(Lambda, S, basis = basis)
     end
 
     # Check if grid is anisotropic (only for matrix inputs)
     if force_anisotropic || (isa(S, Matrix) && is_grid_anisotropic(S))
         # Use anisotropic implementation
-        @debug "🔍 Vandermonde: Using ANISOTROPIC implementation"
+        @debug "Vandermonde: Using anisotropic implementation"
         return lambda_vandermonde_anisotropic(Lambda, S, basis = basis)
     else
         # Use tensorized implementation for regular grids (2x faster!)
-        @debug "🔍 Vandermonde: Using TENSORIZED implementation (default for isotropic grids)"
+        @debug "Vandermonde: Using tensorized implementation (default for isotropic grids)"
         return lambda_vandermonde_tensorized(Lambda, S, basis = basis)
     end
 end

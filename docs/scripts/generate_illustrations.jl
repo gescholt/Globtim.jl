@@ -2,11 +2,11 @@
 """
 Generate illustrations for Globtim.jl documentation.
 
-Run from the GlobalOptim directory:
-    julia --project=globtimplots globtim/docs/scripts/generate_illustrations.jl
+Run from the Globtim directory:
+    julia --project=. docs/scripts/generate_illustrations.jl
 
 Or run specific functions:
-    julia --project=globtimplots -e 'include("globtim/docs/scripts/generate_illustrations.jl"); generate_deuflhard()'
+    julia --project=. -e 'include("docs/scripts/generate_illustrations.jl"); generate_deuflhard()'
 """
 
 using Globtim

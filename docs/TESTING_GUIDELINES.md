@@ -1,4 +1,4 @@
-# GlobTim Testing Guidelines
+# Globtim Testing Guidelines
 
 ## Running Tests
 
@@ -138,14 +138,12 @@ julia-globtim  # Runs Julia with Globtim project, no conda
 
 ## Continuous Integration
 
-### GitLab CI Configuration
+### CI Configuration
 
 Tests should be run in CI with:
 ```yaml
-test:
-  script:
-    - julia --project=. -e "using Pkg; Pkg.instantiate()"
-    - julia --project=. test/runtests.jl
+- julia --project=. -e "using Pkg; Pkg.instantiate()"
+- julia --project=. test/runtests.jl
 ```
 
 ### Known Test Failures

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document catalogs all warning types encountered during globtimcore experiments and provides solutions for each category.
+This document catalogs all warning types encountered during Globtim experiments and provides solutions for each category.
 
 ## Warning Categories
 
@@ -105,7 +105,7 @@ To systematically collect all warnings:
 
 ```bash
 # Run full test suite and collect warnings
-cd globtimcore
+cd globtim
 julia --project=. -e 'using Pkg; Pkg.test()' 2>&1 | grep -E "^┌ Warning|WARNING:" | sort | uniq > /tmp/warnings.txt
 
 # Run typical experiment
@@ -137,7 +137,7 @@ To verify warning suppression:
 
 ```bash
 # Test ODE warnings
-cd globtimcore
+cd globtim
 julia --project=. -e 'push!(LOAD_PATH, "Examples/systems"); using DynamicalSystems; using ModelingToolkit; model, params, states, outputs = define_lotka_volterra_2D_model(); p = [2.0, 3.0]; ic = [1.0, 1.0]; problem = ODEProblem(ModelingToolkit.complete(model), merge(Dict(ModelingToolkit.unknowns(model) .=> ic), Dict(ModelingToolkit.parameters(model) .=> p)), [0.0, 10.0]); data = sample_data(problem, model, outputs, [0.0, 10.0], p, ic, 50); println("✅ No warnings!")'
 ```
 

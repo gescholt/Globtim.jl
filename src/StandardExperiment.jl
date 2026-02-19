@@ -58,7 +58,7 @@ result_refined = refine_experiment_results(
 )
 ```
 
-Created: 2025-10-02 (Issue #112 - Template Unification)
+Created: 2025-10-02
 Updated: 2025-11-23 (Phase 2 - Refinement Migration)
 """
 module StandardExperiment
@@ -180,7 +180,7 @@ This function now exports only raw critical points from HomotopyContinuation.
 # Arguments
 - `objective_function`: Callable with signature f(point::Vector{Float64}) or f(point, params).
   Accepts plain functions or callable structs (e.g., TolerantObjective).
-  - 1-argument: f(p::Vector{Float64}) -> Float64 (auto-detected, e.g., Dynamic_objectives)
+   - 1-argument: f(p::Vector{Float64}) -> Float64 (auto-detected, e.g., ODE cost functions)
   - 2-argument: f(p::Vector{Float64}, params) -> Float64 (legacy, requires problem_params)
 - `objective_name`: Identifier for the objective function (e.g., "lv4d", "deuflhard_4d_q4").
   Stored in `results_summary.json` under `experiment_definition.objective_name` to make
@@ -266,7 +266,7 @@ function run_standard_experiment(;
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
     # Detect function signature and create wrapper if needed
-    # Support both 1-arg (Dynamic_objectives pattern) and 2-arg (legacy pattern)
+    # Support both 1-arg (ODE cost function pattern) and 2-arg (legacy pattern)
     method_sig = first(methods(objective_function)).sig
     while method_sig isa UnionAll
         method_sig = method_sig.body
@@ -438,7 +438,7 @@ function process_single_degree(
     n_critical_points = length(critical_points_array)
     timing["critical_point_solving_time"] = solve_time
 
-    # CRITICAL FIX (Issue #111): ERROR if no critical points found
+    # ERROR if no critical points found
     if n_critical_points == 0
         error("CRITICAL: No critical points found by HomotopyContinuation")
     end

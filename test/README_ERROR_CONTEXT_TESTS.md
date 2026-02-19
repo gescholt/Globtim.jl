@@ -165,12 +165,10 @@ JSON3.write(error_ctx)  # Should succeed
     julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-### GitLab CI
-```yaml
-test:error-context:
-  script:
-    - julia --project=. test/error_context_unit.jl
-    - julia --project=. test/error_context_integration.jl
+### Alternative: Run Individual Test Files
+```bash
+julia --project=. test/error_context_unit.jl
+julia --project=. test/error_context_integration.jl
 ```
 
 ## Test Maintenance

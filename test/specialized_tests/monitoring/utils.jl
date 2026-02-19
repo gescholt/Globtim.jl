@@ -1,7 +1,11 @@
 #!/usr/bin/env julia
+# NOTE: These tests require specific HPC environment configuration. See ENV vars below.
+#
+# Required ENV variables:
+#   GLOBTIM_HPC_USER, GLOBTIM_HPC_HOST, GLOBTIM_HPC_HOME, GLOBTIM_HPC_PROJECT
 """
 Monitoring Test Utilities
-GlobTim Project - Issue #55 - Test Utilities for Monitoring Functions
+Globtim Project - Test Utilities for Monitoring Functions
 
 Purpose: Utility functions for testing monitoring workflow variable scope issues
 Provides common testing infrastructure for monitoring test suites
@@ -14,7 +18,6 @@ Utility Categories:
 5. HPC environment simulation
 6. Cross-platform compatibility helpers
 
-Author: Julia Test Architect Agent
 Date: September 9, 2025
 """
 
@@ -106,11 +109,21 @@ end
 Create a mock HPC environment for testing cross-environment compatibility.
 """
 function mock_hpc_environment()
+    hpc_host = get(ENV, "GLOBTIM_HPC_HOST", "")
+    hpc_user = get(ENV, "GLOBTIM_HPC_USER", "")
+    hpc_home = get(ENV, "GLOBTIM_HPC_HOME", "")
+    hpc_project = get(ENV, "GLOBTIM_HPC_PROJECT", "")
+
+    if isempty(hpc_host) || isempty(hpc_user) || isempty(hpc_home) || isempty(hpc_project)
+        error("mock_hpc_environment() requires ENV variables: " *
+              "GLOBTIM_HPC_HOST, GLOBTIM_HPC_USER, GLOBTIM_HPC_HOME, GLOBTIM_HPC_PROJECT")
+    end
+
     return Dict(
-        "hostname" => "r04n02",
-        "user" => "scholten",
-        "home_dir" => "/home/scholten",
-        "project_dir" => "/home/globaloptim/globtimcore",
+        "hostname" => hpc_host,
+        "user" => hpc_user,
+        "home_dir" => hpc_home,
+        "project_dir" => hpc_project,
         "julia_version" => "1.9.3",
         "available_memory" => "100GB",
         "cpu_cores" => 48,
@@ -118,10 +131,10 @@ function mock_hpc_environment()
         "batch_system" => "direct",  # No SLURM
         "session_type" => "tmux",
         "environment_vars" => Dict(
-            "HOME" => "/home/scholten",
-            "USER" => "scholten",
-            "JULIA_DEPOT_PATH" => "/home/scholten/.julia",
-            "JULIA_PROJECT" => "/home/globaloptim/globtimcore"
+            "HOME" => hpc_home,
+            "USER" => hpc_user,
+            "JULIA_DEPOT_PATH" => "$(hpc_home)/.julia",
+            "JULIA_PROJECT" => hpc_project
         )
     )
 end

@@ -1,13 +1,26 @@
 """
-Environment-Aware Utility Functions for Issue #40
+Environment-Aware Utility Functions for Cross-Environment Path Resolution
 
 Provides robust environment detection and path translation capabilities
-for cross-environment deployment between local macOS and HPC environments.
+for cross-environment deployment between local development and HPC environments.
 
-Author: Claude Code - GlobTim Infrastructure Team
+# Required Environment Variables
+
+Configure the following ENV variables for your environment:
+
+- `GLOBTIM_LOCAL_HOME`     — Local home directory (e.g. "/Users/yourname")
+- `GLOBTIM_LOCAL_PROJECT`  — Local project directory (e.g. "/Users/yourname/globtim")
+- `GLOBTIM_HPC_USER`       — HPC username
+- `GLOBTIM_HPC_HOST`       — HPC hostname
+- `GLOBTIM_HPC_HOME`       — HPC home directory (e.g. "/home/youruser")
+- `GLOBTIM_HPC_PROJECT`    — HPC project directory (e.g. "/home/youruser/globtim")
+- `GLOBTIM_HPC_NFS_HOME`   — HPC NFS home directory (e.g. "/stornext/snfs3/home/youruser")
+
 Date: September 2025
 Issue: #40 - Environment-Aware Path Resolution System for HPC Deployments
 """
+
+# NOTE: These tests require specific HPC environment configuration. See ENV vars above.
 
 module EnvironmentUtils
 
@@ -18,14 +31,40 @@ export detect_environment, auto_detect_environment, translate_path,
 
 using JSON
 
+# ---------------------------------------------------------------------------
+# ENV helpers — error if not set
+# ---------------------------------------------------------------------------
+
+function _require_env(key::String)::String
+    val = get(ENV, key, "")
+    if isempty(val)
+        error("Required environment variable '$key' is not set. " *
+              "See environment_utils.jl header for configuration instructions.")
+    end
+    return val
+end
+
+function _get_env(key::String, default::String="")::String
+    return get(ENV, key, default)
+end
+
+# Convenience accessors
+_local_home()       = _require_env("GLOBTIM_LOCAL_HOME")
+_local_project()    = _require_env("GLOBTIM_LOCAL_PROJECT")
+_hpc_user()         = _require_env("GLOBTIM_HPC_USER")
+_hpc_host()         = _require_env("GLOBTIM_HPC_HOST")
+_hpc_home()         = _require_env("GLOBTIM_HPC_HOME")
+_hpc_project()      = _require_env("GLOBTIM_HPC_PROJECT")
+_hpc_nfs_home()     = _require_env("GLOBTIM_HPC_NFS_HOME")
+
 """
     detect_environment(base_path::String) -> Symbol
 
 Detect environment type based on filesystem path patterns.
 
 Returns:
-- `:local` - Local macOS development environment
-- `:hpc` - HPC cluster environment (r04n02)
+- `:local` - Local development environment
+- `:hpc` - HPC cluster environment
 - `:hpc_nfs` - HPC with NFS storage
 - `:unknown` - Unrecognized environment
 """
@@ -34,23 +73,26 @@ function detect_environment(base_path::String)::Symbol
         return :unknown
     end
 
+    hpc_home = _hpc_home()
+    hpc_project = _hpc_project()
+
     # HPC environment patterns
-    if startswith(base_path, "/home/globaloptim/globtimcore") ||
-       startswith(base_path, "/home/scholten/globtimcore") ||
-       startswith(base_path, "/home/scholten") ||
-       startswith(base_path, "/home/globaloptim")
+    if startswith(base_path, hpc_project) ||
+       startswith(base_path, hpc_home)
         return :hpc
     end
 
     # HPC NFS storage patterns
-    if startswith(base_path, "/stornext/snfs3/home/scholten") ||
-       startswith(base_path, "/stornext/snfs3/home/globaloptim")
+    hpc_nfs_home = _hpc_nfs_home()
+    if startswith(base_path, hpc_nfs_home)
         return :hpc_nfs
     end
 
-    # Local macOS patterns
-    if startswith(base_path, "/Users/ghscholt/globtimcore") ||
-       startswith(base_path, "/Users/ghscholt")
+    # Local patterns
+    local_project = _local_project()
+    local_home = _local_home()
+    if startswith(base_path, local_project) ||
+       startswith(base_path, local_home)
         return :local
     end
 
@@ -63,39 +105,26 @@ end
 Auto-detect current environment by checking for characteristic directories.
 """
 function auto_detect_environment()::Symbol
-    # Check for HPC directories (in order of preference)
-    hpc_paths = [
-        "/home/globaloptim/globtimcore",
-        "/home/scholten/globtimcore",
-        "/home/globaloptim",
-        "/home/scholten"
-    ]
+    # Check for HPC directories
+    hpc_project = _hpc_project()
+    hpc_home = _hpc_home()
 
-    for path in hpc_paths
+    for path in [hpc_project, hpc_home]
         if isdir(path)
             return :hpc
         end
     end
 
     # Check for NFS storage
-    nfs_paths = [
-        "/stornext/snfs3/home/scholten",
-        "/stornext/snfs3/home/globaloptim"
-    ]
-
-    for path in nfs_paths
-        if isdir(path)
-            return :hpc_nfs
-        end
+    hpc_nfs_home = _hpc_nfs_home()
+    if isdir(hpc_nfs_home)
+        return :hpc_nfs
     end
 
-    # Check for local macOS
-    local_paths = [
-        "/Users/ghscholt/globtimcore",
-        "/Users/ghscholt"
-    ]
-
-    for path in local_paths
+    # Check for local
+    local_project = _local_project()
+    local_home = _local_home()
+    for path in [local_project, local_home]
         if isdir(path)
             return :local
         end
@@ -128,19 +157,23 @@ function translate_path(path::String, from_env::Symbol, to_env::Symbol)::String
         return path
     end
 
+    local_home = _local_home()
+    local_project = _local_project()
+    hpc_home = _hpc_home()
+    hpc_project = _hpc_project()
+    hpc_nfs_home = _hpc_nfs_home()
+
     # Define translation mappings
     local_to_hpc_mappings = [
-        ("/Users/ghscholt/globtimcore", "/home/scholten/globtimcore"),
-        ("/Users/ghscholt/.julia", "/home/scholten/.julia"),
-        ("/Users/ghscholt", "/home/scholten")
+        (local_project, hpc_project),
+        ("$(local_home)/.julia", "$(hpc_home)/.julia"),
+        (local_home, hpc_home)
     ]
 
     hpc_to_local_mappings = [
-        ("/home/globaloptim/globtimcore", "/Users/ghscholt/globtimcore"),
-        ("/home/scholten/globtimcore", "/Users/ghscholt/globtimcore"),
-        ("/home/scholten/.julia", "/Users/ghscholt/.julia"),
-        ("/home/scholten", "/Users/ghscholt"),
-        ("/home/globaloptim", "/Users/ghscholt")
+        (hpc_project, local_project),
+        ("$(hpc_home)/.julia", "$(local_home)/.julia"),
+        (hpc_home, local_home)
     ]
 
     # Apply appropriate translation
@@ -158,25 +191,17 @@ function translate_path(path::String, from_env::Symbol, to_env::Symbol)::String
         end
     elseif from_env == :hpc_nfs
         # First translate NFS to regular HPC, then to target
-        nfs_to_hpc = replace(path, "/stornext/snfs3/home/scholten" => "/home/scholten")
-        nfs_to_hpc =
-            replace(nfs_to_hpc, "/stornext/snfs3/home/globaloptim" => "/home/globaloptim")
+        nfs_to_hpc = replace(path, hpc_nfs_home => hpc_home)
         if nfs_to_hpc != path
             return translate_path(nfs_to_hpc, :hpc, to_env)
         end
     elseif to_env == :hpc_nfs
         # First translate to regular HPC, then to NFS
         hpc_path = translate_path(path, from_env, :hpc)
-        if startswith(hpc_path, "/home/scholten")
+        if startswith(hpc_path, hpc_home)
             return replace(
                 hpc_path,
-                "/home/scholten" => "/stornext/snfs3/home/scholten",
-                count = 1
-            )
-        elseif startswith(hpc_path, "/home/globaloptim")
-            return replace(
-                hpc_path,
-                "/home/globaloptim" => "/stornext/snfs3/home/globaloptim",
+                hpc_home => hpc_nfs_home,
                 count = 1
             )
         end
@@ -193,13 +218,11 @@ Get the project directory path for the specified environment.
 """
 function get_project_directory(env::Symbol)::String
     if env == :local
-        return "/Users/ghscholt/globtimcore"
+        return _local_project()
     elseif env == :hpc
-        # Use the directory that actually exists, prefer scholten for collection tasks
-        # but globaloptim is where the actual project files are
-        return "/home/scholten/globtimcore"  # This is consistent with collect_cluster_experiments.jl
+        return _hpc_project()
     elseif env == :hpc_nfs
-        return "/stornext/snfs3/home/scholten/globtimcore"
+        return joinpath(_hpc_nfs_home(), basename(_hpc_project()))
     else
         return ""
     end
@@ -248,12 +271,14 @@ end
 Generate SSH commands for common operations.
 """
 function generate_ssh_command(command_type::String; kwargs...)::Dict{String, String}
-    project_dir = get(kwargs, :project_dir, "/home/scholten/globtimcore")
+    project_dir = get(kwargs, :project_dir, _hpc_project())
+    user = _hpc_user()
+    host = _hpc_host()
 
     if command_type == "list_experiments"
         pattern = get(kwargs, :pattern, "lotka_volterra_4d_exp*")
         command = "cd $project_dir && ls -1d hpc_results/$pattern | sort"
-        full_command = "ssh scholten@r04n02 \"$command\""
+        full_command = "ssh $(user)@$(host) \"$command\""
 
         return Dict(
             "command" => command,
@@ -264,7 +289,7 @@ function generate_ssh_command(command_type::String; kwargs...)::Dict{String, Str
     elseif command_type == "check_status"
         session_name = get(kwargs, :session_name, "experiment")
         command = "tmux list-sessions | grep $session_name"
-        full_command = "ssh scholten@r04n02 \"$command\""
+        full_command = "ssh $(user)@$(host) \"$command\""
 
         return Dict(
             "command" => command,

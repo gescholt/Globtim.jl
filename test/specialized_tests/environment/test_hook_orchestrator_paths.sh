@@ -1,15 +1,25 @@
 #!/bin/bash
-"""
-Hook Orchestrator Path Resolution Test Suite (Issue #40)
-
-Tests the environment-aware path resolution logic in hook_orchestrator.sh
-to ensure proper cross-environment hook execution.
-
-Usage:
-    bash tests/environment/test_hook_orchestrator_paths.sh
-"""
+# NOTE: These tests require specific HPC environment configuration. See ENV vars below.
+#
+# Required ENV variables:
+#   GLOBTIM_LOCAL_HOME, GLOBTIM_LOCAL_PROJECT, GLOBTIM_HPC_USER, GLOBTIM_HPC_HOST,
+#   GLOBTIM_HPC_HOME, GLOBTIM_HPC_PROJECT, GLOBTIM_HPC_NFS_HOME
+#
+# Hook Orchestrator Path Resolution Test Suite
+#
+# Tests the environment-aware path resolution logic in hook_orchestrator.sh
+# to ensure proper cross-environment hook execution.
+#
+# Usage:
+#     bash tests/environment/test_hook_orchestrator_paths.sh
 
 set -e
+
+# Timeout: kill this script if it runs longer than 60 seconds
+TIMEOUT_SECONDS="${GLOBTIM_TEST_TIMEOUT:-60}"
+( sleep "${TIMEOUT_SECONDS}" && echo "ERROR: Test timed out after ${TIMEOUT_SECONDS}s" >&2 && kill -TERM $$ 2>/dev/null ) &
+TIMEOUT_PID=$!
+trap 'kill ${TIMEOUT_PID} 2>/dev/null' EXIT
 
 # Colors for output
 RED='\033[0;31m'
@@ -18,12 +28,20 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Validate required ENV variables
+for var in GLOBTIM_LOCAL_HOME GLOBTIM_HPC_HOME GLOBTIM_HPC_PROJECT; do
+    if [[ -z "${!var}" ]]; then
+        echo "ERROR: Required environment variable ${var} is not set." >&2
+        exit 1
+    fi
+done
+
 # Test configuration
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLOBTIM_DIR="$(cd "$TEST_DIR/../.." && pwd)"
 ORCHESTRATOR_PATH="$GLOBTIM_DIR/tools/hpc/hooks/hook_orchestrator.sh"
 
-echo -e "${BLUE}🧪 Hook Orchestrator Path Resolution Test Suite (Issue #40)${NC}"
+echo -e "${BLUE}Hook Orchestrator Path Resolution Test Suite${NC}"
 echo "=================================================================="
 echo "Testing environment-aware path translation in hook orchestrator"
 echo ""
@@ -59,12 +77,12 @@ test_path_resolution_logic() {
     local full_path
     if [[ "$input_path" = /* ]]; then
         # Absolute path - check if it needs environment translation
-        if [[ "$environment" == "hpc" && "$input_path" =~ ^/Users/ghscholt ]]; then
-            # Translate macOS paths to HPC paths
-            full_path=$(echo "$input_path" | sed 's|^/Users/ghscholt|/home/scholten|')
-        elif [[ "$environment" == "local" && "$input_path" =~ ^/home/scholten ]]; then
-            # Translate HPC paths to macOS paths
-            full_path=$(echo "$input_path" | sed 's|^/home/scholten|/Users/ghscholt|')
+        if [[ "$environment" == "hpc" && "$input_path" =~ ^${GLOBTIM_LOCAL_HOME} ]]; then
+            # Translate local paths to HPC paths
+            full_path=$(echo "$input_path" | sed "s|^${GLOBTIM_LOCAL_HOME}|${GLOBTIM_HPC_HOME}|")
+        elif [[ "$environment" == "local" && "$input_path" =~ ^${GLOBTIM_HPC_HOME} ]]; then
+            # Translate HPC paths to local paths
+            full_path=$(echo "$input_path" | sed "s|^${GLOBTIM_HPC_HOME}|${GLOBTIM_LOCAL_HOME}|")
         else
             full_path="$input_path"
         fi
@@ -73,10 +91,10 @@ test_path_resolution_logic() {
     fi
 
     if [[ "$full_path" == "$expected_output" ]]; then
-        echo -e "✅ $test_name: ${GREEN}PASS${NC}"
+        echo -e "  PASS: $test_name ${GREEN}PASS${NC}"
         return 0
     else
-        echo -e "❌ $test_name: ${RED}FAIL${NC}"
+        echo -e "  FAIL: $test_name ${RED}FAIL${NC}"
         echo "   Expected: $expected_output"
         echo "   Got:      $full_path"
         return 1
@@ -90,7 +108,7 @@ test_environment_detection() {
 
     # Test the environment detection logic
     local detected_env
-    if [[ -d "/home/globaloptim/globtimcore" ]]; then
+    if [[ -d "${GLOBTIM_HPC_PROJECT}" ]]; then
         detected_env="hpc"
     else
         detected_env="local"
@@ -99,10 +117,10 @@ test_environment_detection() {
     echo "Detected environment: $detected_env"
 
     if [[ "$detected_env" == "local" || "$detected_env" == "hpc" ]]; then
-        echo -e "✅ Environment detection: ${GREEN}PASS${NC}"
+        echo -e "  PASS: Environment detection ${GREEN}PASS${NC}"
         return 0
     else
-        echo -e "❌ Environment detection: ${RED}FAIL${NC}"
+        echo -e "  FAIL: Environment detection ${RED}FAIL${NC}"
         return 1
     fi
 }
@@ -117,12 +135,12 @@ test_absolute_path_translations() {
 
     # Test local to HPC translations
     test_cases=(
-        "Local to HPC - Main Project|hpc|/Users/ghscholt/globtimcore|/home/scholten/globtimcore"
-        "Local to HPC - Hook Script|hpc|/Users/ghscholt/globtimcore/tools/hpc/hooks/test.sh|/home/scholten/globtimcore/tools/hpc/hooks/test.sh"
-        "Local to HPC - Julia Depot|hpc|/Users/ghscholt/.julia|/home/scholten/.julia"
-        "HPC to Local - Main Project|local|/home/scholten/globtimcore|/Users/ghscholt/globtimcore"
-        "HPC to Local - Hook Script|local|/home/scholten/globtimcore/tools/gitlab/hook.sh|/Users/ghscholt/globtimcore/tools/gitlab/hook.sh"
-        "HPC to Local - Julia Depot|local|/home/scholten/.julia|/Users/ghscholt/.julia"
+        "Local to HPC - Main Project|hpc|${GLOBTIM_LOCAL_HOME}/globtim|${GLOBTIM_HPC_HOME}/globtim"
+        "Local to HPC - Hook Script|hpc|${GLOBTIM_LOCAL_HOME}/globtim/tools/hpc/hooks/test.sh|${GLOBTIM_HPC_HOME}/globtim/tools/hpc/hooks/test.sh"
+        "Local to HPC - Julia Depot|hpc|${GLOBTIM_LOCAL_HOME}/.julia|${GLOBTIM_HPC_HOME}/.julia"
+        "HPC to Local - Main Project|local|${GLOBTIM_HPC_HOME}/globtim|${GLOBTIM_LOCAL_HOME}/globtim"
+        "HPC to Local - Hook Script|local|${GLOBTIM_HPC_HOME}/globtim/tools/gitlab/hook.sh|${GLOBTIM_LOCAL_HOME}/globtim/tools/gitlab/hook.sh"
+        "HPC to Local - Julia Depot|local|${GLOBTIM_HPC_HOME}/.julia|${GLOBTIM_LOCAL_HOME}/.julia"
         "No Translation - System Path HPC|hpc|/tmp/testfile|/tmp/testfile"
         "No Translation - System Path Local|local|/usr/bin/julia|/usr/bin/julia"
     )
@@ -179,9 +197,8 @@ test_edge_cases() {
     # Test edge cases
     test_cases=(
         "Empty Path Local|local||$GLOBTIM_DIR/"
-        "Same Environment HPC|hpc|/home/scholten/test|/home/scholten/test"
-        "Same Environment Local|local|/Users/ghscholt/test|/Users/ghscholt/test"
-        "Global HPC Path|hpc|/home/globaloptim/globtimcore|/home/globaloptim/globtimcore"
+        "Same Environment HPC|hpc|${GLOBTIM_HPC_HOME}/test|${GLOBTIM_HPC_HOME}/test"
+        "Same Environment Local|local|${GLOBTIM_LOCAL_HOME}/test|${GLOBTIM_LOCAL_HOME}/test"
     )
 
     for test_case in "${test_cases[@]}"; do
@@ -204,28 +221,28 @@ test_orchestrator_integration() {
 
     # Check if orchestrator exists and is executable
     if [[ ! -f "$ORCHESTRATOR_PATH" ]]; then
-        echo -e "❌ Hook orchestrator not found: ${RED}FAIL${NC}"
+        echo -e "  FAIL: Hook orchestrator not found ${RED}FAIL${NC}"
         return 1
     fi
 
     if [[ ! -x "$ORCHESTRATOR_PATH" ]]; then
-        echo -e "❌ Hook orchestrator not executable: ${RED}FAIL${NC}"
+        echo -e "  FAIL: Hook orchestrator not executable ${RED}FAIL${NC}"
         return 1
     fi
 
     # Test help command
     if "$ORCHESTRATOR_PATH" --help >/dev/null 2>&1; then
-        echo -e "✅ Orchestrator help command: ${GREEN}PASS${NC}"
+        echo -e "  PASS: Orchestrator help command ${GREEN}PASS${NC}"
     else
-        echo -e "❌ Orchestrator help command: ${RED}FAIL${NC}"
+        echo -e "  FAIL: Orchestrator help command ${RED}FAIL${NC}"
         return 1
     fi
 
     # Test registry command
     if "$ORCHESTRATOR_PATH" registry >/dev/null 2>&1; then
-        echo -e "✅ Orchestrator registry command: ${GREEN}PASS${NC}"
+        echo -e "  PASS: Orchestrator registry command ${GREEN}PASS${NC}"
     else
-        echo -e "❌ Orchestrator registry command: ${RED}FAIL${NC}"
+        echo -e "  FAIL: Orchestrator registry command ${RED}FAIL${NC}"
         return 1
     fi
 
@@ -237,7 +254,7 @@ main() {
     local total_failures=0
 
     echo "Test environment: $(pwd)"
-    echo "GlobTim directory: $GLOBTIM_DIR"
+    echo "Globtim directory: $GLOBTIM_DIR"
     echo "Orchestrator path: $ORCHESTRATOR_PATH"
     echo ""
 
@@ -253,11 +270,11 @@ main() {
     echo -e "${BLUE}Test Summary${NC}"
 
     if [[ $total_failures -eq 0 ]]; then
-        echo -e "🎉 ${GREEN}ALL TESTS PASSED!${NC}"
+        echo -e "${GREEN}ALL TESTS PASSED!${NC}"
         echo "   Hook orchestrator path resolution is working correctly"
-        echo "   Issue #40 requirements satisfied for hook orchestrator"
+        echo "   Path resolution requirements satisfied for hook orchestrator"
     else
-        echo -e "⚠️  ${RED}$total_failures TEST FAILURES${NC}"
+        echo -e "${RED}$total_failures TEST FAILURES${NC}"
         echo "   Path resolution needs fixes before deployment"
         echo "   Review failing test cases above"
     fi
@@ -266,7 +283,7 @@ main() {
     echo "Next Steps:"
     echo "1. Fix any failing path resolution logic"
     echo "2. Run integration tests with actual hook execution"
-    echo "3. Update GitLab issue #40 with test results"
+    echo "3. Update documentation with test results"
 
     return $total_failures
 }

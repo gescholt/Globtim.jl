@@ -49,14 +49,6 @@ Examples/Notebooks/Triple_Graph*.ipynb
 # Data outputs
 data/figures/
 
-# Environment files with secrets
-.env.gitlab
-.env.gitlab.local
-tools/gitlab/config.json
-tools/gitlab/.gitlab-token
-.gitlab-token
-gitlab-token.txt
-
 # SSH and server configuration - NEVER COMMIT THESE
 *.pem
 *.key
@@ -104,15 +96,6 @@ __pycache__/
 .claudemem
 .claude/
 
-# GitLab internal configs (not for public release)
-.gitlab_config
-.gitlab_agent_config
-.gitlab-ci.yml
-.gitlab-ci.yml.npm-example
-
-# HPC test results (keep locally but don't commit)
-hpc/jobs/submission/collected_results/
-
 # Build artifacts and temporary directories
 build_*/
 bundle_*/
@@ -152,12 +135,6 @@ slurm-jobs/
 *_CLEANUP_ANALYSIS.md
 *_WORKFLOW_ANALYSIS.md
 
-# Hook state and monitoring files
-tools/hpc/hooks/state/*.json
-tools/hpc/monitoring/dashboard/*.html
-tools/hpc/monitoring/performance/*.json
-tools/hpc/monitoring/performance/*.log
-
 # Temporary analysis and collection files
 comprehensive_collection_analysis.jl
 simple_collection_analysis.jl
@@ -181,7 +158,6 @@ experiments/generated/*.jl
 
 # Archive and backup directories
 archives/
-!archives/tools_hpc_archived_2025_10_10/
 backup_*/
 archive_*/
 *_archive_*/
