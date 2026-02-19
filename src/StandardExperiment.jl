@@ -318,6 +318,11 @@ function run_standard_experiment(;
             push!(degree_results, result)
             total_critical_points += result.n_critical_points
 
+            # Checkpoint: save accumulated results after each degree so partial
+            # runs are recoverable if the job hits a wall-time limit.
+            checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
+            jldsave(checkpoint_path; degree_results=degree_results, warn=false)
+
         catch e
             degree_time = time() - degree_start
             println("ERROR degree $degree: $e")
@@ -350,6 +355,10 @@ function run_standard_experiment(;
             )
 
             push!(degree_results, failed_result)
+
+            # Checkpoint on failure too — records which degrees failed
+            checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
+            jldsave(checkpoint_path; degree_results=degree_results, warn=false)
         end
     end
 
@@ -374,6 +383,10 @@ function run_standard_experiment(;
 
     # Save experiment summary
     save_experiment_summary(experiment_summary, output_dir)
+
+    # Remove checkpoint — full summary is now authoritative
+    checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
+    isfile(checkpoint_path) && rm(checkpoint_path)
 
     return experiment_summary
 end
