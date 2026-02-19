@@ -1,7 +1,7 @@
 name = "Globtim"
 uuid = "00da9514-6261-47e9-8848-33640cb1e528"
 license = "GPL-3.0"
-version = "2.0.1"
+version = "2.0.2"
 authors = ["Georgy Scholten <scholtengeorgy@gmail.com>"]
 repo = "https://github.com/gescholt/Globtim.jl"
 

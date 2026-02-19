@@ -74,7 +74,7 @@ using LinearAlgebra
 
 export run_standard_experiment, DegreeResult, solve_and_transform
 
-using .PathManager
+using ..PathManager
 
 """
 Result structure for a single degree's computation.
