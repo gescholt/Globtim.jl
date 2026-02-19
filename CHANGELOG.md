@@ -2,7 +2,7 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
-## [2.0.0] - 2025-12-18
+## [1.0.0] - 2025-12-18
 
 ### Major Release: Globtim Integration
 
