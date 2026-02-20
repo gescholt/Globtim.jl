@@ -285,8 +285,8 @@ function validate_experiment_toml(d::Dict)
         else
             if any(x -> !(x isa Integer), dr)
                 push!(errors, "[polynomial] degree_range values must be integers")
-            elseif dr[1] < 1 || dr[3] > 50
-                push!(errors, "[polynomial] degree_range values must be in [1, 50], got: $dr")
+            elseif dr[1] < 1
+                push!(errors, "[polynomial] degree_range start must be >= 1, got: $dr")
             elseif dr[1] > dr[3]
                 push!(errors, "[polynomial] degree_range start ($(dr[1])) must be <= stop ($(dr[3]))")
             elseif dr[2] < 1
