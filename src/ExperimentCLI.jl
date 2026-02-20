@@ -23,7 +23,7 @@ Usage patterns:
 """
 module ExperimentCLI
 
-export parse_experiment_args, ExperimentParams, validate_params
+export parse_experiment_args, ExperimentParams, validate_params, print_params
 
 using Printf
 using TOML
@@ -86,6 +86,15 @@ struct ExperimentParams
 
         # Convert truncation_mode to Symbol if String
         trunc_mode_sym = truncation_mode isa String ? Symbol(truncation_mode) : truncation_mode
+
+        # Validate truncation settings
+        if !(trunc_mode_sym in (:relative, :absolute))
+            error("Invalid truncation_mode: $(trunc_mode_sym). Must be :relative or :absolute")
+        end
+        if truncation_threshold !== nothing && truncation_threshold <= 0
+            error("truncation_threshold must be positive, got: $(truncation_threshold)")
+        end
+
         trunc_thresh = truncation_threshold === nothing ? nothing : Float64(truncation_threshold)
 
         new(
@@ -135,8 +144,9 @@ function ConstructionBase.setproperties(obj::ExperimentParams, patch::NamedTuple
     return ExperimentParams(; merged...)
 end
 
-# Make ExperimentParams compatible with DrWatson @dict and NamedTuple operations
-Base.pairs(p::ExperimentParams) = (
+# Make ExperimentParams compatible with DrWatson @dict and NamedTuple operations.
+# Returns a proper Pairs iterator (not a bare NamedTuple) so that Dict(pairs(ep)) works.
+Base.pairs(p::ExperimentParams) = pairs((
     domain_size = p.domain_size,
     GN = p.GN,
     degree_range = p.degree_range,
@@ -150,7 +160,7 @@ Base.pairs(p::ExperimentParams) = (
     enable_bfgs_refinement = p.enable_bfgs_refinement,
     truncation_threshold = p.truncation_threshold,
     truncation_mode = p.truncation_mode
-)
+))
 
 Base.getindex(p::ExperimentParams, key::Symbol) = getfield(p, key)
 
@@ -205,8 +215,8 @@ function validate_params(domain_size::Real, GN::Integer, degree_range::AbstractR
     if first(degree_range) < 1
         push!(errors, "degree_range must start at ≥ 1, got $(first(degree_range))")
     end
-    if last(degree_range) > 30
-        push!(errors, "degree_range must end at ≤ 30, got $(last(degree_range))")
+    if last(degree_range) < 1
+        push!(errors, "degree_range must end at ≥ 1, got $(last(degree_range))")
     end
     if first(degree_range) > last(degree_range)
         push!(errors, "degree_range must be increasing, got $(first(degree_range)):$(last(degree_range))")
@@ -250,7 +260,9 @@ function parse_named_args(args::Vector{String})
         :enablegradient => :enablegradients,
         :enable_hessians => :enablehessians,
         :enablehessian => :enablehessians,
-        :enable_bfgs => :enablebfgs
+        :enable_bfgs => :enablebfgs,
+        :truncationthreshold => :truncation_threshold,
+        :truncationmode => :truncation_mode
     )
 
     for arg in args
@@ -350,12 +362,14 @@ function parse_experiment_args(
                       :enablegradients, :enable_gradients,
                       :enablehessians, :enable_hessians,
                       :enablebfgs, :enable_bfgs,
-                      :config, :basis])
+                      :config, :basis,
+                      :truncation_threshold, :truncationthreshold,
+                      :truncation_mode, :truncationmode])
     unrecognized = setdiff(Set(keys(named_args)), valid_keys)
     if !isempty(unrecognized)
         error("Unrecognized named arguments: $(join(sort([string(k) for k in unrecognized]), ", "))\n" *
               "Valid arguments: --config, --degrees, --degree-range, --domain, --domain-size, --GN, --max-time, --maxtime, " *
-              "--basis, --enable-gradients, --enable-hessians, --enable-bfgs")
+              "--basis, --truncation-threshold, --truncation-mode, --enable-gradients, --enable-hessians, --enable-bfgs")
     end
 
     # If --config is specified, load TOML file as base defaults (CLI args override)
@@ -379,6 +393,12 @@ function parse_experiment_args(
         end
         if haskey(poly, "basis") && !haskey(named_args, :basis)
             named_args[:basis] = string(poly["basis"])
+        end
+        if haskey(poly, "truncation_threshold") && !haskey(named_args, :truncation_threshold)
+            named_args[:truncation_threshold] = string(Float64(poly["truncation_threshold"]))
+        end
+        if haskey(poly, "truncation_mode") && !haskey(named_args, :truncation_mode)
+            named_args[:truncation_mode] = string(poly["truncation_mode"])
         end
 
         # Extract domain section
@@ -474,6 +494,11 @@ function parse_experiment_args(
     # Parse basis (string -> passed through to ExperimentParams which converts to Symbol)
     basis = get_param(:basis, nothing, "BASIS", identity)
 
+    # Parse truncation parameters (optional)
+    truncation_threshold = get_param(:truncation_threshold, nothing, "TRUNCATION_THRESHOLD",
+                                     s -> parse(Float64, s))
+    truncation_mode = get_param(:truncation_mode, nothing, "TRUNCATION_MODE", identity)
+
     # Build kwargs dict: start with provided defaults, then override with parsed values
     kwargs = Dict{Symbol, Any}(pairs(defaults))
     if domain_size !== nothing; kwargs[:domain_size] = domain_size; end
@@ -481,6 +506,8 @@ function parse_experiment_args(
     if degree_range !== nothing; kwargs[:degree_range] = degree_range; end
     if max_time !== nothing; kwargs[:max_time] = max_time; end
     if basis !== nothing; kwargs[:basis] = basis; end
+    if truncation_threshold !== nothing; kwargs[:truncation_threshold] = truncation_threshold; end
+    if truncation_mode !== nothing; kwargs[:truncation_mode] = truncation_mode; end
     if enable_gradients !== nothing; kwargs[:enable_gradient_computation] = enable_gradients; end
     if enable_hessians !== nothing; kwargs[:enable_hessian_computation] = enable_hessians; end
     if enable_bfgs !== nothing; kwargs[:enable_bfgs_refinement] = enable_bfgs; end
@@ -494,15 +521,23 @@ end
 
 Pretty-print experiment parameters.
 """
-function print_params(params::ExperimentParams; title="Experiment Parameters")
-    println("=" ^ 60)
-    println(title)
-    println("=" ^ 60)
-    println("  Domain size:     ±$(params.domain_size)")
-    println("  Grid samples:    GN=$(params.GN) ($(params.GN^4) points in 4D)")
-    println("  Degree range:    $(first(params.degree_range)):$(last(params.degree_range))")
-    println("  Max time/degree: $(params.max_time)s")
-    println("=" ^ 60)
+function print_params(io::IO, params::ExperimentParams; title="Experiment Parameters")
+    println(io, "=" ^ 60)
+    println(io, title)
+    println(io, "=" ^ 60)
+    println(io, "  Domain size:     ±$(params.domain_size)")
+    println(io, "  Grid samples:    GN=$(params.GN) ($(params.GN^4) points in 4D)")
+    println(io, "  Degree range:    $(first(params.degree_range)):$(last(params.degree_range))")
+    println(io, "  Max time/degree: $(params.max_time)s")
+    println(io, "  Basis:           $(params.basis)")
+    if params.truncation_threshold !== nothing
+        println(io, "  Truncation:      threshold=$(params.truncation_threshold) ($(params.truncation_mode))")
+    end
+    println(io, "=" ^ 60)
 end
+
+# Convenience: print to stdout
+print_params(params::ExperimentParams; title="Experiment Parameters") =
+    print_params(stdout, params; title=title)
 
 end # module ExperimentCLI
