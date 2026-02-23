@@ -1,7 +1,7 @@
 """
 ModelRegistry.jl
 
-Centralized registry for ODE models and benchmark functions used in globtim.
+Centralized registry for dynamical system models and benchmark functions used in globtim.
 Provides a unified API for querying, validating, and retrieving model definitions.
 
 # Example Usage
@@ -11,8 +11,8 @@ using Globtim.ModelRegistry
 
 # Query available models
 models = list_models()                    # All models
-ode_models = list_models(category = :ode) # Only ODE models
-lv_4d = list_models(dimension = 4)        # 4D models
+dyn_models = list_models(category = :ode) # Only dynamical system models
+models_4d = list_models(dimension = 4)    # 4D models
 
 # Validate model name
 if validate_model_name("lv4d_generalized")
@@ -49,12 +49,12 @@ Metadata structure for registered models.
 # Fields
 - `name::String`: Primary model identifier (lowercase with underscores)
 - `aliases::Vector{String}`: Alternative names for the model
-- `dimension::Int`: Number of dimensions (state variables for ODE, input dimension for benchmarks)
+- `dimension::Int`: Number of dimensions (state variables for dynamical models, input dimension for benchmarks)
 - `num_parameters::Int`: Number of parameters to be inferred (0 for benchmarks)
 - `num_states::Int`: Number of state variables (0 for benchmarks)
 - `num_outputs::Int`: Number of observable/measured quantities
 - `category::Symbol`: `:ode` or `:benchmark`
-- `subcategory::Symbol`: More specific category (e.g., `:lotka_volterra`, `:daisy`, `:fitzhugh_nagumo`)
+- `subcategory::Symbol`: More specific category (e.g., `:predator_prey`, `:chemical`, `:neural`)
 - `requires_inputs::Bool`: Whether the model requires external inputs
 - `definition_function::Function`: Function that returns `(model, parameters, states, measured_quantities)`
 - `description::String`: Human-readable description of the model
@@ -277,18 +277,17 @@ function get_model_function(model_name::String)::Function
 end
 
 # ============================================================================
-# Model Registration: ODE Models from Dynamic_objectives package
+# Model Registration: Dynamical system models from external packages
 # ============================================================================
 
 """
-Register all ODE models from Dynamic_objectives package
+Register dynamical system models from external packages.
 
-Note: This function only works if Dynamic_objectives is loaded in the user's environment.
-Load it explicitly in your experiment:
-    using Dynamic_objectives
+Note: This function only works if the model package is loaded in the user's environment.
+Load it explicitly in your experiment script.
 """
 function register_ode_models!()
-    # Check if Dynamic_objectives is available
+    # Check if external model package is available
     if !isdefined(Main, :Dynamic_objectives)
         return
     end
@@ -648,15 +647,15 @@ end
 # ============================================================================
 
 """
-Initialize the model registry by registering all models from:
-- Dynamic_objectives package (ODE models, when loaded via Main)
+Initialize the model registry by registering all available models from:
+- External model packages (dynamical system models, when loaded via Main)
 - src/LibFunctions.jl (benchmark functions)
 """
 function __init__()
     try
         register_ode_models!()
     catch e
-        @warn "Failed to register ODE models (this is expected if Dynamic_objectives is not loaded): $e"
+        @warn "Failed to register external models (this is expected if the model package is not loaded): $e"
     end
 
     try
@@ -670,7 +669,7 @@ function __init__()
     n_benchmark = length(list_models(category=:benchmark))
 
     if n_total > 0
-        @info "ModelRegistry initialized with $n_total models ($n_ode ODE, $n_benchmark benchmarks)"
+        @info "ModelRegistry initialized with $n_total models ($n_ode dynamical, $n_benchmark benchmarks)"
     else
         @info "ModelRegistry initialized with no models (use register_model! to add models)"
     end

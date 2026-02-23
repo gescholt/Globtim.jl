@@ -752,8 +752,8 @@ function enhanced_bfgs_refinement(
         # Time the optimization
         start_time = time()
 
-        # Run optimization with selected parameters (with ODE warning suppression)
-        # Using NelderMead (gradient-free) for robustness with ODE-based objectives
+        # Run optimization with selected parameters (with warning suppression)
+        # Using NelderMead (gradient-free) for robustness with expensive objectives
         result = Logging.with_logger(Logging.NullLogger()) do
             Optim.optimize(
                 objective_function,

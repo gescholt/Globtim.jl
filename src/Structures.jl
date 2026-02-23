@@ -279,7 +279,7 @@ struct TestInput
     # Custom parameters with higher dimension
     T = TestInput(rosenbrock, dim=10, center=ones(10), tolerance=1e-4)
 
-    # With model and data for parameter estimation
+    # With model and data
     T = TestInput(loss_function, model=my_model, outputs=measured_data)
     ```
     """

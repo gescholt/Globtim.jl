@@ -553,7 +553,7 @@ trims leading/trailing underscores, and collapses multiple underscores.
 
 # Example
 ```julia
-sanitize_objective_name("Lotka-Volterra 4D")  # "lotka_volterra_4d"
+sanitize_objective_name("My Function 4D")  # "my_function_4d"
 sanitize_objective_name("Extended Brusselator!")  # "extended_brusselator_"
 sanitize_objective_name("  UPPERCASE  ")  # "uppercase"
 ```
@@ -612,7 +612,7 @@ function validate_project_structure(
     # Important files (should exist, but not critical)
     important_files = [
         "Manifest.toml",
-        "Examples/systems/DynamicalSystems.jl",
+        "Examples/systems/",
         "test"
     ]
 

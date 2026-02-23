@@ -84,41 +84,6 @@ enabled = true
 method = "NelderMead"
 ```
 
-## Application: ODE Parameter Estimation
-
-The primary research application of Globtim is finding all critical points of ODE parameter estimation objectives. Given an ODE model with unknown parameters **p**, the objective measures how well the model fits observed data:
-
-```
-minimize  ||ODE_solution(p) - data||^2    over p in Domain
-```
-
-Standard optimizers find one local minimum and have no way of knowing whether a better parameter vector exists elsewhere. Globtim discovers *all* critical points of the objective landscape, revealing the full structure of the parameter estimation problem — including additional local minima, saddle points, and symmetries.
-
-Example TOML config for a Lotka-Volterra 2D model:
-
-```toml
-[experiment]
-name = "lv2d"
-description = "Lotka-Volterra 2D parameter estimation"
-
-[model]
-p_true = [0.5, -0.3]
-
-[domain]
-bounds = [[0.0, 2.0], [0.0, 50.0]]
-
-[polynomial]
-GN = 12
-degree_range = [4, 2, 10]
-
-[solver]
-method = "AutoTsit5"
-abstol = 1e-4
-reltol = 1e-4
-```
-
-ODE models are provided by the companion package [Dynamic_objectives](https://github.com/gescholt/globopt_merged), which includes Lotka-Volterra (2D/3D/4D), FitzHugh-Nagumo 3D, Goodwin 4D, and DAISY 4D.
-
 ## Polynomial Basis Options
 
 Two orthogonal polynomial bases are supported:

@@ -40,7 +40,6 @@ Technical implementation details and development guides:
 - **[Conditional Loading](development/CONDITIONAL_LOADING_NO_FALLBACKS.md)** - No-fallback loading rules
 - **[Circular Dependency Prevention](development/CIRCULAR_DEPENDENCY_PREVENTION_RULES.md)** - Dependency rules
 - **[PolyVar Import Solution](development/POLYVAR_IMPORT_SOLUTION.md)** - DynamicPolynomials import patterns
-- **[ODE Warning Suppression](development/ODE_WARNING_SUPPRESSION.md)** - Warning handling
 - **[Warning Catalog](development/WARNING_CATALOG.md)** - Known warnings reference
 
 ### User Guides (`user_guides/`)

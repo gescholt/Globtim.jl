@@ -2,7 +2,7 @@
 # Adaptive domain subdivision for error-driven polynomial approximation
 #
 # Key design principles:
-# 1. Minimize function evaluations (expensive: ~10ms per ODE solve for trajectory problems)
+# 1. Minimize function evaluations (expensive for complex objective functions)
 # 2. Reuse existing Chebyshev samples where possible
 # 3. Statistical dimension selection from residuals (no new evaluations)
 # 4. Parallel processing of independent subdomains
@@ -457,7 +457,7 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
         f_values[i] = f(x_physical)
     end
 
-    # Check for Inf values (failed ODE evaluations or other failures)
+    # Check for Inf values (failed evaluations or other failures)
     if any(isinf, f_values)
         # Mark subdomain as failed - use Inf as sentinel (not NaN)
         subdomain.l2_error = Inf
@@ -952,7 +952,7 @@ Main adaptive refinement loop with parallel processing.
 - `basis::Symbol=:chebyshev`: Basis type
 - `verbose::Bool=false`: Print progress information
 - `phase_callback::Union{Function,Nothing}=nothing`: Called with `(f, :refine, 0)` at start.
-    Use with `TolerantObjective` to set ODE tolerances per phase.
+    Use with `TolerantObjective` to set solver tolerances per phase.
 
 # Returns
 - SubdivisionTree with refined subdomains
@@ -1115,7 +1115,7 @@ Phase 2 refines to meet the final tolerance.
 - `verbose::Bool=false`: Print progress
 - `phase_callback::Union{Function,Nothing}=nothing`: Called with `(f, :coarse, 0)` at
     Phase 1 start and `(f, :fine, 0)` at Phase 2 start. Use with `TolerantObjective` to
-    switch ODE tolerances between phases.
+    switch solver tolerances between phases.
 
 # Returns
 - SubdivisionTree with refined subdomains
@@ -1143,7 +1143,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     verbose && println("=== Phase 1: Coarse balancing ===")
 
     # Notify phase callback for Phase 1 (coarse balancing)
-    # This allows TolerantObjective to switch to coarse ODE tolerances
+    # This allows TolerantObjective to switch to coarse solver tolerances
     if phase_callback !== nothing
         phase_callback(f, :coarse, 0)
     end
@@ -1211,7 +1211,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     verbose && println("\n=== Phase 2: Accuracy refinement ===")
 
     # Notify phase callback for Phase 2 (fine accuracy)
-    # This allows TolerantObjective to switch to tight ODE tolerances
+    # This allows TolerantObjective to switch to tight solver tolerances
     if phase_callback !== nothing
         phase_callback(f, :fine, 0)
     end

@@ -2,10 +2,10 @@
 TOML Experiment Configuration Loader
 
 Parses TOML config files into `ExperimentPipelineConfig` for use with
-`run_standard_experiment()` and external ODE orchestrators.
+`run_standard_experiment()` and external orchestrators.
 
 This module lives in Globtim with no external dependencies.
-ODE-specific orchestration is handled by downstream packages.
+Domain-specific orchestration is handled by downstream packages.
 
 Created: 2026-02-09
 """
@@ -23,12 +23,12 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 # Sections (matching TOML layout)
 
 - `[experiment]`: name, description
-- `[model]`: catalogue_path + entry_name (ODE) OR analytical_function + dimension (built-in)
+- `[model]`: catalogue_path + entry_name (catalogue) OR analytical_function + dimension (built-in)
   Optional: time_interval (override catalogue default, catalogue mode only)
   Optional: sample_times (explicit time sample points, overrides time_interval + numpoints)
 - `[domain]`: radius (symmetric) OR radii (anisotropic) OR bounds (explicit)
 - `[polynomial]`: GN, degree_range, basis, truncation_threshold (opt-in), truncation_mode
-- `[solver]`: ODE solver overrides (optional)
+- `[solver]`: solver overrides (optional)
 - `[refinement]`: post-processing refinement (optional)
 - `[output]`: output_dir (optional)
 """
@@ -59,7 +59,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     truncation_threshold::Union{Nothing, Float64} = nothing  # opt-in coefficient truncation
     truncation_mode::Symbol = :relative                      # :relative or :absolute
 
-    # [solver] — optional ODE overrides
+    # [solver] — optional solver overrides
     solver_method::Union{Nothing, String} = nothing
     solver_abstol::Union{Nothing, Float64} = nothing
     solver_reltol::Union{Nothing, Float64} = nothing
@@ -591,7 +591,7 @@ end
 Convert the polynomial/solver fields of an ExperimentPipelineConfig into an
 ExperimentParams suitable for `run_standard_experiment()`.
 
-ODE objectives are ForwardDiff-incompatible, so gradient/hessian/BFGS are
+Catalogue objectives may be ForwardDiff-incompatible, so gradient/hessian/BFGS are
 disabled when using catalogue models. Analytical models enable them by default.
 """
 function config_to_experiment_params(config::ExperimentPipelineConfig)

@@ -6,37 +6,7 @@ This document catalogs all warning types encountered during Globtim experiments 
 
 ## Warning Categories
 
-### 1. ODE Solver Warnings (ADDRESSED)
-
-**Example:**
-```
-┌ Warning: At t=7.548527380329381, dt was forced below floating point epsilon
-│ 8.881784197001252e-16, and step error estimate = 2.050529468896692e-40.
-│ Aborting. There is either an error in your model specification or the true
-│ solution is unstable (or the true solution can not be represented in the
-│ precision of Float64).
-└ @ SciMLBase ~/.julia/packages/SciMLBase/YE7xF/src/integrator_interface.jl:657
-```
-
-**Source:** DifferentialEquations.jl solver during parameter space exploration
-
-**Status:** ✅ ADDRESSED
-
-**Solution:**
-- Wrapped ODE solve calls with `Logging.global_logger(Logging.SimpleLogger(stderr, Logging.Error))`
-- Applied in 3 locations:
-  - `Examples/systems/DynamicalSystems.jl:298-306` (sample_data)
-  - `src/refine.jl:422-441` (critical point refinement)
-  - `src/refine.jl:782-802` (adaptive precision optimization)
-
-**When it occurs:**
-- During optimization with ODE-based objective functions
-- Parameter recovery experiments
-- When exploring parameter combinations that lead to numerical instability
-
----
-
-### 2. Optim Constructor Warnings (NEEDS REVIEW)
+### 1. Optim Constructor Warnings (NEEDS REVIEW)
 
 **Example:**
 ```
@@ -61,7 +31,7 @@ NOTE: Assumed "Sphere" refers to `Optim.Sphere`.
 
 ---
 
-### 3. Deprecation Warnings (TO BE COLLECTED)
+### 2. Deprecation Warnings (TO BE COLLECTED)
 
 **Status:** 🔍 TO BE COLLECTED
 
@@ -69,7 +39,7 @@ NOTE: Assumed "Sphere" refers to `Optim.Sphere`.
 
 ---
 
-### 4. Type Instability Warnings (TO BE COLLECTED)
+### 3. Type Instability Warnings (TO BE COLLECTED)
 
 **Status:** 🔍 TO BE COLLECTED
 
@@ -80,7 +50,7 @@ NOTE: Assumed "Sphere" refers to `Optim.Sphere`.
 
 ---
 
-### 5. Package Compatibility Warnings (TO BE COLLECTED)
+### 4. Package Compatibility Warnings (TO BE COLLECTED)
 
 **Status:** 🔍 TO BE COLLECTED
 
@@ -88,7 +58,7 @@ NOTE: Assumed "Sphere" refers to `Optim.Sphere`.
 
 ---
 
-### 6. Numerical Precision Warnings (TO BE COLLECTED)
+### 5. Numerical Precision Warnings (TO BE COLLECTED)
 
 **Status:** 🔍 TO BE COLLECTED
 
@@ -124,22 +94,11 @@ grep -rn "@warn" src/ | grep -v "\.md"
 
 ## Next Steps
 
-1. ✅ ODE solver warnings suppressed
-2. ⏳ Collect Sphere constructor warnings
-3. ⏳ Run full experiment suite and collect all warning types
-4. ⏳ Prioritize and address each category
-5. ⏳ Document solutions in this file
-6. ⏳ Create automated warning detection in CI
-
-## Testing
-
-To verify warning suppression:
-
-```bash
-# Test ODE warnings
-cd globtim
-julia --project=. -e 'push!(LOAD_PATH, "Examples/systems"); using DynamicalSystems; using ModelingToolkit; model, params, states, outputs = define_lotka_volterra_2D_model(); p = [2.0, 3.0]; ic = [1.0, 1.0]; problem = ODEProblem(ModelingToolkit.complete(model), merge(Dict(ModelingToolkit.unknowns(model) .=> ic), Dict(ModelingToolkit.parameters(model) .=> p)), [0.0, 10.0]); data = sample_data(problem, model, outputs, [0.0, 10.0], p, ic, 50); println("✅ No warnings!")'
-```
+1. ⏳ Collect Sphere constructor warnings
+2. ⏳ Run full experiment suite and collect all warning types
+3. ⏳ Prioritize and address each category
+4. ⏳ Document solutions in this file
+5. ⏳ Create automated warning detection in CI
 
 ## Last Updated
 

@@ -14,17 +14,17 @@ This document establishes enforceable rules to prevent circular dependencies in 
 ```toml
 # VALID
 [weakdeps]
-ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+HeavyPackage = "some-uuid-here"
 
 [extensions]
-GlobtimModelingToolkitExt = "ModelingToolkit"
+GlobtimHeavyPackageExt = "HeavyPackage"
 
 # INVALID - causes KeyError
 [deps]
-ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+HeavyPackage = "some-uuid-here"
 
 [extensions]
-GlobtimModelingToolkitExt = "ModelingToolkit"  # ERROR: references regular dep
+GlobtimHeavyPackageExt = "HeavyPackage"  # ERROR: references regular dep
 ```
 
 #### Rule 1.2: No Dual Dependencies
@@ -43,7 +43,7 @@ GlobtimModelingToolkitExt = "ModelingToolkit"  # ERROR: references regular dep
 #### Rule 2.2: Heavy Dependencies → Extensions
 - **Rule**: Move heavy dependencies to extensions
 - **Target Dependencies**:
-  - ModelingToolkit (already causing warnings)
+  - Heavy modeling packages
   - Plotting packages (Makie, Plots)
   - Database packages
   - Web frameworks
@@ -57,10 +57,10 @@ GlobtimModelingToolkitExt = "ModelingToolkit"  # ERROR: references regular dep
 abstract type AbstractModel end
 function solve end  # Generic function
 
-# Extension (ext/GlobtimModelingToolkitExt.jl)
-module GlobtimModelingToolkitExt
-    using Globtim, ModelingToolkit
-    Globtim.solve(::ModelingToolkit.ODESystem, ...) = ...
+# Extension (ext/GlobtimHeavyPackageExt.jl)
+module GlobtimHeavyPackageExt
+    using Globtim, HeavyPackage
+    Globtim.solve(::HeavyPackage.ProblemType, ...) = ...
 end
 ```
 
@@ -85,7 +85,7 @@ end
 julia --project=. -e "using Globtim; println(\"Success\")"
 
 # Test with extensions
-julia --project=. -e "using Globtim, ModelingToolkit; println(\"Both loaded\")"
+julia --project=. -e "using Globtim, ExtensionPackage; println(\"Both loaded\")"
 ```
 
 #### Rule 4.2: Precompilation Validation
@@ -116,7 +116,7 @@ julia --project=. -e "using Pkg; Pkg.precompile()"
 ```julia
 function advanced_solve(problem)
     if !hasmethod(solve, (typeof(problem),))
-        error("Advanced solving requires ModelingToolkit extension. Load with: using ModelingToolkit")
+        error("Advanced solving requires the appropriate extension. Load the required package first.")
     end
     solve(problem)
 end
@@ -138,7 +138,6 @@ end
 
 ## Implementation Status
 
-- **Current**: ModelingToolkit circular dependency warning (functionality unaffected)
 - **Fixed**: JuliaFormatter KeyError (extension configuration corrected)
 - **Target**: Zero circular dependency warnings through proper architecture
 

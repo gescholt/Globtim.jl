@@ -55,20 +55,20 @@ end
 
 ### Pattern 2: Extension Implementation
 
-**Extension (ext/GlobtimModelingToolkitExt.jl)**:
+**Extension (ext/GlobtimHeavyPackageExt.jl)**:
 ```julia
-module GlobtimModelingToolkitExt
+module GlobtimHeavyPackageExt
 
 using Globtim
-using ModelingToolkit
+using HeavyPackage
 
-# Extend core interfaces with ModelingToolkit functionality
-struct ModelingToolkitSolver <: Globtim.AbstractSolver
-    system::ModelingToolkit.ODESystem
+# Extend core interfaces with HeavyPackage functionality
+struct HeavyPackageSolver <: Globtim.AbstractSolver
+    system::HeavyPackage.ProblemType
 end
 
-function Globtim.solve(solver::ModelingToolkitSolver, problem)
-    # Implementation using ModelingToolkit
+function Globtim.solve(solver::HeavyPackageSolver, problem)
+    # Implementation using HeavyPackage
 end
 
 end
@@ -79,15 +79,15 @@ end
 **Core Package with Optional Features**:
 ```julia
 function advanced_solve(problem)
-    # Check if ModelingToolkit extension is available
-    if !hasmethod(solve, (ModelingToolkitSolver, typeof(problem)))
+    # Check if the required extension is available
+    if !hasmethod(solve, (HeavyPackageSolver, typeof(problem)))
         error("""
-        Advanced solving requires ModelingToolkit extension.
-        Load with: using ModelingToolkit
+        Advanced solving requires HeavyPackage extension.
+        Load with: using HeavyPackage
         """)
     end
 
-    solver = ModelingToolkitSolver(problem.system)
+    solver = HeavyPackageSolver(problem.system)
     return solve(solver, problem)
 end
 ```
@@ -105,13 +105,11 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [weakdeps]
 # Heavy or optional dependencies
-ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 
 [extensions]
-GlobtimModelingToolkitExt = "ModelingToolkit"
 GlobtimVisualizationExt = ["CairoMakie", "GLMakie"]
 GlobtimAnalysisExt = "Clustering"
 ```
@@ -126,7 +124,7 @@ GlobtimAnalysisExt = "Clustering"
 
 ### Extension Dependencies (Move to [weakdeps])
 - **Plotting**: Makie ecosystem, Plots, etc.
-- **Heavy Modeling**: ModelingToolkit, DifferentialEquations
+- **Heavy Modeling**: Large modeling frameworks
 - **Database/IO**: Database drivers, web frameworks
 - **Machine Learning**: MLJ, Flux, etc.
 - **Visualization**: Any plotting or GUI packages
@@ -205,17 +203,17 @@ end
 ### Extension Testing Pattern
 
 ```julia
-# test/extensions/test_modeling_toolkit_ext.jl
+# test/extensions/test_extension.jl
 using Test
 using Globtim
 
-@testset "ModelingToolkit Extension" begin
+@testset "Extension Loading" begin
     # Test loading
     try
-        using ModelingToolkit
-        @test hasmethod(Globtim.solve, (Globtim.ModelingToolkitSolver, Any))
+        using HeavyPackage
+        @test hasmethod(Globtim.solve, (Globtim.HeavyPackageSolver, Any))
     catch LoadError
-        @test_skip "ModelingToolkit not available"
+        @test_skip "HeavyPackage not available"
     end
 end
 ```
@@ -241,7 +239,7 @@ end
 ```julia
 # BAD: Core depends on heavy packages
 module Globtim
-using ModelingToolkit, GLMakie, DataFrames  # Too heavy!
+using HeavyPackage, GLMakie, DataFrames  # Too heavy!
 ```
 
 ### ❌ Anti-Pattern 2: Extension Interdependence
@@ -255,10 +253,10 @@ using GlobtimAnalysisExt  # Extensions shouldn't depend on each other
 ```toml
 # BAD: Package in both deps and extensions
 [deps]
-ModelingToolkit = "..."
+HeavyPackage = "..."
 
 [extensions]
-GlobtimModelingToolkitExt = "ModelingToolkit"  # Circular!
+GlobtimHeavyPackageExt = "HeavyPackage"  # Circular!
 ```
 
 ## Best Practices Summary
@@ -289,6 +287,5 @@ GlobtimAnalysisExt = ["Clustering", "Distributions"]
 ```
 
 ### Areas for Improvement
-- Consider moving `ModelingToolkit` to weakdeps/extension pattern
 - Evaluate `CSV` and `DataStructures` for extension migration
 - Create plotting extensions for Makie dependencies

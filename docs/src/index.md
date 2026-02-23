@@ -36,18 +36,6 @@ f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  
 
 For functions that vary on different scales in different regions, Globtim uses **adaptive subdivision** to build piecewise polynomial approximations that maintain accuracy everywhere.
 
-## Primary Application: ODE Parameter Estimation
-
-The main research application is finding all critical points of ODE parameter estimation objectives. Given an ODE model with unknown parameters **p**, the objective measures how well the model fits observed data:
-
-```
-minimize  ||ODE_solution(p) - data||^2    over p in Domain
-```
-
-Standard optimizers find one local minimum and cannot guarantee whether better parameters exist elsewhere. Globtim discovers *all* critical points of the objective landscape, revealing additional local minima, saddle points, and symmetries. Understanding the critical point landscape of ODE parameter estimation is an open research question.
-
-Supported ODE models include Lotka-Volterra (2D/3D/4D), FitzHugh-Nagumo 3D, Goodwin 4D, and DAISY 4D.
-
 ## Installation
 
 ```julia
