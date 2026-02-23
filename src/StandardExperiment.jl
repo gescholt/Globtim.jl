@@ -33,13 +33,12 @@ Usage:
 ```julia
 using Globtim
 
-# Define objective function (1-arg or 2-arg)
-objective = p -> sum(p.^2)  # 1-arg function (auto-detected)
+# Define objective function (1-arg closure)
+objective = p -> sum(p.^2)
 
 # Run experiment (exports raw critical points only)
 result = run_standard_experiment(
     objective_function = objective,
-    problem_params = nothing,  # Not needed for 1-arg functions
     bounds = [(-5.0, 5.0), (-5.0, 5.0)],
     experiment_config = config,
     output_dir = output_dir,
@@ -163,7 +162,6 @@ end
     run_standard_experiment(;
         objective_function::Function,
         objective_name::String,
-        problem_params,
         bounds::Vector{Tuple{Float64, Float64}},
         experiment_config,
         output_dir::String,
@@ -177,14 +175,11 @@ Execute standardized experiment with RAW critical point export only.
 This function now exports only raw critical points from HomotopyContinuation.
 
 # Arguments
-- `objective_function`: Callable with signature f(point::Vector{Float64}) or f(point, params).
-  Accepts plain functions or callable structs (e.g., TolerantObjective).
-   - 1-argument: f(p::Vector{Float64}) -> Float64 (auto-detected, e.g., ODE cost functions)
-  - 2-argument: f(p::Vector{Float64}, params) -> Float64 (legacy, requires problem_params)
+- `objective_function`: Callable with signature f(point::Vector{Float64}) -> Float64.
+  Accepts plain functions, closures, or callable structs (e.g., TolerantObjective).
 - `objective_name`: Identifier for the objective function (e.g., "lv4d", "deuflhard_4d_q4").
   Stored in `results_summary.json` under `experiment_definition.objective_name` to make
   experiment outputs self-describing for parameter sweep analysis.
-- `problem_params`: Problem-specific parameters (only for 2-arg functions)
 - `bounds`: Vector of (min, max) tuples for each dimension
 - `experiment_config`: ExperimentParams from ExperimentCLI (GN, degree_range, max_time, domain_size)
 - `output_dir`: Output directory path (from DrWatson, --output-dir, or hierarchical path)
@@ -220,7 +215,6 @@ using Globtim, GlobtimPostProcessing
 result_raw = run_standard_experiment(
     objective_function = my_objective,
     objective_name = "my_problem",
-    problem_params = nothing,
     bounds = bounds,
     experiment_config = config,
     output_dir = "results/my_experiment"
@@ -239,7 +233,6 @@ result_refined = refine_experiment_results(
 result = run_standard_experiment(
     objective_function = p -> sum(p.^2),
     objective_name = "quadratic_test",
-    problem_params = nothing,
     bounds = [(0.5, 1.5), (1.5, 2.5), (2.5, 3.5), (3.5, 4.5)],
     experiment_config = parse_experiment_args(ARGS),
     output_dir = "hpc_results/my_experiment",
@@ -250,7 +243,6 @@ result = run_standard_experiment(
 function run_standard_experiment(;
     objective_function,
     objective_name::String,
-    problem_params,
     bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
@@ -264,32 +256,10 @@ function run_standard_experiment(;
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
-    # Detect function signature and create wrapper if needed
-    # Support both 1-arg (ODE cost function pattern) and 2-arg (legacy pattern)
-    method_sig = first(methods(objective_function)).sig
-    while method_sig isa UnionAll
-        method_sig = method_sig.body
-    end
-    n_args = length(method_sig.parameters) - 1
-
-    func = if n_args == 1
-        if problem_params !== nothing
-            @warn "problem_params provided but objective_function takes 1 argument - ignoring params"
-        end
-        objective_function
-    elseif n_args == 2
-        if problem_params === nothing
-            error("2-argument objective function requires problem_params")
-        end
-        x -> objective_function(x, problem_params)
-    else
-        error("Objective function must accept 1 or 2 arguments, got $n_args")
-    end
-
     # Build tensor representation ONCE (evaluates objective on GN^dimension grid points)
     # This is invariant across degrees — only Constructor depends on degree.
     TR = Globtim.TestInput(
-        func,
+        objective_function,
         dim = dimension,
         center = center,
         GN = experiment_config.GN,
@@ -306,7 +276,7 @@ function run_standard_experiment(;
         try
             result = process_single_degree(
                 degree,
-                func,
+                objective_function,
                 TR,
                 bounds,
                 experiment_config,
@@ -391,14 +361,14 @@ function run_standard_experiment(;
 end
 
 """
-    process_single_degree(degree, func, TR, bounds,
+    process_single_degree(degree, objective_function, TR, bounds,
                          experiment_config, output_dir, true_params) -> DegreeResult
 
 Process a single polynomial degree through the complete pipeline.
 
 # Arguments
 - `degree::Int`: Polynomial degree to process
-- `func`: Resolved 1-argument objective callable (Function or functor struct)
+- `objective_function`: 1-argument objective callable f(x::Vector{Float64}) -> Float64
 - `TR`: Pre-computed tensor representation from `Globtim.TestInput` (shared across degrees)
 - `bounds`: Vector of (lower, upper) tuples
 - `experiment_config`: Experiment parameters (basis, GN, etc.)
@@ -407,7 +377,7 @@ Process a single polynomial degree through the complete pipeline.
 """
 function process_single_degree(
     degree::Int,
-    func,
+    objective_function,
     TR,
     bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
@@ -461,7 +431,7 @@ function process_single_degree(
     processing_start = time()
 
     # Compute objective values at critical points (in original coordinates)
-    objective_values = [func(critical_points_array[i]) for i in 1:n_critical_points]
+    objective_values = [objective_function(critical_points_array[i]) for i in 1:n_critical_points]
 
     # Find best estimate (lowest objective value, even if outside domain)
     best_idx = argmin(objective_values)
