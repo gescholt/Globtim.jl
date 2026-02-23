@@ -1,18 +1,24 @@
-# Globtim - Global Optimization via Polynomial Approximation
+# Globtim.jl — Global Optimization via Polynomial Approximation
 
-[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://gescholt.github.io/Globtim.jl/stable/)
-[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://gescholt.github.io/Globtim.jl/dev/)
+[![Documentation (stable)](https://img.shields.io/badge/docs-stable-blue.svg)](https://gescholt.github.io/Globtim.jl/stable/)
+[![Documentation (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://gescholt.github.io/Globtim.jl/dev/)
 
-A Julia package for global optimization using polynomial approximation methods.
+Finding all local minima of a continuous function over a bounded domain is fundamentally hard. Standard optimization algorithms (gradient descent, BFGS, etc.) find *one* local minimum from a given starting point — but how do you know there isn't a better one elsewhere?
 
-## What is Globtim?
+Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system whose solutions can be computed exactly using homotopy continuation. Each solution seeds a local refinement on the original function, recovering *all* local minima — not just the nearest one.
 
-Globtim finds all local minima of a nonlinear function by:
-1. Constructing a polynomial approximation of your function
-2. Computing all critical points of the polynomial
-3. Filtering and refining to identify local minima
+```
+f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  All minima
+           (Chebyshev/Legendre)   (HomotopyContinuation.jl)
+```
 
-This approach guarantees finding all minima within a bounded domain, unlike gradient-based methods that find only one minimum.
+### Challenging 1D function — multi-frequency oscillations at varying polynomial degrees:
+
+![1D Comparison](docs/src/assets/1D_comparison.png)
+
+### Styblinski-Tang 2D — classic test function with polynomial approximation:
+
+![Styblinski-Tang](docs/src/assets/styblinski_tang_comparison.png)
 
 ## Installation
 
@@ -51,179 +57,131 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 println("Found $(nrow(df_min)) local minima")
 ```
 
+## Running Experiments with TOML Configs
+
+Experiments can be driven entirely by TOML configuration files, which specify the function, domain, polynomial degree, solver, and refinement settings:
+
+```bash
+julia --project=. globtim/scripts/run_experiment.jl experiments/configs/ackley_3d.toml
+```
+
+Example config for a static benchmark:
+
+```toml
+[experiment]
+name = "ackley_3d"
+
+[domain]
+bounds = [[-5.0, 5.0], [-5.0, 5.0], [-5.0, 5.0]]
+
+[polynomial]
+GN = 12
+degree_range = [4, 2, 10]
+basis = "chebyshev"
+
+[refinement]
+enabled = true
+method = "NelderMead"
+```
+
+## Application: ODE Parameter Estimation
+
+The primary research application of Globtim is finding all critical points of ODE parameter estimation objectives. Given an ODE model with unknown parameters **p**, the objective measures how well the model fits observed data:
+
+```
+minimize  ||ODE_solution(p) - data||^2    over p in Domain
+```
+
+Standard optimizers find one local minimum and have no way of knowing whether a better parameter vector exists elsewhere. Globtim discovers *all* critical points of the objective landscape, revealing the full structure of the parameter estimation problem — including additional local minima, saddle points, and symmetries.
+
+Example TOML config for a Lotka-Volterra 2D model:
+
+```toml
+[experiment]
+name = "lv2d"
+description = "Lotka-Volterra 2D parameter estimation"
+
+[model]
+p_true = [0.5, -0.3]
+
+[domain]
+bounds = [[0.0, 2.0], [0.0, 50.0]]
+
+[polynomial]
+GN = 12
+degree_range = [4, 2, 10]
+
+[solver]
+method = "AutoTsit5"
+abstol = 1e-4
+reltol = 1e-4
+```
+
+ODE models are provided by the companion package [Dynamic_objectives](https://github.com/gescholt/globopt_merged), which includes Lotka-Volterra (2D/3D/4D), FitzHugh-Nagumo 3D, Goodwin 4D, and DAISY 4D.
+
 ## Polynomial Basis Options
 
-Globtim supports two orthogonal polynomial basis types:
+Two orthogonal polynomial bases are supported:
 
-- **`:chebyshev`** (default): Chebyshev polynomials - standard choice, well-tested
-- **`:legendre`**: Legendre polynomials - often better conditioning (lower condition numbers)
+- **`:chebyshev`** (default): Chebyshev polynomials — standard choice, well-tested
+- **`:legendre`**: Legendre polynomials — often better conditioning (lower condition numbers)
 
 ```julia
-# Specify basis in Constructor
 pol = Constructor(TR, 8, basis=:chebyshev, precision=AdaptivePrecision)  # Default
 pol = Constructor(TR, 8, basis=:legendre, precision=AdaptivePrecision)   # Alternative
 ```
-
-**When to use Legendre?** Recent experiments show Legendre can achieve:
-- Lower condition numbers (2-3x better)
-- Comparable or better L2 approximation error
-- Similar computational performance
 
 ## Precision Control
 
 Globtim supports multiple precision types for balancing accuracy and performance:
 
-- **`Float64Precision`**: Standard double precision, fastest
-- **`AdaptivePrecision`**: Hybrid (Float64 evaluation, BigFloat coefficients) - **recommended**
-- **`RationalPrecision`**: Exact rational arithmetic for symbolic work
-- **`BigFloatPrecision`**: Maximum precision for research
+| Precision | Performance | Accuracy | Best For |
+|-----------|-------------|----------|----------|
+| `Float64Precision` | Fast | Good | General use |
+| `AdaptivePrecision` | Good | Excellent | **Recommended default** |
+| `RationalPrecision` | Slow | Exact | Symbolic work |
+| `BigFloatPrecision` | Slowest | Maximum | Research |
 
 ```julia
-# Specify precision in Constructor
 pol = Constructor(TR, 8, precision=AdaptivePrecision)
 ```
 
-## Workflow: From Setup to Results
+## Solvers
 
-### 1. Define Your Problem
-```julia
-# Use a built-in test function or define your own
-f(x) = sum(x.^4) - sum(x.^2)  # Custom function
-# OR
-f = Deuflhard  # Built-in function
+Two solvers are available for computing critical points:
+
+1. **[HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/)** (default) — numerical algebraic geometry
+2. **[msolve](https://msolve.lip6.fr/)** — symbolic method based on Groebner basis computations
+
+## Ecosystem
+
+Globtim is part of a three-package ecosystem:
+
+| Package | Purpose | Install |
+|---------|---------|---------|
+| **Globtim** | Polynomial approximation and critical point finding | `Pkg.add("Globtim")` |
+| **[GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing)** | Refinement, validation, parameter recovery | `Pkg.add(url="https://github.com/gescholt/globtimpostprocessing")` |
+| **[GlobtimPlots](https://github.com/gescholt/globtimplots)** | Visualization (CairoMakie/GLMakie) | `Pkg.add(url="https://github.com/gescholt/globtimplots")` |
+
 ```
-
-### 2. Set Up Domain
-```julia
-TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
+Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)
 ```
-
-### 3. Create Polynomial Approximation
-```julia
-pol = Constructor(TR, degree=8, precision=AdaptivePrecision)
-```
-
-### 4. Solve for Critical Points
-```julia
-@polyvar x[1:2]
-solutions = solve_polynomial_system(x, pol)
-df = process_crit_pts(solutions, f, TR)
-```
-
-### 5. Process Results
-```julia
-# Filter and analyze critical points
-df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
-
-# Export results
-using CSV
-CSV.write("local_minima.csv", df_min)
-```
-
-Results include:
-- `critical_points.csv`: All critical points with function values
-- `local_minima.csv`: Filtered local minima with Hessian eigenvalues
-- Timing and performance metrics
-
-## Extensions
-
-Globtim provides optional extensions that are automatically loaded when their trigger packages are present:
-
-### GPU Acceleration (GlobtimCUDAExt)
-```julia
-using Globtim, CUDA  # Automatically loads GPU extension
-Globtim.gpu_available()  # Check GPU availability
-```
-
-### Analysis Extension (GlobtimAnalysisExt)
-```julia
-using Globtim, Clustering, Distributions  # Loads analysis extension
-cluster_critical_points(points; k=3)  # K-means clustering
-statistical_analysis(data)  # Distribution fitting
-```
-
-## Related Packages
-
-Globtim produces critical point candidates. For analysis and refinement, use these companion packages:
-
-### GlobtimPostProcessing - Analysis & Refinement
-
-Refines raw critical points from polynomial approximation into verified critical points with high accuracy (~1e-12).
-
-```julia
-using GlobtimPostProcessing
-
-# Load experiment results from globtim output
-result = load_experiment_results("/path/to/experiment")
-
-# Refine critical points (requires your objective function)
-refined = refine_experiment_results(
-    "/path/to/experiment",
-    my_objective_function
-)
-```
-
-**Key features:**
-- Critical point refinement via local optimization (BFGS/Nelder-Mead)
-- Gradient validation (verify ||∇f(x*)|| ≈ 0)
-- Parameter recovery analysis
-- Quality diagnostics (L2 error, stagnation detection)
-
-Install: `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")`
-
-### GlobtimPlots - Visualization
-
-Creates publication-quality figures and interactive visualizations from globtim and GlobtimPostProcessing results.
-
-```julia
-using GlobtimPlots, CairoMakie
-
-# Backend selection
-CairoMakie.activate!()  # Static (PDF/PNG)
-# GLMakie.activate!()   # Interactive
-
-# Visualize critical points
-fig = plot_critical_points(df_min)
-save("minima.pdf", fig)
-
-# Level set visualization
-fig = create_level_set_visualization(pol, TR, solutions)
-save("levelset.png", fig)
-
-# Convergence analysis
-fig = plot_convergence_analysis(degrees, l2_errors)
-save("convergence.pdf", fig)
-```
-
-**Key features:**
-- Level set and polynomial surface visualization (2D/3D)
-- Convergence analysis plots (L2 error vs degree)
-- Critical point scatter and Hessian eigenvalue plots
-- Campaign comparison across experiments
-- Subdivision tree visualization
-- 1D polynomial approximation plots
-- Animation generation (flyover, rotation)
-- Publication-ready PDF/PNG export
-
-Install: `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")`
-
-See [GlobtimPlots documentation](https://gescholt.github.io/Globtim.jl/stable/globtimplots/) for detailed workflow.
 
 ## Repository Organization
 
 ```
 Globtim.jl/
-├── src/                          # Core package source code
-│   ├── Globtim.jl               # Main module
-│   ├── ApproxConstruct.jl       # Polynomial construction
-│   ├── hom_solve.jl             # Homotopy continuation solver
+├── src/                    # Core package source
+│   ├── Globtim.jl          # Main module
+│   ├── ApproxConstruct.jl  # Polynomial construction
+│   ├── hom_solve.jl        # Homotopy continuation solver
 │   └── ...
-│
-├── ext/                          # Package extensions
-│   └── GlobtimCUDAExt.jl        # GPU acceleration
-│
-├── test/                         # Test suite
-└── docs/                         # Documentation
+├── ext/                    # Package extensions
+│   └── GlobtimCUDAExt.jl   # GPU acceleration (experimental)
+├── test/                   # Test suite
+├── docs/                   # Documenter.jl documentation
+├── scripts/                # Experiment runner scripts
+└── .github/workflows/      # CI (tests, docs, TagBot, CompatHelper)
 ```
 
 ## License

@@ -40,6 +40,7 @@ Examples/**/*.pdf
 *.heif
 
 # Exception: Documentation illustration assets
+!docs/src/assets/*.png
 !docs/src/assets/plots/*.png
 
 # Notebooks not ready for public release
