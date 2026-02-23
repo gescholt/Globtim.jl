@@ -342,16 +342,20 @@ function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture
             analysis_grad_method = _resolve_gradient_method(config, :analysis)
 
             # Read analysis parameters from config if available, else use defaults
+            refinement_goal = :minimum
             newton_tol = 1e-8
             newton_max_iter = 200
+            max_time_pt = 60.0
             hessian_tol = 1e-6
             dedup_frac = 0.02
             top_k = nothing
             accept_tol = 1e-2  # default from build_known_cps_from_refinement
             f_accept_tol = nothing  # disabled by default; set in TOML [analysis] for ODE objectives
             if config !== nothing
+                refinement_goal = config.analysis_refinement_goal !== nothing ? Symbol(config.analysis_refinement_goal) : refinement_goal
                 newton_tol = config.analysis_newton_tol !== nothing ? config.analysis_newton_tol : newton_tol
                 newton_max_iter = config.analysis_newton_max_iterations !== nothing ? config.analysis_newton_max_iterations : newton_max_iter
+                max_time_pt = config.analysis_max_time_per_point !== nothing ? config.analysis_max_time_per_point : max_time_pt
                 hessian_tol = config.analysis_hessian_tol !== nothing ? config.analysis_hessian_tol : hessian_tol
                 dedup_frac = config.analysis_dedup_fraction !== nothing ? config.analysis_dedup_fraction : dedup_frac
                 top_k = config.analysis_top_k
@@ -360,12 +364,13 @@ function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture
             end
 
             # Phase header
+            goal_label = refinement_goal == :minimum ? "NelderMead (f-minimization)" : "Newton (∇f = 0)"
             println()
-            println("══ Newton CP Analysis ══════════════════════════════════════")
+            println("══ CP Refinement: $goal_label ══════════════════════════════════════")
             println("  Source: degree $(highest_dr.degree) ($(highest_dr.n_critical_points) raw CPs)")
             top_k_str = top_k === nothing ? "none (refining all)" : string(top_k)
-            @printf("  Params: tol=%.0e, accept_tol=%.0e, max_iter=%d, gradient=%s\n",
-                newton_tol, accept_tol, newton_max_iter, analysis_grad_method)
+            @printf("  Params: goal=%s, tol=%.0e, accept_tol=%.0e, max_iter=%d, gradient=%s\n",
+                refinement_goal, newton_tol, accept_tol, newton_max_iter, analysis_grad_method)
             if f_accept_tol !== nothing
                 @printf("  f_accept_tol=%.0e (accept CPs with f(x) below this value)\n", f_accept_tol)
             end
@@ -376,11 +381,13 @@ function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture
                 objective,
                 highest_dr.critical_points,
                 bounds;
+                refinement_goal = refinement_goal,
                 gradient_method = analysis_grad_method,
                 tol = newton_tol,
                 accept_tol = accept_tol,
                 f_accept_tol = f_accept_tol,
                 max_iterations = newton_max_iter,
+                max_time_per_point = max_time_pt,
                 hessian_tol = hessian_tol,
                 dedup_fraction = dedup_frac,
                 top_k = top_k,

@@ -72,17 +72,20 @@ Base.@kwdef struct ExperimentPipelineConfig
     refinement_gradient_method::Union{Nothing, String} = nothing
     refinement_gradient_tolerance::Union{Nothing, Float64} = nothing
 
-    # [analysis] — optional CP validation (Newton on ∇f=0, Hessian classification)
+    # [analysis] — optional CP refinement and classification
     analysis_enabled::Bool = false
+    analysis_refinement_goal::Union{Nothing, String} = nothing  # "minimum" or "critical_point"
     analysis_gradient_method::Union{Nothing, String} = nothing
     analysis_newton_tol::Union{Nothing, Float64} = nothing
     analysis_newton_max_iterations::Union{Nothing, Int} = nothing
+    analysis_max_time_per_point::Union{Nothing, Float64} = nothing
     analysis_hessian_tol::Union{Nothing, Float64} = nothing
     analysis_dedup_fraction::Union{Nothing, Float64} = nothing
     analysis_top_k::Union{Nothing, Int} = nothing
     analysis_accept_tol::Union{Nothing, Float64} = nothing
     analysis_f_accept_tol::Union{Nothing, Float64} = nothing
     analysis_valley_walking::Bool = false
+    analysis_deep_diagnostics::Bool = false
 
     # [output]
     output_dir::Union{Nothing, String} = nothing
@@ -501,9 +504,11 @@ function load_experiment_config(path::String)
     # Parse analysis
     ana = get(d, "analysis", Dict())
     analysis_enabled = get(ana, "enabled", false)::Bool
+    analysis_refinement_goal = haskey(ana, "refinement_goal") ? String(ana["refinement_goal"]) : nothing
     analysis_gradient_method = haskey(ana, "gradient_method") ? String(ana["gradient_method"]) : nothing
     analysis_newton_tol = haskey(ana, "newton_tol") ? Float64(ana["newton_tol"]) : nothing
     analysis_newton_max_iterations = haskey(ana, "newton_max_iterations") ? Int(ana["newton_max_iterations"]) : nothing
+    analysis_max_time_per_point = haskey(ana, "max_time_per_point") ? Float64(ana["max_time_per_point"]) : nothing
     analysis_hessian_tol = haskey(ana, "hessian_tol") ? Float64(ana["hessian_tol"]) : nothing
     analysis_dedup_fraction = haskey(ana, "dedup_fraction") ? Float64(ana["dedup_fraction"]) : nothing
     analysis_top_k = haskey(ana, "top_k") ? Int(ana["top_k"]) : nothing
@@ -525,6 +530,7 @@ function load_experiment_config(path::String)
     analysis_accept_tol = haskey(ana, "accept_tol") ? Float64(ana["accept_tol"]) : nothing
     analysis_f_accept_tol = haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
     analysis_valley_walking = Bool(get(ana, "valley_walking", false))
+    analysis_deep_diagnostics = Bool(get(ana, "deep_diagnostics", false))
 
     return ExperimentPipelineConfig(
         # [experiment]
@@ -562,15 +568,18 @@ function load_experiment_config(path::String)
         refinement_gradient_tolerance = refinement_gradient_tolerance,
         # [analysis]
         analysis_enabled = analysis_enabled,
+        analysis_refinement_goal = analysis_refinement_goal,
         analysis_gradient_method = analysis_gradient_method,
         analysis_newton_tol = analysis_newton_tol,
         analysis_newton_max_iterations = analysis_newton_max_iterations,
+        analysis_max_time_per_point = analysis_max_time_per_point,
         analysis_hessian_tol = analysis_hessian_tol,
         analysis_dedup_fraction = analysis_dedup_fraction,
         analysis_top_k = analysis_top_k,
         analysis_accept_tol = analysis_accept_tol,
         analysis_f_accept_tol = analysis_f_accept_tol,
         analysis_valley_walking = analysis_valley_walking,
+        analysis_deep_diagnostics = analysis_deep_diagnostics,
         # [output]
         output_dir = output_dir,
     )
