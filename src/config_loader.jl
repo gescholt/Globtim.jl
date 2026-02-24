@@ -392,7 +392,7 @@ end
 # Path Resolution
 # ═══════════════════════════════════════════════════════════════════════════════
 
-const _RESULTS_PREFIX = "globtim_results" * Base.Filesystem.path_separator
+const _RESULTS_PREFIX = "globtim_results/"  # always forward slash — TOML files use "/" on all platforms
 
 """
     _resolve_config_path(p, config_dir) -> Union{String, Nothing}
