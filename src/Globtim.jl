@@ -227,7 +227,7 @@ include("data_structures.jl") #Enhanced data structures for multi-tolerance anal
 include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
-include("enhanced_analysis.jl") #Phase 3: Enhanced statistical tables and analysis
+# enhanced_analysis.jl removed — types and functions live in GlobtimPostProcessing (htxw)
 include("grid_utils.jl") #Grid format conversion utilities
 include("subdomain_management.jl") #4D subdomain decomposition management
 include("multi_tolerance_analysis.jl") #Multi-tolerance execution framework
@@ -320,16 +320,6 @@ export EnhancedMetrics
 # Level set data types (canonical definitions, used by GlobtimPlots)
 export LevelSetData, VisualizationParameters
 
-# Phase 3: Enhanced statistical tables and analysis - export main functions
-export analyze_critical_points_with_tables,
-    display_statistical_table,
-    export_analysis_tables,
-    create_statistical_summary,
-    quick_table_preview,
-    compute_type_specific_statistics,
-    render_table,
-    render_console_table,
-    render_comparative_table
 
 # Enhanced data structures - canonical result types
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
