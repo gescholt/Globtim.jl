@@ -9,7 +9,18 @@ makedocs(
         repolink = "https://github.com/gescholt/Globtim.jl",
         canonical = "https://gescholt.github.io/Globtim.jl/dev/",
         edit_link = "main",
-        assets = String[]
+        assets = [
+            RawHTMLHeadContent("""
+            <!-- Google tag (gtag.js) -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-22HWCKE0JK"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-22HWCKE0JK');
+            </script>
+            """)
+        ]
     ),
     pages = [
         "Home" => "index.md",
