@@ -99,7 +99,7 @@ Pkg.test("Globtim")
 - Verifies grid dimensions match specifications
 - Tests node distributions for different bases
 - Validates L2 norm accuracy on anisotropic grids
-- Demonstrates 15x improvement for multiscale functions
+- Demonstrates ~15x error reduction on exp(-50x₁² - 2x₂²) test function
 
 ### 4. Quadrature L2 Norm Tests (`test_quadrature_l2_norm.jl`)
 

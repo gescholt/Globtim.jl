@@ -252,9 +252,9 @@ end
                       force_anisotropic::Bool=false,
                       force_tensorized::Bool=false)
 
-Enhanced lambda_vandermonde that automatically selects the best implementation.
+Dispatching lambda_vandermonde that selects implementation based on grid structure.
 
-This wrapper automatically detects grid structure and calls the optimal implementation:
+This wrapper automatically detects grid structure and calls the appropriate implementation:
 - Tensorized: For regular tensor-product grids (2x faster, eliminates dict lookup bottleneck)
 - Anisotropic: For grids with different nodes per dimension
 - Original: Fallback for irregular grids

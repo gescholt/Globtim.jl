@@ -110,7 +110,7 @@ f_multiscale = x -> exp(-100*x[1]^2 - x[2]^2)
 @test error_aniso < error_iso
 ```
 - **Purpose**: Quantify improvement for multiscale problems
-- **Key Result**: Typically 10-15x error reduction
+- **Key Result**: ~10-15x error reduction for this test function (depends on degree of anisotropy)
 - **Principle**: Allocate points based on directional variation
 
 ### 6. High-Dimensional Anisotropic Grids
@@ -151,7 +151,7 @@ grid_new = generate_anisotropic_grid([5, 5], basis=:chebyshev)
 @test grid_old == grid_new
 ```
 - **Purpose**: Ensure old code continues working
-- **Validates**: Seamless migration path
+- **Validates**: Backward-compatible interface
 
 ## Performance Demonstration
 
@@ -167,7 +167,7 @@ end
 ### Key Results:
 - **Isotropic 20×20** (400 points): Error ~1e-3
 - **Anisotropic 50×8** (400 points): Error ~6e-5
-- **Improvement**: 15x accuracy gain
+- **Improvement**: ~15x error reduction for this test function
 
 ## Common Test Patterns
 

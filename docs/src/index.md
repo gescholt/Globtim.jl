@@ -13,16 +13,16 @@ Finding all local minima of a continuous function over a bounded domain is funda
 
 Globtim solves this by replacing your function with a polynomial approximation. Why polynomials?
 
-1. **Smooth functions are well-approximated by polynomials** — Chebyshev and Legendre expansions converge rapidly for smooth functions
-2. **Polynomial critical points can be found exactly** — Setting ∇p(x) = 0 gives a polynomial system, which has finitely many solutions that can be computed using homotopy continuation
-3. **Refinement recovers true minima** — Each polynomial critical point seeds a local optimization (BFGS) on the original function
+1. **Smooth functions are well-approximated by polynomials** — Chebyshev and Legendre bases provide well-conditioned polynomial approximations whose accuracy improves with degree for smooth functions
+2. **Polynomial critical points can be enumerated** — Setting ∇p(x) = 0 gives a polynomial system with finitely many solutions (bounded by Bezout's theorem), which can be computed numerically via homotopy continuation or exactly via symbolic methods
+3. **Refinement on the original function** — Each polynomial critical point seeds a local optimization (BFGS) on the original function, which can converge to a nearby true critical point
 
-The result: a systematic way to find *all* local minima, not just the nearest one.
+The result: a systematic search for local minima across the entire domain, not just the nearest one.
 
 ## Algorithm Overview
 
 ```
-f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  All minima
+f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  Candidate minima
            (Chebyshev/Legendre)   (HomotopyContinuation.jl)
 ```
 

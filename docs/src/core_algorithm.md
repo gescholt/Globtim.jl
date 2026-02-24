@@ -55,7 +55,7 @@ The L2-norm can be computed using either Riemann sums or high-accuracy quadratur
 
 Two basis types are supported:
 
-- **Chebyshev polynomials** (default): Better for smooth functions
+- **Chebyshev polynomials** (default): Standard choice for polynomial approximation; near-minimax property
 - **Legendre polynomials**: Alternative basis with different convergence properties
 
 ## 2. Critical Point Finding
@@ -87,9 +87,9 @@ solutions = solve_polynomial_system(
 
 Two solvers are available:
 
-1. **[HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/)** (default): State of the art numerical algebraic geometry method
+1. **[HomotopyContinuation.jl](https://www.juliahomotopycontinuation.org/)** (default): Numerical algebraic geometry solver (Breiding & Timme, 2018)
 
-2. **[msolve](https://msolve.lip6.fr/)**: State of the art symbolic (exact) method, relies on Gröbner basis computations
+2. **[msolve](https://msolve.lip6.fr/)**: Symbolic solver based on Gröbner basis computations (Berthomieu, Eder & Safey El Din, 2021)
 
 For detailed solver configuration and selection guidelines, see [Polynomial System Solvers](solvers.md).
 
@@ -142,10 +142,7 @@ The refinement process tracks:
 
 ### Polynomial Degree
 
-Higher degrees improve approximation but increase cost:
-- Degree 4-6: Fast, suitable for smooth functions
-- Degree 8-10: Good balance for most problems  
-- Degree 12+: High accuracy, computationally intensive
+For smooth functions, higher polynomial degrees generally improve approximation but increase cost.
 
 ### Domain Scaling
 

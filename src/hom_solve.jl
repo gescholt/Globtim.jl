@@ -7,7 +7,7 @@ Find all critical points of a polynomial approximation by solving the gradient s
 grad(p)(x) = 0 using HomotopyContinuation.jl. This is the core function for locating all
 local minima, maxima, and saddle points of the approximated objective function.
 
-Uses numerical algebraic geometry with homotopy continuation for robust solving.
+Uses numerical algebraic geometry with homotopy continuation.
 Solution count is bounded by Bezout's theorem: (d-1)^n for degree d polynomial.
 
 # Arguments

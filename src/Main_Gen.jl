@@ -372,7 +372,7 @@ polynomial of the specified degree.
 # Notes
 - The approximation error (`pol.nrm`) provides a measure of approximation quality
 - Higher degrees generally reduce approximation error but increase computational cost
-- Chebyshev basis is recommended for most problems due to better conditioning
+- Chebyshev basis is the default (well-understood approximation properties; avoids ill-conditioning of monomial basis)
 - The function automatically handles both uniform and non-uniform domain scaling
 
 # Examples

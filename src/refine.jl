@@ -383,7 +383,7 @@ When enabled, adds comprehensive Hessian-based analysis:
 # Implementation Details
 Hessian analysis uses ForwardDiff.jl for automatic differentiation to compute Hessian matrices,
 then performs eigenvalue decomposition for critical point classification. All eigenvalue
-computations include robust error handling for numerical stability.
+computations include error handling (try-catch around eigenvalue decomposition).
 
 See also: `compute_hessians`, `classify_critical_points`, `process_crit_pts`
 """

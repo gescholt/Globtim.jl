@@ -5,9 +5,9 @@ This guide covers the polynomial approximation methods used in Globtim, includin
 ## Overview
 
 Globtim uses orthogonal polynomial bases (Chebyshev or Legendre) to approximate objective functions over compact domains. This approach provides:
-- Stable numerical computation
-- Optimal convergence for smooth functions
-- Efficient critical point finding via polynomial system solving
+- Well-conditioned basis representations (compared to monomial basis)
+- Spectral convergence for smooth functions (exponential for analytic functions)
+- Critical point finding via polynomial system solving, with solution count bounded by Bezout's theorem
 
 ## Basis Functions
 
@@ -19,9 +19,9 @@ pol = Constructor(TR, degree, basis=:chebyshev)
 ```
 
 **Advantages:**
-- Near-optimal approximation for continuous functions
+- Near-minimax approximation at Chebyshev nodes (within a log factor of the best polynomial approximation)
 - Extrema at grid boundaries minimize Runge phenomenon
-- Fast convergence for smooth functions
+- Exponential convergence for analytic functions; algebraic convergence for C^k functions
 
 **Grid points:** Chebyshev extrema at cos(πk/n) for k=0,...,n
 
@@ -34,7 +34,7 @@ pol = Constructor(TR, degree, basis=:legendre)
 
 **Advantages:**
 - Orthogonal with respect to uniform weight
-- Sometimes better for functions with boundary singularities
+- Nodes do not cluster at boundaries (unlike Chebyshev), which may reduce endpoint sensitivity
 - Natural for probability-weighted problems
 
 **Grid points:** Zeros of Legendre polynomials

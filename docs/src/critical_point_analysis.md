@@ -10,7 +10,7 @@ The analysis proceeds in two steps:
 
 2. **Classification**: The Hessian matrix at each refined point is computed using automatic differentiation ([ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/)), and eigenvalue analysis determines whether the point is a minimum, maximum, saddle, or degenerate
 
-ForwardDiff.jl provides efficient forward-mode automatic differentiation for computing exact gradients and Hessians without numerical approximation errors.
+ForwardDiff.jl computes gradients and Hessians via forward-mode automatic differentiation, accurate to machine precision (no finite-difference truncation error).
 
 > **Note:** For comprehensive campaign analysis, statistical reporting, and result aggregation across multiple experiments, see [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing). The `analyze_critical_points` function documented here provides basic refinement and classification for individual experiments.
 
@@ -174,7 +174,7 @@ df_enhanced, df_min = analyze_critical_points(
 
 ### Quality Indicators
 
-Good critical points typically have:
+Suggested quality thresholds (problem-dependent; adjust based on function scale):
 - `gradient_norm` < 1e-6
 - `converged` = true
 - `hessian_condition_number` < 1e6
@@ -190,7 +190,4 @@ Potential issues indicated by:
 
 ### Basin Structure
 
-The `df_min` DataFrame reveals the optimization landscape:
-- Large `basin_points`: Strong attractor
-- High `region_coverage_count`: Wide basin
-- Low `average_convergence_steps`: Smooth basin
+The `df_min` DataFrame reveals the optimization landscape.

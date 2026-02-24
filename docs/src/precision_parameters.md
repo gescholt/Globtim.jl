@@ -4,7 +4,7 @@ Globtim serves as an interface between **numeric** and **symbolic** computation.
 
 ## Overview
 
-A key feature of Globtim is exploring which precision types work best at each stage of the algorithm. The goal is to remain **efficient and fast** while maintaining **accuracy** where it matters most.
+Globtim allows different precision types at each stage of the algorithm, enabling users to trade off computational cost against numerical accuracy.
 
 Globtim supports multiple precision types through the `precision` parameter in the `Constructor` function:
 
@@ -52,15 +52,15 @@ println("Monomial coefficients: $(typeof(coeffs[1]))")  # BigFloat
 **Key Features:**
 - Function evaluation stays Float64 (fast sampling)
 - Coefficient manipulation uses BigFloat (accurate)
-- Seamless integration with sparsification
+- Compatible with sparsification workflow
 - Automatic precision selection based on coefficient magnitude
-- Optimal for high-dimensional problems
+- Recommended for high-dimensional problems where Float64 may be insufficient
 
 ### RationalPrecision
 
 **Exact rational arithmetic with arbitrary precision**
 
-Fully symbolic computation using `Rational{BigInt}`. Enables exact polynomial representations with no rounding errors, at the cost of computational overhead.
+Constructs a polynomial approximant with coefficients expressed as fractions of `BigInt`. This is useful when the objective function can be evaluated exactly and exact polynomial coefficients are required as input to a symbolic solver such as msolve, in order to find critical points exactly.
 
 ```julia
 pol = Constructor(TR, 8, precision=RationalPrecision)
@@ -72,7 +72,7 @@ println("Coefficient type: $(eltype(pol.coeffs))")  # Rational{BigInt}
 - No rounding errors in coefficient computation
 - Can represent exact polynomial coefficients
 - Memory and computation intensive
-- Ideal for problems requiring exact solutions
+- Useful when the function can be evaluated exactly and exact polynomial coefficients are needed as input to a symbolic solver such as msolve
 
 ### BigFloatPrecision
 
@@ -88,7 +88,7 @@ println("Coefficient type: $(eltype(pol.coeffs))")  # BigFloat
 **Characteristics:**
 - Uses BigFloat throughout the computation
 - Configurable precision (default: 256 bits)
-- Highest numerical accuracy available
+- Highest numerical accuracy among Globtim's precision types
 - Significant performance and memory overhead
 - Use only when maximum precision is essential
 
@@ -128,7 +128,7 @@ BigFloatPrecision: L2-norm = 1.1e-77
 
 ## Integration with Sparsification
 
-AdaptivePrecision provides the best integration with Globtim's sparsification features:
+AdaptivePrecision is designed to integrate with Globtim's sparsification features:
 
 ### Coefficient Analysis
 
@@ -487,7 +487,7 @@ pol = smart_precision_selection(Deuflhard, 2, 8, 1.2)
 ## Best Practices
 
 ### 1. Start with AdaptivePrecision
-For most applications, `AdaptivePrecision` provides the best balance:
+For most applications, `Float64Precision` is sufficient:
 
 ```julia
 # Recommended default approach
@@ -511,7 +511,7 @@ end
 ```
 
 ### 3. Apply Sparsification with AdaptivePrecision
-Combine precision and sparsification for optimal results:
+Combine precision and sparsification:
 
 ```julia
 # Best practice workflow

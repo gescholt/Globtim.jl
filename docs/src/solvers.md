@@ -6,7 +6,7 @@ Globtim uses polynomial system solvers to find critical points by solving ∇p(x
 
 ### HomotopyContinuation.jl (Default)
 
-State of the art numerical algebraic geometry method.
+Numerical algebraic geometry solver (Breiding & Timme, 2018).
 
 **Website:** [https://www.juliahomotopycontinuation.org/](https://www.juliahomotopycontinuation.org/)
 
@@ -19,7 +19,7 @@ solutions = solve_polynomial_system(
 
 ### msolve
 
-State of the art symbolic (exact) method, relies on Gröbner basis computations.
+Symbolic solver based on Gröbner basis computations (Berthomieu, Eder & Safey El Din, 2021).
 
 **Website:** [https://msolve.lip6.fr/](https://msolve.lip6.fr/)
 

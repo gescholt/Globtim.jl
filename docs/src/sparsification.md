@@ -6,7 +6,7 @@ Globtim now includes advanced features for exact polynomial arithmetic, sparsifi
 
 The sparsification module provides:
 - **Exact conversion** from orthogonal bases (Chebyshev/Legendre) to monomial basis
-- **Intelligent sparsification** that zeros small coefficients while tracking L²-norm preservation
+- **Threshold-based sparsification** that zeros small coefficients while tracking L²-norm preservation
 - **Truncation analysis** with quality metrics
 - **Multiple L²-norm computation methods** for verification
 
@@ -145,9 +145,9 @@ println("L² norm preservation: $(round(quality.l2_ratio*100, digits=1))%")
 
 ## Performance Considerations
 
-1. **Vandermonde approach**: More efficient than polynomial construction for L² norms
+1. **Vandermonde approach**: Computes L² norm directly from Vandermonde matrix without constructing the monomial polynomial
 2. **Sparsification benefits**: 
-   - Significant sparsity achievable while preserving L² accuracy
+   - Sparsity depends on the coefficient distribution; functions with rapidly decaying coefficients admit high sparsity with low L² error increase
    - Reduced memory usage and faster polynomial operations
 3. **Exact arithmetic**: Use `RationalPrecision` for exact coefficients, `Float64Precision` for speed
 

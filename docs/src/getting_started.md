@@ -57,7 +57,7 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # [-2,2]×
 
 ## Polynomial Degree Selection
 
-Higher degrees improve approximation but increase computation:
+For smooth functions, higher polynomial degrees generally improve approximation but increase computation:
 
 ```julia
 pol = Constructor(TR, degree)  # degree = 4, 6, 8, 10, ...
@@ -71,12 +71,12 @@ Check approximation quality: `pol.nrm` returns L²-norm error.
 
 **See:** `Examples/sparsification_demo.jl`
 
-| Precision | Performance | Accuracy | Best For |
-|-----------|-------------|----------|----------|
-| `Float64Precision` | Fast | Good | General use |
-| `AdaptivePrecision` | Good | Excellent | Recommended default |
-| `RationalPrecision` | Slow | Exact | Symbolic computation |
-| `BigFloatPrecision` | Slowest | Maximum | Research |
+| Precision | Relative cost | Arithmetic | Best For |
+|-----------|---------------|------------|----------|
+| `Float64Precision` | 1.0× | ~15 digits | **General use (default)** |
+| `AdaptivePrecision` | 1.2× | Float64 + BigFloat coefficients | Coefficient analysis, sparsification |
+| `RationalPrecision` | 5-10× | Exact arithmetic | Exact evaluations + symbolic solver (msolve) |
+| `BigFloatPrecision` | 3-8× | ~77 digits (256 bits) | Research |
 
 **Usage:**
 ```julia
@@ -108,8 +108,8 @@ For dimension ≥ 4:
 pol = Constructor(TR, 8, precision=AdaptivePrecision, verbose=0)
 ```
 
-- `Float64Precision`: Fastest, lowest memory
-- `AdaptivePrecision`: Good balance for production
+- `Float64Precision`: Fastest, lowest memory; sufficient for most cases
+- `AdaptivePrecision`: Higher coefficient precision; useful for sparsification workflows
 - Avoid `RationalPrecision` for large-scale computations
 
 ---

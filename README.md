@@ -5,10 +5,10 @@
 
 Finding all local minima of a continuous function over a bounded domain is fundamentally hard. Standard optimization algorithms (gradient descent, BFGS, etc.) find *one* local minimum from a given starting point — but how do you know there isn't a better one elsewhere?
 
-Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system whose solutions can be computed exactly using homotopy continuation. Each solution seeds a local refinement on the original function, recovering *all* local minima — not just the nearest one.
+Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system with finitely many solutions (bounded by Bezout's theorem), which can be computed numerically via homotopy continuation or exactly via symbolic methods. Each solution seeds a local refinement on the original function, searching for local minima across the entire domain — not just the nearest one.
 
 ```
-f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  All minima
+f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  Candidate minima
            (Chebyshev/Legendre)   (HomotopyContinuation.jl)
 ```
 
@@ -89,7 +89,7 @@ method = "NelderMead"
 Two orthogonal polynomial bases are supported:
 
 - **`:chebyshev`** (default): Chebyshev polynomials — standard choice, well-tested
-- **`:legendre`**: Legendre polynomials — often better conditioning (lower condition numbers)
+- **`:legendre`**: Legendre polynomials — uniform distribution of nodes along each coordinate axis
 
 ```julia
 pol = Constructor(TR, 8, basis=:chebyshev, precision=AdaptivePrecision)  # Default
@@ -100,12 +100,12 @@ pol = Constructor(TR, 8, basis=:legendre, precision=AdaptivePrecision)   # Alter
 
 Globtim supports multiple precision types for balancing accuracy and performance:
 
-| Precision | Performance | Accuracy | Best For |
-|-----------|-------------|----------|----------|
-| `Float64Precision` | Fast | Good | General use |
-| `AdaptivePrecision` | Good | Excellent | **Recommended default** |
-| `RationalPrecision` | Slow | Exact | Symbolic work |
-| `BigFloatPrecision` | Slowest | Maximum | Research |
+| Precision | Relative cost | Arithmetic | Best For |
+|-----------|---------------|------------|----------|
+| `Float64Precision` | 1.0× | ~15 digits | **General use (default)** |
+| `AdaptivePrecision` | 1.2× | Float64 + BigFloat coefficients | Coefficient analysis, sparsification |
+| `RationalPrecision` | 5-10× | Exact arithmetic | Exact evaluations + symbolic solver (msolve) |
+| `BigFloatPrecision` | 3-8× | ~77 digits (256 bits) | Research |
 
 ```julia
 pol = Constructor(TR, 8, precision=AdaptivePrecision)
