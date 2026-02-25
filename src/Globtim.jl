@@ -487,6 +487,10 @@ using .SparsificationExperiment
 # Export SparsificationExperiment types and functions
 export SparsifiedVariant, SparsificationDegreeResult, run_sparsification_experiment
 
+# tree_solve - collect and deduplicate critical points from a SubdivisionTree
+include("tree_solve.jl")
+export solve_tree_leaves
+
 # ExperimentCLI - experiment configuration (re-export for downstream packages)
 include("ExperimentCLI.jl")
 using .ExperimentCLI
