@@ -1,6 +1,11 @@
 push!(LOAD_PATH, "../src/")
 using Documenter, Globtim
 
+# Activate WGLMakie for interactive 3D plots in @example blocks
+using WGLMakie, Bonito
+WGLMakie.activate!()
+Makie.inline!(true)
+
 makedocs(
     sitename = "Globtim.jl Documentation",
     modules = [Globtim],
@@ -9,6 +14,8 @@ makedocs(
         repolink = "https://github.com/gescholt/Globtim.jl",
         canonical = "https://gescholt.github.io/Globtim.jl/dev/",
         edit_link = "main",
+        size_threshold = nothing,           # WGLMakie pages embed JS/WebGL data
+        example_size_threshold = nothing,   # prevent per-example fallback to static images
         assets = [
             RawHTMLHeadContent("""
             <!-- Google tag (gtag.js) -->
@@ -35,6 +42,7 @@ makedocs(
         "Grid Formats" => "grid_formats.md",
         "Precision" => "precision_parameters.md",
         "GlobtimPlots" => "globtimplots.md",
+        "Interactive Visualizations" => "interactive_test.md",
         "API Reference" => "api_reference.md"
     ],
     checkdocs = :none

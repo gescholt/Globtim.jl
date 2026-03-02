@@ -1,9 +1,22 @@
 [deps]
+Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
 Globtim = "00da9514-6261-47e9-8848-33640cb1e528"
+GlobtimPlots = "dce1bbde-eed0-4d20-b978-1e0da4aec0e5"
+GlobtimPostProcessing = "b470b6bb-4443-493e-998d-c7c5e1aa9116"
+LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [sources]
 Globtim = {path = ".."}
+GlobtimPlots = {path = "../../globtimplots"}
+GlobtimPostProcessing = {path = "../../globtimpostprocessing"}
 
 [compat]
+Bonito = "4"
+DataFrames = "1.6"
 Documenter = "1"
+DynamicPolynomials = "0.6"
+WGLMakie = "0.10, 0.11"
