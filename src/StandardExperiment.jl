@@ -104,6 +104,11 @@ struct DegreeResult
     n_total_coeffs::Int   # Total coefficients = binomial(n+d, d) for total degree d in n dims
     support_size::Int     # Nonzero coefficients: count(!iszero, pol.coeffs)
 
+    # Truncation/sparsity metrics (nothing when no truncation applied)
+    truncation_original_nnz::Union{Int, Nothing}   # Nonzero coefficients before truncation
+    truncation_new_nnz::Union{Int, Nothing}         # Nonzero coefficients after truncation
+    truncation_l2_ratio::Union{Float64, Nothing}    # ||p_truncated||_L2 / ||p_original||_L2
+
     # Timing breakdown
     polynomial_construction_time::Float64
     critical_point_solving_time::Float64
@@ -294,7 +299,7 @@ function run_standard_experiment(;
 
         catch e
             degree_time = time() - degree_start
-            println("ERROR degree $degree: $e")
+            @error "Degree $degree failed" exception=(e, catch_backtrace())
 
             # Capture rich error context for post-processing analysis
             error_context = Dict{String, Any}(
@@ -318,6 +323,7 @@ function run_standard_experiment(;
                 nothing, nothing, nothing,  # No best estimate
                 NaN, NaN, NaN,  # Quality metrics (l2, relative_l2, cond)
                 0, 0,  # n_total_coeffs, support_size (unknown for failed)
+                nothing, nothing, nothing,  # No truncation metrics
                 0.0, 0.0, 0.0, 0.0, degree_time,  # Timing
                 output_dir,
                 error_context  # Rich error context
@@ -405,13 +411,13 @@ function process_single_degree(
             pol, experiment_config.truncation_threshold,
             mode = experiment_config.truncation_mode
         )
-        println("  Truncation (threshold=$(experiment_config.truncation_threshold), " *
-                "mode=$(experiment_config.truncation_mode)): " *
-                "$(sparse_result.original_nnz) → $(sparse_result.new_nnz) coefficients " *
-                "(L² ratio: $(round(sparse_result.l2_ratio, digits=6)))")
+        @info "  Truncation (threshold=$(experiment_config.truncation_threshold), " *
+              "mode=$(experiment_config.truncation_mode)): " *
+              "$(sparse_result.original_nnz) → $(sparse_result.new_nnz) coefficients " *
+              "(L² ratio: $(round(sparse_result.l2_ratio, digits=6)))"
         pol = sparse_result.polynomial
-        timing["truncation_original_nnz"] = Float64(sparse_result.original_nnz)
-        timing["truncation_new_nnz"] = Float64(sparse_result.new_nnz)
+        timing["truncation_original_nnz"] = sparse_result.original_nnz
+        timing["truncation_new_nnz"] = sparse_result.new_nnz
         timing["truncation_l2_ratio"] = sparse_result.l2_ratio
     end
 
@@ -425,7 +431,7 @@ function process_single_degree(
         error("CRITICAL: No critical points found by HomotopyContinuation")
     end
 
-    println("Found $n_critical_points raw critical points at degree $degree")
+    @info "Found $n_critical_points raw critical points at degree $degree"
 
     # Phase 3: Use raw critical points (refinement moved to globtimpostprocessing)
     processing_start = time()
@@ -470,6 +476,11 @@ function process_single_degree(
                   timing["critical_point_processing_time"] +
                   timing["file_io_time"])
 
+    # Extract truncation metrics (nothing if no truncation was applied)
+    trunc_original = get(timing, "truncation_original_nnz", nothing)
+    trunc_new = get(timing, "truncation_new_nnz", nothing)
+    trunc_l2 = get(timing, "truncation_l2_ratio", nothing)
+
     return DegreeResult(
         degree, "success",
         n_critical_points,
@@ -478,6 +489,7 @@ function process_single_degree(
         best_estimate, best_objective, recovery_error,
         timing["l2_approx_error"], timing["relative_l2_error"], timing["condition_number"],
         length(pol.coeffs), count(!iszero, pol.coeffs),
+        trunc_original, trunc_new, trunc_l2,
         timing["polynomial_construction_time"],
         timing["critical_point_solving_time"],
         timing["critical_point_processing_time"],
@@ -529,6 +541,11 @@ function create_experiment_summary(
             # Coefficient counts
             "n_total_coeffs" => result.n_total_coeffs,
             "support_size" => result.support_size,
+
+            # Truncation/sparsity metrics
+            "truncation_original_nnz" => result.truncation_original_nnz,
+            "truncation_new_nnz" => result.truncation_new_nnz,
+            "truncation_l2_ratio" => result.truncation_l2_ratio,
 
             # Timing breakdown
             "polynomial_construction_time" => result.polynomial_construction_time,
@@ -627,6 +644,9 @@ function sanitize_for_json(obj)
             "condition_number" => sanitize_for_json(obj.condition_number),
             "n_total_coeffs" => obj.n_total_coeffs,
             "support_size" => obj.support_size,
+            "truncation_original_nnz" => obj.truncation_original_nnz,
+            "truncation_new_nnz" => obj.truncation_new_nnz,
+            "truncation_l2_ratio" => sanitize_for_json(obj.truncation_l2_ratio),
             "polynomial_construction_time" => sanitize_for_json(obj.polynomial_construction_time),
             "critical_point_solving_time" => sanitize_for_json(obj.critical_point_solving_time),
             "critical_point_processing_time" => sanitize_for_json(obj.critical_point_processing_time),
@@ -667,7 +687,7 @@ Print timing breakdown for a degree result (Phase 2: no refinement).
 """
 function print_degree_summary(result::DegreeResult)
     total = result.total_computation_time
-    println("Degree $(result.degree): $(round(total, digits=2))s [poly=$(round(result.polynomial_construction_time, digits=2))s, solve=$(round(result.critical_point_solving_time, digits=2))s, process=$(round(result.critical_point_processing_time, digits=2))s]")
+    @info "Degree $(result.degree): $(round(total, digits=2))s [poly=$(round(result.polynomial_construction_time, digits=2))s, solve=$(round(result.critical_point_solving_time, digits=2))s, process=$(round(result.critical_point_processing_time, digits=2))s]"
 end
 
 end  # module StandardExperiment

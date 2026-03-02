@@ -217,15 +217,19 @@ TimerOutputs.@timeit _TO function MainGenerate(
         )
     end
 
-    @info "  🔢 Computing Gram matrix ($(size(VL, 2)) × $(size(VL, 2)))..."
+    if verbose >= 1
+        @info "  🔢 Computing Gram matrix ($(size(VL, 2)) × $(size(VL, 2)))..."
+    end
     TimerOutputs.@timeit _TO "gram_matrix" begin
         G_original = VL' * VL
     end
-    @info "  ✓ Gram matrix computed"
+    if verbose >= 1
+        @info "  ✓ Gram matrix computed"
+    end
 
     # Log if using anisotropic algorithm
     if verbose >= 1 && is_anisotropic
-        println("Detected anisotropic grid structure - using enhanced algorithm")
+        @info "  Detected anisotropic grid structure — using enhanced algorithm"
     end
 
     # Convert center to SVector
@@ -233,7 +237,9 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Handle different scale_factor types for function evaluation
     n_grid_points = grid_provided ? size(matrix_from_grid, 1) : length(grid)
-    @info "  🎯 Evaluating objective function on grid ($n_grid_points points)..."
+    if verbose >= 1
+        @info "  🎯 Evaluating objective function on grid ($n_grid_points points)..."
+    end
     TimerOutputs.@timeit _TO "evaluation" begin
         # Handle grid format differences
         if grid_provided
@@ -272,51 +278,57 @@ TimerOutputs.@timeit _TO function MainGenerate(
             F = map(apply_scale, grid_points)
         end
         eval_time = time() - eval_start
-        if eval_time > 1.0  # Only log if evaluation took significant time
+        if verbose >= 1 && eval_time > 1.0  # Only log if evaluation took significant time
             @info "  ⏱️  Evaluation rate: $(round(n_grid_points / eval_time, digits=1)) points/sec"
         end
     end
-    @info "  ✓ Function evaluation complete"
-
-    # Compute condition number only when needed (expensive: requires SVD)
-    # This saves ~160ms per call when verbose == 0
-    cond_vandermonde = if verbose >= 1
-        @info "  📐 Computing condition number..."
-        TimerOutputs.@timeit _TO "condition_number" begin
-            cond(G_original)
-        end
-    else
-        NaN  # Skip computation in non-verbose mode
+    if verbose >= 1
+        @info "  ✓ Function evaluation complete"
     end
 
+    # Always compute condition number — essential diagnostic for numerical stability
+    if verbose >= 1
+        @info "  📐 Computing condition number..."
+    end
+    cond_vandermonde = TimerOutputs.@timeit _TO "condition_number" begin
+        cond(G_original)
+    end
     if verbose >= 1
         @info "  ✓ Condition number: $(cond_vandermonde)"
     end
 
-    @info "  🔧 Solving linear system..."
+    if verbose >= 1
+        @info "  🔧 Solving linear system..."
+    end
     TimerOutputs.@timeit _TO "linear_solve_vandermonde" begin
         RHS = VL' * F
         linear_prob = LinearProblem(G_original, RHS)
-        if verbose == 1
-            println("Condition number of G: ", cond_vandermonde)
-            # Use LU factorization to avoid QR pivot type issues in Julia 1.11
+        # Use LU factorization to avoid QR pivot type issues in Julia 1.11
+        if verbose >= 1
             sol = LinearSolve.solve(
                 linear_prob,
                 LinearSolve.LUFactorization(),
                 verbose = true
             )
-            println("Chosen method: ", typeof(sol.alg))
         else
-            # Use LU factorization to avoid QR pivot type issues in Julia 1.11
             sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization())
         end
     end
-    @info "  ✓ Linear system solved"
+    if verbose >= 1
+        @info "  ✓ Linear system solved"
+    end
 
     # Compute L2 norm using proper quadrature weights
     # This ensures monotonic decrease with degree (by containment)
     TimerOutputs.@timeit _TO "norm_computation" nrm =
         compute_norm(scale_factor, VL, sol, F, basis, actual_GN, n)
+
+    # Guard: NaN/Inf norm means numerical breakdown — fail fast with diagnostics
+    if isnan(nrm) || isinf(nrm)
+        error("L2 norm is $(nrm) at degree=$(grid_provided ? degree_est : d) — " *
+              "numerical instability (cond_vandermonde=$(cond_vandermonde), " *
+              "n_grid_points=$(size(matrix_from_grid, 1)), basis=$(basis))")
+    end
 
     # Store the basis parameters in the ApproxPoly object
     # Use the smart constructor to get correct type parameters
@@ -433,7 +445,9 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom
         )
-        println("current L2-norm: ", p.nrm)
+        if verbose >= 1
+            @info "  L2-norm: $(p.nrm)"
+        end
         return p
     elseif !isnothing(T.GN) && isa(T.GN, Int)
         p = MainGenerate(
@@ -452,7 +466,9 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom
         )
-        println("current L2-norm: ", p.nrm)
+        if verbose >= 1
+            @info "  L2-norm: $(p.nrm)"
+        end
         return p
     end
 
