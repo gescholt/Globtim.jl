@@ -498,7 +498,7 @@ Construct polynomial approximation on a subdomain using least squares.
 
 This wraps the existing Globtim infrastructure (MainGenerate pattern).
 """
-function construct_polynomial_on_subdomain(::Function, subdomain::Subdomain,
+function construct_polynomial_on_subdomain(_, subdomain::Subdomain,
                                            degree, samples::Matrix{Float64},
                                            f_values::Vector{Float64}, basis::Symbol)
     n_dim = dimension(subdomain)
