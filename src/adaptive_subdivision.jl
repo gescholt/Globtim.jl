@@ -399,6 +399,40 @@ function evaluate_polynomial_at_samples(pol::ApproxPoly, samples::Matrix{Float64
 end
 
 #==============================================================================#
+#                      DEGREE SPEC UTILITIES                                    #
+#==============================================================================#
+
+"""
+    _extract_per_dim_degrees(degree, n_dim) -> Vector{Int}
+
+Normalize any degree specification to a per-dimension degree vector.
+
+# Examples
+```julia
+_extract_per_dim_degrees(4, 2)                       # → [4, 4]
+_extract_per_dim_degrees((:one_d_for_all, 4), 2)     # → [4, 4]
+_extract_per_dim_degrees((:one_d_per_dim, [4, 8]), 2) # → [4, 8]
+```
+"""
+function _extract_per_dim_degrees(degree, n_dim::Int)::Vector{Int}
+    if degree isa Integer
+        return fill(Int(degree), n_dim)
+    elseif degree isa Tuple
+        mode, spec = degree
+        if mode == :one_d_for_all
+            return fill(Int(spec), n_dim)
+        elseif mode == :one_d_per_dim
+            length(spec) == n_dim || error("per-dim degree vector length $(length(spec)) ≠ n_dim=$n_dim")
+            return Int.(spec)
+        else
+            error("Unsupported degree mode: $mode")
+        end
+    else
+        error("Unsupported degree type: $(typeof(degree))")
+    end
+end
+
+#==============================================================================#
 #                      ERROR ESTIMATION                                         #
 #==============================================================================#
 
@@ -428,14 +462,21 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
                                    eval_progress::Union{Function,Nothing}=nothing)
     n_dim = dimension(subdomain)
 
-    # Determine grid size: default is ~2× degree for sparse but sufficient LS fit
-    if n_samples_per_dim == 0
-        d = degree isa Tuple ? degree[2] : degree
-        n_samples_per_dim = 2 * d + 1
+    # Determine per-dimension grid sizes (GN values; grid will have GN+1 points per dim)
+    per_dim_degrees = _extract_per_dim_degrees(degree, n_dim)
+    if n_samples_per_dim > 0
+        # Manual override: uniform samples in all dims
+        per_dim_GN = fill(n_samples_per_dim - 1, n_dim)
+    else
+        per_dim_GN = 2 .* per_dim_degrees  # ~2× degree per dimension
     end
 
     # Generate normalized grid in [-1, 1]^n
-    grid = generate_grid(n_dim, n_samples_per_dim - 1, basis=basis)
+    grid = if all(==(per_dim_GN[1]), per_dim_GN)
+        generate_grid(n_dim, per_dim_GN[1], basis=basis)
+    else
+        generate_anisotropic_grid(per_dim_GN, basis=basis)
+    end
 
     # Convert to matrix format
     # grid_to_matrix returns (n_samples × n_dim), but we need (n_dim × n_samples) for Vandermonde
@@ -473,7 +514,7 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
     # Compute L2 error
     poly_values = evaluate_polynomial_at_samples(pol, grid_matrix)
     errors = f_values .- poly_values
-    weight = (2.0 / n_samples_per_dim)^n_dim
+    weight = prod(2.0 ./ (per_dim_GN .+ 1))
     l2_error = sqrt(sum(abs2.(errors)) * weight)
 
     # Defensive: catch any remaining NaN from numerical issues
@@ -516,7 +557,9 @@ function construct_polynomial_on_subdomain(_, subdomain::Subdomain,
 
     # Compute L2 norm of approximation
     poly_values = V * coeffs
-    weight = (2.0 / size(samples, 1)^(1/n_dim))^n_dim
+    per_dim_degrees = _extract_per_dim_degrees(degree, n_dim)
+    per_dim_GN = 2 .* per_dim_degrees
+    weight = prod(2.0 ./ (per_dim_GN .+ 1))
     nrm = sqrt(sum(abs2.(poly_values)) * weight)
 
     # Create ApproxPoly with anisotropic scale_factor
@@ -990,6 +1033,16 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     if gpu && !gpu_available()
         error("GPU acceleration requested but CUDA.jl not loaded or GPU not functional. " *
               "Load CUDA.jl before Globtim, or use gpu=false.")
+    end
+
+    # Guard: GPU path does not support anisotropic per-dim degrees
+    if gpu
+        n_dim = length(bounds)
+        per_dim = _extract_per_dim_degrees(degree, n_dim)
+        if !all(==(per_dim[1]), per_dim)
+            error("GPU batched processing does not support anisotropic per-dimension degrees. " *
+                  "Use gpu=false for anisotropic degree specifications.")
+        end
     end
 
     # Initialize tree
