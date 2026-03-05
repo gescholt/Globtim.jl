@@ -26,6 +26,8 @@ Represents a subdomain in the adaptive refinement tree.
 - `half_widths::Vector{Float64}`: Half-width in each dimension (anisotropic support)
 - `l2_error::Float64`: Estimated L2 approximation error on this subdomain
 - `depth::Int`: Depth in subdivision tree (root = 0)
+- `degree::Int`: Polynomial degree used on this subdomain (0 = not yet assigned;
+  children inherit parent's degree on subdivision)
 - `parent_id::Union{Int, Nothing}`: Index of parent subdomain (nothing for root)
 - `polynomial::Union{ApproxPoly, Nothing}`: Polynomial approximation (if computed)
 - `samples::Union{Matrix{Float64}, Nothing}`: Cached sample points (for reuse)
@@ -39,6 +41,7 @@ mutable struct Subdomain
     half_widths::Vector{Float64}
     l2_error::Float64
     depth::Int
+    degree::Int
     parent_id::Union{Int, Nothing}
     polynomial::Union{ApproxPoly, Nothing}
     samples::Union{Matrix{Float64}, Nothing}
@@ -51,17 +54,20 @@ end
 
 # Constructor for new subdomain (no polynomial yet)
 function Subdomain(center::Vector{Float64}, half_widths::Vector{Float64};
-                   depth::Int=0, parent_id::Union{Int, Nothing}=nothing)
-    return Subdomain(center, half_widths, Inf, depth, parent_id, nothing, nothing, nothing,
+                   depth::Int=0, degree::Int=0,
+                   parent_id::Union{Int, Nothing}=nothing)
+    return Subdomain(center, half_widths, Inf, depth, degree, parent_id,
+                     nothing, nothing, nothing,
                      nothing, nothing, nothing)  # children, split_dim, split_pos
 end
 
 # Constructor from bounds
 function Subdomain(bounds::Vector{Tuple{Float64, Float64}};
-                   depth::Int=0, parent_id::Union{Int, Nothing}=nothing)
+                   depth::Int=0, degree::Int=0,
+                   parent_id::Union{Int, Nothing}=nothing)
     center = [(b[1] + b[2]) / 2 for b in bounds]
     half_widths = [(b[2] - b[1]) / 2 for b in bounds]
-    return Subdomain(center, half_widths, depth=depth, parent_id=parent_id)
+    return Subdomain(center, half_widths, depth=depth, degree=degree, parent_id=parent_id)
 end
 
 """
@@ -112,9 +118,9 @@ function SubdivisionTree(initial_domain::Subdomain)
     return SubdivisionTree([initial_domain], [1], Int[], 1)
 end
 
-# Constructor from bounds
-function SubdivisionTree(bounds::Vector{Tuple{Float64, Float64}})
-    root = Subdomain(bounds)
+# Constructor from bounds (optional degree sets the root subdomain's degree)
+function SubdivisionTree(bounds::Vector{Tuple{Float64, Float64}}; degree::Int=0)
+    root = Subdomain(bounds; degree=degree)
     return SubdivisionTree(root)
 end
 
@@ -203,15 +209,15 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int=20, sort_by::Symbol
     println()
 
     # Table
-    Printf.@printf("%-4s  %-5s  %-10s  %-8s  %s\n", "ID", "Depth", "L2 Error", "Status", "Bounds")
-    println("-"^70)
+    Printf.@printf("%-4s  %-5s  %-3s  %-10s  %-8s  %s\n", "ID", "Depth", "Deg", "L2 Error", "Status", "Bounds")
+    println("-"^75)
 
     for id in sorted_leaves[1:min(max_leaves, length(sorted_leaves))]
         sd = tree.subdomains[id]
         bounds = get_bounds(sd)
         bounds_str = join([Printf.@sprintf("[%.2f,%.2f]", b[1], b[2]) for b in bounds], "×")
         status = id in tree.converged_leaves ? "conv" : "active"
-        Printf.@printf("%-4d  %-5d  %-10.2e  %-8s  %s\n", id, sd.depth, sd.l2_error, status, bounds_str)
+        Printf.@printf("%-4d  %-5d  %-3d  %-10.2e  %-8s  %s\n", id, sd.depth, sd.degree, sd.l2_error, status, bounds_str)
     end
 
     length(sorted_leaves) > max_leaves && println("... $(length(sorted_leaves) - max_leaves) more")
@@ -258,9 +264,11 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
     right_half_widths[dim] = (upper_bound - cut_point) / 2
 
     child_left = Subdomain(left_center, left_half_widths,
-                           depth=subdomain.depth + 1, parent_id=nothing)  # Set parent later
+                           depth=subdomain.depth + 1, degree=subdomain.degree,
+                           parent_id=nothing)  # parent_id set by update_tree!
     child_right = Subdomain(right_center, right_half_widths,
-                            depth=subdomain.depth + 1, parent_id=nothing)
+                            depth=subdomain.depth + 1, degree=subdomain.degree,
+                            parent_id=nothing)
 
     return (child_left, child_right)
 end
@@ -702,6 +710,10 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
                            eval_progress::Union{Function,Nothing}=nothing)
     subdomain = tree.subdomains[subdomain_id]
 
+    # Record the degree used on this subdomain (scalar max of per-dim degrees)
+    n_dim = length(subdomain.center)
+    subdomain.degree = maximum(_extract_per_dim_degrees(degree, n_dim))
+
     # Estimate error on this subdomain
     l2_error = estimate_subdomain_error(f, subdomain, degree, basis=basis,
                                          eval_progress=eval_progress)
@@ -950,6 +962,7 @@ function process_subdomains_gpu(
         )
 
         # Update subdomain state
+        subdomain.degree = degree
         subdomain.l2_error = l2_error
         subdomain.polynomial = pol
         subdomain.samples = grids[idx]
@@ -1045,8 +1058,10 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         end
     end
 
-    # Initialize tree
-    tree = SubdivisionTree(bounds)
+    # Initialize tree with root degree
+    n_dim = length(bounds)
+    root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
+    tree = SubdivisionTree(bounds; degree=root_degree)
 
     # Notify phase callback that we're starting (single-phase refinement)
     if phase_callback !== nothing
@@ -1121,6 +1136,8 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     for leaf_id in copy(tree.active_leaves)  # copy: we modify during iteration
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
+            # Record the degree used (same logic as process_subdomain)
+            sd.degree = root_degree
             estimate_subdomain_error(f, sd, degree, basis=basis,
                                       eval_progress=eval_progress)
         end
@@ -1202,7 +1219,9 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     end
 
     # Phase 1: Coarse balancing pass
-    tree = SubdivisionTree(bounds)
+    n_dim = length(bounds)
+    root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
+    tree = SubdivisionTree(bounds; degree=root_degree)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100
@@ -1329,6 +1348,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     for leaf_id in tree.active_leaves
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
+            sd.degree = root_degree
             estimate_subdomain_error(f, sd, degree, basis=basis)
         end
     end
