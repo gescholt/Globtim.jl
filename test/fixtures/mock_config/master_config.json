@@ -1,0 +1,18 @@
+{
+  "experiment_name": "test_experiment",
+  "campaigns": [
+    {
+      "campaign_id": "test_campaign_1",
+      "experiments": [
+        {
+          "exp_id": "exp_1",
+          "script": "../mock_scripts/test_exp_1.jl"
+        },
+        {
+          "exp_id": "exp_2",
+          "script": "../mock_scripts/test_exp_2.jl"
+        }
+      ]
+    }
+  ]
+}
