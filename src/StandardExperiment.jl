@@ -139,6 +139,9 @@ and `run_sparsification_experiment` (sparsified polynomial variants).
 # Keyword Arguments
 - `solver::Symbol=:hc`: Solver backend (`:hc` or `:msolve`)
 - `msolve_threads::Int=1`: Number of threads for msolve (`:msolve` only)
+- `search_bounds`: Optional sub-box in ORIGINAL domain coordinates to restrict
+  solutions to. For msolve, uses certified interval-box overlap; for HC, uses
+  midpoint filtering. Bounds are converted to normalized [-1,1]^n internally.
 
 # Returns
 - `critical_points::Vector{Vector{Float64}}`: Critical points in original domain coordinates
@@ -151,10 +154,19 @@ function solve_and_transform(
     start_system::Symbol = :auto,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
+
+    # Convert search_bounds from original domain to normalized [-1,1]^n
+    normalized_search_bounds = if search_bounds !== nothing
+        [((sb[1] - center[i]) / sample_range[i], (sb[2] - center[i]) / sample_range[i])
+         for (i, sb) in enumerate(search_bounds)]
+    else
+        nothing
+    end
 
     # Solve polynomial system (HC or msolve, selected by solver kwarg)
     @polyvar x[1:dimension]
@@ -165,6 +177,7 @@ function solve_and_transform(
             start_system = start_system,
             solver = solver,
             msolve_threads = msolve_threads,
+            search_bounds = normalized_search_bounds,
         )
     end
 

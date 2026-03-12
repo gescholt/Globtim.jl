@@ -30,6 +30,7 @@ function solve_tree_leaves(
     start_system :: Symbol = :auto,
     solver :: Symbol = :hc,
     msolve_threads :: Int = 1,
+    search_bounds :: Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
 )
     all_cps = Vector{Float64}[]
     leaf_ids = vcat(tree.converged_leaves, tree.active_leaves)
@@ -47,6 +48,7 @@ function solve_tree_leaves(
                 start_system = start_system,
                 solver = solver,
                 msolve_threads = msolve_threads,
+                search_bounds = search_bounds,
             )
             append!(all_cps, cps)
         catch e

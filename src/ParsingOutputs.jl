@@ -250,14 +250,103 @@ function parse_msolve_output(content::AbstractString, n::Int)::Vector{Vector{Flo
 end
 
 """
+    parse_msolve_output_with_intervals(content::AbstractString, n::Int)
+        -> Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+
+Parse raw msolve output into solution midpoints AND isolating intervals.
+
+Returns `(points, intervals)` where:
+- `points[i]::Vector{Float64}`: midpoints for solution i
+- `intervals[i]::Vector{Tuple{Float64,Float64}}`: `(lo, hi)` per coordinate for solution i
+
+See [`parse_msolve_output`](@ref) for format details.
+"""
+function parse_msolve_output_with_intervals(
+    content::AbstractString, n::Int
+)::Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+    content = strip(rstrip(strip(content), ':'))
+
+    if contains(content, "[-1]")
+        @debug "msolve: no solutions in algebraic closure"
+        return (Vector{Float64}[], Vector{Tuple{Float64,Float64}}[])
+    end
+    if occursin(r"\[1,\s*\d+,\s*-1,\s*\[\]\]", content)
+        error("msolve: infinitely many solutions (positive-dimensional ideal)")
+    end
+
+    start_idx = findfirst("[0, [1,", content)
+    if start_idx === nothing
+        error("Unexpected msolve output format — missing '[0, [1,' header.\n" *
+              "Content preview: $(first(content, min(300, length(content))))")
+    end
+
+    inner = content[(start_idx[end] + 1):end]
+
+    points = Vector{Float64}[]
+    all_intervals = Vector{Tuple{Float64,Float64}}[]
+
+    outer_start = findfirst('[', inner)
+    outer_start === nothing && return (points, all_intervals)
+
+    depth = 0
+    sol_start = 0
+    i = outer_start
+    while i <= lastindex(inner)
+        c = inner[i]
+        if c == '['
+            depth += 1
+            if depth == 2
+                sol_start = i
+            end
+        elseif c == ']'
+            depth -= 1
+            if depth == 1 && sol_start > 0
+                sol_block = inner[sol_start:i]
+                result = _parse_solution_block_intervals(sol_block, n)
+                if result !== nothing
+                    push!(points, result[1])
+                    push!(all_intervals, result[2])
+                end
+                sol_start = 0
+            end
+            depth <= 0 && break
+        end
+        i = nextind(inner, i)
+    end
+
+    return (points, all_intervals)
+end
+
+"""
     _parse_solution_block(block::AbstractString, n::Int) -> Union{Vector{Float64}, Nothing}
 
 Parse a single msolve solution block `[[lo1, hi1], [lo2, hi2], ...]` into
 coordinate midpoints. Returns `nothing` if parsing fails.
 """
 function _parse_solution_block(block::AbstractString, n::Int)::Union{Vector{Float64}, Nothing}
-    # Extract coordinate intervals: each is [lo, hi]
+    result = _parse_solution_block_intervals(block, n)
+    result === nothing && return nothing
+    return result[1]  # return midpoints only
+end
+
+"""
+    _parse_solution_block_intervals(block::AbstractString, n::Int)
+        -> Union{Tuple{Vector{Float64}, Vector{Tuple{Float64,Float64}}}, Nothing}
+
+Parse a single msolve solution block `[[lo1, hi1], [lo2, hi2], ...]` into
+coordinate midpoints AND isolating intervals.
+
+Returns `(midpoints, intervals)` where:
+- `midpoints::Vector{Float64}`: midpoint `(lo+hi)/2` for each coordinate
+- `intervals::Vector{Tuple{Float64,Float64}}`: `(lo, hi)` bounds for each coordinate
+
+Returns `nothing` if parsing fails or dimension mismatch.
+"""
+function _parse_solution_block_intervals(
+    block::AbstractString, n::Int
+)::Union{Tuple{Vector{Float64}, Vector{Tuple{Float64,Float64}}}, Nothing}
     coords = Float64[]
+    intervals = Tuple{Float64,Float64}[]
     depth = 0
     interval_start = 0
 
@@ -266,21 +355,19 @@ function _parse_solution_block(block::AbstractString, n::Int)::Union{Vector{Floa
         c = block[i]
         if c == '['
             depth += 1
-            # depth 2 = start of a coordinate interval [lo, hi]
             if depth == 2
                 interval_start = i
             end
         elseif c == ']'
             depth -= 1
-            # depth 1 = end of a coordinate interval
             if depth == 1 && interval_start > 0
                 interval_str = block[(interval_start + 1):(i - 1)]
-                # Split on comma — gives [lo_str, hi_str]
                 parts = split(interval_str, ',')
                 if length(parts) == 2
                     lo = parse_msolve_rational(parts[1])
                     hi = parse_msolve_rational(parts[2])
                     push!(coords, (lo + hi) / 2.0)
+                    push!(intervals, (lo, hi))
                 end
                 interval_start = 0
             end
@@ -289,7 +376,7 @@ function _parse_solution_block(block::AbstractString, n::Int)::Union{Vector{Floa
     end
 
     if length(coords) == n
-        return coords
+        return (coords, intervals)
     else
         @debug "msolve: solution block has $(length(coords)) coordinates, expected $n — skipping"
         return nothing
@@ -323,6 +410,117 @@ function msolve_raw_points(file_path::String, n::Int)::Vector{Vector{Float64}}
     rm(file_path)
 
     return parse_msolve_output(content, n)
+end
+
+"""
+    msolve_raw_points_with_intervals(file_path::String, n::Int)
+        -> Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+
+Parse an msolve output file and return raw solution midpoints AND isolating intervals.
+File is cleaned up after parsing.
+
+See [`parse_msolve_output_with_intervals`](@ref) for return format.
+"""
+function msolve_raw_points_with_intervals(
+    file_path::String, n::Int
+)::Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+    if !isfile(file_path)
+        error("msolve output file not found: $file_path")
+    end
+
+    content = read(file_path, String)
+    rm(file_path)
+
+    return parse_msolve_output_with_intervals(content, n)
+end
+
+# ── Certified interval-box overlap (range search) ────────────────────────────
+
+"""
+    interval_overlaps_box(
+        intervals::Vector{Tuple{Float64,Float64}},
+        box::Vector{Tuple{Float64,Float64}}
+    ) -> Bool
+
+Check whether an N-dimensional isolating interval overlaps a search box.
+
+Returns `true` if the interval `[lo_i, hi_i]` overlaps with `[box_lo_i, box_hi_i]`
+in ALL dimensions (i.e., the hyperrectangles intersect). If any single dimension
+has no overlap, the root is certifiably outside the box.
+
+This is a certified rejection test: if it returns `false`, the root is guaranteed
+to be outside the box. If it returns `true`, the root might be inside or near the
+boundary — its midpoint should be checked for final inclusion.
+"""
+function interval_overlaps_box(
+    intervals::Vector{Tuple{Float64,Float64}},
+    box::Vector{Tuple{Float64,Float64}},
+)::Bool
+    for (iv, bx) in zip(intervals, box)
+        iv_lo, iv_hi = iv
+        bx_lo, bx_hi = bx
+        # No overlap if interval is entirely below or above the box
+        if iv_hi < bx_lo || iv_lo > bx_hi
+            return false
+        end
+    end
+    return true
+end
+
+"""
+    interval_certified_inside(
+        intervals::Vector{Tuple{Float64,Float64}},
+        box::Vector{Tuple{Float64,Float64}}
+    ) -> Bool
+
+Check whether an N-dimensional isolating interval is certifiably contained in a box.
+
+Returns `true` only if `[lo_i, hi_i] ⊆ [box_lo_i, box_hi_i]` in ALL dimensions.
+This means the root is guaranteed to be inside the box regardless of its exact
+position within the isolating interval.
+"""
+function interval_certified_inside(
+    intervals::Vector{Tuple{Float64,Float64}},
+    box::Vector{Tuple{Float64,Float64}},
+)::Bool
+    for (iv, bx) in zip(intervals, box)
+        iv_lo, iv_hi = iv
+        bx_lo, bx_hi = bx
+        if iv_lo < bx_lo || iv_hi > bx_hi
+            return false
+        end
+    end
+    return true
+end
+
+"""
+    filter_solutions_by_box(
+        points::Vector{Vector{Float64}},
+        intervals::Vector{Vector{Tuple{Float64,Float64}}},
+        box::Vector{Tuple{Float64,Float64}}
+    ) -> Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+
+Filter solutions using certified interval-box overlap.
+
+Keeps solutions whose isolating interval overlaps the search box. Solutions whose
+interval is entirely outside the box in any dimension are certifiably rejected.
+
+Returns `(filtered_points, filtered_intervals)`.
+"""
+function filter_solutions_by_box(
+    points::Vector{Vector{Float64}},
+    intervals::Vector{Vector{Tuple{Float64,Float64}}},
+    box::Vector{Tuple{Float64,Float64}},
+)::Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+    kept_pts = Vector{Float64}[]
+    kept_ivs = Vector{Tuple{Float64,Float64}}[]
+    for (pt, iv) in zip(points, intervals)
+        if interval_overlaps_box(iv, box)
+            push!(kept_pts, pt)
+            push!(kept_ivs, iv)
+        end
+    end
+    return (kept_pts, kept_ivs)
 end
 
 """

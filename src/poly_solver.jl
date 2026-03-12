@@ -67,6 +67,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     start_system::Symbol = :auto,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
 )
     # Optional coefficient sparsification: zero out small coefficients before
     # constructing the DynamicPolynomials polynomial. DynamicPolynomials automatically
@@ -86,17 +87,28 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     end
 
     if solver == :hc
-        return _solve_hc(
+        result = _solve_hc(
             x, n, d, actual_coeffs;
             basis, precision, normalized, power_of_two_denom,
             return_system, start_system,
         )
+        # Apply search_bounds as midpoint filter for HC (no interval data available)
+        if search_bounds !== nothing && !return_system
+            result = filter(result) do pt
+                all(zip(pt, search_bounds)) do (val, (lo, hi))
+                    lo <= val <= hi
+                end
+            end
+            result = collect(result)
+        end
+        return result
     elseif solver == :msolve
         return_system && error("return_system=true is not supported with solver=:msolve")
         return _solve_msolve(
             x, n, d, actual_coeffs;
             basis, precision, normalized, power_of_two_denom,
             threads = msolve_threads,
+            search_bounds = search_bounds,
         )
     else
         error("Unknown solver: $solver. Available: :hc, :msolve")
@@ -160,12 +172,8 @@ function _solve_msolve(
     x, n, d, coeffs;
     basis, precision, normalized, power_of_two_denom,
     threads::Int = 1,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
 )
-    # Build an ApproxPoly-like structure that msolve_polynomial_system expects.
-    # We need: .coeffs, .degree — the minimum interface.
-    # Construct a temporary ApproxPoly with the coefficients and degree.
-    # msolve_polynomial_system uses: pol.coeffs, pol.degree, and the basis kwarg.
-
     # Convert coefficients to the format expected by construct_orthopoly_polynomial
     rational_coeffs = [Rational{BigInt}(c) for c in coeffs]
 
@@ -209,11 +217,18 @@ function _solve_msolve(
         msolve_cmd = `msolve -v 0 -t $threads -f $input_file -o $output_file`
         run(msolve_cmd)
 
-        # Parse output — returns Vector{Vector{Float64}} in normalized domain
-        return msolve_raw_points(output_file, n)
+        if search_bounds !== nothing
+            # Certified range search: parse intervals and filter by box overlap
+            pts, ivs = msolve_raw_points_with_intervals(output_file, n)
+            filtered_pts, _ = filter_solutions_by_box(pts, ivs, search_bounds)
+            return filtered_pts
+        else
+            # Standard path: midpoints only
+            return msolve_raw_points(output_file, n)
+        end
     finally
         isfile(input_file) && rm(input_file)
-        # output_file is cleaned up by msolve_raw_points
+        # output_file is cleaned up by msolve_raw_points / msolve_raw_points_with_intervals
     end
 end
 
@@ -239,7 +254,12 @@ pol = Constructor(TR, 8)
 solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
 ```
 """
-function solve_polynomial_system(x, pol::ApproxPoly; solver::Symbol = :hc, kwargs...)
+function solve_polynomial_system(
+    x, pol::ApproxPoly;
+    solver::Symbol = :hc,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    kwargs...,
+)
     # Handle both single variable and vector of variables
     x_vec = if isa(x, AbstractVector)
         x
@@ -258,7 +278,10 @@ function solve_polynomial_system(x, pol::ApproxPoly; solver::Symbol = :hc, kwarg
 
     # Pass the full degree spec through — main_nd → normalize_degree handles
     # both (:one_d_for_all, d) and (:one_d_per_dim, [d1, d2, ...]) correctly.
-    return solve_polynomial_system(x_vec, n, pol.degree, pol.coeffs; solver = solver, kwargs...)
+    return solve_polynomial_system(
+        x_vec, n, pol.degree, pol.coeffs;
+        solver = solver, search_bounds = search_bounds, kwargs...,
+    )
 end
 
 """
@@ -277,6 +300,7 @@ function solve_polynomial_system_from_approx(
     start_system::Symbol = :auto,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
@@ -289,6 +313,7 @@ function solve_polynomial_system_from_approx(
         start_system = start_system,
         solver = solver,
         msolve_threads = msolve_threads,
+        search_bounds = search_bounds,
     )
 end
 
