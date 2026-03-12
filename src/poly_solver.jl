@@ -1,14 +1,16 @@
 """
-    solve_polynomial_system(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}} or Tuple
+    solve_polynomial_system(x, n, d, coeffs; solver=:hc, kwargs...) -> Vector{Vector{Float64}} or Tuple
 
 **Critical point finder using polynomial system solving.**
 
 Find all critical points of a polynomial approximation by solving the gradient system
-grad(p)(x) = 0 using HomotopyContinuation.jl. This is the core function for locating all
-local minima, maxima, and saddle points of the approximated objective function.
+∇p(x) = 0. Two solver backends are available:
 
-Uses numerical algebraic geometry with homotopy continuation.
-Solution count is bounded by Bezout's theorem: (d-1)^n for degree d polynomial.
+- `:hc` (default) — HomotopyContinuation.jl: numerical algebraic geometry via homotopy
+  continuation. Fast, handles large systems, but may lose paths (miss solutions).
+- `:msolve` — msolve binary: exact Gröbner basis computation over ℚ with certified
+  real root isolation. Guaranteed to find all real solutions (no path loss), but
+  may be slower for large systems.
 
 # Arguments
 - `x`: Polynomial variables (from DynamicPolynomials)
@@ -17,14 +19,16 @@ Solution count is bounded by Bezout's theorem: (d-1)^n for degree d polynomial.
 - `coeffs`: Coefficient matrix from polynomial approximation
 
 # Keyword Arguments
+- `solver::Symbol=:hc`: Solver backend (`:hc` or `:msolve`)
 - `basis::Symbol=:chebyshev`: Basis type (`:chebyshev` or `:legendre`)
 - `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
 - `normalized::Bool=true`: Whether to use normalized basis polynomials
 - `power_of_two_denom::Bool=false`: For rational precision, ensures denominators are powers of 2
-- `return_system::Bool=false`: If true, also return the polynomial system information
+- `return_system::Bool=false`: If true, also return the polynomial system information (`:hc` only)
+- `msolve_threads::Int=1`: Number of threads for msolve (`:msolve` only)
 
 # Returns
-- If `return_system=false`: `Vector{Vector{Float64}}` - Real solutions within [-1,1]ⁿ
+- If `return_system=false`: `Vector{Vector{Float64}}` — Real solutions within [-1,1]ⁿ
 - If `return_system=true`: `Tuple` containing:
   - Solutions vector
   - Tuple of (polynomial system, HC system, total solution count)
@@ -37,23 +41,16 @@ Solution count is bounded by Bezout's theorem: (d-1)^n for degree d polynomial.
 # Examples
 ```julia
 using DynamicPolynomials
-
-# Basic usage (assuming pol is an ApproxPoly object)
 @polyvar x[1:2]
-# coeffs = ... # coefficient matrix from polynomial approximation
-# crit_pts = solve_polynomial_system(x, 2, 8, coeffs)
-# println("Found \$(length(crit_pts)) critical points")
 
-# With system information for debugging
-# crit_pts, (polysys, hc_sys, total) = solve_polynomial_system(
-#     x, 2, 8, coeffs, 
-#     return_system=true
-# )
-# println("Total solutions (including complex): \$total")
-# println("Real solutions in domain: \$(length(crit_pts))")
+# Using HomotopyContinuation (default)
+crit_pts = solve_polynomial_system(x, 2, 8, coeffs)
 
-# Using Legendre basis
-# crit_pts = solve_polynomial_system(x, 2, 6, coeffs, basis=:legendre)
+# Using msolve (exact, no path loss)
+crit_pts = solve_polynomial_system(x, 2, 8, coeffs; solver=:msolve)
+
+# msolve with 4 threads
+crit_pts = solve_polynomial_system(x, 2, 8, coeffs; solver=:msolve, msolve_threads=4)
 ```
 """
 TimerOutputs.@timeit _TO function solve_polynomial_system(
@@ -67,7 +64,9 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     power_of_two_denom::Bool = false,
     return_system = false,
     sparsify_threshold::Float64 = 0.0,
-    start_system::Symbol = :auto
+    start_system::Symbol = :auto,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )
     # Optional coefficient sparsification: zero out small coefficients before
     # constructing the DynamicPolynomials polynomial. DynamicPolynomials automatically
@@ -86,16 +85,42 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
         coeffs
     end
 
+    if solver == :hc
+        return _solve_hc(
+            x, n, d, actual_coeffs;
+            basis, precision, normalized, power_of_two_denom,
+            return_system, start_system,
+        )
+    elseif solver == :msolve
+        return_system && error("return_system=true is not supported with solver=:msolve")
+        return _solve_msolve(
+            x, n, d, actual_coeffs;
+            basis, precision, normalized, power_of_two_denom,
+            threads = msolve_threads,
+        )
+    else
+        error("Unknown solver: $solver. Available: :hc, :msolve")
+    end
+end
+
+"""
+    _solve_hc(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}}
+
+Solve the gradient system using HomotopyContinuation.jl.
+This is the original code path — extracted for dispatch clarity.
+"""
+function _solve_hc(
+    x, n, d, coeffs;
+    basis, precision, normalized, power_of_two_denom,
+    return_system, start_system,
+)
     # Use the updated main_nd function with all parameters
     pol = main_nd(
-        x,
-        n,
-        d,
-        actual_coeffs;
+        x, n, d, coeffs;
         basis = basis,
         precision = precision,
         normalized = normalized,
-        power_of_two_denom = power_of_two_denom
+        power_of_two_denom = power_of_two_denom,
     )
 
     # Resolve start system: :auto picks :polyhedral for n >= 3, :total_degree otherwise.
@@ -122,6 +147,77 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
 end
 
 """
+    _solve_msolve(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}}
+
+Solve the gradient system using the msolve binary (Gröbner basis + real root isolation).
+Returns raw solution points in [-1,1]^n — same contract as `_solve_hc`.
+
+Uses rational arithmetic internally for exact Gröbner basis computation.
+Calls the system `msolve` binary via `msolve_polynomial_system`, then parses
+the output with `msolve_raw_points`.
+"""
+function _solve_msolve(
+    x, n, d, coeffs;
+    basis, precision, normalized, power_of_two_denom,
+    threads::Int = 1,
+)
+    # Build an ApproxPoly-like structure that msolve_polynomial_system expects.
+    # We need: .coeffs, .degree — the minimum interface.
+    # Construct a temporary ApproxPoly with the coefficients and degree.
+    # msolve_polynomial_system uses: pol.coeffs, pol.degree, and the basis kwarg.
+
+    # Convert coefficients to the format expected by construct_orthopoly_polynomial
+    rational_coeffs = [Rational{BigInt}(c) for c in coeffs]
+
+    # Build the polynomial in monomial basis (rational precision for msolve)
+    degree = normalize_degree(d)
+    p = construct_orthopoly_polynomial(
+        x,
+        rational_coeffs,
+        degree,
+        basis,
+        RationalPrecision;
+        normalized = normalized,
+        power_of_two_denom = power_of_two_denom,
+    )
+
+    # Compute gradient
+    grad = differentiate.(p, x)
+
+    # Write input file for msolve
+    random_suffix = randstring(8)
+    input_file = tempname() * "_msolve_$(random_suffix).ms"
+    output_file = tempname() * "_msolve_$(random_suffix)_out.ms"
+
+    try
+        # Write msolve input: variable names, characteristic, gradient polynomials
+        names = [string(x[i]) for i in 1:length(x)]
+        open(input_file, "w") do file
+            println(file, join(names, ", "))
+            println(file, 0)  # characteristic 0 = rationals
+            for i in 1:n
+                poly_str = replace(string(grad[i]), "//" => "/")
+                if i < n
+                    println(file, poly_str, ",")
+                else
+                    println(file, poly_str)
+                end
+            end
+        end
+
+        # Run msolve
+        msolve_cmd = `msolve -v 0 -t $threads -f $input_file -o $output_file`
+        run(msolve_cmd)
+
+        # Parse output — returns Vector{Vector{Float64}} in normalized domain
+        return msolve_raw_points(output_file, n)
+    finally
+        isfile(input_file) && rm(input_file)
+        # output_file is cleaned up by msolve_raw_points
+    end
+end
+
+"""
     solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
 
 Convenience method that automatically extracts dimension and degree from an ApproxPoly object.
@@ -143,7 +239,7 @@ pol = Constructor(TR, 8)
 solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
 ```
 """
-function solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
+function solve_polynomial_system(x, pol::ApproxPoly; solver::Symbol = :hc, kwargs...)
     # Handle both single variable and vector of variables
     x_vec = if isa(x, AbstractVector)
         x
@@ -162,7 +258,7 @@ function solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
 
     # Pass the full degree spec through — main_nd → normalize_degree handles
     # both (:one_d_for_all, d) and (:one_d_per_dim, [d1, d2, ...]) correctly.
-    return solve_polynomial_system(x_vec, n, pol.degree, pol.coeffs; kwargs...)
+    return solve_polynomial_system(x_vec, n, pol.degree, pol.coeffs; solver = solver, kwargs...)
 end
 
 """
@@ -179,6 +275,8 @@ function solve_polynomial_system_from_approx(
     pol_approx::ApproxPoly;
     sparsify_threshold::Float64 = 0.0,
     start_system::Symbol = :auto,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
@@ -189,6 +287,8 @@ function solve_polynomial_system_from_approx(
         power_of_two_denom = pol_approx.power_of_two_denom,
         sparsify_threshold = sparsify_threshold,
         start_system = start_system,
+        solver = solver,
+        msolve_threads = msolve_threads,
     )
 end
 
@@ -335,6 +435,8 @@ function solve_polynomial_with_defaults(
     return_system::Bool = false,
     sparsify_threshold::Float64 = 0.0,
     start_system::Symbol = :auto,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )
     return solve_polynomial_system(
         x, n, d, coeffs;
@@ -345,6 +447,8 @@ function solve_polynomial_with_defaults(
         return_system = return_system,
         sparsify_threshold = sparsify_threshold,
         start_system = start_system,
+        solver = solver,
+        msolve_threads = msolve_threads,
     )
 end
 
@@ -381,7 +485,7 @@ solutions = solve_polynomial_with_defaults(x, pol, precision=Float64Precision)
 - Prevents common precision parameter omission bugs
 - Maintains compatibility with existing ApproxPoly workflows
 """
-function solve_polynomial_with_defaults(x, pol::ApproxPoly; kwargs...)
+function solve_polynomial_with_defaults(x, pol::ApproxPoly; solver::Symbol = :hc, kwargs...)
     # Use the existing ApproxPoly method but ensure we pass through our safe defaults
     # The kwargs will override the defaults when explicitly provided
     default_kwargs = Dict{Symbol, Any}(
@@ -389,11 +493,11 @@ function solve_polynomial_with_defaults(x, pol::ApproxPoly; kwargs...)
         :precision => RationalPrecision,
         :normalized => true,
         :power_of_two_denom => false,
-        :return_system => false
+        :return_system => false,
     )
 
     # Merge user-provided kwargs with defaults (user kwargs take precedence)
     merged_kwargs = merge(default_kwargs, Dict{Symbol, Any}(kwargs))
 
-    return solve_polynomial_system(x, pol; merged_kwargs...)
+    return solve_polynomial_system(x, pol; solver = solver, merged_kwargs...)
 end

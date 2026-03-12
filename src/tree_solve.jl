@@ -1,16 +1,20 @@
 """
-    solve_tree_leaves(tree::SubdivisionTree; dedup_tol=1e-6) -> Vector{Vector{Float64}}
+    solve_tree_leaves(tree::SubdivisionTree; solver=:hc, dedup_tol=1e-6) -> Vector{Vector{Float64}}
 
-Run HomotopyContinuation solving on every leaf polynomial of a finished
+Solve the gradient system on every leaf polynomial of a finished
 `SubdivisionTree` and return all critical points (in original-domain
 coordinates), deduplicated by pairwise distance.
 
 ## Workflow
 1. Iterate `converged_leaves ∪ active_leaves` (active leaves hit a depth/count
    limit but still have valid polynomials).
-2. Call `solve_and_transform(sd.polynomial, get_bounds(sd))` per leaf.
+2. Call `solve_and_transform(sd.polynomial, get_bounds(sd); solver)` per leaf.
 3. Merge all raw critical points and drop any point within `dedup_tol` of an
    earlier one (simple greedy deduplication).
+
+## Keyword Arguments
+- `solver::Symbol=:hc`: Solver backend (`:hc` or `:msolve`)
+- `msolve_threads::Int=1`: Number of threads for msolve
 
 ## Notes
 - Leaves whose `.polynomial` field is `nothing` are silently skipped.
@@ -24,6 +28,8 @@ function solve_tree_leaves(
     dedup_tol :: Float64 = 1e-6,
     sparsify_threshold :: Float64 = 0.0,
     start_system :: Symbol = :auto,
+    solver :: Symbol = :hc,
+    msolve_threads :: Int = 1,
 )
     all_cps = Vector{Float64}[]
     leaf_ids = vcat(tree.converged_leaves, tree.active_leaves)
@@ -39,6 +45,8 @@ function solve_tree_leaves(
                 sd.polynomial, leaf_bounds;
                 sparsify_threshold = sparsify_threshold,
                 start_system = start_system,
+                solver = solver,
+                msolve_threads = msolve_threads,
             )
             append!(all_cps, cps)
         catch e

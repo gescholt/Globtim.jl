@@ -100,6 +100,9 @@ export TestInput,
     solve_polynomial_with_defaults,
     msolve_polynomial_system,
     msolve_parser,
+    msolve_raw_points,
+    parse_msolve_output,
+    parse_msolve_rational,
     generate_grid,
     SupportGen,
     construct_chebyshev_approx,
@@ -221,7 +224,7 @@ include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("ApproxPolyEval.jl") #ApproxPoly evaluation and gradient functions.
 include("msolve_system.jl") #polynomial system solving with Msolve.
-include("hom_solve.jl") #polynomial system solving with homotopy Continuation. 
+include("poly_solver.jl") #polynomial system solving (HC + msolve backends)
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
 include("data_structures.jl") #Enhanced data structures for multi-tolerance analysis
 include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)

@@ -123,30 +123,218 @@ function process_crit_pts(
     )
 end
 
+# ── msolve output parsing (N-dimensional) ─────────────────────────────────────
+
+"""
+    parse_msolve_rational(s::AbstractString) -> Float64
+
+Parse a single msolve rational number string to Float64.
+
+msolve outputs coordinates as either:
+- Plain integers: `123`, `-456`
+- Rational fractions: `numerator / 2^exponent`  (e.g. `-12031136 / 2^139`)
+
+Uses BigFloat intermediate to avoid precision loss for large numerators.
+"""
+function parse_msolve_rational(s::AbstractString)::Float64
+    s = strip(s)
+    if contains(s, '/')
+        parts = split(s, '/')
+        num = parse(BigFloat, strip(parts[1]))
+        den_str = strip(parts[2])
+        den = if startswith(den_str, "2^")
+            BigFloat(2)^parse(Int, den_str[3:end])
+        else
+            parse(BigFloat, den_str)
+        end
+        return Float64(num / den)
+    else
+        return parse(Float64, s)
+    end
+end
+
+"""
+    parse_msolve_output(content::AbstractString, n::Int) -> Vector{Vector{Float64}}
+
+Parse raw msolve output into solution points (N-dimensional).
+
+# msolve v0.9.4 output format
+
+For systems over QQ, msolve outputs real solutions as isolating intervals:
+```
+[0, [1,
+[[[lo₁, hi₁], [lo₂, hi₂], ...], [[lo₁, hi₁], [lo₂, hi₂], ...], ...]
+]]:
+```
+
+Each solution is a list of N coordinate intervals `[lo, hi]` where lo and hi
+are rational numbers in the form `integer` or `integer / 2^exponent`.
+The midpoint `(lo + hi) / 2` is taken as the coordinate value.
+
+Special output cases:
+- `[-1]:` — no solutions in algebraic closure
+- `[1, nvars, -1, []]:` — infinitely many solutions
+
+# Arguments
+- `content`: Raw msolve output file content
+- `n`: Expected number of variables (dimension)
+
+# Returns
+- `Vector{Vector{Float64}}`: Solution midpoints in the normalized domain
+"""
+function parse_msolve_output(content::AbstractString, n::Int)::Vector{Vector{Float64}}
+    content = strip(rstrip(strip(content), ':'))
+
+    # Check for no-solution cases
+    if contains(content, "[-1]")
+        @debug "msolve: no solutions in algebraic closure"
+        return Vector{Float64}[]
+    end
+    if occursin(r"\[1,\s*\d+,\s*-1,\s*\[\]\]", content)
+        error("msolve: infinitely many solutions (positive-dimensional ideal)")
+    end
+
+    # Find the solution data after the header [0, [1, ...]
+    start_idx = findfirst("[0, [1,", content)
+    if start_idx === nothing
+        error("Unexpected msolve output format — missing '[0, [1,' header.\n" *
+              "Content preview: $(first(content, min(300, length(content))))")
+    end
+
+    # Extract everything after "[0, [1,"
+    inner = content[(start_idx[end] + 1):end]
+
+    # Strategy: walk the string character-by-character tracking bracket depth
+    # to split into individual solution blocks. Each solution is
+    # [[lo1, hi1], [lo2, hi2], ..., [loN, hiN]] at the top-level list.
+    #
+    # The outer structure is [ sol1, sol2, ... ] where each sol is [[...], ...].
+    # We need to find each sol block.
+
+    points = Vector{Float64}[]
+
+    # Find the outermost [ that contains all solutions
+    outer_start = findfirst('[', inner)
+    outer_start === nothing && return points
+
+    # Parse solution blocks by tracking bracket depth
+    depth = 0
+    sol_start = 0
+    i = outer_start
+    while i <= lastindex(inner)
+        c = inner[i]
+        if c == '['
+            depth += 1
+            # depth 2 = start of a solution block [[lo1,hi1], ...]
+            if depth == 2
+                sol_start = i
+            end
+        elseif c == ']'
+            depth -= 1
+            # depth 1 = end of a solution block
+            if depth == 1 && sol_start > 0
+                sol_block = inner[sol_start:i]
+                pt = _parse_solution_block(sol_block, n)
+                if pt !== nothing
+                    push!(points, pt)
+                end
+                sol_start = 0
+            end
+            # depth 0 = end of outer list
+            depth <= 0 && break
+        end
+        i = nextind(inner, i)
+    end
+
+    return points
+end
+
+"""
+    _parse_solution_block(block::AbstractString, n::Int) -> Union{Vector{Float64}, Nothing}
+
+Parse a single msolve solution block `[[lo1, hi1], [lo2, hi2], ...]` into
+coordinate midpoints. Returns `nothing` if parsing fails.
+"""
+function _parse_solution_block(block::AbstractString, n::Int)::Union{Vector{Float64}, Nothing}
+    # Extract coordinate intervals: each is [lo, hi]
+    coords = Float64[]
+    depth = 0
+    interval_start = 0
+
+    i = firstindex(block)
+    while i <= lastindex(block)
+        c = block[i]
+        if c == '['
+            depth += 1
+            # depth 2 = start of a coordinate interval [lo, hi]
+            if depth == 2
+                interval_start = i
+            end
+        elseif c == ']'
+            depth -= 1
+            # depth 1 = end of a coordinate interval
+            if depth == 1 && interval_start > 0
+                interval_str = block[(interval_start + 1):(i - 1)]
+                # Split on comma — gives [lo_str, hi_str]
+                parts = split(interval_str, ',')
+                if length(parts) == 2
+                    lo = parse_msolve_rational(parts[1])
+                    hi = parse_msolve_rational(parts[2])
+                    push!(coords, (lo + hi) / 2.0)
+                end
+                interval_start = 0
+            end
+        end
+        i = nextind(block, i)
+    end
+
+    if length(coords) == n
+        return coords
+    else
+        @debug "msolve: solution block has $(length(coords)) coordinates, expected $n — skipping"
+        return nothing
+    end
+end
+
+"""
+    msolve_raw_points(file_path::String, n::Int) -> Vector{Vector{Float64}}
+
+Parse an msolve output file and return raw solution points in the normalized
+domain (no filtering, no coordinate transform, no function evaluation).
+
+This is the low-level parser that matches HomotopyContinuation's return contract:
+a `Vector{Vector{Float64}}` of real solutions.
+
+# Arguments
+- `file_path`: Path to msolve output file (will be cleaned up after parsing)
+- `n`: Number of variables (dimension)
+
+# Returns
+- `Vector{Vector{Float64}}`: Raw solution midpoints
+"""
+function msolve_raw_points(file_path::String, n::Int)::Vector{Vector{Float64}}
+    if !isfile(file_path)
+        error("msolve output file not found: $file_path")
+    end
+
+    content = read(file_path, String)
+
+    # Clean up output file
+    rm(file_path)
+
+    return parse_msolve_output(content, n)
+end
+
 """
     msolve_parser(file_path::String, f::Function, TR::TestInput; skip_filtering::Bool=false)::DataFrame
 
-Parse msolve output file containing critical points in rational number format.
+Parse msolve output file and return a DataFrame with transformed critical points
+and function values. Supports arbitrary dimension.
 
-# Msolve Output Format
-Msolve produces output in the following structure:
-```
-[0, [1,
-[[[x1, y1], [data]], [[x2, y2], [data]], ...]]]
-```
+# msolve v0.9.4 output format
 
-Where coordinates are given as exact rational numbers:
-- Simple integers: `123` or `-456`
-- Rational fractions: `numerator / 2^exponent` (e.g., `-1203113635169695151124944263156110755035 / 2^139`)
-
-# Parsing Process
-1. Extracts the content after `[0, [1,` pattern
-2. Uses regex to match coordinate pairs: `[[x, y], [data]]`
-3. Parses rational numbers by:
-   - Splitting on `/` to separate numerator and denominator
-   - Handling `2^n` notation for powers of 2
-   - Converting to BigFloat for precision, then to Float64
-4. Applies filtering and transformations via `process_crit_pts`
+Each real solution is given as N isolating intervals `[lo, hi]` with rational bounds.
+The midpoint is taken as the coordinate value. See [`parse_msolve_output`](@ref) for details.
 
 # Arguments
 - `file_path`: Path to msolve output file
@@ -156,9 +344,6 @@ Where coordinates are given as exact rational numbers:
 
 # Returns
 DataFrame with columns x1, x2, ..., xn and z (function values)
-
-# Note
-Currently only supports 2D problems. Higher dimensions require different parsing logic.
 """
 function msolve_parser(
     file_path::String,
@@ -166,174 +351,23 @@ function msolve_parser(
     TR::TestInput;
     skip_filtering::Bool = false
 )::DataFrame
-    total_time = @elapsed begin
-        println("\n=== Starting MSolve Parser (dimension: $(TR.dim)) ===")
+    @debug "Starting msolve parser (dimension: $(TR.dim))"
 
-        if !isfile(file_path)
-            error("File not found: $file_path")
-        end
-
-        try
-            # Read and parse msolve output file
-            process_time = @elapsed begin
-                if !isfile(file_path)
-                    error("Msolve output file not found: $file_path")
-                end
-
-                # Read the file content
-                content = read(file_path, String)
-
-                # Parse the solutions from msolve output
-                # Msolve outputs in format: [0, [1, [[[x1, y1], [data]], [[x2, y2], [data]], ...]]]:
-                points = Vector{Vector{Float64}}()
-
-                # Remove trailing colon and whitespace
-                content = strip(rstrip(content, ':'))
-
-                try
-                    # Find the innermost list containing the point data
-                    # Look for the pattern [0, [1, [...]]]
-                    start_idx = findfirst("[0, [1,", content)
-                    if start_idx === nothing
-                        error("Unexpected msolve output format")
-                    end
-
-                    # Extract the content after [0, [1,
-                    inner_content = content[(start_idx[end] + 1):end]
-
-                    # Use a regex that properly captures rational numbers
-                    # Match patterns like [[x, y], [data]] where x,y can be:
-                    #   - Integers: 123 or -456
-                    #   - Rationals: -123/2^45 (with spaces allowed around /)
-                    # The pattern (-?\d+\s*/\s*2\^\d+|-?\d+) matches either form
-                    coord_pattern =
-                        r"\[\[\s*(-?\d+\s*/\s*2\^\d+|-?\d+)\s*,\s*(-?\d+\s*/\s*2\^\d+|-?\d+)\s*\],\s*\[[^\]]*\]\]"
-
-                    for match in eachmatch(coord_pattern, inner_content)
-                        x_str = strip(match.captures[1])
-                        y_str = strip(match.captures[2])
-
-                        # Parse rational numbers
-                        x_val = if contains(x_str, '/')
-                            parts = split(x_str, '/')
-                            num = parse(BigFloat, strip(parts[1]))
-                            den_str = strip(parts[2])
-                            # Handle 2^n notation
-                            den = if startswith(den_str, "2^")
-                                BigFloat(2)^parse(Int, den_str[3:end])
-                            else
-                                parse(BigFloat, den_str)
-                            end
-                            Float64(num / den)
-                        else
-                            parse(Float64, x_str)
-                        end
-
-                        y_val = if contains(y_str, '/')
-                            parts = split(y_str, '/')
-                            num = parse(BigFloat, strip(parts[1]))
-                            den_str = strip(parts[2])
-                            # Handle 2^n notation
-                            den = if startswith(den_str, "2^")
-                                BigFloat(2)^parse(Int, den_str[3:end])
-                            else
-                                parse(BigFloat, den_str)
-                            end
-                            Float64(num / den)
-                        else
-                            parse(Float64, y_str)
-                        end
-
-                        # For now, only handle 2D case
-                        if TR.dim == 2
-                            push!(points, [x_val, y_val])
-                        else
-                            # For higher dimensions, we'd need to parse differently
-                            error("msolve parser currently only supports 2D problems")
-                        end
-                    end
-                catch e
-                    println("Error parsing msolve output: ", e)
-                    println("Content preview: ", first(content, min(200, length(content))))
-                    rethrow(e)
-                end
-            end
-            println(
-                "Processed $(length(points)) points ($(round(process_time, digits=3))s)"
-            )
-
-            if !all(p -> length(p) == TR.dim, points)
-                invalid_points = filter(p -> length(p) != TR.dim, points)
-                error("Found points with incorrect dimension: $invalid_points")
-            end
-
-            # Apply filtering
-            filtered_points = points
-            if !skip_filtering
-                filtered_points = filter(p -> all(-1 .<= p .<= 1), points)
-
-                # If all points were filtered out but there were points to begin with,
-                # consider using them anyway if they're not too far outside
-                if isempty(filtered_points) && !isempty(points)
-                    println("Warning: All points were filtered out.")
-
-                    # Find the maximum absolute value to understand how far outside bounds
-                    max_abs_val = maximum(abs.(reduce(vcat, points)))
-
-                    # If the points are not too far outside, use them anyway
-                    if max_abs_val < 10.0
-                        println("Points are not too far outside bounds, using them anyway")
-                        filtered_points = points
-                    end
-                end
-            end
-
-            if isempty(filtered_points)
-                println("No valid points found after filtering")
-                return DataFrame(Dict(Symbol("x$i") => Float64[] for i in 1:(TR.dim)))
-            end
-
-            # Convert center to vector if it's not already
-            center_vec = Vector(TR.center)
-
-            # Transform points based on sample_range type
-            points_to_process = if isa(TR.sample_range, Number)
-                # Scalar sample_range
-                [TR.sample_range .* p .+ center_vec for p in filtered_points]
-            else
-                # Vector sample_range - apply per-coordinate scaling
-                [
-                    [TR.sample_range[i] * p[i] + center_vec[i] for i in 1:(TR.dim)]
-                    for
-                    p in filtered_points
-                ]
-            end
-
-            z = [f(p) for p in points_to_process]
-
-            df = DataFrame(
-                merge(
-                    Dict(
-                        Symbol("x$i") => [p[i] for p in points_to_process] for
-                        i in 1:(TR.dim)
-                    ),
-                    Dict(:z => z)
-                )
-            )
-
-            return df
-        catch e
-            println("Error in msolve_parser: ", e)
-            println("Stack trace:")
-            for (exc, bt) in Base.catch_stack()
-                showerror(stdout, exc, bt)
-                println()
-            end
-            rethrow(e)
-        finally
-            # Clean up the output file after processing
-            isfile(file_path) && rm(file_path)
-        end
+    if !isfile(file_path)
+        error("File not found: $file_path")
     end
-    println("Total execution time: $(round(total_time, digits=3))s")
+
+    local points::Vector{Vector{Float64}}
+    parse_time = @elapsed begin
+        content = read(file_path, String)
+        points = parse_msolve_output(content, TR.dim)
+    end
+
+    # Clean up output file
+    isfile(file_path) && rm(file_path)
+
+    @debug "Parsed $(length(points)) points ($(round(parse_time, digits=3))s)"
+
+    # Delegate to process_crit_pts for filtering, transform, and function evaluation
+    return process_crit_pts(points, f, TR; skip_filtering = skip_filtering)
 end

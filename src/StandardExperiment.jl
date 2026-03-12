@@ -124,10 +124,10 @@ struct DegreeResult
 end
 
 """
-    solve_and_transform(pol::ApproxPoly, bounds) -> (critical_points, solve_time)
+    solve_and_transform(pol::ApproxPoly, bounds; solver=:hc) -> (critical_points, solve_time)
 
-Solve a polynomial system via HomotopyContinuation and transform solutions from
-normalized [-1,1]^n coordinates to the original domain.
+Solve a polynomial system and transform solutions from normalized [-1,1]^n
+coordinates to the original domain.
 
 This is the shared kernel used by both `run_standard_experiment` (full polynomials)
 and `run_sparsification_experiment` (sparsified polynomial variants).
@@ -136,27 +136,35 @@ and `run_sparsification_experiment` (sparsified polynomial variants).
 - `pol::ApproxPoly`: Polynomial approximation (full or sparsified)
 - `bounds::Vector{Tuple{Float64, Float64}}`: Domain bounds [(lb₁,ub₁), ...]
 
+# Keyword Arguments
+- `solver::Symbol=:hc`: Solver backend (`:hc` or `:msolve`)
+- `msolve_threads::Int=1`: Number of threads for msolve (`:msolve` only)
+
 # Returns
 - `critical_points::Vector{Vector{Float64}}`: Critical points in original domain coordinates
-- `solve_time::Float64`: Wall-clock time for HC solve (seconds)
+- `solve_time::Float64`: Wall-clock time for solve (seconds)
 """
 function solve_and_transform(
     pol,  # ApproxPoly — not typed to avoid import dependency
     bounds::Vector{Tuple{Float64, Float64}};
     sparsify_threshold::Float64 = 0.0,
     start_system::Symbol = :auto,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
-    # Solve polynomial system via HomotopyContinuation
+    # Solve polynomial system (HC or msolve, selected by solver kwarg)
     @polyvar x[1:dimension]
     solve_time = @elapsed begin
         raw_critical_points = Globtim.solve_polynomial_system_from_approx(
             x, pol;
             sparsify_threshold = sparsify_threshold,
             start_system = start_system,
+            solver = solver,
+            msolve_threads = msolve_threads,
         )
     end
 
@@ -258,7 +266,9 @@ function run_standard_experiment(;
     experiment_config,
     output_dir::String,
     metadata::Dict{String, Any} = Dict(),
-    true_params::Union{Vector{Float64}, Nothing} = nothing
+    true_params::Union{Vector{Float64}, Nothing} = nothing,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )
     mkpath(output_dir)
 
@@ -292,7 +302,9 @@ function run_standard_experiment(;
                 bounds,
                 experiment_config,
                 output_dir,
-                true_params
+                true_params;
+                solver = solver,
+                msolve_threads = msolve_threads,
             )
 
             push!(degree_results, result)
@@ -394,7 +406,9 @@ function process_single_degree(
     bounds::Vector{Tuple{Float64, Float64}},
     experiment_config,
     output_dir::String,
-    true_params::Union{Vector{Float64}, Nothing}
+    true_params::Union{Vector{Float64}, Nothing};
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -428,7 +442,11 @@ function process_single_degree(
     end
 
     # Phase 2: Critical Point Solving + coordinate transformation
-    critical_points_array, solve_time = solve_and_transform(pol, bounds)
+    critical_points_array, solve_time = solve_and_transform(
+        pol, bounds;
+        solver = solver,
+        msolve_threads = msolve_threads,
+    )
     n_critical_points = length(critical_points_array)
     timing["critical_point_solving_time"] = solve_time
 
@@ -586,6 +604,8 @@ function create_experiment_summary(
         "optim_f_tol"    => experiment_config.optim_f_tol,
         "optim_x_tol"    => experiment_config.optim_x_tol,
         "max_iterations" => experiment_config.max_iterations,
+        "solver"         => string(solver),
+        "msolve_threads" => msolve_threads,
     )
 
     GN = experiment_config.GN
