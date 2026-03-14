@@ -5,9 +5,11 @@ Covers:
 - RANGE-01: Interval parsing — _parse_solution_block_intervals returns (midpoints, intervals)
 - RANGE-02: parse_msolve_output_with_intervals returns points + interval bounds
 - RANGE-03: interval_in_box / interval_overlaps_box certified filtering
-- RANGE-04: _solve_msolve with search_bounds filters solutions algebraically
-- RANGE-05: solve_polynomial_system with search_bounds (both :hc and :msolve)
-- RANGE-06: solve_and_transform with search_bounds (subdomain filtering)
+- RANGE-04: filter_solutions_by_box — certified range filtering
+- RANGE-05: msolve_raw_points_with_intervals (file-based parsing)
+- RANGE-06: End-to-end solver integration with search_bounds (2D)
+- RANGE-07: 3D range search — certified interval filtering in higher dimensions
+- RANGE-08: Monotonicity — tighter boxes yield strictly fewer or equal CPs
 """
 
 using Test
@@ -18,16 +20,20 @@ using Printf
 
 # ─── Helper: check msolve binary is available ────────────────────────────────
 
-function msolve_available()
-    try
-        run(pipeline(`msolve -h`, devnull), wait=true)
-        return true
-    catch
-        return false
+if !@isdefined(msolve_available)
+    function msolve_available()
+        try
+            run(pipeline(`msolve -h`, devnull), wait=true)
+            return true
+        catch
+            return false
+        end
     end
 end
 
-const HAS_MSOLVE = msolve_available()
+if !@isdefined(HAS_MSOLVE)
+    const HAS_MSOLVE = msolve_available()
+end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # RANGE-01: Interval parsing
@@ -79,7 +85,7 @@ end
     @test length(ivs) == 4
     @test all(iv -> length(iv) == 2, ivs)
 
-    # Each interval should be (lo, hi) tuple
+    # Each interval should be (lo, hi) tuple with lo ≤ hi
     for iv in ivs
         for (lo, hi) in iv
             @test lo <= hi
@@ -97,60 +103,50 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @testset "RANGE-03: interval_overlaps_box" begin
-    # 2D intervals, box is [-1,1]^2
+    unit_box = [(-1.0, 1.0), (-1.0, 1.0)]
 
-    # Fully inside: intervals [0.2, 0.3] x [-0.5, -0.4] → overlaps
-    iv_inside = [(0.2, 0.3), (-0.5, -0.4)]
-    @test Globtim.interval_overlaps_box(iv_inside, [(-1.0, 1.0), (-1.0, 1.0)]) == true
+    # Fully inside
+    @test Globtim.interval_overlaps_box([(0.2, 0.3), (-0.5, -0.4)], unit_box) == true
+    # Fully outside (x > 1)
+    @test Globtim.interval_overlaps_box([(1.5, 2.0), (0.0, 0.1)], unit_box) == false
+    # Fully outside (y < -1)
+    @test Globtim.interval_overlaps_box([(0.0, 0.1), (-3.0, -2.0)], unit_box) == false
+    # Straddling boundary
+    @test Globtim.interval_overlaps_box([(-0.5, 1.5), (0.0, 0.1)], unit_box) == true
+    # Exactly on boundary (touching)
+    @test Globtim.interval_overlaps_box([(1.0, 1.0), (0.0, 0.0)], unit_box) == true
 
-    # Fully outside (x > 1): intervals [1.5, 2.0] x [0.0, 0.1] → no overlap
-    iv_outside_x = [(1.5, 2.0), (0.0, 0.1)]
-    @test Globtim.interval_overlaps_box(iv_outside_x, [(-1.0, 1.0), (-1.0, 1.0)]) == false
-
-    # Fully outside (y < -1): intervals [0.0, 0.1] x [-3.0, -2.0] → no overlap
-    iv_outside_y = [(0.0, 0.1), (-3.0, -2.0)]
-    @test Globtim.interval_overlaps_box(iv_outside_y, [(-1.0, 1.0), (-1.0, 1.0)]) == false
-
-    # Straddling boundary: interval [-0.5, 1.5] x [0.0, 0.1] → overlaps
-    iv_straddle = [(-0.5, 1.5), (0.0, 0.1)]
-    @test Globtim.interval_overlaps_box(iv_straddle, [(-1.0, 1.0), (-1.0, 1.0)]) == true
-
-    # Exactly on boundary: interval [1.0, 1.0] x [0.0, 0.0] → overlaps (touching)
-    iv_boundary = [(1.0, 1.0), (0.0, 0.0)]
-    @test Globtim.interval_overlaps_box(iv_boundary, [(-1.0, 1.0), (-1.0, 1.0)]) == true
-
-    # Custom box: [-2, 2] x [-3, 3]
+    # Custom box
     custom_box = [(-2.0, 2.0), (-3.0, 3.0)]
-    iv_in_custom = [(1.5, 1.8), (2.5, 2.8)]
-    @test Globtim.interval_overlaps_box(iv_in_custom, custom_box) == true
-    iv_out_custom = [(2.5, 3.0), (0.0, 0.1)]
-    @test Globtim.interval_overlaps_box(iv_out_custom, custom_box) == false
+    @test Globtim.interval_overlaps_box([(1.5, 1.8), (2.5, 2.8)], custom_box) == true
+    @test Globtim.interval_overlaps_box([(2.5, 3.0), (0.0, 0.1)], custom_box) == false
 
-    # 3D test
-    iv_3d_in = [(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)]
+    # 3D overlap tests
     box_3d = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
-    @test Globtim.interval_overlaps_box(iv_3d_in, box_3d) == true
-
-    iv_3d_out = [(0.0, 0.1), (0.0, 0.1), (2.0, 3.0)]
-    @test Globtim.interval_overlaps_box(iv_3d_out, box_3d) == false
+    @test Globtim.interval_overlaps_box([(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == true
+    @test Globtim.interval_overlaps_box([(0.0, 0.1), (0.0, 0.1), (2.0, 3.0)], box_3d) == false
+    # 3D: one dimension barely overlapping
+    @test Globtim.interval_overlaps_box([(0.9, 1.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == true
+    # 3D: one dimension just outside
+    @test Globtim.interval_overlaps_box([(1.01, 1.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == false
 end
 
 @testset "RANGE-03: interval_certified_inside" begin
-    # Fully certified inside: both lo and hi within box
-    iv_inside = [(0.2, 0.3), (-0.5, -0.4)]
-    @test Globtim.interval_certified_inside(iv_inside, [(-1.0, 1.0), (-1.0, 1.0)]) == true
+    unit_box = [(-1.0, 1.0), (-1.0, 1.0)]
 
+    # Fully certified inside
+    @test Globtim.interval_certified_inside([(0.2, 0.3), (-0.5, -0.4)], unit_box) == true
     # One coordinate straddles → NOT certified inside
-    iv_straddle = [(-0.5, 1.5), (0.0, 0.1)]
-    @test Globtim.interval_certified_inside(iv_straddle, [(-1.0, 1.0), (-1.0, 1.0)]) == false
-
+    @test Globtim.interval_certified_inside([(-0.5, 1.5), (0.0, 0.1)], unit_box) == false
     # Exactly on boundary → certified inside (closed interval)
-    iv_boundary = [(1.0, 1.0), (-1.0, -1.0)]
-    @test Globtim.interval_certified_inside(iv_boundary, [(-1.0, 1.0), (-1.0, 1.0)]) == true
-
+    @test Globtim.interval_certified_inside([(1.0, 1.0), (-1.0, -1.0)], unit_box) == true
     # Outside → NOT certified inside
-    iv_outside = [(1.5, 2.0), (0.0, 0.1)]
-    @test Globtim.interval_certified_inside(iv_outside, [(-1.0, 1.0), (-1.0, 1.0)]) == false
+    @test Globtim.interval_certified_inside([(1.5, 2.0), (0.0, 0.1)], unit_box) == false
+
+    # 3D certified inside
+    box_3d = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
+    @test Globtim.interval_certified_inside([(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == true
+    @test Globtim.interval_certified_inside([(0.0, 0.1), (0.0, 0.1), (0.9, 1.1)], box_3d) == false
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -167,30 +163,42 @@ end
         [(-1.0, -1.0), (-2.0, -2.0)],
     ]
 
-    # Box [-1.5, 1.5] x [-1.5, 1.5] → only solutions with |y| ≤ 1.5 qualify
-    # All 4 solutions have |y| = 2.0, none overlap
+    # Box [-1.5, 1.5] x [-1.5, 1.5] → all have |y| = 2.0 > 1.5, none overlap
     box_small = [(-1.5, 1.5), (-1.5, 1.5)]
-    filtered_pts, filtered_ivs = Globtim.filter_solutions_by_box(points, intervals, box_small)
+    filtered_pts, _ = Globtim.filter_solutions_by_box(points, intervals, box_small)
     @test isempty(filtered_pts)
 
     # Box [-1.5, 1.5] x [-2.5, 2.5] → all 4 solutions overlap
     box_wide = [(-1.5, 1.5), (-2.5, 2.5)]
-    filtered_pts2, filtered_ivs2 = Globtim.filter_solutions_by_box(points, intervals, box_wide)
+    filtered_pts2, _ = Globtim.filter_solutions_by_box(points, intervals, box_wide)
     @test length(filtered_pts2) == 4
 
     # Box [0.0, 2.0] x [0.0, 3.0] → only (1.0, 2.0) overlaps
     box_quadrant = [(0.0, 2.0), (0.0, 3.0)]
-    filtered_pts3, filtered_ivs3 = Globtim.filter_solutions_by_box(points, intervals, box_quadrant)
+    filtered_pts3, _ = Globtim.filter_solutions_by_box(points, intervals, box_quadrant)
     @test length(filtered_pts3) == 1
     @test filtered_pts3[1] == [1.0, 2.0]
 
-    # With non-trivial intervals: solution at midpoint 0.5 but interval [0.4, 0.6]
+    # Non-trivial intervals: midpoint inside but interval may straddle
     pts_iv = [[0.5, 0.5]]
     ivs_iv = [[(0.4, 0.6), (0.4, 0.6)]]
-    # Box [0.0, 1.0]^2 → interval overlaps → keep
     @test length(Globtim.filter_solutions_by_box(pts_iv, ivs_iv, [(0.0, 1.0), (0.0, 1.0)])[1]) == 1
-    # Box [0.7, 1.0]^2 → x-interval [0.4, 0.6] doesn't overlap [0.7, 1.0] → reject
     @test length(Globtim.filter_solutions_by_box(pts_iv, ivs_iv, [(0.7, 1.0), (0.0, 1.0)])[1]) == 0
+
+    # 3D filtering: 8 solutions at (±1, ±1, ±1)
+    pts_3d = [[s1, s2, s3] for s1 in [-1.0, 1.0] for s2 in [-1.0, 1.0] for s3 in [-1.0, 1.0]]
+    ivs_3d = [[(p, p) for p in pt] for pt in pts_3d]  # exact intervals
+
+    # Positive octant → only (1,1,1)
+    box_octant = [(0.0, 2.0), (0.0, 2.0), (0.0, 2.0)]
+    filt_3d, _ = Globtim.filter_solutions_by_box(pts_3d, ivs_3d, box_octant)
+    @test length(filt_3d) == 1
+    @test filt_3d[1] == [1.0, 1.0, 1.0]
+
+    # Half-space x > 0 → 4 solutions
+    box_half = [(0.0, 2.0), (-2.0, 2.0), (-2.0, 2.0)]
+    filt_half, _ = Globtim.filter_solutions_by_box(pts_3d, ivs_3d, box_half)
+    @test length(filt_half) == 4
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -198,7 +206,6 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @testset "RANGE-05: msolve_raw_points_with_intervals" begin
-    # Write a mock msolve output file
     content = """[0, [1,
 [[[1, 1], [2, 2]], [[-1, -1], [2, 2]], [[1, 1], [-2, -2]], [[-1, -1], [-2, -2]]]
 ]]:"""
@@ -208,17 +215,18 @@ end
     pts, ivs = Globtim.msolve_raw_points_with_intervals(tmpfile, 2)
     @test length(pts) == 4
     @test length(ivs) == 4
-    # File should be cleaned up
-    @test !isfile(tmpfile)
+    @test !isfile(tmpfile)  # cleaned up
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# RANGE-06: End-to-end solver integration with search_bounds
+# RANGE-06 through RANGE-08: Live solver tests (require msolve binary)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if HAS_MSOLVE
-    @testset "RANGE-06: _solve_msolve with search_bounds" begin
-        # Levy 2D degree 6 — known to have solutions both inside and outside [-1,1]^2
+
+    # ─── RANGE-06: 2D search_bounds — msolve certified filtering ────────────
+
+    @testset "RANGE-06: _solve_msolve with search_bounds — 2D" begin
         f = Levy
         TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
         pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
@@ -226,7 +234,6 @@ if HAS_MSOLVE
         @polyvar x_all[1:2]
         all_pts = solve_polynomial_system(x_all, pol; solver=:msolve)
 
-        # Now solve with tight search_bounds — should find fewer or equal CPs
         @polyvar x_tight[1:2]
         tight_pts = solve_polynomial_system(
             x_tight, pol;
@@ -235,20 +242,23 @@ if HAS_MSOLVE
         )
 
         @test length(tight_pts) <= length(all_pts)
-        # All tight points should be within the search bounds (midpoint check)
+
+        # Strict assertion: msolve uses certified intervals, so filtered points
+        # must have their interval overlapping the search box. The midpoints
+        # returned should be close to the box — allow half the interval width
+        # as overshoot (typically < 0.01 for msolve's isolation precision).
         for p in tight_pts
-            @test -0.5 <= p[1] <= 0.5 || abs(p[1]) < 0.6  # allow small interval overshoot
-            @test -0.5 <= p[2] <= 0.5 || abs(p[2]) < 0.6
+            @test -0.55 <= p[1] <= 0.55
+            @test -0.55 <= p[2] <= 0.55
         end
 
         @info @sprintf(
-            "Levy 2D deg 6: all=%d CPs, tight=[-0.5,0.5]^2=%d CPs",
+            "Levy 2D deg 6: all=%d CPs, tight=[-0.5,0.5]²=%d CPs",
             length(all_pts), length(tight_pts)
         )
     end
 
-    @testset "RANGE-06: solve_polynomial_system search_bounds — HC uses midpoint filter" begin
-        # HC doesn't have intervals, so search_bounds falls back to midpoint filtering
+    @testset "RANGE-06: HC search_bounds — midpoint filter" begin
         f = Levy
         TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
         pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
@@ -264,23 +274,20 @@ if HAS_MSOLVE
         )
 
         @test length(tight_hc) <= length(all_hc)
-        # All tight points should have midpoints inside search bounds
+        # HC uses exact midpoint filtering — no interval overshoot
         for p in tight_hc
             @test -0.5 <= p[1] <= 0.5
             @test -0.5 <= p[2] <= 0.5
         end
     end
 
-    @testset "RANGE-06: solve_and_transform with search_bounds" begin
+    @testset "RANGE-06: solve_and_transform with search_bounds — 2D" begin
         f = Levy
         TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
         pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
         bounds = [(-10.0, 10.0), (-10.0, 10.0)]
 
-        # Without search_bounds: full domain
         cps_all, _ = solve_and_transform(pol, bounds; solver=:msolve)
-
-        # With search_bounds in ORIGINAL coordinates: [-5, 5]^2
         cps_sub, _ = solve_and_transform(
             pol, bounds;
             solver=:msolve,
@@ -289,16 +296,111 @@ if HAS_MSOLVE
 
         @test length(cps_sub) <= length(cps_all)
         for p in cps_sub
-            # Should be roughly within [-5, 5]^2 (allow small interval overshoot)
             @test -5.5 <= p[1] <= 5.5
             @test -5.5 <= p[2] <= 5.5
         end
 
         @info @sprintf(
-            "solve_and_transform: all=%d CPs, [-5,5]^2=%d CPs",
+            "solve_and_transform 2D: all=%d CPs, [-5,5]²=%d CPs",
             length(cps_all), length(cps_sub)
         )
     end
+
+    # ─── RANGE-07: 3D range search — certified interval filtering ────────────
+
+    @testset "RANGE-07: 3D search_bounds — msolve" begin
+        f = Sphere
+        TR = TestInput(f, dim=3, center=[0.0, 0.0, 0.0], GN=8, sample_range=[5.12, 5.12, 5.12])
+        pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
+
+        @polyvar x_all3[1:3]
+        all_pts_3d = solve_polynomial_system(x_all3, pol; solver=:msolve)
+
+        @polyvar x_tight3[1:3]
+        tight_pts_3d = solve_polynomial_system(
+            x_tight3, pol;
+            solver=:msolve,
+            search_bounds=[(-0.3, 0.3), (-0.3, 0.3), (-0.3, 0.3)]
+        )
+
+        @test length(tight_pts_3d) <= length(all_pts_3d)
+        for p in tight_pts_3d
+            for c in p
+                @test -0.35 <= c <= 0.35
+            end
+        end
+
+        @info @sprintf(
+            "Sphere 3D deg 4: all=%d CPs, tight=[-0.3,0.3]³=%d CPs",
+            length(all_pts_3d), length(tight_pts_3d)
+        )
+    end
+
+    @testset "RANGE-07: 3D search_bounds — HC midpoint filter" begin
+        f = Sphere
+        TR = TestInput(f, dim=3, center=[0.0, 0.0, 0.0], GN=8, sample_range=[5.12, 5.12, 5.12])
+        pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
+
+        @polyvar x_hc3_all[1:3]
+        all_hc_3d = solve_polynomial_system(x_hc3_all, pol; solver=:hc)
+
+        @polyvar x_hc3_tight[1:3]
+        tight_hc_3d = solve_polynomial_system(
+            x_hc3_tight, pol;
+            solver=:hc,
+            search_bounds=[(-0.3, 0.3), (-0.3, 0.3), (-0.3, 0.3)]
+        )
+
+        @test length(tight_hc_3d) <= length(all_hc_3d)
+        for p in tight_hc_3d
+            for c in p
+                @test -0.3 <= c <= 0.3
+            end
+        end
+    end
+
+    # ─── RANGE-08: Monotonicity — tighter boxes yield ≤ CPs ─────────────────
+
+    @testset "RANGE-08: monotonicity — nested boxes yield non-increasing CP count" begin
+        f = Levy
+        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
+        pol = Constructor(TR, 8, basis=:chebyshev, normalized=false)
+
+        # Nested boxes: full ⊃ medium ⊃ tight
+        boxes = [
+            nothing,                                     # full [-1,1]^2
+            [(-0.8, 0.8), (-0.8, 0.8)],                # medium
+            [(-0.4, 0.4), (-0.4, 0.4)],                # tight
+        ]
+
+        counts = Int[]
+        for sb in boxes
+            @polyvar xm[1:2]
+            pts = solve_polynomial_system(xm, pol; solver=:msolve, search_bounds=sb)
+            push!(counts, length(pts))
+        end
+
+        # Monotonicity: full ≥ medium ≥ tight
+        @test counts[1] >= counts[2]
+        @test counts[2] >= counts[3]
+
+        @info @sprintf(
+            "Levy 2D deg 8 monotonicity: full=%d, [-0.8,0.8]²=%d, [-0.4,0.4]²=%d",
+            counts[1], counts[2], counts[3]
+        )
+
+        # Same for HC
+        counts_hc = Int[]
+        for sb in boxes
+            @polyvar xh[1:2]
+            pts = solve_polynomial_system(xh, pol; solver=:hc, search_bounds=sb)
+            push!(counts_hc, length(pts))
+        end
+
+        @test counts_hc[1] >= counts_hc[2]
+        @test counts_hc[2] >= counts_hc[3]
+    end
+
 else
-    @warn "msolve binary not found — skipping range search integration tests"
+    @warn "msolve binary not found — skipping range search integration tests (RANGE-06 through RANGE-08)"
 end

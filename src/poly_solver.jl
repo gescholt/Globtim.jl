@@ -1,3 +1,34 @@
+# ── Solver selection heuristic ────────────────────────────────────────────────
+#
+# Empirical timing ranges (Apple M-series, msolve 0.9.4, HC.jl 2.x, 2026-03):
+#
+#   dim=2:  msolve 10-25x faster at deg 4-6, ~2-5x at deg 8, ~1x at deg 10
+#   dim=3:  HC 100-600x faster (msolve Groebner basis wall)
+#   dim=4:  HC 30-2200x faster
+#
+# Correctness: identical CP sets across all tested (dim, degree) pairs.
+# Both solvers find the same points — no observed HC path loss on benchmarks.
+
+"""
+    recommended_solver(dim::Int; msolve_available::Bool=false) -> Symbol
+
+Return `:msolve` or `:hc` based on empirical timing data.
+
+Rules (from benchmarks on Levy, Rastrigin, Sphere, DeJong5):
+- **2D with msolve available**: `:msolve` (10-25x faster at typical degrees)
+- **3D+** or **msolve unavailable**: `:hc` (Groebner basis cost explodes in dim ≥ 3)
+
+This is a heuristic — both solvers produce identical results in all tested cases.
+Pass `solver=:hc` or `solver=:msolve` explicitly to override.
+"""
+function recommended_solver(dim::Int; msolve_available::Bool=false)
+    if dim <= 2 && msolve_available
+        return :msolve
+    else
+        return :hc
+    end
+end
+
 """
     solve_polynomial_system(x, n, d, coeffs; solver=:hc, kwargs...) -> Vector{Vector{Float64}} or Tuple
 

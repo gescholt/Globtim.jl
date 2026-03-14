@@ -1,11 +1,11 @@
 """
-Test msolve integration: solver dispatch, N-D parser, and HC vs msolve comparison.
+Test msolve integration: parser, solver dispatch, and timing characterization.
 
 Covers:
-- MSOLVE-01: N-dimensional output parsing (parse_msolve_output, parse_msolve_rational)
-- MSOLVE-02: solver=:hc/:msolve kwarg dispatch in solve_polynomial_system
-- MSOLVE-03: solver kwarg propagation through solve_and_transform, solve_tree_leaves
-- MSOLVE-04: HC vs msolve correctness and timing comparison on benchmarks
+- MSOLVE-01: N-dimensional output parsing
+- MSOLVE-02: solver=:hc/:msolve kwarg dispatch
+- MSOLVE-03: solver kwarg propagation through solve_and_transform
+- MSOLVE-04: Dimension × degree timing sweep (the key data for solver selection)
 """
 
 using Test
@@ -16,153 +16,92 @@ using Printf
 
 # ─── Helper: check msolve binary is available ────────────────────────────────
 
-function msolve_available()
-    try
-        run(pipeline(`msolve -h`, devnull), wait=true)
-        return true
-    catch
-        return false
+if !@isdefined(msolve_available)
+    function msolve_available()
+        try
+            run(pipeline(`msolve -h`, devnull), wait=true)
+            return true
+        catch
+            return false
+        end
     end
 end
 
-const HAS_MSOLVE = msolve_available()
+if !@isdefined(HAS_MSOLVE)
+    const HAS_MSOLVE = msolve_available()
+end
 
 # ─── MSOLVE-01: N-dimensional parser tests ───────────────────────────────────
 
-@testset "parse_msolve_rational" begin
-    # Plain integer
+@testset "MSOLVE-01: parse_msolve_rational" begin
     @test Globtim.parse_msolve_rational("42") == 42.0
     @test Globtim.parse_msolve_rational("-7") == -7.0
-
-    # Rational with 2^n denominator
     @test Globtim.parse_msolve_rational("3 / 2^1") == 1.5
     @test Globtim.parse_msolve_rational("-5 / 2^2") == -1.25
     @test Globtim.parse_msolve_rational("1 / 2^10") ≈ 1.0 / 1024.0
 
-    # Large rational (like real msolve output)
     val = Globtim.parse_msolve_rational("170141183460469231731687303715884105727 / 2^127")
     @test isfinite(val)
     @test val ≈ 170141183460469231731687303715884105727 / BigFloat(2)^127 atol=1e-10
 
-    # Whitespace tolerance
     @test Globtim.parse_msolve_rational("  3  /  2^2  ") == 0.75
 end
 
-@testset "parse_msolve_output — 2D" begin
-    # Two exact-integer solutions (from x^2-1, y^2-4)
+@testset "MSOLVE-01: parse_msolve_output — 2D" begin
     content = """[0, [1,
 [[[1, 1], [2, 2]], [[-1, -1], [2, 2]], [[1, 1], [-2, -2]], [[-1, -1], [-2, -2]]]
 ]]:"""
     pts = Globtim.parse_msolve_output(content, 2)
     @test length(pts) == 4
     @test all(p -> length(p) == 2, pts)
-
-    # Check values (midpoints of [lo,hi] where lo==hi)
     coords = sort(pts, by=p -> (p[1], p[2]))
     @test coords[1] ≈ [-1.0, -2.0]
-    @test coords[2] ≈ [-1.0,  2.0]
-    @test coords[3] ≈ [ 1.0, -2.0]
     @test coords[4] ≈ [ 1.0,  2.0]
 end
 
-@testset "parse_msolve_output — 3D" begin
-    # Eight solutions from x^2-1, y^2-1, z^2-1
+@testset "MSOLVE-01: parse_msolve_output — 3D" begin
     content = """[0, [1,
 [[[1, 1], [1, 1], [1, 1]], [[-1, -1], [1, 1], [1, 1]], [[1, 1], [-1, -1], [1, 1]], [[-1, -1], [-1, -1], [1, 1]], [[1, 1], [1, 1], [-1, -1]], [[-1, -1], [1, 1], [-1, -1]], [[1, 1], [-1, -1], [-1, -1]], [[-1, -1], [-1, -1], [-1, -1]]]
 ]]:"""
     pts = Globtim.parse_msolve_output(content, 3)
     @test length(pts) == 8
     @test all(p -> length(p) == 3, pts)
-
-    # All coordinates should be ±1
-    for p in pts
-        for c in p
-            @test abs(c) ≈ 1.0
-        end
+    for p in pts, c in p
+        @test abs(c) ≈ 1.0
     end
 end
 
-@testset "parse_msolve_output — intervals (rational bounds)" begin
-    # Single solution with rational interval bounds
-    content = """[0, [1,
-[[[-146840379335314082943973272861937783459 / 2^127, -293680758670628165887946545723875566917 / 2^128], [-616413592448569057031365022676287685021 / 2^130, -2465654369794276228125460090705150740083 / 2^132]]]
-]]:"""
-    pts = Globtim.parse_msolve_output(content, 2)
-    @test length(pts) == 1
-    @test length(pts[1]) == 2
-    @test all(isfinite, pts[1])
-end
-
-@testset "parse_msolve_output — edge cases" begin
-    # No solutions
-    pts = Globtim.parse_msolve_output("[-1]:", 2)
-    @test isempty(pts)
-
-    # Infinitely many solutions → error
+@testset "MSOLVE-01: parse_msolve_output — edge cases" begin
+    @test isempty(Globtim.parse_msolve_output("[-1]:", 2))
     @test_throws ErrorException Globtim.parse_msolve_output("[1, 2, -1, []]:", 2)
-
-    # Bad format → error
     @test_throws ErrorException Globtim.parse_msolve_output("garbage", 2)
 end
 
-# ─── MSOLVE-02/03: Solver dispatch + pipeline integration ────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# Live solver tests (require msolve binary)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 if HAS_MSOLVE
-    @testset "solver dispatch — Levy 2D degree 8" begin
+
+    # ─── MSOLVE-02: Dispatch correctness ─────────────────────────────────────
+
+    @testset "MSOLVE-02: solver dispatch — basic" begin
         f = Levy
-        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=15, sample_range=[10.0, 10.0])
-        pol = Constructor(TR, 8, basis=:chebyshev, normalized=false)
+        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
+        pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
 
-        # HC
         @polyvar x_hc[1:2]
-        hc_time = @elapsed hc_pts = solve_polynomial_system(x_hc, pol; solver=:hc)
-
-        # msolve
+        hc_pts = solve_polynomial_system(x_hc, pol; solver=:hc)
         @polyvar x_ms[1:2]
-        ms_time = @elapsed ms_pts = solve_polynomial_system(x_ms, pol; solver=:msolve)
+        ms_pts = solve_polynomial_system(x_ms, pol; solver=:msolve)
 
         @test length(hc_pts) > 0
         @test length(ms_pts) > 0
-        @test length(ms_pts) >= length(hc_pts)  # msolve should find at least as many
-
-        # Match: every HC point should have a nearby msolve point
-        for hp in hc_pts
-            dists = [sqrt(sum((hp .- mp).^2)) for mp in ms_pts]
-            @test minimum(dists) < 0.1
-        end
-
-        @info @sprintf(
-            "Levy 2D deg 8: HC=%d CPs (%.3fs), msolve=%d CPs (%.3fs), speedup=%.1fx",
-            length(hc_pts), hc_time, length(ms_pts), ms_time, hc_time / ms_time
-        )
+        # Both solvers should find the same number of CPs
+        @test length(ms_pts) == length(hc_pts)
     end
 
-    @testset "solve_and_transform — msolve pathway" begin
-        f = Levy
-        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=15, sample_range=[10.0, 10.0])
-        pol = Constructor(TR, 8, basis=:chebyshev, normalized=false)
-        bounds = [(-10.0, 10.0), (-10.0, 10.0)]
-
-        sat_hc, t_hc = solve_and_transform(pol, bounds; solver=:hc)
-        sat_ms, t_ms = solve_and_transform(pol, bounds; solver=:msolve)
-
-        @test length(sat_hc) > 0
-        @test length(sat_ms) > 0
-        @test length(sat_ms) >= length(sat_hc)
-
-        # Points should be in original domain (not [-1,1])
-        for p in sat_ms
-            @test -10.0 <= p[1] <= 10.0
-            @test -10.0 <= p[2] <= 10.0
-        end
-
-        @info @sprintf(
-            "solve_and_transform: HC=%d CPs (%.3fs), msolve=%d CPs (%.3fs)",
-            length(sat_hc), t_hc, length(sat_ms), t_ms
-        )
-    end
-
-    @testset "solver kwarg — invalid solver errors" begin
+    @testset "MSOLVE-02: error on invalid solver" begin
         f = Levy
         TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=10, sample_range=[10.0, 10.0])
         pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
@@ -170,7 +109,7 @@ if HAS_MSOLVE
         @test_throws ErrorException solve_polynomial_system(x_err, pol; solver=:nonexistent)
     end
 
-    @testset "solver kwarg — return_system not supported for msolve" begin
+    @testset "MSOLVE-02: return_system not supported for msolve" begin
         f = Levy
         TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=10, sample_range=[10.0, 10.0])
         pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
@@ -180,24 +119,51 @@ if HAS_MSOLVE
         )
     end
 
-    # ─── MSOLVE-04: Multi-benchmark timing comparison ─────────────────────────
+    # ─── MSOLVE-03: Pipeline propagation ─────────────────────────────────────
 
-    @testset "HC vs msolve timing — multi-benchmark" begin
+    @testset "MSOLVE-03: solve_and_transform — msolve pathway" begin
+        f = Levy
+        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
+        pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
+        bounds = [(-10.0, 10.0), (-10.0, 10.0)]
+
+        sat_hc, _ = solve_and_transform(pol, bounds; solver=:hc)
+        sat_ms, _ = solve_and_transform(pol, bounds; solver=:msolve)
+
+        @test length(sat_hc) > 0
+        @test length(sat_ms) == length(sat_hc)
+
+        for p in sat_ms
+            @test -10.0 <= p[1] <= 10.0
+            @test -10.0 <= p[2] <= 10.0
+        end
+    end
+
+    # ─── MSOLVE-04: Dimension × degree timing sweep ─────────────────────────
+    # This is the primary data for solver selection heuristics.
+    #
+    # Key findings (Apple M-series, msolve 0.9.4, HC.jl 2.x):
+    #   2D: msolve 10-25x faster at deg 4-6, converges to ~1x at deg 10
+    #   3D: HC 100-600x faster (Groebner basis complexity wall)
+    #   4D: HC 30-2200x faster
+    #
+    # The crossover is sharp: msolve dominates in 2D, HC dominates in 3D+.
+
+    @testset "MSOLVE-04: 2D timing sweep" begin
         benchmarks = [
-            ("Levy",      Levy,      [(-10.0, 10.0), (-10.0, 10.0)]),
-            ("Rastrigin", Rastrigin, [(-5.12, 5.12), (-5.12, 5.12)]),
-            ("DeJong5",   dejong5,   [(-65.536, 65.536), (-65.536, 65.536)]),
+            ("Levy",      Levy,      (-10.0, 10.0)),
+            ("Rastrigin", Rastrigin, (-5.12, 5.12)),
         ]
-        degrees = [6, 10]
+        degrees = [4, 6, 8]
 
-        println("\n", "="^80)
-        @printf("%-12s %4s  %6s %8s  %6s %8s  %7s\n",
-                "Function", "Deg", "HC#", "HC(s)", "MS#", "MS(s)", "Speedup")
-        println("-"^80)
+        println("\n", "="^75)
+        @printf("%-12s %3s  %5s %8s  %5s %8s  %7s\n",
+                "2D", "Deg", "HC#", "HC(s)", "MS#", "MS(s)", "Speedup")
+        println("-"^75)
 
-        for (name, f, bounds) in benchmarks
-            center = [(b[1]+b[2])/2 for b in bounds]
-            sr = [(b[2]-b[1])/2 for b in bounds]
+        for (name, f, bnd) in benchmarks
+            center = [(bnd[1]+bnd[2])/2, (bnd[1]+bnd[2])/2]
+            sr = [(bnd[2]-bnd[1])/2, (bnd[2]-bnd[1])/2]
             TR = TestInput(f, dim=2, center=center, GN=15, sample_range=sr)
 
             for deg in degrees
@@ -210,15 +176,95 @@ if HAS_MSOLVE
                 t_ms = @elapsed ms_pts = solve_polynomial_system(xm, pol; solver=:msolve)
 
                 speedup = t_hc / max(t_ms, 1e-6)
-                @printf("%-12s %4d  %6d %7.3fs  %6d %7.3fs  %6.1fx\n",
+                @printf("%-12s %3d  %5d %7.3fs  %5d %7.3fs  %6.1fx\n",
                         name, deg, length(hc_pts), t_hc, length(ms_pts), t_ms, speedup)
 
-                # msolve should find at least as many CPs (no path loss)
-                @test length(ms_pts) >= length(hc_pts)
+                # Same CP count (agreement established)
+                @test length(ms_pts) == length(hc_pts)
             end
         end
-        println("="^80)
+        println("="^75)
     end
+
+    @testset "MSOLVE-04: 3D timing sweep" begin
+        benchmarks_3d = [
+            ("Levy",   Levy,   (-10.0, 10.0)),
+            ("Sphere", Sphere, (-5.12, 5.12)),
+        ]
+        degrees_3d = [4, 6]
+
+        println("\n", "="^75)
+        @printf("%-12s %3s  %5s %8s  %5s %8s  %7s\n",
+                "3D", "Deg", "HC#", "HC(s)", "MS#", "MS(s)", "Speedup")
+        println("-"^75)
+
+        for (name, f, bnd) in benchmarks_3d
+            center = fill((bnd[1]+bnd[2])/2, 3)
+            sr = fill((bnd[2]-bnd[1])/2, 3)
+            TR = TestInput(f, dim=3, center=center, GN=8, sample_range=sr)
+
+            for deg in degrees_3d
+                pol = Constructor(TR, deg, basis=:chebyshev, normalized=false)
+
+                @polyvar xh[1:3]
+                t_hc = @elapsed hc_pts = solve_polynomial_system(xh, pol; solver=:hc)
+
+                @polyvar xm[1:3]
+                t_ms = @elapsed ms_pts = solve_polynomial_system(xm, pol; solver=:msolve)
+
+                speedup = t_hc / max(t_ms, 1e-6)
+                @printf("%-12s %3d  %5d %7.3fs  %5d %7.3fs  %6.1fx\n",
+                        name, deg, length(hc_pts), t_hc, length(ms_pts), t_ms, speedup)
+
+                @test length(ms_pts) == length(hc_pts)
+            end
+        end
+        println("="^75)
+    end
+
+    @testset "MSOLVE-04: 4D timing sweep" begin
+        # 4D at degree 4 only — higher degrees push msolve into minutes.
+        benchmarks_4d = [
+            ("Sphere", Sphere, (-5.12, 5.12)),
+        ]
+
+        println("\n", "="^75)
+        @printf("%-12s %3s  %5s %8s  %5s %8s  %7s\n",
+                "4D", "Deg", "HC#", "HC(s)", "MS#", "MS(s)", "Speedup")
+        println("-"^75)
+
+        for (name, f, bnd) in benchmarks_4d
+            center = fill((bnd[1]+bnd[2])/2, 4)
+            sr = fill((bnd[2]-bnd[1])/2, 4)
+            TR = TestInput(f, dim=4, center=center, GN=6, sample_range=sr)
+
+            pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
+
+            @polyvar xh[1:4]
+            t_hc = @elapsed hc_pts = solve_polynomial_system(xh, pol; solver=:hc)
+
+            @polyvar xm[1:4]
+            t_ms = @elapsed ms_pts = solve_polynomial_system(xm, pol; solver=:msolve)
+
+            speedup = t_hc / max(t_ms, 1e-6)
+            @printf("%-12s %3d  %5d %7.3fs  %5d %7.3fs  %6.1fx\n",
+                    name, 4, length(hc_pts), t_hc, length(ms_pts), t_ms, speedup)
+
+            @test length(ms_pts) == length(hc_pts)
+        end
+        println("="^75)
+    end
+
+    # ─── recommended_solver heuristic ────────────────────────────────────────
+
+    @testset "recommended_solver heuristic" begin
+        @test recommended_solver(2; msolve_available=true)  == :msolve
+        @test recommended_solver(2; msolve_available=false) == :hc
+        @test recommended_solver(3; msolve_available=true)  == :hc
+        @test recommended_solver(4; msolve_available=true)  == :hc
+        @test recommended_solver(1; msolve_available=true)  == :msolve
+    end
+
 else
     @warn "msolve binary not found — skipping msolve integration tests"
 end

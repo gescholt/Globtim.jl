@@ -114,3 +114,13 @@ end
 with_timeout(TIMEOUT_TESTFILE, label="test_aqua.jl") do
     include("test_aqua.jl")
 end
+
+# msolve integration + range search tests (require msolve binary; 4D sweep can take ~2min)
+const TIMEOUT_MSOLVE = 300  # msolve 4D tests take ~90s; allow generous headroom
+with_timeout(TIMEOUT_MSOLVE, label="test_msolve_integration.jl") do
+    include("test_msolve_integration.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label="test_range_search.jl") do
+    include("test_range_search.jl")
+end
