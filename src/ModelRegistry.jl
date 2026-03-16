@@ -299,6 +299,7 @@ function register_ode_models!()
     define_daisy_ex3_model_4D_no_input = Main.Dynamic_objectives.define_daisy_ex3_model_4D_no_input
     define_fitzhugh_nagumo_3D_model = Main.Dynamic_objectives.define_fitzhugh_nagumo_3D_model
     define_lotka_volterra_3D_model = Main.Dynamic_objectives.define_lotka_volterra_3D_model
+    define_lotka_volterra_3D_model_locally_identifiable = Main.Dynamic_objectives.define_lotka_volterra_3D_model_locally_identifiable
     define_lotka_volterra_3D_model_v2 = Main.Dynamic_objectives.define_lotka_volterra_3D_model_v2
     define_lotka_volterra_2D_model = Main.Dynamic_objectives.define_lotka_volterra_2D_model
     define_lotka_volterra_2D_model_v2 = Main.Dynamic_objectives.define_lotka_volterra_2D_model_v2
@@ -395,7 +396,22 @@ function register_ode_models!()
         subcategory = :lotka_volterra,
         requires_inputs = false,
         definition_function = define_lotka_volterra_3D_model,
-        description = "Lotka-Volterra 3D model (3 parameters: a, b, c)"
+        description = "Lotka-Volterra 3D model, globally identifiable (3 parameters: a, b, c)"
+    ))
+
+    # Lotka-Volterra 3D - locally identifiable (squared parameterization)
+    register_model!(ModelInfo(
+        name = "lv3d_locally_id",
+        aliases = ["lotka_volterra_3d_locally_identifiable", "lv3d_sq"],
+        dimension = 2,
+        num_parameters = 3,
+        num_states = 2,
+        num_outputs = 1,
+        category = :ode,
+        subcategory = :lotka_volterra,
+        requires_inputs = false,
+        definition_function = define_lotka_volterra_3D_model_locally_identifiable,
+        description = "Lotka-Volterra 3D locally identifiable (a², b², c) — multiple equivalent minimizers"
     ))
 
     # Lotka-Volterra 3D v2
