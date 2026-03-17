@@ -141,8 +141,6 @@ Globtim.jl/
 │   ├── ApproxConstruct.jl  # Polynomial construction
 │   ├── hom_solve.jl        # Homotopy continuation solver
 │   └── ...
-├── ext/                    # Package extensions
-│   └── GlobtimCUDAExt.jl   # GPU acceleration (experimental)
 ├── test/                   # Test suite
 ├── docs/                   # Documenter.jl documentation
 ├── scripts/                # Experiment runner scripts

@@ -222,5 +222,4 @@ Potential expansions:
 1. Adaptive anisotropic refinement
 2. Optimal grid size selection
 3. Integration with sparsification
-4. GPU acceleration tests
-5. Parallel computation validation
+4. Parallel computation validation

@@ -180,10 +180,6 @@ export Subdomain, SubdivisionTree,
     select_cut_dimension_by_width,  # Fallback dimension selection
     display_tree, get_max_depth  # Tree visualization & info
 
-# GPU acceleration - optional (requires CUDA.jl)
-export gpu_available, gpu_memory_info, estimate_gpu_memory_requirement
-export BatchGroup, group_subdomains_for_gpu
-
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
 
@@ -253,50 +249,6 @@ include("EnhancedMetrics.jl") #Enhanced statistics collection
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
-
-# GPU acceleration stub functions - implemented by GlobtimCUDAExt when CUDA.jl is loaded
-"""
-    gpu_available() -> Bool
-
-Check if GPU acceleration is available (CUDA.jl loaded and functional GPU present).
-Returns `false` when CUDA extension is not loaded.
-"""
-gpu_available() = false
-
-"""
-    gpu_memory_info() -> NamedTuple{(:total, :free, :used), Tuple{Int,Int,Int}}
-
-Return GPU memory information in bytes.
-Returns zeros when CUDA extension is not loaded.
-"""
-gpu_memory_info() = (total=0, free=0, used=0)
-
-"""
-    estimate_gpu_memory_requirement(n_subdomains, n_points, n_terms) -> Int
-
-Estimate GPU memory requirement in bytes for batched processing of `n_subdomains`
-subdomains, each with `n_points` grid points and `n_terms` polynomial terms.
-"""
-function estimate_gpu_memory_requirement(n_subdomains::Int, n_points::Int, n_terms::Int)
-    # Vandermonde matrices: B * N * m * 8 bytes
-    vandermonde_mem = n_subdomains * n_points * n_terms * 8
-    # Gram matrices: B * m * m * 8 bytes
-    gram_mem = n_subdomains * n_terms * n_terms * 8
-    # RHS and solution vectors: B * m * 8 * 2
-    vectors_mem = n_subdomains * n_terms * 8 * 2
-    # Grid points: B * N * n_dim * 8 (assume n_dim ~ 4)
-    grid_mem = n_subdomains * n_points * 4 * 8
-    # f_values: B * N * 8
-    fval_mem = n_subdomains * n_points * 8
-    # Polynomial cache overhead
-    cache_mem = 4 * 50 * 20 * 8
-
-    return vandermonde_mem + gram_mem + vectors_mem + grid_mem + fval_mem + cache_mem
-end
-
-# Internal GPU functions - stubs overridden by GlobtimCUDAExt
-function batched_vandermonde_gpu end
-function batched_ls_solve_gpu end
 
 # L2 norm functions (after l2_norm.jl is included)
 export discrete_l2_norm_riemann

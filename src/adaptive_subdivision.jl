@@ -785,208 +785,6 @@ function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::S
     end
 end
 
-#==============================================================================#
-#                      GPU BATCHED PROCESSING                                   #
-#==============================================================================#
-
-"""
-    BatchGroup
-
-Groups subdomains with identical grid configurations for batched GPU processing.
-
-# Fields
-- `subdomain_ids::Vector{Int}`: Indices of subdomains in this group
-- `n_points::Int`: Number of grid points per subdomain
-- `n_terms::Int`: Number of polynomial terms
-- `degree::Int`: Polynomial degree
-- `n_dims::Int`: Problem dimension
-"""
-struct BatchGroup
-    subdomain_ids::Vector{Int}
-    n_points::Int
-    n_terms::Int
-    degree::Int
-    n_dims::Int
-end
-
-"""
-    group_subdomains_for_gpu(tree, active_ids, degree) -> Vector{BatchGroup}
-
-Group active subdomains by (n_points, n_terms, n_dims) for efficient GPU batching.
-
-Subdomains with identical grid configurations are grouped together so they can
-be processed in a single batched GPU operation.
-
-# Arguments
-- `tree::SubdivisionTree`: The subdivision tree
-- `active_ids::Vector{Int}`: Indices of active subdomains to process
-- `degree`: Polynomial degree specification
-
-# Returns
-- Vector of BatchGroup, each containing subdomains with matching configurations
-"""
-function group_subdomains_for_gpu(tree::SubdivisionTree, active_ids::Vector{Int}, degree)
-    groups = Dict{Tuple{Int,Int,Int}, Vector{Int}}()
-
-    for id in active_ids
-        sd = tree.subdomains[id]
-        n_dim = dimension(sd)
-        d = degree isa Tuple ? degree[2] : degree
-        n_samples_per_dim = 2 * d + 1
-        n_points = n_samples_per_dim^n_dim
-        n_terms = binomial(n_dim + d, d)
-
-        key = (n_points, n_terms, n_dim)
-        if !haskey(groups, key)
-            groups[key] = Int[]
-        end
-        push!(groups[key], id)
-    end
-
-    return [BatchGroup(ids, key[1], key[2],
-                      degree isa Tuple ? degree[2] : degree, key[3])
-            for (key, ids) in groups]
-end
-
-"""
-    process_subdomains_gpu(f, tree, batch_group, l2_tolerance, basis) -> Vector{ProcessResult}
-
-Process a batch of subdomains on GPU using batched Vandermonde + LS solve.
-
-This function:
-1. Generates grids for all subdomains in the batch
-2. Evaluates the objective function at all grid points (CPU, sequential)
-3. Builds batched Vandermonde matrices on GPU
-4. Solves batched least squares on GPU
-5. Computes errors and determines split decisions
-
-# Arguments
-- `f`: Objective function to approximate (any callable, including TolerantObjective)
-- `tree::SubdivisionTree`: The subdivision tree
-- `batch_group::BatchGroup`: Group of subdomains with same configuration
-- `l2_tolerance::Float64`: Error tolerance for subdivision
-- `basis::Symbol`: Polynomial basis (:chebyshev or :legendre)
-
-# Returns
-- Vector{ProcessResult}: Results for each subdomain in the batch
-"""
-function process_subdomains_gpu(
-    f,
-    tree::SubdivisionTree,
-    batch_group::BatchGroup,
-    l2_tolerance::Float64,
-    basis::Symbol
-)::Vector{ProcessResult}
-
-    # Check GPU availability
-    if !gpu_available()
-        error("GPU requested but CUDA.jl not loaded or GPU not functional. " *
-              "Load CUDA.jl before Globtim, or use gpu=false.")
-    end
-
-    B = length(batch_group.subdomain_ids)
-    n_points = batch_group.n_points
-    n_terms = batch_group.n_terms
-    n_dim = batch_group.n_dims
-    degree = batch_group.degree
-
-    # Check GPU memory
-    mem_required = estimate_gpu_memory_requirement(B, n_points, n_terms)
-    mem_info = gpu_memory_info()
-    if mem_required > 0.8 * mem_info.free
-        error("Insufficient GPU memory. Required: $(mem_required ÷ 1_000_000) MB, " *
-              "Available: $(mem_info.free ÷ 1_000_000) MB. " *
-              "Reduce batch size or use gpu=false.")
-    end
-
-    # Generate support (shared across all subdomains)
-    Lambda = SupportGen(n_dim, (:one_d_for_all, degree))
-
-    # Prepare grids and collect f_values
-    grids = Vector{Matrix{Float64}}(undef, B)
-    f_values_all = zeros(Float64, n_points, B)
-
-    n_samples_per_dim = 2 * degree + 1
-
-    for (idx, sd_id) in enumerate(batch_group.subdomain_ids)
-        subdomain = tree.subdomains[sd_id]
-
-        # Generate normalized grid [-1, 1]^n
-        grid = generate_grid(n_dim, n_samples_per_dim - 1, basis=basis)
-        grid_matrix = grid_to_matrix(grid)  # (n_points, n_dim)
-        grids[idx] = grid_matrix
-
-        # Evaluate function at physical coordinates (CPU - this is the bottleneck)
-        for i in 1:n_points
-            x_normalized = grid_matrix[i, :]
-            x_physical = subdomain.center .+ x_normalized .* subdomain.half_widths
-            f_values_all[i, idx] = f(x_physical)
-        end
-    end
-
-    # GPU: Build batched Vandermonde matrices
-    V_batch_gpu = batched_vandermonde_gpu(Lambda, grids, basis)
-
-    # Transfer f_values to GPU
-    f_batch_gpu = CuArray(f_values_all)
-
-    # GPU: Solve batched least squares
-    coeffs_batch_gpu = batched_ls_solve_gpu(V_batch_gpu, f_batch_gpu)
-
-    # Transfer results back to CPU
-    coeffs_batch = Array(coeffs_batch_gpu)
-    V_batch_cpu = Array(V_batch_gpu)
-
-    # Compute errors and create results (on CPU)
-    results = Vector{ProcessResult}(undef, B)
-
-    for (idx, sd_id) in enumerate(batch_group.subdomain_ids)
-        subdomain = tree.subdomains[sd_id]
-        coeffs = coeffs_batch[:, idx]
-        V = V_batch_cpu[:, :, idx]
-        f_vals = f_values_all[:, idx]
-
-        # Compute L2 error
-        poly_values = V * coeffs
-        errors = f_vals .- poly_values
-        weight = (2.0 / n_samples_per_dim)^n_dim
-        l2_error = sqrt(sum(abs2.(errors)) * weight)
-
-        # Create ApproxPoly and cache in subdomain
-        nrm = sqrt(sum(abs2.(poly_values)) * weight)
-        pol = ApproxPoly{Float64}(
-            coeffs, Lambda.data, (:one_d_for_all, degree), nrm,
-            n_points, subdomain.half_widths, subdomain.center,
-            collect(grids[idx]'), f_vals, basis,
-            Float64Precision, true, false, NaN  # cond skipped for GPU path
-        )
-
-        # Update subdomain state
-        subdomain.degree = degree
-        subdomain.l2_error = l2_error
-        subdomain.polynomial = pol
-        subdomain.samples = grids[idx]
-        subdomain.f_values = f_vals
-
-        # Determine if split needed
-        if l2_error <= l2_tolerance
-            results[idx] = ProcessResult(sd_id, false, nothing, nothing, l2_error)
-        else
-            # Determine split dimension (use width-based for GPU path - faster)
-            split_dim = select_cut_dimension_by_width(subdomain)
-            cut_pos = 0.0  # Midpoint for GPU path (optimize_cuts adds overhead)
-            results[idx] = ProcessResult(sd_id, true, split_dim, cut_pos, l2_error)
-        end
-    end
-
-    return results
-end
-
-# Placeholder for CuArray when CUDA not loaded - will be overridden by extension
-if !@isdefined(CuArray)
-    const CuArray = Array  # Fallback type for non-GPU code paths
-end
-
 """
     adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                     degree; kwargs...)
@@ -1004,7 +802,6 @@ Main adaptive refinement loop with parallel processing.
 - `max_leaves::Int=1000`: Maximum number of leaf subdomains
 - `optimize_cuts::Bool=true`: Whether to optimize cut positions
 - `parallel::Bool=true`: Whether to use CPU parallel processing
-- `gpu::Bool=false`: Whether to use GPU acceleration (requires CUDA.jl)
 - `basis::Symbol=:chebyshev`: Basis type
 - `verbose::Bool=false`: Print progress information
 - `phase_callback::Union{Function,Nothing}=nothing`: Called with `(f, :refine, 0)` at start.
@@ -1013,19 +810,13 @@ Main adaptive refinement loop with parallel processing.
 # Returns
 - SubdivisionTree with refined subdomains
 
-# GPU Acceleration
-When `gpu=true`, batched Vandermonde matrix construction and least squares solving
-are performed on GPU. This provides speedup when processing many subdomains (4+).
-Requires CUDA.jl to be loaded before Globtim.
-
 # Example
 ```julia
-using CUDA  # Load before Globtim for GPU support
 using Globtim
 
 f(x) = sum(x.^2)
 bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-tree = adaptive_refine(f, bounds, 4, l2_tolerance=1e-4, gpu=true)
+tree = adaptive_refine(f, bounds, 4, l2_tolerance=1e-4)
 ```
 """
 function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
@@ -1035,28 +826,11 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                          max_leaves::Int=1000,
                          optimize_cuts::Bool=true,
                          parallel::Bool=true,
-                         gpu::Bool=false,
                          basis::Symbol=:chebyshev,
                          verbose::Bool=false,
                          iteration_callback::Union{Function,Nothing}=nothing,
                          eval_progress::Union{Function,Nothing}=nothing,
                          phase_callback::Union{Function,Nothing}=nothing)
-
-    # Validate GPU option
-    if gpu && !gpu_available()
-        error("GPU acceleration requested but CUDA.jl not loaded or GPU not functional. " *
-              "Load CUDA.jl before Globtim, or use gpu=false.")
-    end
-
-    # Guard: GPU path does not support anisotropic per-dim degrees
-    if gpu
-        n_dim = length(bounds)
-        per_dim = _extract_per_dim_degrees(degree, n_dim)
-        if !all(==(per_dim[1]), per_dim)
-            error("GPU batched processing does not support anisotropic per-dimension degrees. " *
-                  "Use gpu=false for anisotropic degree specifications.")
-        end
-    end
 
     # Initialize tree with root degree
     n_dim = length(bounds)
@@ -1089,22 +863,7 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         # Process all active leaves
         current_active = copy(tree.active_leaves)
 
-        if gpu && length(current_active) >= 4
-            # GPU batched processing (worthwhile for 4+ subdomains)
-            verbose && println("  Using GPU batched processing")
-            batch_groups = group_subdomains_for_gpu(tree, current_active, degree)
-
-            all_results = ProcessResult[]
-            for group in batch_groups
-                group_results = process_subdomains_gpu(f, tree, group, l2_tolerance, basis)
-                append!(all_results, group_results)
-            end
-
-            # Sort results by original subdomain order
-            results_dict = Dict(r.subdomain_id => r for r in all_results)
-            results = [results_dict[id] for id in current_active]
-
-        elseif parallel && length(current_active) > 1 && Threads.nthreads() > 1
+        if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             # CPU parallel processing
             tasks = map(current_active) do leaf_id
                 Threads.@spawn process_subdomain(f, tree, leaf_id, degree, l2_tolerance,
@@ -1180,7 +939,6 @@ Phase 2 refines to meet the final tolerance.
 - `max_depth::Int=10`: Maximum subdivision depth
 - `max_leaves::Int=1000`: Maximum leaves
 - `parallel::Bool=true`: Use CPU parallel processing
-- `gpu::Bool=false`: Use GPU acceleration (requires CUDA.jl)
 - `basis::Symbol=:chebyshev`: Basis type
 - `verbose::Bool=false`: Print progress
 - `phase_callback::Union{Function,Nothing}=nothing`: Called with `(f, :coarse, 0)` at
@@ -1198,17 +956,10 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                           max_depth::Int=10,
                           max_leaves::Int=1000,
                           parallel::Bool=true,
-                          gpu::Bool=false,
                           basis::Symbol=:chebyshev,
                           verbose::Bool=false,
                           iteration_callback::Union{Function,Nothing}=nothing,
                           phase_callback::Union{Function,Nothing}=nothing)
-
-    # Validate GPU option
-    if gpu && !gpu_available()
-        error("GPU acceleration requested but CUDA.jl not loaded or GPU not functional. " *
-              "Load CUDA.jl before Globtim, or use gpu=false.")
-    end
 
     verbose && println("=== Phase 1: Coarse balancing ===")
 
@@ -1230,17 +981,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         # Process all active leaves
         current_active = copy(tree.active_leaves)
 
-        if gpu && length(current_active) >= 4
-            # GPU batched processing
-            batch_groups = group_subdomains_for_gpu(tree, current_active, degree)
-            all_results = ProcessResult[]
-            for group in batch_groups
-                group_results = process_subdomains_gpu(f, tree, group, coarse_tolerance, basis)
-                append!(all_results, group_results)
-            end
-            results_dict = Dict(r.subdomain_id => r for r in all_results)
-            results = [results_dict[id] for id in current_active]
-        elseif parallel && length(current_active) > 1 && Threads.nthreads() > 1
+        if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             tasks = map(current_active) do leaf_id
                 Threads.@spawn process_subdomain(f, tree, leaf_id, degree, coarse_tolerance,
                                                  optimize_cuts=true, basis=basis)
@@ -1304,17 +1045,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
 
         current_active = copy(tree.active_leaves)
 
-        if gpu && length(current_active) >= 4
-            # GPU batched processing
-            batch_groups = group_subdomains_for_gpu(tree, current_active, degree)
-            all_results = ProcessResult[]
-            for group in batch_groups
-                group_results = process_subdomains_gpu(f, tree, group, fine_tolerance, basis)
-                append!(all_results, group_results)
-            end
-            results_dict = Dict(r.subdomain_id => r for r in all_results)
-            results = [results_dict[id] for id in current_active]
-        elseif parallel && length(current_active) > 1 && Threads.nthreads() > 1
+        if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             tasks = map(current_active) do leaf_id
                 Threads.@spawn process_subdomain(f, tree, leaf_id, degree, fine_tolerance,
                                                  optimize_cuts=true, basis=basis)

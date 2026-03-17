@@ -41,83 +41,14 @@ Core dependencies are always loaded when `using Globtim` is executed. These pack
 - **TimerOutputs** (v0.5): Performance monitoring throughout the package
 - **TOML** (v1): Configuration file parsing
 
-### Weak Dependencies (Conditional Loading)
-
-Weak dependencies are only loaded when explicitly imported by the user and when the corresponding package is available.
-
-#### GPU Acceleration (Optional)
-- **CUDA** (v5): GPU acceleration for polynomial evaluation
-
-## Package Extensions
-
-Package extensions provide conditional functionality that is only available when the corresponding weak dependencies are loaded.
-
-### Extension Modules
-
-#### GlobtimCUDAExt
-- **Trigger**: Loading `CUDA`
-- **Functions**: GPU-accelerated polynomial evaluation and grid operations
-
-### Extension Usage Pattern
-
-```julia
-# Core functionality always available
-using Globtim
-TR = TestInput(camel, dim=2)
-pol = Constructor(TR, 8)
-
-# Optional GPU acceleration - only if CUDA is available
-using CUDA
-Globtim.gpu_available()  # Now available via extension
-```
-
-## Design Rationale
-
-### Why Weak Dependencies?
-
-1. **Reduced Startup Time**: Core mathematical functions load quickly without heavy plotting libraries
-2. **HPC Compatibility**: Clusters often lack GUI libraries needed for plotting
-3. **Modular Functionality**: Users only load features they need
-4. **Dependency Isolation**: Plotting library issues don't affect core computations
-
-### Core vs Weak Dependency Classification
-
-**Core Dependencies** (must remain in [deps]):
-- Used directly in included source files
-- Required for fundamental mathematical operations
-- Called without conditional checks
-- Examples: ForwardDiff, DataFrames, Optim
-
-**Weak Dependencies** (moved to [weakdeps]):
-- Used only through extensions or optional functions
-- Provide supplementary functionality
-- Can be conditionally loaded
-- Examples: CUDA
-
-## Migration History
-
-The package was migrated from a monolithic dependency structure to the current weak dependency system in August 2025:
-
-- **Before**: 33 direct dependencies, all loaded at startup
-- **After**: Core dependencies + 1 weak dependency (CUDA) with extension
-- **Benefits**: Faster startup, better HPC compatibility, modular functionality
-
 ## Usage Guidelines
 
 ### For Users
 
-#### Basic Usage (Core Only)
+#### Basic Usage
 ```julia
 using Globtim
 # All mathematical functionality available
-# No plotting or advanced analysis
-```
-
-#### With GPU Acceleration
-```julia
-using Globtim
-using CUDA  # GPU extension loaded automatically
-Globtim.gpu_available()
 ```
 
 ### For Developers

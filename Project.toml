@@ -31,15 +31,8 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
-[weakdeps]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-
-[extensions]
-GlobtimCUDAExt = ["CUDA"]
-
 [compat]
 CSV = "0.10"
-CUDA = "5"
 ConstructionBase = "1"
 DataFrames = "1.6"
 Dates = "1"
