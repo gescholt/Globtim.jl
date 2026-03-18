@@ -377,18 +377,21 @@ function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture
             println("  Pre-filter: top_k=$top_k_str, dedup=$(dedup_frac)")
             println()
 
+            refine_method = if refinement_goal == :minimum
+                GlobtimPostProcessing.OptimNelderMead(;
+                    gradient_method = analysis_grad_method, hessian_tol,
+                    max_iterations = newton_max_iter, max_time = max_time_pt)
+            else
+                GlobtimPostProcessing.NewtonCP(;
+                    gradient_method = analysis_grad_method, tol = newton_tol,
+                    accept_tol, f_accept_tol, max_iterations = newton_max_iter,
+                    hessian_tol)
+            end
             discovery_result = GlobtimPostProcessing.build_known_cps_from_refinement(
                 objective,
                 highest_dr.critical_points,
                 bounds;
-                refinement_goal = refinement_goal,
-                gradient_method = analysis_grad_method,
-                tol = newton_tol,
-                accept_tol = accept_tol,
-                f_accept_tol = f_accept_tol,
-                max_iterations = newton_max_iter,
-                max_time_per_point = max_time_pt,
-                hessian_tol = hessian_tol,
+                method = refine_method,
                 dedup_fraction = dedup_frac,
                 top_k = top_k,
             )

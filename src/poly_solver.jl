@@ -179,7 +179,7 @@ function _solve_hc(
     # Compute the gradient and solve the system
     grad = differentiate.(pol, x)
     sys = System(grad)
-    hc_result = solve(sys, start_system = actual_start)
+    hc_result = solve(sys, start_system = actual_start, show_progress = false)
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
 
     if return_system
