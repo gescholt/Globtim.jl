@@ -30,6 +30,8 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 - `[polynomial]`: GN, degree_range, basis, truncation_threshold (opt-in), truncation_mode
 - `[solver]`: solver overrides (optional)
 - `[refinement]`: post-processing refinement (optional)
+- `[analysis]`: Newton CP refinement and classification (optional)
+- `[visualization]`: level set / landscape visualization parameters (optional)
 - `[output]`: output_dir (optional)
 """
 Base.@kwdef struct ExperimentPipelineConfig
@@ -89,6 +91,25 @@ Base.@kwdef struct ExperimentPipelineConfig
 
     # [output]
     output_dir::Union{Nothing, String} = nothing
+
+    # [visualization] — optional level set / landscape visualization
+    viz_enabled::Bool = false
+    viz_n_coarse::Int = 10
+    viz_n_refine::Int = 2
+    viz_level_max::Float64 = 1.0
+    viz_domain_mode::Symbol = :catalogue       # :catalogue or :tight
+    viz_tight_frac::Float64 = 0.1
+    viz_level_tol::Float64 = 0.005
+    viz_figure_size::Tuple{Int, Int} = (1200, 900)
+    viz_record_animation::Bool = false
+    viz_animation_fps::Int = 30
+    viz_animation_duration::Int = 15
+    viz_augment_enabled::Bool = true
+    viz_augment_fraction::Float64 = 0.25
+    viz_augment_n::Int = 4
+    viz_near_zero_enabled::Bool = true
+    viz_near_zero_threshold::Float64 = 0.5
+    viz_near_zero_n::Int = 8
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -380,6 +401,54 @@ function validate_experiment_toml(d::Dict)
             "[refinement] gradient_tolerance must be positive")
     end
 
+    # --- [visualization] (optional) ---
+    viz = get(d, "visualization", Dict())
+    if haskey(viz, "n_coarse")
+        nc = viz["n_coarse"]
+        (nc isa Integer && 5 <= nc <= 50) || push!(errors, "[visualization] n_coarse must be an integer in [5, 50], got: $nc")
+    end
+    if haskey(viz, "n_refine")
+        nr = viz["n_refine"]
+        (nr isa Integer && 1 <= nr <= 10) || push!(errors, "[visualization] n_refine must be an integer in [1, 10], got: $nr")
+    end
+    if haskey(viz, "level_max")
+        lm = viz["level_max"]
+        (lm isa Number && lm > 0) || push!(errors, "[visualization] level_max must be positive, got: $lm")
+    end
+    if haskey(viz, "domain_mode")
+        dm = viz["domain_mode"]
+        dm in ["catalogue", "tight"] || push!(errors, "[visualization] domain_mode must be 'catalogue' or 'tight', got: '$dm'")
+    end
+    if haskey(viz, "tight_frac")
+        tf = viz["tight_frac"]
+        (tf isa Number && 0 < tf < 10) || push!(errors, "[visualization] tight_frac must be in (0, 10), got: $tf")
+    end
+    if haskey(viz, "level_tol")
+        lt = viz["level_tol"]
+        (lt isa Number && lt > 0) || push!(errors, "[visualization] level_tol must be positive, got: $lt")
+    end
+    if haskey(viz, "figure_size")
+        fs = viz["figure_size"]
+        (fs isa AbstractVector && length(fs) == 2 && all(x -> x isa Integer && x > 0, fs)) || push!(errors,
+            "[visualization] figure_size must be [width, height] with positive integers, got: $fs")
+    end
+    if haskey(viz, "animation_fps")
+        af = viz["animation_fps"]
+        (af isa Integer && 1 <= af <= 120) || push!(errors, "[visualization] animation_fps must be in [1, 120], got: $af")
+    end
+    if haskey(viz, "animation_duration")
+        ad = viz["animation_duration"]
+        (ad isa Integer && 1 <= ad <= 300) || push!(errors, "[visualization] animation_duration must be in [1, 300], got: $ad")
+    end
+    if haskey(viz, "augment_fraction")
+        af = viz["augment_fraction"]
+        (af isa Number && 0 < af <= 1) || push!(errors, "[visualization] augment_fraction must be in (0, 1], got: $af")
+    end
+    if haskey(viz, "augment_n")
+        an = viz["augment_n"]
+        (an isa Integer && 2 <= an <= 10) || push!(errors, "[visualization] augment_n must be an integer in [2, 10], got: $an")
+    end
+
     # --- Raise all errors ---
     if !isempty(errors)
         error("TOML validation failed:\n  " * join(errors, "\n  "))
@@ -526,6 +595,30 @@ function load_experiment_config(path::String)
     catalogue_path = _resolve_config_path(catalogue_path, config_dir)
     output_dir     = _resolve_config_path(output_dir, config_dir)
 
+    # Parse visualization
+    viz = get(d, "visualization", Dict())
+    viz_enabled = get(viz, "enabled", false)::Bool
+    viz_n_coarse = haskey(viz, "n_coarse") ? Int(viz["n_coarse"]) : 10
+    viz_n_refine = haskey(viz, "n_refine") ? Int(viz["n_refine"]) : 2
+    viz_level_max = haskey(viz, "level_max") ? Float64(viz["level_max"]) : 1.0
+    viz_domain_mode = Symbol(get(viz, "domain_mode", "catalogue"))
+    viz_tight_frac = haskey(viz, "tight_frac") ? Float64(viz["tight_frac"]) : 0.1
+    viz_level_tol = haskey(viz, "level_tol") ? Float64(viz["level_tol"]) : 0.005
+    viz_figure_size = if haskey(viz, "figure_size")
+        (Int(viz["figure_size"][1]), Int(viz["figure_size"][2]))
+    else
+        (1200, 900)
+    end
+    viz_record_animation = get(viz, "record_animation", false)::Bool
+    viz_animation_fps = haskey(viz, "animation_fps") ? Int(viz["animation_fps"]) : 30
+    viz_animation_duration = haskey(viz, "animation_duration") ? Int(viz["animation_duration"]) : 15
+    viz_augment_enabled = get(viz, "augment_enabled", true)::Bool
+    viz_augment_fraction = haskey(viz, "augment_fraction") ? Float64(viz["augment_fraction"]) : 0.25
+    viz_augment_n = haskey(viz, "augment_n") ? Int(viz["augment_n"]) : 4
+    viz_near_zero_enabled = get(viz, "near_zero_enabled", true)::Bool
+    viz_near_zero_threshold = haskey(viz, "near_zero_threshold") ? Float64(viz["near_zero_threshold"]) : 0.5
+    viz_near_zero_n = haskey(viz, "near_zero_n") ? Int(viz["near_zero_n"]) : 8
+
     # Parse analysis accept tolerances and valley walking
     analysis_accept_tol = haskey(ana, "accept_tol") ? Float64(ana["accept_tol"]) : nothing
     analysis_f_accept_tol = haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
@@ -582,6 +675,24 @@ function load_experiment_config(path::String)
         analysis_deep_diagnostics = analysis_deep_diagnostics,
         # [output]
         output_dir = output_dir,
+        # [visualization]
+        viz_enabled = viz_enabled,
+        viz_n_coarse = viz_n_coarse,
+        viz_n_refine = viz_n_refine,
+        viz_level_max = viz_level_max,
+        viz_domain_mode = viz_domain_mode,
+        viz_tight_frac = viz_tight_frac,
+        viz_level_tol = viz_level_tol,
+        viz_figure_size = viz_figure_size,
+        viz_record_animation = viz_record_animation,
+        viz_animation_fps = viz_animation_fps,
+        viz_animation_duration = viz_animation_duration,
+        viz_augment_enabled = viz_augment_enabled,
+        viz_augment_fraction = viz_augment_fraction,
+        viz_augment_n = viz_augment_n,
+        viz_near_zero_enabled = viz_near_zero_enabled,
+        viz_near_zero_threshold = viz_near_zero_threshold,
+        viz_near_zero_n = viz_near_zero_n,
     )
 end
 
