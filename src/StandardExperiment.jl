@@ -384,7 +384,9 @@ function run_standard_experiment(;
         success_rate;
         objective_name = objective_name,
         bounds = bounds,
-        true_params = true_params
+        true_params = true_params,
+        solver = solver,
+        msolve_threads = msolve_threads,
     )
 
     # Save experiment summary
@@ -555,6 +557,8 @@ function create_experiment_summary(
     objective_name::String,
     bounds::Vector{Tuple{Float64, Float64}},
     true_params::Union{Vector{Float64}, Nothing} = nothing,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
 )
     # Build results_summary dict
     results_summary = Dict{String, Any}()
