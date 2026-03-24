@@ -506,14 +506,27 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
         f_values[i] = f(x_physical)
     end
 
-    # Check for Inf values (failed evaluations or other failures)
-    if any(isinf, f_values)
-        # Mark subdomain as failed - use Inf as sentinel (not NaN)
+    # Handle Inf values from failed evaluations (e.g., ODE integration failures)
+    n_inf = count(isinf, f_values)
+    if n_inf == n_total
+        # All evaluations failed — no data to fit
         subdomain.l2_error = Inf
-        subdomain.polynomial = nothing  # Triggers fallback to width-based dimension selection
+        subdomain.polynomial = nothing
         subdomain.samples = grid_matrix
         subdomain.f_values = f_values
         return Inf
+    elseif n_inf > 0
+        # Partial failures: replace Inf with a large penalty value so the polynomial
+        # can still be constructed. The high error in these regions will cause
+        # subdivision to split them, eventually isolating the failing region.
+        finite_vals = filter(isfinite, f_values)
+        penalty = 10.0 * maximum(abs, finite_vals)
+        for i in 1:n_total
+            if isinf(f_values[i])
+                f_values[i] = penalty
+            end
+        end
+        @debug "Replaced $n_inf/$n_total Inf values with penalty=$penalty"
     end
 
     # Construct polynomial approximation
