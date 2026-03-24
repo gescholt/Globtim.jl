@@ -178,7 +178,8 @@ export Subdomain, SubdivisionTree,
     get_bounds, n_leaves, n_active, total_error, error_balance_ratio,
     dimension, volume,  # Subdomain utilities
     select_cut_dimension_by_width,  # Fallback dimension selection
-    display_tree, get_max_depth  # Tree visualization & info
+    display_tree, get_max_depth,  # Tree visualization & info
+    RefinementAction, ActionConverged, ActionDegreeBump, ActionSplit  # hp-refinement
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
