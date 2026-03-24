@@ -5,11 +5,11 @@
 
 Finding all local minima of a continuous function over a bounded domain is fundamentally hard. Standard optimization algorithms (gradient descent, BFGS, etc.) find *one* local minimum from a given starting point — but how do you know there isn't a better one elsewhere?
 
-Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system with finitely many solutions (bounded by Bezout's theorem), which can be computed numerically via homotopy continuation or exactly via symbolic methods. Each solution seeds a local refinement on the original function, searching for local minima across the entire domain — not just the nearest one.
+Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system with finitely many solutions (bounded by Bezout's theorem), which can be computed numerically via homotopy continuation or exactly via symbolic methods. Each solution seeds a local refinement on the original function, searching for local minima across the entire domain — not just the nearest one. The procedure is agnostic of what method is used in the refinement step — refinement is a pluggable component that should be adapted to each particular problem.
 
 ```
-f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  Candidate minima
-           (Chebyshev/Legendre)   (HomotopyContinuation.jl)
+f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine on f(x)    -->  Candidate minima
+           (Chebyshev/Legendre)   (HomotopyContinuation.jl)  (any local method)
 ```
 
 ### Challenging 1D function — multi-frequency oscillations at varying polynomial degrees:
