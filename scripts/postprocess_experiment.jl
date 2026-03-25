@@ -110,6 +110,59 @@ function parse_args(args)
     return (; results_dirs, do_refinement, do_capture, do_hessian_only)
 end
 
+# ── Cluster path remapping ────────────────────────────────────────────────────
+
+const REPO_ROOT = dirname(dirname(dirname(@__DIR__)))
+const CLUSTER_MARKERS = ["globopt_merged/", "globopt/globopt_merged/"]
+
+"""
+    _remap_cluster_path(path) -> Union{String, Nothing}
+
+Remap a catalogue path to the local repo root. Handles:
+1. Absolute cluster paths (`/mnt/beegfs/.../globopt_merged/globtim_results/foo.jsonl`)
+2. Mis-resolved relative paths (`/repo/globtim_results/paper/exp/../../Dynamic_objectives/...`)
+   where the config loader resolved `../../` against the wrong base directory.
+
+Strategy: extract a recognizable tail (after `globopt_merged/` or known package dirs)
+and re-resolve it against the local repo root, trying `pkg/` prefix if needed.
+"""
+function _remap_cluster_path(path::String)
+    # Strategy 1: Find globopt_merged/ marker and extract relative tail
+    for marker in CLUSTER_MARKERS
+        idx = findlast(marker, path)
+        idx === nothing && continue
+        relative = path[last(idx)+1:end]
+        # Try direct resolution
+        candidate = joinpath(REPO_ROOT, relative)
+        isfile(candidate) && return candidate
+        # Try under pkg/ (e.g., Dynamic_objectives/ → pkg/Dynamic_objectives/)
+        candidate = joinpath(REPO_ROOT, "pkg", relative)
+        isfile(candidate) && return candidate
+    end
+
+    # Strategy 2: Look for known package directory names in the path
+    # Handles mis-resolved paths like .../globtim_results/paper/exp/../../Dynamic_objectives/paper/catalogue/foo.jsonl
+    for pkg_dir in ["Dynamic_objectives/", "globtim/", "globtimpostprocessing/"]
+        idx = findlast(pkg_dir, path)
+        idx === nothing && continue
+        # Extract from the package dir onward
+        relative = path[first(idx):end]
+        for prefix in ["pkg/", ""]
+            candidate = joinpath(REPO_ROOT, prefix, relative)
+            isfile(candidate) && return candidate
+        end
+    end
+
+    # Strategy 3: basename fallback — search known catalogue locations
+    fname = basename(path)
+    for dir in ["globtim_results", "pkg/Dynamic_objectives/paper/catalogue"]
+        candidate = joinpath(REPO_ROOT, dir, fname)
+        isfile(candidate) && return candidate
+    end
+
+    return nothing
+end
+
 # ── Objective reconstruction ──────────────────────────────────────────────────
 
 """
@@ -137,11 +190,21 @@ function reconstruct_objective(results_dir::String)
             return bench.objective, bounds, config
         elseif config.catalogue_path !== nothing
             # ODE catalogue model — reconstruct with correct solver settings
-            isfile(config.catalogue_path) || error(
-                "Catalogue file not found: $(config.catalogue_path)\n" *
-                "The catalogue path in the saved TOML config is no longer valid.\n" *
-                "Update [model].catalogue_path in $toml_path to point to the catalogue file.")
-            entries = load_catalogue(config.catalogue_path; model_name=config.entry_name)
+            cat_path = config.catalogue_path
+            if !isfile(cat_path)
+                local_path = _remap_cluster_path(cat_path)
+                if local_path !== nothing && isfile(local_path)
+                    @info "Remapped cluster catalogue path" cluster=cat_path local_path=local_path
+                    cat_path = local_path
+                else
+                    error(
+                        "Catalogue file not found: $cat_path\n" *
+                        "The catalogue path in the saved TOML config is no longer valid.\n" *
+                        "Tried local remap: $(something(local_path, "no match"))\n" *
+                        "Update [model].catalogue_path in $toml_path to point to the catalogue file.")
+                end
+            end
+            entries = load_catalogue(cat_path; model_name=config.entry_name)
             matching = filter(e -> e.name == config.entry_name, entries)
             isempty(matching) && error("Entry '$(config.entry_name)' not found in catalogue")
             entry = first(matching)
@@ -230,9 +293,21 @@ function reconstruct_objective(results_dir::String)
     entry_name = get(meta, "entry_name", nothing)
 
     if catalogue_path !== nothing && entry_name !== nothing
-        isfile(catalogue_path) || error(
-            "Catalogue file not found: $catalogue_path\n" *
-            "The catalogue path saved in results metadata is no longer valid.")
+        if !isfile(catalogue_path)
+            # Try to resolve cluster paths to local repo paths
+            # Cluster saves absolute paths like /mnt/beegfs/.../globopt_merged/globtim_results/foo.jsonl
+            # Locally, the same file is at <repo_root>/globtim_results/foo.jsonl
+            local_path = _remap_cluster_path(catalogue_path)
+            if local_path !== nothing && isfile(local_path)
+                @info "Remapped cluster catalogue path" cluster=catalogue_path local_path=local_path
+                catalogue_path = local_path
+            else
+                error(
+                    "Catalogue file not found: $catalogue_path\n" *
+                    "The catalogue path saved in results metadata is no longer valid.\n" *
+                    "Tried local remap: $(something(local_path, "no match"))")
+            end
+        end
         entries = load_catalogue(catalogue_path; model_name=entry_name)
         matching = filter(e -> e.name == entry_name, entries)
         isempty(matching) && error("Entry '$entry_name' not found in catalogue")
