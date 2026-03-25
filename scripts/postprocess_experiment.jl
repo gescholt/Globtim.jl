@@ -3,10 +3,10 @@
 # postprocess_experiment.jl — Standalone post-processing from saved results
 #
 # Usage:
-#   julia --project=. globtim/scripts/postprocess_experiment.jl results_dir/
-#   julia --project=. globtim/scripts/postprocess_experiment.jl results_dir/ --refinement
-#   julia --project=. globtim/scripts/postprocess_experiment.jl results_dir/ --capture
-#   julia --project=. globtim/scripts/postprocess_experiment.jl results_dir/ --all
+#   julia --project=. globtim/scripts/postprocess_experiment.jl results_dir/ [results_dir2/ ...]
+#   julia --project=. globtim/scripts/postprocess_experiment.jl --refinement results_dir/
+#   julia --project=. globtim/scripts/postprocess_experiment.jl --hessian-only globtim_results/paper/*/
+#   julia --project=. globtim/scripts/postprocess_experiment.jl --all results_dir/
 #   julia --project=. globtim/scripts/postprocess_experiment.jl --help
 #
 # Loads saved experiment results (JLD2) and reconstructs the objective function
@@ -22,6 +22,9 @@
 
 using Printf
 using JLD2
+using CSV
+using DataFrames
+using JSON
 using Dynamic_objectives
 using Globtim
 using GlobtimPostProcessing
@@ -34,15 +37,17 @@ function print_usage()
     ═══════════════════════════════════
 
     Usage:
-      julia --project=. globtim/scripts/postprocess_experiment.jl [options] results_dir/
+      julia --project=. globtim/scripts/postprocess_experiment.jl [options] results_dir/ [results_dir2/ ...]
 
     Options:
       --refinement   Run NelderMead refinement on raw CPs
       --capture      Run Newton CP discovery + capture analysis
+      --hessian-only Add Hessian classification to existing refined CSVs (no re-refinement)
       --all          Run all analyses (refinement + capture)
       --help         Show this help message
 
     If no analysis flags are given, defaults to --all.
+    Multiple results directories can be specified for batch processing.
 
     The results directory must contain:
       - results_summary.jld2  (saved by globtim/scripts/run_experiment.jl)
@@ -50,23 +55,29 @@ function print_usage()
 
     Examples:
       # Full post-processing on saved results
-      julia --project=. globtim/scripts/postprocess_experiment.jl globtim_results/benchmark_3d/levy/
+      julia --project=. globtim/scripts/postprocess_experiment.jl globtim_results/paper/levy_3d/
 
-      # Only refinement
-      julia --project=. globtim/scripts/postprocess_experiment.jl --refinement globtim_results/benchmark_3d/levy/
+      # Add Hessian classification to all paper experiments (no re-refinement)
+      julia --project=. globtim/scripts/postprocess_experiment.jl --hessian-only globtim_results/paper/*/
+
+      # Only refinement on multiple experiments
+      julia --project=. globtim/scripts/postprocess_experiment.jl --refinement globtim_results/paper/lv2d/ globtim_results/paper/fhn3d/
     """)
 end
 
 function parse_args(args)
     do_refinement = false
     do_capture = false
-    results_dir = nothing
+    do_hessian_only = false
+    results_dirs = String[]
 
     for arg in args
         if arg == "--refinement"
             do_refinement = true
         elseif arg == "--capture"
             do_capture = true
+        elseif arg == "--hessian-only"
+            do_hessian_only = true
         elseif arg == "--all"
             do_refinement = true
             do_capture = true
@@ -76,21 +87,27 @@ function parse_args(args)
         elseif startswith(arg, "--")
             error("Unknown option: $arg. Run with --help for usage.")
         else
-            results_dir !== nothing && error("Only one results directory can be specified.")
-            results_dir = String(rstrip(arg, '/'))
+            push!(results_dirs, String(rstrip(arg, '/')))
         end
     end
 
-    results_dir === nothing && (print_usage(); error("No results directory specified."))
-    isdir(results_dir) || error("Results directory not found: $results_dir")
+    isempty(results_dirs) && (print_usage(); error("No results directory specified."))
+    for d in results_dirs
+        isdir(d) || error("Results directory not found: $d")
+    end
+
+    # Validate flag combinations
+    if do_hessian_only && (do_refinement || do_capture)
+        error("--hessian-only cannot be combined with --refinement or --capture")
+    end
 
     # Default to --all if no flags given
-    if !do_refinement && !do_capture
+    if !do_refinement && !do_capture && !do_hessian_only
         do_refinement = true
         do_capture = true
     end
 
-    return (; results_dir, do_refinement, do_capture)
+    return (; results_dirs, do_refinement, do_capture, do_hessian_only)
 end
 
 # ── Objective reconstruction ──────────────────────────────────────────────────
@@ -455,11 +472,146 @@ function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture
     println()
 end
 
+# ── Hessian-only mode ──────────────────────────────────────────────────────
+
+"""
+    run_hessian_only(results_dir::String)
+
+Add Hessian eigenvalue classification to existing refined CSVs without re-running
+refinement. Reads refined points from `critical_points_refined_deg_*.csv`, computes
+Hessian matrices (ForwardDiff for analytical, FiniteDiff for ODE objectives), classifies
+each point as minimum/saddle/maximum/degenerate, and updates both the CSV and JSON.
+
+This is much faster than full re-refinement since it only requires n_points × O(d²)
+function evaluations for the Hessian, vs n_points × O(iterations) for NelderMead.
+"""
+function run_hessian_only(results_dir::String)
+    println("Hessian-only classification: $results_dir")
+    println("=" ^ 72)
+
+    # 1. Reconstruct objective
+    println("\nReconstructing objective function...")
+    objective, _, config = reconstruct_objective(results_dir)
+    println("  Objective reconstructed successfully")
+
+    # 2. Determine gradient method (finitediff for ODE, forwarddiff for analytical)
+    gradient_method = _resolve_gradient_method(config, :refinement)
+    println("  Hessian method: $gradient_method")
+
+    # 3. Find all refined CSVs
+    refined_csvs = sort(filter(f -> startswith(basename(f), "critical_points_refined_deg_") && endswith(f, ".csv"),
+                               readdir(results_dir, join=true)))
+
+    if isempty(refined_csvs)
+        println("  No refined CSVs found — run --refinement first.")
+        return
+    end
+    println("  Found $(length(refined_csvs)) refined CSV(s)")
+
+    n_updated = 0
+    for csv_path in refined_csvs
+        # Extract degree from filename
+        m = match(r"critical_points_refined_deg_(\d+)\.csv", basename(csv_path))
+        m === nothing && continue
+        degree = parse(Int, m[1])
+
+        # Load refined points
+        df = CSV.read(csv_path, DataFrame)
+        nrow(df) == 0 && (println("  Degree $degree: 0 points, skipping"); continue)
+
+        # Extract point coordinates (dim1, dim2, ...)
+        dim_cols = filter(n -> startswith(String(n), "dim"), names(df))
+        points = [Vector{Float64}([row[c] for c in dim_cols]) for row in eachrow(df)]
+
+        # Classify via Hessian
+        println("  Degree $degree: classifying $(length(points)) points...")
+        classifications = GlobtimPostProcessing.classify_refined_points(GlobtimPostProcessing._as_function(objective), points; gradient_method=gradient_method)
+
+        if isempty(classifications)
+            println("    WARNING: classify_refined_points returned empty — GlobtimExt may not be loaded")
+            continue
+        end
+
+        # Update CSV
+        df[!, :critical_point_type] = String.(classifications)
+        CSV.write(csv_path, df)
+
+        # Count classification results
+        n_min = count(==(Symbol("minimum")), classifications)
+        n_saddle = count(==(Symbol("saddle")), classifications)
+        n_max = count(==(Symbol("maximum")), classifications)
+        n_degen = count(==(Symbol("degenerate")), classifications)
+        n_err = count(==(Symbol("error")), classifications)
+        println("    → $n_min min, $n_saddle saddle, $n_max max, $n_degen degenerate, $n_err error")
+
+        # Update refinement summary JSON
+        summary_path = joinpath(results_dir, "refinement_summary_deg_$degree.json")
+        if isfile(summary_path)
+            summary = JSON.parsefile(summary_path)
+            summary["hessian_classification"] = Dict(
+                "n_minimum" => n_min,
+                "n_saddle" => n_saddle,
+                "n_maximum" => n_max,
+                "n_degenerate" => n_degen,
+                "n_error" => n_err,
+            )
+            open(summary_path, "w") do io
+                JSON.print(io, summary, 2)
+            end
+        end
+
+        # Also update comparison CSV if it exists
+        comparison_path = joinpath(results_dir, "refinement_comparison_deg_$degree.csv")
+        if isfile(comparison_path)
+            comp_df = CSV.read(comparison_path, DataFrame)
+            # Expand classifications to n_raw (only converged rows get a value)
+            if "converged" in names(comp_df)
+                cp_type_col = fill("", nrow(comp_df))
+                cls_idx = 0
+                for (j, conv) in enumerate(comp_df.converged)
+                    if conv
+                        cls_idx += 1
+                        if cls_idx <= length(classifications)
+                            cp_type_col[j] = String(classifications[cls_idx])
+                        end
+                    end
+                end
+                comp_df[!, :critical_point_type] = cp_type_col
+                CSV.write(comparison_path, comp_df)
+            end
+        end
+
+        n_updated += 1
+    end
+
+    println("\n  Updated $n_updated degree(s) with Hessian classification")
+    println("=" ^ 72)
+end
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 if abspath(PROGRAM_FILE) == @__FILE__
     args = parse_args(ARGS)
-    run_postprocessing(args.results_dir;
-        do_refinement = args.do_refinement,
-        do_capture = args.do_capture)
+
+    n_dirs = length(args.results_dirs)
+    for (i, results_dir) in enumerate(args.results_dirs)
+        if n_dirs > 1
+            println("\n[$i/$n_dirs] $(basename(results_dir))")
+            println("─" ^ 72)
+        end
+
+        if args.do_hessian_only
+            run_hessian_only(results_dir)
+        else
+            run_postprocessing(results_dir;
+                do_refinement = args.do_refinement,
+                do_capture = args.do_capture)
+        end
+    end
+
+    if n_dirs > 1
+        println("\n" * "=" ^ 72)
+        println("Batch complete: $n_dirs experiment(s) processed")
+        println("=" ^ 72)
+    end
 end
