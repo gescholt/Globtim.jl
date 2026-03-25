@@ -40,6 +40,7 @@ mutable struct Subdomain
     center::Vector{Float64}
     half_widths::Vector{Float64}
     l2_error::Float64
+    relative_l2_error::Float64
     depth::Int
     degree::Int
     parent_id::Union{Int, Nothing}
@@ -56,7 +57,7 @@ end
 function Subdomain(center::Vector{Float64}, half_widths::Vector{Float64};
                    depth::Int=0, degree::Int=0,
                    parent_id::Union{Int, Nothing}=nothing)
-    return Subdomain(center, half_widths, Inf, depth, degree, parent_id,
+    return Subdomain(center, half_widths, Inf, Inf, depth, degree, parent_id,
                      nothing, nothing, nothing,
                      nothing, nothing, nothing)  # children, split_dim, split_pos
 end
@@ -184,7 +185,7 @@ Display subdivision tree as formatted table.
 
 # Example
 ```julia
-tree = adaptive_refine(f, bounds, 4, l2_tolerance=0.1)
+tree = adaptive_refine(f, bounds, 4)
 display_tree(tree, max_leaves=10)
 ```
 """
@@ -511,6 +512,7 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
     if n_inf == n_total
         # All evaluations failed — no data to fit
         subdomain.l2_error = Inf
+        subdomain.relative_l2_error = Inf
         subdomain.polynomial = nothing
         subdomain.samples = grid_matrix
         subdomain.f_values = f_values
@@ -538,14 +540,26 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
     weight = prod(2.0 ./ (per_dim_GN .+ 1))
     l2_error = sqrt(sum(abs2.(errors)) * weight)
 
+    # Compute relative L2 error: ||f - p||_L2 / ||f||_L2
+    norm_f = sqrt(sum(abs2.(f_values)) * weight)
+    rel_l2 = if norm_f > 0
+        l2_error / norm_f
+    elseif l2_error == 0.0
+        0.0
+    else
+        Inf
+    end
+
     # Defensive: catch any remaining NaN from numerical issues
     if isnan(l2_error)
         l2_error = Inf
+        rel_l2 = Inf
         pol = nothing
     end
 
     # Cache everything for reuse
     subdomain.l2_error = l2_error
+    subdomain.relative_l2_error = rel_l2
     subdomain.polynomial = pol
     subdomain.samples = grid_matrix
     subdomain.f_values = f_values
@@ -576,12 +590,13 @@ function construct_polynomial_on_subdomain(_, subdomain::Subdomain,
     # Solve least squares for coefficients
     coeffs = V \ f_values
 
-    # Compute L2 norm of approximation
+    # Compute L2 norm of residual (||f - p||_L2)
     poly_values = V * coeffs
     per_dim_degrees = _extract_per_dim_degrees(degree, n_dim)
     per_dim_GN = 2 .* per_dim_degrees
     weight = prod(2.0 ./ (per_dim_GN .+ 1))
-    nrm = sqrt(sum(abs2.(poly_values)) * weight)
+    residuals = f_values .- poly_values
+    nrm = sqrt(sum(abs2.(residuals)) * weight)
 
     # Create ApproxPoly with anisotropic scale_factor
     return ApproxPoly{Float64}(
@@ -751,7 +766,11 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
                            eval_progress::Union{Function,Nothing}=nothing,
                            enable_p_refinement::Bool=false,
                            max_degree::Int=40, degree_step::Int=6,
-                           cond_threshold::Float64=1e14)
+                           cond_threshold::Float64=1e14,
+                           tolerance_mode::Symbol=:relative)
+    tolerance_mode in (:absolute, :relative) ||
+        error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
+
     subdomain = tree.subdomains[subdomain_id]
 
     # Use per-leaf degree if previously set (from a degree bump), otherwise use the passed degree
@@ -763,7 +782,9 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
     l2_error = estimate_subdomain_error(f, subdomain, effective_degree, basis=basis,
                                          eval_progress=eval_progress)
 
-    if l2_error <= l2_tolerance
+    # Check convergence using the selected error metric
+    effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
+    if effective_error <= l2_tolerance
         return ProcessResult(subdomain_id, ActionConverged, false, nothing, nothing, l2_error, nothing)
     end
 
@@ -881,16 +902,25 @@ using Globtim
 
 f(x) = sum(x.^2)
 bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-tree = adaptive_refine(f, bounds, 4, l2_tolerance=1e-4)
+
+# Default: relative L2 tolerance (0.03 = reliable CP recovery threshold)
+tree = adaptive_refine(f, bounds, 4)
+
+# Explicit relative tolerance
+tree = adaptive_refine(f, bounds, 4; l2_tolerance=0.01, tolerance_mode=:relative)
+
+# Absolute tolerance (backward compatible)
+tree = adaptive_refine(f, bounds, 4; l2_tolerance=1e-4, tolerance_mode=:absolute)
 
 # hp-adaptive: start at degree 10, bump up to 40 before splitting
-tree = adaptive_refine(f, bounds, 10; l2_tolerance=1e-4,
+tree = adaptive_refine(f, bounds, 10; l2_tolerance=1e-4, tolerance_mode=:absolute,
                        enable_p_refinement=true, max_degree=40, degree_step=6)
 ```
 """
 function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                          degree;
-                         l2_tolerance::Float64=1e-6,
+                         l2_tolerance::Float64=NaN,
+                         tolerance_mode::Symbol=:relative,
                          max_depth::Int=10,
                          max_leaves::Int=1000,
                          optimize_cuts::Bool=true,
@@ -904,6 +934,14 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                          max_degree::Int=40,
                          degree_step::Int=6,
                          cond_threshold::Float64=1e14)
+
+    tolerance_mode in (:absolute, :relative) ||
+        error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
+
+    # Resolve default tolerance based on mode
+    if isnan(l2_tolerance)
+        l2_tolerance = tolerance_mode == :relative ? 0.03 : 1e-6
+    end
 
     # Initialize tree with root degree
     n_dim = length(bounds)
@@ -936,7 +974,7 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         # Process all active leaves
         current_active = copy(tree.active_leaves)
 
-        hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold)
+        hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode)
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             # CPU parallel processing
@@ -976,7 +1014,8 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                                       eval_progress=eval_progress)
         end
         # Check if leaf now meets tolerance → mark as converged
-        if sd.l2_error <= l2_tolerance
+        check_error = tolerance_mode == :relative ? sd.relative_l2_error : sd.l2_error
+        if check_error <= l2_tolerance
             filter!(id -> id != leaf_id, tree.active_leaves)
             push!(tree.converged_leaves, leaf_id)
         end
@@ -1029,8 +1068,9 @@ Phase 2 refines to meet the final tolerance.
 """
 function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                           degree;
-                          coarse_tolerance::Float64=1e-4,
-                          fine_tolerance::Float64=1e-6,
+                          coarse_tolerance::Float64=NaN,
+                          fine_tolerance::Float64=NaN,
+                          tolerance_mode::Symbol=:relative,
                           balance_threshold::Float64=3.0,
                           max_depth::Int=10,
                           max_leaves::Int=1000,
@@ -1043,6 +1083,17 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                           max_degree::Int=40,
                           degree_step::Int=6,
                           cond_threshold::Float64=1e14)
+
+    tolerance_mode in (:absolute, :relative) ||
+        error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
+
+    # Resolve default tolerances based on mode
+    if isnan(coarse_tolerance)
+        coarse_tolerance = tolerance_mode == :relative ? 0.05 : 1e-4
+    end
+    if isnan(fine_tolerance)
+        fine_tolerance = tolerance_mode == :relative ? 0.03 : 1e-6
+    end
 
     verbose && println("=== Phase 1: Coarse balancing ===")
 
@@ -1057,7 +1108,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
     tree = SubdivisionTree(bounds; degree=root_degree)
 
-    hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold)
+    hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100
@@ -1115,10 +1166,11 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     end
 
     # Phase 2: Accuracy refinement
-    # Only re-activate leaves whose l2_error exceeds fine_tolerance;
+    # Only re-activate leaves whose error exceeds fine_tolerance;
     # leaves already below fine_tolerance from Phase 1 stay converged.
-    needs_reeval = filter(id -> tree.subdomains[id].l2_error > fine_tolerance, tree.converged_leaves)
-    already_fine = filter(id -> tree.subdomains[id].l2_error <= fine_tolerance, tree.converged_leaves)
+    _leaf_error(id) = tolerance_mode == :relative ? tree.subdomains[id].relative_l2_error : tree.subdomains[id].l2_error
+    needs_reeval = filter(id -> _leaf_error(id) > fine_tolerance, tree.converged_leaves)
+    already_fine = filter(id -> _leaf_error(id) <= fine_tolerance, tree.converged_leaves)
     append!(tree.active_leaves, needs_reeval)
     tree.converged_leaves = already_fine
 

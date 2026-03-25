@@ -32,6 +32,7 @@ using Globtim
             objective_with_inf, bounds, 4;
             coarse_tolerance=1e-2,
             fine_tolerance=1e-4,
+            tolerance_mode=:absolute,
             max_depth=3,
             max_leaves=50,
             parallel=false,
@@ -64,6 +65,7 @@ using Globtim
             corner_inf, bounds, 6;
             coarse_tolerance=1e-4,
             fine_tolerance=1e-6,
+            tolerance_mode=:absolute,
             max_depth=4,
             max_leaves=100,
             parallel=false,
