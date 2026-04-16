@@ -85,7 +85,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
     GN::Union{Int, Nothing} = nothing,
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false
+    power_of_two_denom::Bool = false,
+    thread_evals::Bool = false
 )::ApproxPoly
     # Check if d is a grid (Matrix format)
     grid_provided = isa(d, Matrix)
@@ -255,27 +256,42 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
         # Evaluate function on grid points
         eval_start = time()
-        if isa(scale_factor, Number)
-            # Scalar scale_factor
+        # Build the per-point evaluation closure once, then dispatch between
+        # sequential `map` and a chunked `@spawn` pool based on thread_evals.
+        eval_fn = if isa(scale_factor, Number)
             if n == 1
-                # For 1D functions, extract scalar from SVector
-                F = map(x -> f((scale_factor * x + scaled_center)[1]), grid_points)
+                x -> f((scale_factor * x + scaled_center)[1])
             else
-                F = map(x -> f(scale_factor * x + scaled_center), grid_points)
+                x -> f(scale_factor * x + scaled_center)
             end
         else
-            # Vector scale_factor - element-wise multiplication for each coordinate
-            # Create a function to apply per-coordinate scaling
             function apply_scale(x)
                 scaled_x = SVector{n, Float64}([scale_factor[i] * x[i] for i in 1:n])
                 if n == 1
-                    # For 1D functions, pass scalar
                     return f((scaled_x + scaled_center)[1])
                 else
                     return f(scaled_x + scaled_center)
                 end
             end
-            F = map(apply_scale, grid_points)
+            apply_scale
+        end
+
+        if thread_evals && Threads.nthreads() > 1
+            # Threaded fan-out: chunked @spawn, matching adaptive_subdivision.
+            # Caller is responsible for f being thread-safe.
+            n_pts = length(grid_points)
+            F = Vector{Float64}(undef, n_pts)
+            chunk_size = max(1, cld(n_pts, 4 * Threads.nthreads()))
+            @sync for chunk_start in 1:chunk_size:n_pts
+                chunk_end = min(chunk_start + chunk_size - 1, n_pts)
+                Threads.@spawn begin
+                    for i in chunk_start:chunk_end
+                        F[i] = eval_fn(grid_points[i])
+                    end
+                end
+            end
+        else
+            F = map(eval_fn, grid_points)
         end
         eval_time = time() - eval_start
         if verbose >= 1 && eval_time > 1.0  # Only log if evaluation took significant time
@@ -422,7 +438,8 @@ TimerOutputs.@timeit _TO function Constructor(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = false,
     power_of_two_denom::Bool = false,
-    grid::Union{Nothing, Matrix{Float64}} = nothing
+    grid::Union{Nothing, Matrix{Float64}} = nothing,
+    thread_evals::Bool = false
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
@@ -443,7 +460,8 @@ TimerOutputs.@timeit _TO function Constructor(
             basis = basis,
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom
+            power_of_two_denom = power_of_two_denom,
+            thread_evals = thread_evals
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
@@ -464,7 +482,8 @@ TimerOutputs.@timeit _TO function Constructor(
             GN = T.GN,
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom
+            power_of_two_denom = power_of_two_denom,
+            thread_evals = thread_evals
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
@@ -488,7 +507,8 @@ TimerOutputs.@timeit _TO function Constructor(
             GN = T.GN,
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom
+            power_of_two_denom = power_of_two_denom,
+            thread_evals = thread_evals
         )
         if !isnothing(T.tolerance) && p.nrm < T.tolerance
             if verbose >= 1

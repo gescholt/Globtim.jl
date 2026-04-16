@@ -90,6 +90,20 @@ using Globtim
         @test tree.subdomains[1].polynomial !== nothing
     end
 
+    @testset "Constructor / MainGenerate (threaded == sequential)" begin
+        # Cover the Main_Gen.jl evaluation path separately from
+        # adaptive_subdivision.jl.
+        TR = TestInput(sphere, dim=3, center=[0.0, 0.0, 0.0], GN=10, sample_range=1.0)
+
+        p_seq = Constructor(TR, 4; basis=:chebyshev, normalized=false,
+                            thread_evals=false)
+        p_par = Constructor(TR, 4; basis=:chebyshev, normalized=false,
+                            thread_evals=true)
+
+        @test p_seq.coeffs == p_par.coeffs
+        @test p_seq.nrm == p_par.nrm
+    end
+
     # Diagnostic: if this test file runs with Threads.nthreads() == 1 the
     # threaded path is a no-op — print so CI logs make the coverage visible.
     @info "thread_evals tests ran with Threads.nthreads() = $(Threads.nthreads())"
