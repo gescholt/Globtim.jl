@@ -447,7 +447,8 @@ end
 
 """
     estimate_subdomain_error(f, subdomain::Subdomain, degree;
-                             n_samples_per_dim::Int=0, basis::Symbol=:chebyshev)
+                             n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
+                             thread_evals::Bool=false)
 
 Estimate L2 approximation error on a subdomain.
 
@@ -459,6 +460,10 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
 - `degree`: Polynomial degree (or degree specification)
 - `n_samples_per_dim`: Grid points per dimension (0 = auto: 2×degree+1)
 - `basis`: Basis type (:chebyshev or :legendre)
+- `thread_evals`: When `true` and `Threads.nthreads() > 1`, evaluate grid
+  points concurrently via `@spawn`-chunked tasks. Caller is responsible for
+  passing a thread-safe `f` (e.g. an ODE objective that uses `remake` rather
+  than in-place parameter mutation). `eval_progress` is ignored in this mode.
 
 # Returns
 - Estimated L2 error
@@ -468,7 +473,8 @@ Updates subdomain.l2_error, subdomain.polynomial, subdomain.samples, subdomain.f
 """
 function estimate_subdomain_error(f, subdomain::Subdomain, degree;
                                    n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
-                                   eval_progress::Union{Function,Nothing}=nothing)
+                                   eval_progress::Union{Function,Nothing}=nothing,
+                                   thread_evals::Bool=false)
     n_dim = dimension(subdomain)
 
     # Determine per-dimension grid sizes (GN values; grid will have GN+1 points per dim)
@@ -497,14 +503,34 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
     n_total = size(grid_matrix, 1)
     n_dim = dimension(subdomain)
     f_values = Vector{Float64}(undef, n_total)
-    x_physical = Vector{Float64}(undef, n_dim)  # Reusable buffer
 
-    for i in 1:n_total
-        eval_progress !== nothing && eval_progress(i, n_total)
-        @inbounds for d in 1:n_dim
-            x_physical[d] = subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
+    if thread_evals && Threads.nthreads() > 1
+        # Threaded path: chunk the grid across tasks with a per-task x buffer.
+        # Per-task (not per-thread) avoids the Threads.threadid() pitfalls that
+        # break under task migration in Julia ≥ 1.7. eval_progress is skipped
+        # here because most callback sinks (stdout, TUI) are not thread-safe.
+        chunk_size = max(1, cld(n_total, 4 * Threads.nthreads()))
+        @sync for chunk_start in 1:chunk_size:n_total
+            chunk_end = min(chunk_start + chunk_size - 1, n_total)
+            Threads.@spawn begin
+                x_buf = Vector{Float64}(undef, n_dim)
+                for i in chunk_start:chunk_end
+                    @inbounds for d in 1:n_dim
+                        x_buf[d] = subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
+                    end
+                    f_values[i] = f(x_buf)
+                end
+            end
         end
-        f_values[i] = f(x_physical)
+    else
+        x_physical = Vector{Float64}(undef, n_dim)  # Reusable buffer
+        for i in 1:n_total
+            eval_progress !== nothing && eval_progress(i, n_total)
+            @inbounds for d in 1:n_dim
+                x_physical[d] = subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
+            end
+            f_values[i] = f(x_physical)
+        end
     end
 
     # Handle Inf values from failed evaluations (e.g., ODE integration failures)
@@ -644,7 +670,8 @@ Evaluates L2 error at a few candidate cut positions and fits a parabola to find 
 Uses existing samples where possible to minimize new function evaluations.
 """
 function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
-                                  n_candidates::Int=3, basis::Symbol=:chebyshev)
+                                  n_candidates::Int=3, basis::Symbol=:chebyshev,
+                                  thread_evals::Bool=false)
     # Candidate positions in normalized [-1, 1] coordinates
     # Default: -0.5, 0.0, 0.5 (quarter, half, three-quarters)
     if n_candidates == 3
@@ -659,8 +686,10 @@ function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
         left, right = subdivide_domain(subdomain, dim, cut_pos)
 
         # Estimate error on both children
-        err_left = estimate_subdomain_error(f, left, degree, basis=basis)
-        err_right = estimate_subdomain_error(f, right, degree, basis=basis)
+        err_left = estimate_subdomain_error(f, left, degree, basis=basis,
+                                             thread_evals=thread_evals)
+        err_right = estimate_subdomain_error(f, right, degree, basis=basis,
+                                              thread_evals=thread_evals)
 
         # Combined error (sum weighted by volume for fair comparison)
         combined = err_left * sqrt(volume(left)) + err_right * sqrt(volume(right))
@@ -767,7 +796,8 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
                            enable_p_refinement::Bool=false,
                            max_degree::Int=40, degree_step::Int=6,
                            cond_threshold::Float64=1e14,
-                           tolerance_mode::Symbol=:relative)
+                           tolerance_mode::Symbol=:relative,
+                           thread_evals::Bool=false)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -780,7 +810,8 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
 
     # Estimate error on this subdomain
     l2_error = estimate_subdomain_error(f, subdomain, effective_degree, basis=basis,
-                                         eval_progress=eval_progress)
+                                         eval_progress=eval_progress,
+                                         thread_evals=thread_evals)
 
     # Check convergence using the selected error metric
     effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
@@ -805,7 +836,8 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
     end
 
     if optimize_cuts
-        cut_pos = find_optimal_cut_sparse(f, subdomain, split_dim, effective_degree, basis=basis)
+        cut_pos = find_optimal_cut_sparse(f, subdomain, split_dim, effective_degree,
+                                           basis=basis, thread_evals=thread_evals)
     else
         cut_pos = 0.0  # Midpoint
     end
@@ -933,7 +965,8 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                          enable_p_refinement::Bool=false,
                          max_degree::Int=40,
                          degree_step::Int=6,
-                         cond_threshold::Float64=1e14)
+                         cond_threshold::Float64=1e14,
+                         thread_evals::Bool=false)
 
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -974,7 +1007,7 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         # Process all active leaves
         current_active = copy(tree.active_leaves)
 
-        hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode)
+        hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode, thread_evals)
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             # CPU parallel processing
@@ -1011,7 +1044,8 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
             # Record the degree used (same logic as process_subdomain)
             sd.degree = root_degree
             estimate_subdomain_error(f, sd, degree, basis=basis,
-                                      eval_progress=eval_progress)
+                                      eval_progress=eval_progress,
+                                      thread_evals=thread_evals)
         end
         # Check if leaf now meets tolerance → mark as converged
         check_error = tolerance_mode == :relative ? sd.relative_l2_error : sd.l2_error
@@ -1082,7 +1116,8 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
                           enable_p_refinement::Bool=false,
                           max_degree::Int=40,
                           degree_step::Int=6,
-                          cond_threshold::Float64=1e14)
+                          cond_threshold::Float64=1e14,
+                          thread_evals::Bool=false)
 
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1108,7 +1143,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
     tree = SubdivisionTree(bounds; degree=root_degree)
 
-    hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode)
+    hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode, thread_evals)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100
@@ -1217,7 +1252,7 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
             sd.degree = root_degree
-            estimate_subdomain_error(f, sd, degree, basis=basis)
+            estimate_subdomain_error(f, sd, degree, basis=basis, thread_evals=thread_evals)
         end
     end
 

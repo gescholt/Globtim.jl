@@ -124,3 +124,7 @@ end
 with_timeout(TIMEOUT_TESTFILE, label="test_range_search.jl") do
     include("test_range_search.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label="test_threaded_evals.jl") do
+    include("test_threaded_evals.jl")
+end
