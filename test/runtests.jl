@@ -128,3 +128,7 @@ end
 with_timeout(TIMEOUT_TESTFILE, label="test_threaded_evals.jl") do
     include("test_threaded_evals.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label="test_subdivision_reuse.jl") do
+    include("test_subdivision_reuse.jl")
+end
