@@ -45,7 +45,7 @@ end
 if !BENCHMARKTOOLS_AVAILABLE
     println("⚠️  BenchmarkTools not available - using basic timing fallback")
     println(
-        "   For better benchmarking, run: include(\"Examples/install_optional_deps.jl\")"
+        "   For better benchmarking, run: include(\"Examples/install_optional_deps.jl\")",
     )
     println("   Or manually: Pkg.add(\"BenchmarkTools\")")
     println("   Then restart Julia and reload this framework.")
@@ -67,7 +67,7 @@ function install_benchmarktools()
         println("📋 Next steps:")
         println("   1. Restart Julia")
         println(
-            "   2. Reload the framework: include(\"test/adaptive_precision_4d_framework.jl\")"
+            "   2. Reload the framework: include(\"test/adaptive_precision_4d_framework.jl\")",
         )
         println("   3. You'll then have access to detailed benchmarking statistics")
     else
@@ -110,8 +110,11 @@ end
 # Sparse functions
 function sparse_4d(x)
     """Sparse structure: few significant terms, ideal for truncation testing"""
-    return x[1]^4 + 0.1 * x[1]^3 * x[2] + 0.01 * x[1]^2 * x[2]^2 +
-           0.001 * x[1] * x[2]^3 * x[3] + x[4]^4
+    return x[1]^4 +
+           0.1 * x[1]^3 * x[2] +
+           0.01 * x[1]^2 * x[2]^2 +
+           0.001 * x[1] * x[2]^3 * x[3] +
+           x[4]^4
 end
 
 function exponential_decay_4d(x)
@@ -134,7 +137,7 @@ const TEST_FUNCTIONS_4D = Dict(
     :mixed_frequency => mixed_frequency_4d,
     :sparse => sparse_4d,
     :exponential_decay => exponential_decay_4d,
-    :holder_table => holder_table_4d
+    :holder_table => holder_table_4d,
 )
 
 # ============================================================================
@@ -151,7 +154,7 @@ const QUICK_CONFIG = (
     samples = [10, 20],
     center = [0.0, 0.0, 0.0, 0.0],
     sample_range = 1.0,
-    functions = [:gaussian, :polynomial_exact]
+    functions = [:gaussian, :polynomial_exact],
 )
 
 # Standard testing: balanced resource usage
@@ -160,7 +163,7 @@ const STANDARD_CONFIG = (
     samples = [20, 50, 100],
     center = [0.0, 0.0, 0.0, 0.0],
     sample_range = 1.0,
-    functions = [:gaussian, :polynomial_exact, :shubert, :sparse]
+    functions = [:gaussian, :polynomial_exact, :shubert, :sparse],
 )
 
 # Comprehensive testing: full analysis
@@ -169,7 +172,7 @@ const COMPREHENSIVE_CONFIG = (
     samples = [50, 100, 200, 500],
     center = [0.0, 0.0, 0.0, 0.0],
     sample_range = 1.0,
-    functions = keys(TEST_FUNCTIONS_4D)
+    functions = keys(TEST_FUNCTIONS_4D),
 )
 
 # ============================================================================
@@ -181,9 +184,12 @@ const COMPREHENSIVE_CONFIG = (
 
 Create a TestInput for 4D function testing with specified configuration.
 """
-function create_4d_test_input(func_name::Symbol, config;
+function create_4d_test_input(
+    func_name::Symbol,
+    config;
     samples = config.samples[1],
-    kwargs...)
+    kwargs...,
+)
     func = TEST_FUNCTIONS_4D[func_name]
     return TestInput(
         func,
@@ -192,7 +198,7 @@ function create_4d_test_input(func_name::Symbol, config;
         sample_range = config.sample_range,
         GN = samples,
         tolerance = nothing;
-        kwargs...
+        kwargs...,
     )
 end
 
@@ -210,8 +216,12 @@ end
 
 Compare Float64Precision vs AdaptivePrecision for a single 4D test case.
 """
-function compare_4d_precisions(func_name::Symbol, degree::Int, samples::Int;
-    config = QUICK_CONFIG)
+function compare_4d_precisions(
+    func_name::Symbol,
+    degree::Int,
+    samples::Int;
+    config = QUICK_CONFIG,
+)
     # Create test input
     TR = create_4d_test_input(func_name, config, samples = samples)
 
@@ -237,7 +247,7 @@ function compare_4d_precisions(func_name::Symbol, degree::Int, samples::Int;
         :adaptive_coeffs => length(pol_adaptive.coeffs),
         :float64_norm => pol_float64.nrm,
         :adaptive_norm => pol_adaptive.nrm,
-        :precision_overhead => time_adaptive / time_float64
+        :precision_overhead => time_adaptive / time_float64,
     )
 
     return results, pol_float64, pol_adaptive
@@ -271,13 +281,13 @@ function run_4d_quick_test()
                     println("  Adaptive time: $(round(result[:adaptive_time], digits=3))s")
                     println("  Overhead: $(round(result[:precision_overhead], digits=2))x")
                     println(
-                        "  Norms: F64=$(round(result[:float64_norm], digits=6)), Adaptive=$(round(result[:adaptive_norm], digits=6))"
+                        "  Norms: F64=$(round(result[:float64_norm], digits=6)), Adaptive=$(round(result[:adaptive_norm], digits=6))",
                     )
                     println()
 
                 catch e
                     println(
-                        "❌ Error with $func_name (degree=$degree, samples=$samples): $e"
+                        "❌ Error with $func_name (degree=$degree, samples=$samples): $e",
                     )
                 end
             end
@@ -335,7 +345,7 @@ function run_4d_precision_comparison(config = STANDARD_CONFIG)
                     push!(results, result)
 
                     println(
-                        "  ✓ degree=$degree, samples=$samples: overhead=$(round(result[:precision_overhead], digits=2))x"
+                        "  ✓ degree=$degree, samples=$samples: overhead=$(round(result[:precision_overhead], digits=2))x",
                     )
 
                 catch e
@@ -385,12 +395,12 @@ function run_4d_scaling_analysis(func_name = :gaussian; max_degree = 10, max_sam
                 :adaptive_time => time_adaptive,
                 :overhead => time_adaptive / time_f64,
                 :float64_norm => pol_f64.nrm,
-                :adaptive_norm => pol_adaptive.nrm
+                :adaptive_norm => pol_adaptive.nrm,
             )
 
             push!(results, result)
             println(
-                "  Degree $degree: overhead=$(round(result[:overhead], digits=2))x, norms=($(round(pol_f64.nrm, digits=4)), $(round(pol_adaptive.nrm, digits=4)))"
+                "  Degree $degree: overhead=$(round(result[:overhead], digits=2))x, norms=($(round(pol_f64.nrm, digits=4)), $(round(pol_adaptive.nrm, digits=4)))",
             )
 
         catch e
@@ -419,12 +429,12 @@ function run_4d_scaling_analysis(func_name = :gaussian; max_degree = 10, max_sam
                     :adaptive_time => time_adaptive,
                     :overhead => time_adaptive / time_f64,
                     :float64_norm => pol_f64.nrm,
-                    :adaptive_norm => pol_adaptive.nrm
+                    :adaptive_norm => pol_adaptive.nrm,
                 )
 
                 push!(results, result)
                 println(
-                    "  Samples $samples: overhead=$(round(result[:overhead], digits=2))x, times=($(round(time_f64, digits=3))s, $(round(time_adaptive, digits=3))s)"
+                    "  Samples $samples: overhead=$(round(result[:overhead], digits=2))x, times=($(round(time_f64, digits=3))s, $(round(time_adaptive, digits=3))s)",
                 )
 
             catch e
@@ -483,7 +493,7 @@ function analyze_4d_sparsity(func_name = :sparse; degree = 8, samples = 100)
         for threshold in thresholds
             truncated_poly, stats = truncate_polynomial_adaptive(mono_adaptive, threshold)
             println(
-                "  Threshold $(threshold): keep $(stats.n_kept)/$(stats.n_total) ($(round(stats.sparsity_ratio*100, digits=1))% sparse)"
+                "  Threshold $(threshold): keep $(stats.n_kept)/$(stats.n_total) ($(round(stats.sparsity_ratio*100, digits=1))% sparse)",
             )
         end
 
@@ -526,7 +536,7 @@ function compare_critical_point_accuracy(func_name = :shubert; degree = 8, sampl
         :adaptive_terms => length([coefficient(t) for t in terms(mono_adaptive)]),
         :f64_norm => pol_f64.nrm,
         :adaptive_norm => pol_adaptive.nrm,
-        :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm)
+        :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm),
     )
 
     # Test polynomial evaluation accuracy at random test points
@@ -574,12 +584,12 @@ function compare_critical_point_accuracy(func_name = :shubert; degree = 8, sampl
     if max_error_adaptive < max_error_f64 && max_error_f64 > 1e-15
         improvement = max_error_f64 / max_error_adaptive
         println(
-            "  ✅ AdaptivePrecision improvement: $(round(improvement, digits=2))x more accurate"
+            "  ✅ AdaptivePrecision improvement: $(round(improvement, digits=2))x more accurate",
         )
     elseif max_error_adaptive > max_error_f64 && max_error_adaptive > 1e-15
         degradation = max_error_adaptive / max_error_f64
         println(
-            "  ⚠️  AdaptivePrecision $(round(degradation, digits=2))x less accurate in this test"
+            "  ⚠️  AdaptivePrecision $(round(degradation, digits=2))x less accurate in this test",
         )
     else
         println("  ➡️  Similar accuracy between precision types")
@@ -598,12 +608,11 @@ function optimize_4d_accuracy(func_name = :shubert; max_degree = 12, max_samples
     println("="^50)
 
     # Parameter ranges to test
-    degrees =
-        [4, 6, 8, 10, 12][1:(findfirst(x -> x > max_degree, [4, 6, 8, 10, 12, 14]) - 1)]
+    degrees = [4, 6, 8, 10, 12][1:(findfirst(x->x>max_degree, [4, 6, 8, 10, 12, 14])-1)]
     sample_sizes = [50, 100, 200, 300, 500][1:(findfirst(
-        x -> x > max_samples,
-        [50, 100, 200, 300, 500, 1000]
-    ) - 1)]
+        x->x>max_samples,
+        [50, 100, 200, 300, 500, 1000],
+    )-1)]
 
     println("📊 Testing degrees: $degrees")
     println("📊 Testing sample sizes: $sample_sizes")
@@ -629,7 +638,7 @@ function optimize_4d_accuracy(func_name = :shubert; max_degree = 12, max_samples
                     :adaptive_norm => adaptive_norm,
                     :float64_norm => result_f64[:float64_norm],
                     :precision_overhead => result_f64[:precision_overhead],
-                    :adaptive_coeffs => result_f64[:adaptive_coeffs]
+                    :adaptive_coeffs => result_f64[:adaptive_coeffs],
                 )
 
                 push!(results, config_result)
@@ -652,7 +661,7 @@ function optimize_4d_accuracy(func_name = :shubert; max_degree = 12, max_samples
     println("\n🏆 Accuracy Optimization Results:")
     println("  Best accuracy: $(round(best_accuracy, digits=8))")
     println(
-        "  Best configuration: degree=$(best_config.degree), samples=$(best_config.samples)"
+        "  Best configuration: degree=$(best_config.degree), samples=$(best_config.samples)",
     )
 
     # Find Pareto-optimal configurations (best accuracy for each performance level)
@@ -686,7 +695,7 @@ function profile_4d_bottlenecks(
     func_name = :shubert;
     degree = 8,
     samples = 200,
-    iterations = 10
+    iterations = 10,
 )
     println("🔬 Performance Bottleneck Analysis for $func_name")
     println("="^60)
@@ -712,7 +721,7 @@ function profile_4d_bottlenecks(
                 pol = construct_4d_polynomial(TR, degree, AdaptivePrecision)
                 @polyvar x[1:4]
                 to_exact_monomial_basis(pol, variables = x)
-            end
+            end,
     )
 
     bottleneck_results = Dict()
@@ -750,14 +759,14 @@ function profile_4d_bottlenecks(
                 :std => std_time,
                 :min => min_time,
                 :max => max_time,
-                :samples => length(times)
+                :samples => length(times),
             )
 
             println(
-                "  Mean time: $(round(mean_time, digits=4))s ± $(round(std_time, digits=4))s"
+                "  Mean time: $(round(mean_time, digits=4))s ± $(round(std_time, digits=4))s",
             )
             println(
-                "  Range: $(round(min_time, digits=4))s - $(round(max_time, digits=4))s"
+                "  Range: $(round(min_time, digits=4))s - $(round(max_time, digits=4))s",
             )
         else
             println("  ❌ No successful iterations")
@@ -774,7 +783,7 @@ function profile_4d_bottlenecks(
         for (i, (phase, result)) in enumerate(sorted_phases)
             percentage = (result[:mean] / total_time) * 100
             println(
-                "  $i. $phase: $(round(result[:mean], digits=4))s ($(round(percentage, digits=1))%)"
+                "  $i. $phase: $(round(result[:mean], digits=4))s ($(round(percentage, digits=1))%)",
             )
         end
 
@@ -809,7 +818,7 @@ Find optimal degree/sample combinations for best accuracy/performance trade-off.
 function optimize_4d_parameters(
     func_name = :shubert;
     target_accuracy = 1e-6,
-    max_time = 60.0
+    max_time = 60.0,
 )
     println("⚖️  Parameter Optimization for $func_name")
     println("="^50)
@@ -845,7 +854,7 @@ function optimize_4d_parameters(
                     :meets_time => elapsed_time <= max_time,
                     :feasible =>
                         (result[:adaptive_norm] <= target_accuracy) &&
-                        (elapsed_time <= max_time)
+                        (elapsed_time <= max_time),
                 )
 
                 push!(results, config_result)
@@ -855,10 +864,10 @@ function optimize_4d_parameters(
                 end
 
                 println(
-                    "  L2 norm: $(round(result[:adaptive_norm], digits=8)) $(result[:adaptive_norm] <= target_accuracy ? "✅" : "❌")"
+                    "  L2 norm: $(round(result[:adaptive_norm], digits=8)) $(result[:adaptive_norm] <= target_accuracy ? "✅" : "❌")",
                 )
                 println(
-                    "  Time: $(round(elapsed_time, digits=3))s $(elapsed_time <= max_time ? "✅" : "❌")"
+                    "  Time: $(round(elapsed_time, digits=3))s $(elapsed_time <= max_time ? "✅" : "❌")",
                 )
                 println("  Feasible: $(config_result[:feasible] ? "✅" : "❌")")
 
@@ -904,7 +913,7 @@ function optimize_4d_parameters(
         println("\n🏆 Recommended Configurations:")
         println("1. Best Accuracy:")
         println(
-            "   Degree=$(best_accuracy_config[:degree]), Samples=$(best_accuracy_config[:samples])"
+            "   Degree=$(best_accuracy_config[:degree]), Samples=$(best_accuracy_config[:samples])",
         )
         println("   L2 norm: $(round(best_accuracy_config[:adaptive_norm], digits=8))")
         println("   Time: $(round(best_accuracy_config[:construction_time], digits=3))s")
@@ -916,7 +925,7 @@ function optimize_4d_parameters(
 
         println("\n3. Balanced (Recommended):")
         println(
-            "   Degree=$(balanced_config[:degree]), Samples=$(balanced_config[:samples])"
+            "   Degree=$(balanced_config[:degree]), Samples=$(balanced_config[:samples])",
         )
         println("   L2 norm: $(round(balanced_config[:adaptive_norm], digits=8))")
         println("   Time: $(round(balanced_config[:construction_time], digits=3))s")
@@ -943,7 +952,7 @@ function optimize_sparsity_thresholds(
     func_name = :sparse;
     degree = 8,
     samples = 200,
-    max_accuracy_loss = 0.01
+    max_accuracy_loss = 0.01,
 )
     println("✂️  Sparsity Threshold Optimization for $func_name")
     println("="^60)
@@ -969,7 +978,7 @@ function optimize_sparsity_thresholds(
     threshold_strategies = [
         ("Absolute", [1e-16, 1e-14, 1e-12, 1e-10, 1e-8, 1e-6]),
         ("Relative", [1e-16, 1e-14, 1e-12, 1e-10, 1e-8, 1e-6]),
-        ("Percentile", [0.1, 0.5, 1.0, 2.0, 5.0, 10.0])
+        ("Percentile", [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]),
     ]
 
     results = []
@@ -1009,7 +1018,7 @@ function optimize_sparsity_thresholds(
                     :accuracy_loss_estimate => accuracy_loss,
                     :largest_removed => stats.largest_removed,
                     :smallest_kept => stats.smallest_kept,
-                    :meets_accuracy_constraint => accuracy_loss <= max_accuracy_loss
+                    :meets_accuracy_constraint => accuracy_loss <= max_accuracy_loss,
                 )
 
                 push!(results, config_result)
@@ -1019,7 +1028,7 @@ function optimize_sparsity_thresholds(
                 end
 
                 println(
-                    "  Threshold $threshold: $(round(sparsity_ratio*100, digits=1))% sparse, est. loss $(round(accuracy_loss*100, digits=3))% $(accuracy_loss <= max_accuracy_loss ? "✅" : "❌")"
+                    "  Threshold $threshold: $(round(sparsity_ratio*100, digits=1))% sparse, est. loss $(round(accuracy_loss*100, digits=3))% $(accuracy_loss <= max_accuracy_loss ? "✅" : "❌")",
                 )
 
             catch e
@@ -1046,26 +1055,26 @@ function optimize_sparsity_thresholds(
         println("   Strategy: $(best_sparsity_config[:strategy])")
         println("   Threshold: $(best_sparsity_config[:threshold])")
         println(
-            "   Sparsity: $(round(best_sparsity_config[:sparsity_ratio]*100, digits=1))%"
+            "   Sparsity: $(round(best_sparsity_config[:sparsity_ratio]*100, digits=1))%",
         )
         println(
-            "   Est. accuracy loss: $(round(best_sparsity_config[:accuracy_loss_estimate]*100, digits=3))%"
+            "   Est. accuracy loss: $(round(best_sparsity_config[:accuracy_loss_estimate]*100, digits=3))%",
         )
         println(
-            "   Terms: $(best_sparsity_config[:kept_terms])/$(best_sparsity_config[:original_terms])"
+            "   Terms: $(best_sparsity_config[:kept_terms])/$(best_sparsity_config[:original_terms])",
         )
 
         println("\n2. Most Conservative:")
         println("   Strategy: $(most_conservative_config[:strategy])")
         println("   Threshold: $(most_conservative_config[:threshold])")
         println(
-            "   Sparsity: $(round(most_conservative_config[:sparsity_ratio]*100, digits=1))%"
+            "   Sparsity: $(round(most_conservative_config[:sparsity_ratio]*100, digits=1))%",
         )
         println(
-            "   Est. accuracy loss: $(round(most_conservative_config[:accuracy_loss_estimate]*100, digits=3))%"
+            "   Est. accuracy loss: $(round(most_conservative_config[:accuracy_loss_estimate]*100, digits=3))%",
         )
         println(
-            "   Terms: $(most_conservative_config[:kept_terms])/$(most_conservative_config[:original_terms])"
+            "   Terms: $(most_conservative_config[:kept_terms])/$(most_conservative_config[:original_terms])",
         )
 
         # Pareto frontier analysis
@@ -1083,7 +1092,7 @@ function optimize_sparsity_thresholds(
         println("\n📈 Pareto-Optimal Configurations: $(length(pareto_configs))")
         for (i, config) in enumerate(pareto_configs[1:min(3, end)])
             println(
-                "  $i. $(config[:strategy]) $(config[:threshold]): $(round(config[:sparsity_ratio]*100, digits=1))% sparse, $(round(config[:accuracy_loss_estimate]*100, digits=3))% loss"
+                "  $i. $(config[:strategy]) $(config[:threshold]): $(round(config[:sparsity_ratio]*100, digits=1))% sparse, $(round(config[:accuracy_loss_estimate]*100, digits=3))% loss",
             )
         end
 
@@ -1115,7 +1124,7 @@ Analyze how AdaptivePrecision performance scales with polynomial degree.
 function analyze_degree_scaling(
     func_name = :shubert;
     degrees = [4, 6, 8, 10, 12],
-    samples = 200
+    samples = 200,
 )
     println("📈 Degree Scaling Analysis for $func_name")
     println("="^50)
@@ -1172,23 +1181,23 @@ function analyze_degree_scaling(
                 :adaptive_terms => length(adaptive_coeffs),
                 :f64_norm => pol_f64.nrm,
                 :adaptive_norm => pol_adaptive.nrm,
-                :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm)
+                :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm),
             )
 
             push!(results, result)
 
             println(
-                "  Construction: $(round(f64_time, digits=3))s → $(round(adaptive_time, digits=3))s ($(round(result[:construction_overhead], digits=2))x)"
+                "  Construction: $(round(f64_time, digits=3))s → $(round(adaptive_time, digits=3))s ($(round(result[:construction_overhead], digits=2))x)",
             )
             println(
-                "  Conversion: $(round(f64_conversion_time, digits=3))s → $(round(adaptive_conversion_time, digits=3))s ($(round(result[:conversion_overhead], digits=2))x)"
+                "  Conversion: $(round(f64_conversion_time, digits=3))s → $(round(adaptive_conversion_time, digits=3))s ($(round(result[:conversion_overhead], digits=2))x)",
             )
             println(
-                "  Total: $(round(result[:total_f64_time], digits=3))s → $(round(result[:total_adaptive_time], digits=3))s ($(round(result[:total_overhead], digits=2))x)"
+                "  Total: $(round(result[:total_f64_time], digits=3))s → $(round(result[:total_adaptive_time], digits=3))s ($(round(result[:total_overhead], digits=2))x)",
             )
             println("  Terms: $(result[:f64_terms]) → $(result[:adaptive_terms])")
             println(
-                "  L2 norm: $(round(result[:f64_norm], digits=8)) → $(round(result[:adaptive_norm], digits=8))"
+                "  L2 norm: $(round(result[:f64_norm], digits=8)) → $(round(result[:adaptive_norm], digits=8))",
             )
 
         catch e
@@ -1205,19 +1214,19 @@ function analyze_degree_scaling(
         total_overheads = [r[:total_overhead] for r in results]
 
         println(
-            "  Construction overhead: $(round(minimum(construction_overheads), digits=2))x - $(round(maximum(construction_overheads), digits=2))x"
+            "  Construction overhead: $(round(minimum(construction_overheads), digits=2))x - $(round(maximum(construction_overheads), digits=2))x",
         )
         println(
-            "  Conversion overhead: $(round(minimum(conversion_overheads), digits=2))x - $(round(maximum(conversion_overheads), digits=2))x"
+            "  Conversion overhead: $(round(minimum(conversion_overheads), digits=2))x - $(round(maximum(conversion_overheads), digits=2))x",
         )
         println(
-            "  Total overhead: $(round(minimum(total_overheads), digits=2))x - $(round(maximum(total_overheads), digits=2))x"
+            "  Total overhead: $(round(minimum(total_overheads), digits=2))x - $(round(maximum(total_overheads), digits=2))x",
         )
 
         # Check if overhead is increasing with degree
         if length(results) >= 3
             early_overhead = mean(total_overheads[1:2])
-            late_overhead = mean(total_overheads[(end - 1):end])
+            late_overhead = mean(total_overheads[(end-1):end])
 
             if late_overhead > early_overhead * 1.2
                 println("  ⚠️  Overhead increases significantly with degree")
@@ -1252,7 +1261,7 @@ Analyze how AdaptivePrecision performance scales with number of samples.
 function analyze_sample_scaling(
     func_name = :shubert;
     degree = 8,
-    sample_sizes = [50, 100, 200, 400, 800]
+    sample_sizes = [50, 100, 200, 400, 800],
 )
     println("📊 Sample Size Scaling Analysis for $func_name")
     println("="^50)
@@ -1313,22 +1322,22 @@ function analyze_sample_scaling(
                 :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm),
                 :time_per_sample_f64 => (f64_time + f64_conversion_time) / samples,
                 :time_per_sample_adaptive =>
-                    (adaptive_time + adaptive_conversion_time) / samples
+                    (adaptive_time + adaptive_conversion_time) / samples,
             )
 
             push!(results, result)
 
             println(
-                "  Construction: $(round(f64_time, digits=3))s → $(round(adaptive_time, digits=3))s ($(round(result[:construction_overhead], digits=2))x)"
+                "  Construction: $(round(f64_time, digits=3))s → $(round(adaptive_time, digits=3))s ($(round(result[:construction_overhead], digits=2))x)",
             )
             println(
-                "  Total: $(round(result[:total_f64_time], digits=3))s → $(round(result[:total_adaptive_time], digits=3))s ($(round(result[:total_overhead], digits=2))x)"
+                "  Total: $(round(result[:total_f64_time], digits=3))s → $(round(result[:total_adaptive_time], digits=3))s ($(round(result[:total_overhead], digits=2))x)",
             )
             println(
-                "  Time/sample: $(round(result[:time_per_sample_f64]*1000, digits=2))ms → $(round(result[:time_per_sample_adaptive]*1000, digits=2))ms"
+                "  Time/sample: $(round(result[:time_per_sample_f64]*1000, digits=2))ms → $(round(result[:time_per_sample_adaptive]*1000, digits=2))ms",
             )
             println(
-                "  L2 norm: $(round(result[:f64_norm], digits=8)) → $(round(result[:adaptive_norm], digits=8))"
+                "  L2 norm: $(round(result[:f64_norm], digits=8)) → $(round(result[:adaptive_norm], digits=8))",
             )
 
         catch e
@@ -1344,16 +1353,16 @@ function analyze_sample_scaling(
         total_overheads = [r[:total_overhead] for r in results]
 
         println(
-            "  Construction overhead: $(round(minimum(construction_overheads), digits=2))x - $(round(maximum(construction_overheads), digits=2))x"
+            "  Construction overhead: $(round(minimum(construction_overheads), digits=2))x - $(round(maximum(construction_overheads), digits=2))x",
         )
         println(
-            "  Total overhead: $(round(minimum(total_overheads), digits=2))x - $(round(maximum(total_overheads), digits=2))x"
+            "  Total overhead: $(round(minimum(total_overheads), digits=2))x - $(round(maximum(total_overheads), digits=2))x",
         )
 
         # Check scaling behavior
         if length(results) >= 3
             small_samples_overhead = mean(total_overheads[1:2])
-            large_samples_overhead = mean(total_overheads[(end - 1):end])
+            large_samples_overhead = mean(total_overheads[(end-1):end])
 
             if large_samples_overhead < small_samples_overhead * 0.8
                 println("  ✅ Overhead decreases with more samples (better amortization)")
@@ -1375,19 +1384,19 @@ function analyze_sample_scaling(
         # Check if time per sample decreases (good scaling)
         if length(results) >= 3
             early_time_f64 = mean(times_per_sample_f64[1:2])
-            late_time_f64 = mean(times_per_sample_f64[(end - 1):end])
+            late_time_f64 = mean(times_per_sample_f64[(end-1):end])
             early_time_adaptive = mean(times_per_sample_adaptive[1:2])
-            late_time_adaptive = mean(times_per_sample_adaptive[(end - 1):end])
+            late_time_adaptive = mean(times_per_sample_adaptive[(end-1):end])
 
             f64_scaling = late_time_f64 / early_time_f64
             adaptive_scaling = late_time_adaptive / early_time_adaptive
 
             println("  Time/sample scaling:")
             println(
-                "    Float64: $(round(f64_scaling, digits=3))x ($(f64_scaling < 1.0 ? "improving" : "degrading"))"
+                "    Float64: $(round(f64_scaling, digits=3))x ($(f64_scaling < 1.0 ? "improving" : "degrading"))",
             )
             println(
-                "    Adaptive: $(round(adaptive_scaling, digits=3))x ($(adaptive_scaling < 1.0 ? "improving" : "degrading"))"
+                "    Adaptive: $(round(adaptive_scaling, digits=3))x ($(adaptive_scaling < 1.0 ? "improving" : "degrading"))",
             )
         end
 
@@ -1401,7 +1410,7 @@ function analyze_sample_scaling(
             println("  ✅ Good accuracy consistency across sample sizes")
         else
             println(
-                "  ⚠️  Accuracy varies across sample sizes (max diff: $(max_norm_diff))"
+                "  ⚠️  Accuracy varies across sample sizes (max diff: $(max_norm_diff))",
             )
         end
     end
@@ -1417,7 +1426,7 @@ Analyze how AdaptivePrecision handles different coefficient magnitude ranges acr
 function analyze_coefficient_ranges(
     func_names = [:gaussian, :shubert, :sparse];
     degree = 8,
-    samples = 200
+    samples = 200,
 )
     println("🔢 Coefficient Range Analysis")
     println("="^40)
@@ -1457,7 +1466,7 @@ function analyze_coefficient_ranges(
                     :std => std(f64_nonzero),
                     :dynamic_range => maximum(f64_nonzero) / minimum(f64_nonzero),
                     :log_dynamic_range =>
-                        log10(maximum(f64_nonzero) / minimum(f64_nonzero))
+                        log10(maximum(f64_nonzero) / minimum(f64_nonzero)),
                 )
 
                 adaptive_analysis = Dict(
@@ -1469,8 +1478,8 @@ function analyze_coefficient_ranges(
                     :dynamic_range =>
                         Float64(maximum(adaptive_nonzero) / minimum(adaptive_nonzero)),
                     :log_dynamic_range => log10(
-                        Float64(maximum(adaptive_nonzero) / minimum(adaptive_nonzero))
-                    )
+                        Float64(maximum(adaptive_nonzero) / minimum(adaptive_nonzero)),
+                    ),
                 )
 
                 result = Dict(
@@ -1497,25 +1506,25 @@ function analyze_coefficient_ranges(
                         f64_analysis[:log_dynamic_range],
                     :f64_norm => pol_f64.nrm,
                     :adaptive_norm => pol_adaptive.nrm,
-                    :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm)
+                    :norm_difference => abs(pol_adaptive.nrm - pol_f64.nrm),
                 )
 
                 push!(results, result)
 
                 println(
-                    "  Float64 coefficient range: [$(scientific_notation(f64_analysis[:min])), $(scientific_notation(f64_analysis[:max]))]"
+                    "  Float64 coefficient range: [$(scientific_notation(f64_analysis[:min])), $(scientific_notation(f64_analysis[:max]))]",
                 )
                 println(
-                    "  Adaptive coefficient range: [$(scientific_notation(adaptive_analysis[:min])), $(scientific_notation(adaptive_analysis[:max]))]"
+                    "  Adaptive coefficient range: [$(scientific_notation(adaptive_analysis[:min])), $(scientific_notation(adaptive_analysis[:max]))]",
                 )
                 println(
-                    "  Dynamic range: F64=$(round(f64_analysis[:log_dynamic_range], digits=1)) decades, Adaptive=$(round(adaptive_analysis[:log_dynamic_range], digits=1)) decades"
+                    "  Dynamic range: F64=$(round(f64_analysis[:log_dynamic_range], digits=1)) decades, Adaptive=$(round(adaptive_analysis[:log_dynamic_range], digits=1)) decades",
                 )
                 println(
-                    "  Precision advantage: $(round(result[:precision_advantage], digits=1)) decades"
+                    "  Precision advantage: $(round(result[:precision_advantage], digits=1)) decades",
                 )
                 println(
-                    "  L2 norms: F64=$(round(result[:f64_norm], digits=8)), Adaptive=$(round(result[:adaptive_norm], digits=8))"
+                    "  L2 norms: F64=$(round(result[:f64_norm], digits=8)), Adaptive=$(round(result[:adaptive_norm], digits=8))",
                 )
 
             else
@@ -1535,10 +1544,10 @@ function analyze_coefficient_ranges(
         dynamic_range_ratios = [r[:dynamic_range_ratio] for r in results]
 
         println(
-            "  Precision advantage: $(round(minimum(precision_advantages), digits=1)) - $(round(maximum(precision_advantages), digits=1)) decades"
+            "  Precision advantage: $(round(minimum(precision_advantages), digits=1)) - $(round(maximum(precision_advantages), digits=1)) decades",
         )
         println(
-            "  Dynamic range improvement: $(round(minimum(dynamic_range_ratios), digits=2))x - $(round(maximum(dynamic_range_ratios), digits=2))x"
+            "  Dynamic range improvement: $(round(minimum(dynamic_range_ratios), digits=2))x - $(round(maximum(dynamic_range_ratios), digits=2))x",
         )
 
         # Identify functions that benefit most from AdaptivePrecision
@@ -1547,18 +1556,18 @@ function analyze_coefficient_ranges(
         best_advantage = precision_advantages[best_advantage_idx]
 
         println(
-            "  Best precision advantage: $best_function ($(round(best_advantage, digits=1)) decades)"
+            "  Best precision advantage: $best_function ($(round(best_advantage, digits=1)) decades)",
         )
 
         # Check for functions where AdaptivePrecision provides significant benefit
         significant_benefit = filter(r -> r[:precision_advantage] > 2.0, results)
         if !isempty(significant_benefit)
             println(
-                "  Functions with significant benefit (>2 decades): $(length(significant_benefit))"
+                "  Functions with significant benefit (>2 decades): $(length(significant_benefit))",
             )
             for r in significant_benefit
                 println(
-                    "    $(r[:function]): $(round(r[:precision_advantage], digits=1)) decades"
+                    "    $(r[:function]): $(round(r[:precision_advantage], digits=1)) decades",
                 )
             end
         else
@@ -1575,7 +1584,7 @@ function analyze_coefficient_ranges(
             println("  ✅ Good accuracy consistency across coefficient ranges")
         else
             println(
-                "  ⚠️  Accuracy varies across coefficient ranges (max diff: $(max_norm_diff))"
+                "  ⚠️  Accuracy varies across coefficient ranges (max diff: $(max_norm_diff))",
             )
         end
     end
@@ -1603,14 +1612,16 @@ end
 Cache system for pre-saving and reusing function evaluations in 4D.
 """
 mutable struct FunctionEvaluationCache
-    cache::Dict{String, Dict{Vector{Float64}, Float64}}
-    hit_count::Dict{String, Int}
-    miss_count::Dict{String, Int}
+    cache::Dict{String,Dict{Vector{Float64},Float64}}
+    hit_count::Dict{String,Int}
+    miss_count::Dict{String,Int}
 
     function FunctionEvaluationCache()
-        new(Dict{String, Dict{Vector{Float64}, Float64}}(),
-            Dict{String, Int}(),
-            Dict{String, Int}())
+        new(
+            Dict{String,Dict{Vector{Float64},Float64}}(),
+            Dict{String,Int}(),
+            Dict{String,Int}(),
+        )
     end
 end
 
@@ -1623,12 +1634,12 @@ function cache_function_evaluations!(
     cache::FunctionEvaluationCache,
     func_name::String,
     points::Vector{Vector{Float64}},
-    func::Function
+    func::Function,
 )
     println("💾 Caching $(length(points)) evaluations for $func_name...")
 
     if !haskey(cache.cache, func_name)
-        cache.cache[func_name] = Dict{Vector{Float64}, Float64}()
+        cache.cache[func_name] = Dict{Vector{Float64},Float64}()
         cache.hit_count[func_name] = 0
         cache.miss_count[func_name] = 0
     end
@@ -1661,7 +1672,7 @@ function get_cached_evaluation(
     cache::FunctionEvaluationCache,
     func_name::String,
     point::Vector{Float64},
-    func::Function
+    func::Function,
 )
     if haskey(cache.cache, func_name) && haskey(cache.cache[func_name], point)
         cache.hit_count[func_name] += 1
@@ -1672,7 +1683,7 @@ function get_cached_evaluation(
 
         # Cache the new evaluation
         if !haskey(cache.cache, func_name)
-            cache.cache[func_name] = Dict{Vector{Float64}, Float64}()
+            cache.cache[func_name] = Dict{Vector{Float64},Float64}()
             cache.hit_count[func_name] = 0
             cache.miss_count[func_name] = 0
         end
@@ -1690,7 +1701,7 @@ Generate grid points for 4D function evaluation caching.
 function generate_4d_grid_points(
     center::Vector{Float64},
     range::Float64,
-    samples_per_dim::Int
+    samples_per_dim::Int,
 )
     points = Vector{Float64}[]
 
@@ -1720,7 +1731,7 @@ function benchmark_cached_construction(
     func_name = :shubert;
     degree = 8,
     samples = 200,
-    cache_samples_per_dim = 10
+    cache_samples_per_dim = 10,
 )
     println("🚀 Cached Construction Benchmark for $func_name")
     println("="^50)
@@ -1798,7 +1809,7 @@ function benchmark_cached_construction(
         :standard_construction_time => standard_time,
         :estimated_hit_rate => hit_rate,
         :cache_efficiency => cached_count / total_cache_points,
-        :standard_norm => pol_standard.nrm
+        :standard_norm => pol_standard.nrm,
     )
 
     println("  Cache hit rate (estimated): $(round(hit_rate*100, digits=1))%")
@@ -1848,7 +1859,7 @@ function generate_grid_points(
     strategy::UniformGrid,
     center::Vector{Float64},
     range::Float64,
-    func::Function
+    func::Function,
 )
     return generate_4d_grid_points(center, range, strategy.samples_per_dim)
 end
@@ -1857,7 +1868,7 @@ function generate_grid_points(
     strategy::RandomGrid,
     center::Vector{Float64},
     range::Float64,
-    func::Function
+    func::Function,
 )
     Random.seed!(strategy.seed)
     points = Vector{Float64}[]
@@ -1874,7 +1885,7 @@ function generate_grid_points(
     strategy::AdaptiveGrid,
     center::Vector{Float64},
     range::Float64,
-    func::Function
+    func::Function,
 )
     println("🎯 Generating adaptive grid...")
 
@@ -1885,7 +1896,7 @@ function generate_grid_points(
     println("  Initial uniform grid: $(length(points)) points")
 
     # Evaluate function at initial points
-    evaluations = Dict{Vector{Float64}, Float64}()
+    evaluations = Dict{Vector{Float64},Float64}()
     for point in points
         try
             evaluations[point] = func(point)
@@ -1905,7 +1916,7 @@ function generate_grid_points(
         point_list = collect(keys(evaluations))
 
         for i in 1:length(point_list)
-            for j in (i + 1):length(point_list)
+            for j in (i+1):length(point_list)
                 p1, p2 = point_list[i], point_list[j]
 
                 # Check if points are neighbors (within reasonable distance)
@@ -1977,7 +1988,7 @@ function compare_grid_strategies(func_name = :shubert; degree = 8, strategies = 
             ("Uniform 5^4", UniformGrid(5)),
             ("Random 200", RandomGrid(200, 42)),
             ("Random 500", RandomGrid(500, 42)),
-            ("Adaptive", AdaptiveGrid(100, 2, 0.1))
+            ("Adaptive", AdaptiveGrid(100, 2, 0.1)),
         ]
     end
 
@@ -2014,7 +2025,7 @@ function compare_grid_strategies(func_name = :shubert; degree = 8, strategies = 
                 :total_setup_time => grid_generation_time + cache_time,
                 :cache_efficiency => cached_count / length(grid_points),
                 :points_per_second =>
-                    length(grid_points) / (grid_generation_time + cache_time)
+                    length(grid_points) / (grid_generation_time + cache_time),
             )
 
             push!(results, result)
@@ -2039,13 +2050,13 @@ function compare_grid_strategies(func_name = :shubert; degree = 8, strategies = 
         sorted_by_coverage = sort(results, by = x -> x[:grid_points], rev = true)
 
         println(
-            "  Most efficient: $(sorted_by_efficiency[1][:strategy]) ($(round(sorted_by_efficiency[1][:cache_efficiency]*100, digits=1))%)"
+            "  Most efficient: $(sorted_by_efficiency[1][:strategy]) ($(round(sorted_by_efficiency[1][:cache_efficiency]*100, digits=1))%)",
         )
         println(
-            "  Fastest setup: $(sorted_by_speed[1][:strategy]) ($(round(sorted_by_speed[1][:points_per_second], digits=1)) pts/s)"
+            "  Fastest setup: $(sorted_by_speed[1][:strategy]) ($(round(sorted_by_speed[1][:points_per_second], digits=1)) pts/s)",
         )
         println(
-            "  Best coverage: $(sorted_by_coverage[1][:strategy]) ($(sorted_by_coverage[1][:grid_points]) points)"
+            "  Best coverage: $(sorted_by_coverage[1][:strategy]) ($(sorted_by_coverage[1][:grid_points]) points)",
         )
 
         # Recommendations
@@ -2074,7 +2085,7 @@ function compare_grid_strategies(func_name = :shubert; degree = 8, strategies = 
         # Specific recommendations based on use case
         if any(r[:grid_points] > 1000 for r in results)
             println(
-                "  For large-scale problems: Consider uniform grids for predictable performance"
+                "  For large-scale problems: Consider uniform grids for predictable performance",
             )
         end
 
@@ -2092,17 +2103,24 @@ end
 Memory-efficient storage system for large-scale 4D polynomial data.
 """
 struct PolynomialStorage
-    coefficients::Dict{Vector{Int}, BigFloat}  # Sparse storage: exponent -> coefficient
+    coefficients::Dict{Vector{Int},BigFloat}  # Sparse storage: exponent -> coefficient
     variables::Vector{Symbol}
     degree::Int
     sparsity_threshold::Float64
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
-    function PolynomialStorage(degree::Int,
+    function PolynomialStorage(
+        degree::Int,
         variables::Vector{Symbol} = [:x1, :x2, :x3, :x4];
-        sparsity_threshold::Float64 = 1e-15)
-        new(Dict{Vector{Int}, BigFloat}(), variables, degree, sparsity_threshold,
-            Dict{String, Any}())
+        sparsity_threshold::Float64 = 1e-15,
+    )
+        new(
+            Dict{Vector{Int},BigFloat}(),
+            variables,
+            degree,
+            sparsity_threshold,
+            Dict{String,Any}(),
+        )
     end
 end
 
@@ -2144,7 +2162,7 @@ function store_polynomial!(storage::PolynomialStorage, polynomial)
                 term_hash % 10,
                 (term_hash ÷ 10) % 10,
                 (term_hash ÷ 100) % 10,
-                (term_hash ÷ 1000) % 10
+                (term_hash ÷ 1000) % 10,
             ]
 
             storage.coefficients[exponent_key] = big_coeff
@@ -2176,7 +2194,7 @@ Analyze memory efficiency of polynomial storage across different functions.
 function analyze_storage_efficiency(
     func_names = [:gaussian, :shubert, :sparse];
     degree = 8,
-    samples = 200
+    samples = 200,
 )
     println("💾 Storage Efficiency Analysis")
     println("="^40)
@@ -2201,7 +2219,7 @@ function analyze_storage_efficiency(
                 storage = PolynomialStorage(
                     degree,
                     [:x1, :x2, :x3, :x4],
-                    sparsity_threshold = threshold
+                    sparsity_threshold = threshold,
                 )
 
                 # Store polynomial
@@ -2228,13 +2246,13 @@ function analyze_storage_efficiency(
                     :estimated_memory_mb => estimated_total_memory / (1024^2),
                     :dense_memory_mb => dense_memory / (1024^2),
                     :memory_savings => 1.0 - (estimated_total_memory / dense_memory),
-                    :max_possible_terms => max_terms_4d
+                    :max_possible_terms => max_terms_4d,
                 )
 
                 push!(results, result)
 
                 println(
-                    "  Threshold $(threshold): $(terms_stored) terms, $(round(result[:estimated_memory_mb], digits=2)) MB"
+                    "  Threshold $(threshold): $(terms_stored) terms, $(round(result[:estimated_memory_mb], digits=2)) MB",
                 )
             end
 
@@ -2251,10 +2269,10 @@ function analyze_storage_efficiency(
         sparsity_ratios = [r[:sparsity_ratio] for r in results]
 
         println(
-            "  Memory savings: $(round(minimum(memory_savings)*100, digits=1))% - $(round(maximum(memory_savings)*100, digits=1))%"
+            "  Memory savings: $(round(minimum(memory_savings)*100, digits=1))% - $(round(maximum(memory_savings)*100, digits=1))%",
         )
         println(
-            "  Sparsity ratios: $(round(minimum(sparsity_ratios)*100, digits=1))% - $(round(maximum(sparsity_ratios)*100, digits=1))%"
+            "  Sparsity ratios: $(round(minimum(sparsity_ratios)*100, digits=1))% - $(round(maximum(sparsity_ratios)*100, digits=1))%",
         )
 
         # Best configurations
@@ -2262,11 +2280,11 @@ function analyze_storage_efficiency(
         best_config = results[best_savings_idx]
 
         println(
-            "  Best memory savings: $(best_config[:function]) with threshold $(best_config[:threshold])"
+            "  Best memory savings: $(best_config[:function]) with threshold $(best_config[:threshold])",
         )
         println("    Savings: $(round(best_config[:memory_savings]*100, digits=1))%")
         println(
-            "    Memory: $(round(best_config[:estimated_memory_mb], digits=2)) MB vs $(round(best_config[:dense_memory_mb], digits=2)) MB dense"
+            "    Memory: $(round(best_config[:estimated_memory_mb], digits=2)) MB vs $(round(best_config[:dense_memory_mb], digits=2)) MB dense",
         )
 
         # Recommendations by function type
@@ -2284,7 +2302,7 @@ function analyze_storage_efficiency(
             best_func_result =
                 sort(func_results, by = x -> x[:memory_savings], rev = true)[1]
             println(
-                "  $func: Use threshold $(best_func_result[:threshold]) for $(round(best_func_result[:memory_savings]*100, digits=1))% savings"
+                "  $func: Use threshold $(best_func_result[:threshold]) for $(round(best_func_result[:memory_savings]*100, digits=1))% savings",
             )
         end
 
@@ -2295,15 +2313,15 @@ function analyze_storage_efficiency(
         degree_12_terms = binomial(12 + 4, 4)
 
         println(
-            "  Theoretical max terms: deg 4→$(degree_4_terms), deg 8→$(degree_8_terms), deg 12→$(degree_12_terms)"
+            "  Theoretical max terms: deg 4→$(degree_4_terms), deg 8→$(degree_8_terms), deg 12→$(degree_12_terms)",
         )
         println(
-            "  Memory scaling (dense): deg 4→$(round(degree_4_terms*80/(1024^2), digits=2))MB, deg 8→$(round(degree_8_terms*80/(1024^2), digits=2))MB, deg 12→$(round(degree_12_terms*80/(1024^2), digits=2))MB"
+            "  Memory scaling (dense): deg 4→$(round(degree_4_terms*80/(1024^2), digits=2))MB, deg 8→$(round(degree_8_terms*80/(1024^2), digits=2))MB, deg 12→$(round(degree_12_terms*80/(1024^2), digits=2))MB",
         )
 
         if maximum(sparsity_ratios) > 0.8
             println(
-                "  ✅ High sparsity enables significant memory savings for large degrees"
+                "  ✅ High sparsity enables significant memory savings for large degrees",
             )
         else
             println("  ⚠️  Low sparsity - memory savings may be limited")
@@ -2327,7 +2345,7 @@ function benchmark_4d_construction(
     func_name = :gaussian;
     degree = 6,
     samples = 100,
-    trials = 5
+    trials = 5,
 )
     println("⏱️  Benchmarking 4D Construction for $func_name")
     println("="^50)
@@ -2358,15 +2376,15 @@ function benchmark_4d_construction(
             :adaptive_mean => mean(bench_adaptive.times) / 1e9,
             :adaptive_std => std(bench_adaptive.times) / 1e9,
             :overhead_median => median(bench_adaptive.times) / median(bench_f64.times),
-            :overhead_mean => mean(bench_adaptive.times) / mean(bench_f64.times)
+            :overhead_mean => mean(bench_adaptive.times) / mean(bench_f64.times),
         )
 
         println("📊 Benchmark Results:")
         println(
-            "  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s"
+            "  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s",
         )
         println(
-            "  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s"
+            "  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s",
         )
         println("  Overhead (median): $(round(results[:overhead_median], digits=2))x")
         println("  Overhead (mean): $(round(results[:overhead_mean], digits=2))x")
@@ -2399,15 +2417,15 @@ function benchmark_4d_construction(
             :adaptive_mean => mean(times_adaptive),
             :adaptive_std => std(times_adaptive),
             :overhead_median => median(times_adaptive) / median(times_f64),
-            :overhead_mean => mean(times_adaptive) / mean(times_f64)
+            :overhead_mean => mean(times_adaptive) / mean(times_f64),
         )
 
         println("📊 Basic Timing Results:")
         println(
-            "  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s"
+            "  Float64Precision: $(round(results[:float64_median], digits=4))s ± $(round(results[:float64_std], digits=4))s",
         )
         println(
-            "  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s"
+            "  AdaptivePrecision: $(round(results[:adaptive_median], digits=4))s ± $(round(results[:adaptive_std], digits=4))s",
         )
         println("  Overhead (median): $(round(results[:overhead_median], digits=2))x")
         println("  Overhead (mean): $(round(results[:overhead_mean], digits=2))x")
@@ -2440,7 +2458,7 @@ function generate_4d_test_report(results_df)
     println("  Functions tested: $(length(unique(results_df.function)))")
     println("  Degree range: $(minimum(results_df.degree)) - $(maximum(results_df.degree))")
     println(
-        "  Sample range: $(minimum(results_df.samples)) - $(maximum(results_df.samples))"
+        "  Sample range: $(minimum(results_df.samples)) - $(maximum(results_df.samples))",
     )
 
     # Performance analysis
@@ -2460,7 +2478,7 @@ function generate_4d_test_report(results_df)
         println("  Mean norm difference: $(round(mean(norm_diff), digits=8))")
         println("  Max norm difference: $(round(maximum(norm_diff), digits=8))")
         println(
-            "  Cases with improved accuracy: $(sum(results_df.adaptive_norm .< results_df.float64_norm))"
+            "  Cases with improved accuracy: $(sum(results_df.adaptive_norm .< results_df.float64_norm))",
         )
     end
 
@@ -2471,7 +2489,7 @@ function generate_4d_test_report(results_df)
         if :precision_overhead in names(func_data)
             avg_overhead = mean(func_data.precision_overhead)
             println(
-                "  $func: $(nrow(func_data)) tests, avg overhead $(round(avg_overhead, digits=2))x"
+                "  $func: $(nrow(func_data)) tests, avg overhead $(round(avg_overhead, digits=2))x",
             )
         end
     end
@@ -2557,5 +2575,5 @@ const scaling_analysis = run_4d_scaling_analysis
 const sparsity_analysis = analyze_4d_sparsity
 
 println(
-    "💡 Short aliases available: help_4d(), quick_test(), compare_precisions(), scaling_analysis(), sparsity_analysis()"
+    "💡 Short aliases available: help_4d(), quick_test(), compare_precisions(), scaling_analysis(), sparsity_analysis()",
 )

@@ -58,11 +58,11 @@ for func_name in test_functions
         result, pol_f64, pol_adaptive = compare_4d_precisions(func_name, 6, 50)
 
         println(
-            "  Construction time: F64=$(round(result[:float64_time], digits=3))s, Adaptive=$(round(result[:adaptive_time], digits=3))s"
+            "  Construction time: F64=$(round(result[:float64_time], digits=3))s, Adaptive=$(round(result[:adaptive_time], digits=3))s",
         )
         println("  Overhead: $(round(result[:precision_overhead], digits=2))x")
         println(
-            "  L2 norms: F64=$(round(result[:float64_norm], digits=6)), Adaptive=$(round(result[:adaptive_norm], digits=6))"
+            "  L2 norms: F64=$(round(result[:float64_norm], digits=6)), Adaptive=$(round(result[:adaptive_norm], digits=6))",
         )
 
         # Coefficient analysis
@@ -74,10 +74,10 @@ for func_name in test_functions
         coeffs_adaptive = [coefficient(t) for t in terms(mono_adaptive)]
 
         println(
-            "  Monomial terms: F64=$(length(coeffs_f64)), Adaptive=$(length(coeffs_adaptive))"
+            "  Monomial terms: F64=$(length(coeffs_f64)), Adaptive=$(length(coeffs_adaptive))",
         )
         println(
-            "  Coefficient types: F64=$(typeof(coeffs_f64[1])), Adaptive=$(typeof(coeffs_adaptive[1]))"
+            "  Coefficient types: F64=$(typeof(coeffs_f64[1])), Adaptive=$(typeof(coeffs_adaptive[1]))",
         )
 
         # Sparsity analysis for AdaptivePrecision
@@ -88,7 +88,7 @@ for func_name in test_functions
             # Test one truncation threshold
             truncated_poly, stats = truncate_polynomial_adaptive(mono_adaptive, 1e-10)
             println(
-                "  Sparsity (1e-10): $(round(stats.sparsity_ratio*100, digits=1))% ($(stats.n_kept)/$(stats.n_total) terms)"
+                "  Sparsity (1e-10): $(round(stats.sparsity_ratio*100, digits=1))% ($(stats.n_kept)/$(stats.n_total) terms)",
             )
         end
 
@@ -117,7 +117,7 @@ try
             println("\n📈 Degree Scaling Results:")
             for row in eachrow(degree_data)
                 println(
-                    "  Degree $(row.degree): overhead=$(round(row.overhead, digits=2))x, time=$(round(row.adaptive_time, digits=3))s"
+                    "  Degree $(row.degree): overhead=$(round(row.overhead, digits=2))x, time=$(round(row.adaptive_time, digits=3))s",
                 )
             end
         end
@@ -128,7 +128,7 @@ try
             println("\n📊 Sample Scaling Results:")
             for row in eachrow(sample_data)
                 println(
-                    "  Samples $(row.samples): overhead=$(round(row.overhead, digits=2))x, time=$(round(row.adaptive_time, digits=3))s"
+                    "  Samples $(row.samples): overhead=$(round(row.overhead, digits=2))x, time=$(round(row.adaptive_time, digits=3))s",
                 )
             end
         end
@@ -155,7 +155,7 @@ try
     println("  Float64Precision: $(round(benchmark_results[:float64_median], digits=4))s")
     println("  AdaptivePrecision: $(round(benchmark_results[:adaptive_median], digits=4))s")
     println(
-        "  Performance overhead: $(round(benchmark_results[:overhead_median], digits=2))x"
+        "  Performance overhead: $(round(benchmark_results[:overhead_median], digits=2))x",
     )
 
     if benchmark_results[:overhead_median] < 3.0

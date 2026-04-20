@@ -21,7 +21,7 @@ Rules (from benchmarks on Levy, Rastrigin, Sphere, DeJong5):
 This is a heuristic — both solvers produce identical results in all tested cases.
 Pass `solver=:hc` or `solver=:msolve` explicitly to override.
 """
-function recommended_solver(dim::Int; msolve_available::Bool=false)
+function recommended_solver(dim::Int; msolve_available::Bool = false)
     if dim <= 2 && msolve_available
         return :msolve
     else
@@ -98,7 +98,8 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     start_system::Symbol = :auto,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
-    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )
     # Optional coefficient sparsification: zero out small coefficients before
     # constructing the DynamicPolynomials polynomial. DynamicPolynomials automatically
@@ -119,9 +120,16 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
 
     if solver == :hc
         result = _solve_hc(
-            x, n, d, actual_coeffs;
-            basis, precision, normalized, power_of_two_denom,
-            return_system, start_system,
+            x,
+            n,
+            d,
+            actual_coeffs;
+            basis,
+            precision,
+            normalized,
+            power_of_two_denom,
+            return_system,
+            start_system,
         )
         # Apply search_bounds as midpoint filter for HC (no interval data available)
         if search_bounds !== nothing && !return_system
@@ -136,9 +144,16 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     elseif solver == :msolve
         return_system && error("return_system=true is not supported with solver=:msolve")
         return _solve_msolve(
-            x, n, d, actual_coeffs;
-            basis, precision, normalized, power_of_two_denom,
+            x,
+            n,
+            d,
+            actual_coeffs;
+            basis,
+            precision,
+            normalized,
+            power_of_two_denom,
             threads = msolve_threads,
+            timeout_seconds = msolve_timeout_seconds,
             search_bounds = search_bounds,
         )
     else
@@ -150,43 +165,13 @@ end
     _solve_hc(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}}
 
 Solve the gradient system using HomotopyContinuation.jl.
-This is the original code path — extracted for dispatch clarity.
+Implemented in GlobtimHomotopyContinuationExt — requires `using HomotopyContinuation`.
 """
-function _solve_hc(
-    x, n, d, coeffs;
-    basis, precision, normalized, power_of_two_denom,
-    return_system, start_system,
-)
-    # Use the updated main_nd function with all parameters
-    pol = main_nd(
-        x, n, d, coeffs;
-        basis = basis,
-        precision = precision,
-        normalized = normalized,
-        power_of_two_denom = power_of_two_denom,
+function _solve_hc(args...; kwargs...)
+    error(
+        "solver=:hc requires HomotopyContinuation.jl. " *
+        "Add `using HomotopyContinuation` before calling, or switch to solver=:msolve.",
     )
-
-    # Resolve start system: :auto picks :polyhedral for n >= 3, :total_degree otherwise.
-    # Polyhedral homotopy uses the Newton polytope (mixed volume) which is much smaller
-    # than the Bezout bound for sparse systems (e.g., after sparsification or with
-    # anisotropic tensor-product supports).
-    actual_start = if start_system == :auto
-        n >= 3 ? :polyhedral : :total_degree
-    else
-        start_system
-    end
-
-    # Compute the gradient and solve the system
-    grad = differentiate.(pol, x)
-    sys = System(grad)
-    hc_result = solve(sys, start_system = actual_start, show_progress = false)
-    rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
-
-    if return_system
-        return rl_sol, (pol, sys, Int(length(hc_result)))
-    else
-        return rl_sol
-    end
 end
 
 """
@@ -200,10 +185,17 @@ Calls the system `msolve` binary via `msolve_polynomial_system`, then parses
 the output with `msolve_raw_points`.
 """
 function _solve_msolve(
-    x, n, d, coeffs;
-    basis, precision, normalized, power_of_two_denom,
+    x,
+    n,
+    d,
+    coeffs;
+    basis,
+    precision,
+    normalized,
+    power_of_two_denom,
     threads::Int = 1,
-    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    timeout_seconds::Union{Nothing,Float64} = nothing,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )
     # Convert coefficients to the format expected by construct_orthopoly_polynomial
     rational_coeffs = [Rational{BigInt}(c) for c in coeffs]
@@ -244,9 +236,18 @@ function _solve_msolve(
             end
         end
 
-        # Run msolve
+        # Run msolve (with optional process-level timeout)
         msolve_cmd = `msolve -v 0 -t $threads -f $input_file -o $output_file`
-        run(msolve_cmd)
+        if timeout_seconds !== nothing
+            proc = run(msolve_cmd, wait = false)
+            did_finish = timedwait(() -> !process_running(proc), timeout_seconds)
+            if did_finish == :timed_out
+                kill(proc)
+                throw(SolverTimeoutError("msolve", timeout_seconds))
+            end
+        else
+            run(msolve_cmd)
+        end
 
         if search_bounds !== nothing
             # Certified range search: parse intervals and filter by box overlap
@@ -286,9 +287,10 @@ solutions = solve_polynomial_system(x, pol)  # No need to specify dim and degree
 ```
 """
 function solve_polynomial_system(
-    x, pol::ApproxPoly;
+    x,
+    pol::ApproxPoly;
     solver::Symbol = :hc,
-    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     kwargs...,
 )
     # Handle both single variable and vector of variables
@@ -310,8 +312,13 @@ function solve_polynomial_system(
     # Pass the full degree spec through — main_nd → normalize_degree handles
     # both (:one_d_for_all, d) and (:one_d_per_dim, [d1, d2, ...]) correctly.
     return solve_polynomial_system(
-        x_vec, n, pol.degree, pol.coeffs;
-        solver = solver, search_bounds = search_bounds, kwargs...,
+        x_vec,
+        n,
+        pol.degree,
+        pol.coeffs;
+        solver = solver,
+        search_bounds = search_bounds,
+        kwargs...,
     )
 end
 
@@ -331,7 +338,8 @@ function solve_polynomial_system_from_approx(
     start_system::Symbol = :auto,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
-    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
@@ -344,6 +352,7 @@ function solve_polynomial_system_from_approx(
         start_system = start_system,
         solver = solver,
         msolve_threads = msolve_threads,
+        msolve_timeout_seconds = msolve_timeout_seconds,
         search_bounds = search_bounds,
     )
 end
@@ -370,8 +379,8 @@ function main_nd(
     x::Vector{
         Variable{
             DynamicPolynomials.Commutative{DynamicPolynomials.CreationOrder},
-            Graded{LexOrder}
-        }
+            Graded{LexOrder},
+        },
     },
     n::Int,
     d,
@@ -380,7 +389,7 @@ function main_nd(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    verbose::Bool = false
+    verbose::Bool = false,
 )
     degree = normalize_degree(d)
 
@@ -406,7 +415,7 @@ function main_nd(
             precision;
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
-            verbose = verbose
+            verbose = verbose,
         )
     end
 
@@ -495,7 +504,10 @@ function solve_polynomial_with_defaults(
     msolve_threads::Int = 1,
 )
     return solve_polynomial_system(
-        x, n, d, coeffs;
+        x,
+        n,
+        d,
+        coeffs;
         basis = basis,
         precision = precision,
         normalized = normalized,
@@ -544,7 +556,7 @@ solutions = solve_polynomial_with_defaults(x, pol, precision=Float64Precision)
 function solve_polynomial_with_defaults(x, pol::ApproxPoly; solver::Symbol = :hc, kwargs...)
     # Use the existing ApproxPoly method but ensure we pass through our safe defaults
     # The kwargs will override the defaults when explicitly provided
-    default_kwargs = Dict{Symbol, Any}(
+    default_kwargs = Dict{Symbol,Any}(
         :basis => :chebyshev,
         :precision => RationalPrecision,
         :normalized => true,
@@ -553,7 +565,7 @@ function solve_polynomial_with_defaults(x, pol::ApproxPoly; solver::Symbol = :hc
     )
 
     # Merge user-provided kwargs with defaults (user kwargs take precedence)
-    merged_kwargs = merge(default_kwargs, Dict{Symbol, Any}(kwargs))
+    merged_kwargs = merge(default_kwargs, Dict{Symbol,Any}(kwargs))
 
     return solve_polynomial_system(x, pol; solver = solver, merged_kwargs...)
 end

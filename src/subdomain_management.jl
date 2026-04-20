@@ -60,9 +60,8 @@ function create_orthant_test_inputs(
     base_center::Vector{Float64},
     base_range::Float64,
     tolerance::Float64;
-    overlap_factor::Float64 = 0.1
+    overlap_factor::Float64 = 0.1,
 )
-
     orthant_centers = generate_4d_orthant_centers(base_center, base_range)
     subdomain_range = base_range / 2 * (1 + overlap_factor)
 
@@ -74,7 +73,7 @@ function create_orthant_test_inputs(
             dim = 4,
             center = center,
             sample_range = subdomain_range,
-            tolerance = tolerance
+            tolerance = tolerance,
         )
         push!(test_inputs, TR)
     end
@@ -167,7 +166,7 @@ Filter critical points belonging to a specific orthant.
 function filter_points_by_orthant(
     df::DataFrame,
     orthant_id::Int,
-    base_center::Vector{Float64}
+    base_center::Vector{Float64},
 )
     mask = Bool[]
 
@@ -197,7 +196,7 @@ Merge results from all orthants, removing duplicates at boundaries.
 function merge_orthant_results(
     orthant_dfs::Vector{DataFrame},
     base_center::Vector{Float64};
-    distance_tolerance::Float64 = 1e-6
+    distance_tolerance::Float64 = 1e-6,
 )
 
     # Combine all DataFrames
@@ -211,14 +210,14 @@ function merge_orthant_results(
     n_dims = 4
     keep_mask = trues(nrow(merged_df))
 
-    for i in 1:(nrow(merged_df) - 1)
+    for i in 1:(nrow(merged_df)-1)
         if !keep_mask[i]
             continue
         end
 
         point_i = [merged_df[i, Symbol("x$j")] for j in 1:n_dims]
 
-        for j in (i + 1):nrow(merged_df)
+        for j in (i+1):nrow(merged_df)
             if !keep_mask[j]
                 continue
             end
@@ -254,7 +253,7 @@ Analyze distribution of critical points across orthants.
 - `Dict{Int, Int}`: Count of points in each orthant
 """
 function analyze_orthant_coverage(df::DataFrame, base_center::Vector{Float64})
-    coverage = Dict{Int, Int}()
+    coverage = Dict{Int,Int}()
 
     # Initialize all orthants
     for i in 1:16
@@ -301,7 +300,7 @@ function compute_orthant_statistics(orthant_results::Vector{OrthantResult})
         total_computation_time = sum(computation_times),
         min_success_rate = minimum(success_rates),
         max_success_rate = maximum(success_rates),
-        orthants_with_points = count(c -> c > 0, raw_counts)
+        orthants_with_points = count(c -> c > 0, raw_counts),
     )
 end
 

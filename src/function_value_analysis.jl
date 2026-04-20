@@ -94,7 +94,7 @@ function compute_function_value_errors(
     f::Function;
     match_threshold::Float64 = 0.1,
     compute_gradients::Bool = true,
-    point_types::Union{Vector{Symbol}, Nothing} = nothing
+    point_types::Union{Vector{Symbol},Nothing} = nothing,
 )
     errors = FunctionValueError[]
 
@@ -154,8 +154,8 @@ function compute_function_value_errors(
                     ptype,
                     min_dist,
                     grad_norm_theo,
-                    grad_norm_comp
-                )
+                    grad_norm_comp,
+                ),
             )
         end
     end
@@ -195,7 +195,7 @@ function compute_error_metrics(errors::Vector{FunctionValueError})
         std(abs_errors),
         isempty(finite_rel_errors) ? 0.0 : std(finite_rel_errors),
         length(errors),
-        1.0  # Success rate placeholder
+        1.0,  # Success rate placeholder
     )
 end
 
@@ -211,7 +211,7 @@ Analyze function value errors grouped by critical point type.
 - Dict{Symbol, ErrorMetrics}: Error metrics for each point type
 """
 function analyze_errors_by_type(errors::Vector{FunctionValueError})
-    metrics_by_type = Dict{Symbol, ErrorMetrics}()
+    metrics_by_type = Dict{Symbol,ErrorMetrics}()
 
     # Group errors by point type
     for ptype in unique(e.point_type for e in errors)
@@ -251,7 +251,7 @@ function create_error_analysis_dataframe(errors::Vector{FunctionValueError})
         relative_error = [e.relative_error for e in errors],
         distance_to_theoretical = [e.distance_to_theoretical for e in errors],
         grad_norm_theoretical = [e.gradient_norm_theoretical for e in errors],
-        grad_norm_computed = [e.gradient_norm_computed for e in errors]
+        grad_norm_computed = [e.gradient_norm_computed for e in errors],
     )
 
     # Add coordinate columns
@@ -274,7 +274,7 @@ Analyze convergence of function value errors across multiple tolerance levels.
 # Returns
 - DataFrame: Convergence analysis with columns for tolerance, metrics, and rates
 """
-function convergence_analysis(tolerance_results::Dict{Float64, Vector{FunctionValueError}})
+function convergence_analysis(tolerance_results::Dict{Float64,Vector{FunctionValueError}})
     analysis_data = []
 
     sorted_tolerances = sort(collect(keys(tolerance_results)), rev = true)
@@ -287,7 +287,7 @@ function convergence_analysis(tolerance_results::Dict{Float64, Vector{FunctionVa
         conv_rate_abs = NaN
         conv_rate_rel = NaN
         if i > 1
-            prev_tol = sorted_tolerances[i - 1]
+            prev_tol = sorted_tolerances[i-1]
             prev_metrics = compute_error_metrics(tolerance_results[prev_tol])
 
             # Convergence rate: log(error_new/error_old) / log(tol_new/tol_old)
@@ -314,8 +314,8 @@ function convergence_analysis(tolerance_results::Dict{Float64, Vector{FunctionVa
                 max_absolute_error = metrics.max_absolute_error,
                 max_relative_error = metrics.max_relative_error,
                 convergence_rate_absolute = conv_rate_abs,
-                convergence_rate_relative = conv_rate_rel
-            )
+                convergence_rate_relative = conv_rate_rel,
+            ),
         )
     end
 
@@ -342,7 +342,7 @@ function integrate_with_bfgs_results(
     df::DataFrame,
     f::Function,
     theoretical_points::Vector{Vector{Float64}};
-    theoretical_types::Vector{Symbol} = Symbol[]
+    theoretical_types::Vector{Symbol} = Symbol[],
 )
 
     # Extract dimension
@@ -362,7 +362,7 @@ function integrate_with_bfgs_results(
         theoretical_points,
         refined_points,
         f;
-        point_types = theoretical_types
+        point_types = theoretical_types,
     )
 
     # Add error metrics to DataFrame

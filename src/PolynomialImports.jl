@@ -76,7 +76,10 @@ function ensure_polyvar()
         return true
     catch e
         # @polyvar not available, try to import it
-        @debug "@polyvar not yet available, attempting import" exception=(e, catch_backtrace())
+        @debug "@polyvar not yet available, attempting import" exception=(
+            e,
+            catch_backtrace(),
+        )
     end
 
     if !DYNAMIC_POLYNOMIALS_AVAILABLE
@@ -112,11 +115,9 @@ function ensure_polyvar()
 
     # Strategy 3: Manual macro definition (last resort)
     try
-        Core.eval(Main, :(
-            macro polyvar(args...)
-                DynamicPolynomials.@polyvar(args...)
-            end
-        ))
+        Core.eval(Main, :(macro polyvar(args...)
+            DynamicPolynomials.@polyvar(args...)
+        end))
 
         # Verify it worked
         Core.eval(Main, :(@polyvar verification_var_3))
@@ -145,7 +146,7 @@ Examples:
 """
 function create_polynomial_vars(
     names::Vector{Symbol},
-    dimensions::Dict{Symbol, Int} = Dict()
+    dimensions::Dict{Symbol,Int} = Dict(),
 )
     if !DYNAMIC_POLYNOMIALS_AVAILABLE
         error("Cannot create polynomial variables: DynamicPolynomials not available")

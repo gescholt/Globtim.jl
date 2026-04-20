@@ -47,7 +47,7 @@ try
     internal_functions = [
         (:_convert_value, "Precision conversion function"),
         (:construct_orthopoly_polynomial, "Polynomial construction"),
-        (:solve_polynomial_system, "Polynomial system solver")
+        (:solve_polynomial_system, "Polynomial system solver"),
     ]
 
     available_functions = []
@@ -114,8 +114,12 @@ try
 
             try
                 pol = Globtim.construct_orthopoly_polynomial(
-                    [x], coeffs, (:one_d_for_all, 2), :chebyshev, Float64Precision;
-                    verbose = false
+                    [x],
+                    coeffs,
+                    (:one_d_for_all, 2),
+                    :chebyshev,
+                    Float64Precision;
+                    verbose = false,
                 )
                 @test !iszero(pol)
                 println("✓ 1D polynomial construction working")
@@ -142,19 +146,25 @@ try
 
                 try
                     pol = Globtim.construct_orthopoly_polynomial(
-                        y, coeffs_2d, (:one_d_for_all, degree), :chebyshev,
+                        y,
+                        coeffs_2d,
+                        (:one_d_for_all, degree),
+                        :chebyshev,
                         Float64Precision;
-                        verbose = false
+                        verbose = false,
                     )
                     @test !iszero(pol)
                     println("✓ 2D minimal case polynomial construction working")
 
                     # Test polynomial system solving with Float64Precision
                     real_pts, (poly, system, nsols) = Globtim.solve_polynomial_system(
-                        y, 2, (:one_d_for_all, degree), coeffs_2d;
+                        y,
+                        2,
+                        (:one_d_for_all, degree),
+                        coeffs_2d;
                         basis = :chebyshev,
                         precision = Float64Precision,  # Explicitly specify Float64Precision
-                        return_system = true
+                        return_system = true,
                     )
 
                     @test nsols ≥ 0
@@ -164,10 +174,13 @@ try
                     # Test with AdaptivePrecision as alternative
                     real_pts_adaptive, (system_adaptive, nsols_adaptive) =
                         Globtim.solve_polynomial_system(
-                            y, 2, (:one_d_for_all, degree), coeffs_2d;
+                            y,
+                            2,
+                            (:one_d_for_all, degree),
+                            coeffs_2d;
                             basis = :chebyshev,
                             precision = AdaptivePrecision,
-                            return_system = true
+                            return_system = true,
                         )
 
                     @test nsols_adaptive ≥ 0
@@ -183,7 +196,7 @@ try
 
     else
         println(
-            "⚠ Skipping polynomial tests - construction/solving functions not available"
+            "⚠ Skipping polynomial tests - construction/solving functions not available",
         )
     end
 
@@ -206,7 +219,7 @@ try
         println("Missing functions: $unavailable_functions")
         println()
         println(
-            "To run full tests, ensure all GlobTim functions are properly exported or accessible."
+            "To run full tests, ensure all GlobTim functions are properly exported or accessible.",
         )
     end
 
@@ -215,7 +228,7 @@ try
     println("Test Summary")
     println("="^70)
     println(
-        "Available functions: $(length(available_functions))/$(length(internal_functions))"
+        "Available functions: $(length(available_functions))/$(length(internal_functions))",
     )
 
     if :_convert_value in available_functions

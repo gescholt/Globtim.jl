@@ -172,12 +172,8 @@ sorted_indices = sortperm(abs.(pol7.coeffs), rev = true)
 preserve_count = 10
 preserve_indices = sorted_indices[1:preserve_count]
 
-result_preserved = sparsify_polynomial(
-    pol7,
-    1e-3,
-    mode = :relative,
-    preserve_indices = preserve_indices
-)
+result_preserved =
+    sparsify_polynomial(pol7, 1e-3, mode = :relative, preserve_indices = preserve_indices)
 
 println("\nPreserving top $preserve_count coefficients:")
 println("  Original non-zero: $(result_preserved.original_nnz)")
@@ -185,9 +181,7 @@ println("  After sparsification: $(result_preserved.new_nnz)")
 println("  L2 ratio: $(round(result_preserved.l2_ratio*100, digits=2))%")
 
 # Verify preserved coefficients are not zeroed
-preserved_intact = all(
-    idx ∉ result_preserved.zeroed_indices for idx in preserve_indices
-)
+preserved_intact = all(idx ∉ result_preserved.zeroed_indices for idx in preserve_indices)
 println("  All preserved coefficients intact: $preserved_intact")
 
 # Test 8: 3D Monomial L2 Contributions

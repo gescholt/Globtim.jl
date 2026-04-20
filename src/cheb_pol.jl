@@ -7,7 +7,6 @@ using LinearAlgebra
 # Global variable to use for creating symbolic polynomials
 @polyvar x
 
-
 """
     symbolic_chebyshev(
         n::Integer; 
@@ -31,7 +30,7 @@ function symbolic_chebyshev(
     n::Integer;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false
+    power_of_two_denom::Bool = false,
 )
     n < 0 && throw(ArgumentError("Degree must be non-negative"))
 
@@ -122,13 +121,13 @@ function _convert_value(val, precision::PrecisionType)
             return rationalize(BigInt, Float64(val))
         elseif isnan(val)
             error(
-                "Cannot convert NaN to rational number. Check computation for numerical instability."
+                "Cannot convert NaN to rational number. Check computation for numerical instability.",
             )
         elseif val == 0.0 || iszero(val)
             return Rational{BigInt}(0)
         elseif isinf(val)
             error(
-                "Cannot convert Inf to rational number. Check computation for numerical overflow."
+                "Cannot convert Inf to rational number. Check computation for numerical overflow.",
             )
         else
             return typeof(val) <: Rational ? val : Rational{BigInt}(val)
@@ -250,7 +249,7 @@ function get_chebyshev_coeffs(
     max_degree::Integer;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false
+    power_of_two_denom::Bool = false,
 )
     # Vector to store coefficient vectors
     chebyshev_coeffs = Vector{Vector}(undef, max_degree + 1)
@@ -261,14 +260,14 @@ function get_chebyshev_coeffs(
             deg;
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom
+            power_of_two_denom = power_of_two_denom,
         )
 
         # Handle constant polynomials
         if T isa Number
             coeff_type = precision == RationalPrecision ? Rational{BigInt} : Float64
             # Convert to the correct type
-            chebyshev_coeffs[deg + 1] = [convert(coeff_type, T)]
+            chebyshev_coeffs[deg+1] = [convert(coeff_type, T)]
         else
             # Extract coefficients from terms
             terms_array = terms(T)
@@ -282,10 +281,10 @@ function get_chebyshev_coeffs(
             full_coeffs = zeros(coeff_type, deg + 1)
             for (d, c) in zip(degrees, coeffs)
                 # Convert each coefficient to the desired type
-                full_coeffs[d + 1] = convert(coeff_type, c)
+                full_coeffs[d+1] = convert(coeff_type, c)
             end
 
-            chebyshev_coeffs[deg + 1] = full_coeffs
+            chebyshev_coeffs[deg+1] = full_coeffs
         end
     end
 
@@ -315,13 +314,13 @@ function chebyshev_coeff_matrix(
     n::Integer;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false
+    power_of_two_denom::Bool = false,
 )
     coeffs = get_chebyshev_coeffs(
         n;
         precision = precision,
         normalized = normalized,
-        power_of_two_denom = power_of_two_denom
+        power_of_two_denom = power_of_two_denom,
     )
 
     # Create a matrix with proper dimensions
@@ -330,13 +329,12 @@ function chebyshev_coeff_matrix(
 
     # Fill in the coefficient matrix
     for i in 0:n
-        row = coeffs[i + 1]
-        result[i + 1, 1:length(row)] = row
+        row = coeffs[i+1]
+        result[i+1, 1:length(row)] = row
     end
 
     return result
 end
-
 
 """
     construct_chebyshev_approx(
@@ -367,7 +365,7 @@ function construct_chebyshev_approx(
     degree;
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
-    power_of_two_denom::Bool = false
+    power_of_two_denom::Bool = false,
 )
     n = length(x_vars)  # number of variables
 
@@ -391,7 +389,7 @@ function construct_chebyshev_approx(
         max_degree;
         precision = precision,
         normalized = normalized,
-        power_of_two_denom = power_of_two_denom
+        power_of_two_denom = power_of_two_denom,
     )
 
     # Initialize polynomial
@@ -402,7 +400,7 @@ function construct_chebyshev_approx(
         term = one(x_vars[1])
         for k in 1:n
             deg = lambda[j, k]
-            coeff_vec = chebyshev_coeffs[deg + 1]
+            coeff_vec = chebyshev_coeffs[deg+1]
 
             # Create monomial vector for this variable
             monom_vec = MonomialVector([x_vars[k]], 0:deg)
@@ -483,7 +481,7 @@ function truncate_polynomial_adaptive(poly, threshold::Real; relative::Bool = fa
         sparsity_ratio = sparsity_ratio,
         threshold_used = effective_threshold,
         largest_removed = n_removed > 0 ? maximum(coeff_magnitudes[.!keep_mask]) : 0.0,
-        smallest_kept = minimum(coeff_magnitudes[keep_mask])
+        smallest_kept = minimum(coeff_magnitudes[keep_mask]),
     )
 
     return truncated_poly, stats
@@ -513,7 +511,7 @@ function analyze_coefficient_distribution(poly)
     large_gaps = findall(gaps .< -2.0)  # Gaps of more than 2 orders of magnitude
 
     suggested_thresholds = if !isempty(large_gaps)
-        [10^log_mags[gap_idx + 1] for gap_idx in large_gaps[1:min(3, end)]]
+        [10^log_mags[gap_idx+1] for gap_idx in large_gaps[1:min(3, end)]]
     else
         [max_coeff * 1e-12, max_coeff * 1e-10, max_coeff * 1e-8]
     end
@@ -524,6 +522,6 @@ function analyze_coefficient_distribution(poly)
         min_coefficient = min_coeff,
         dynamic_range = max_coeff / min_coeff,
         suggested_thresholds = suggested_thresholds,
-        coefficient_magnitudes = coeff_magnitudes
+        coefficient_magnitudes = coeff_magnitudes,
     )
 end

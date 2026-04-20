@@ -91,9 +91,9 @@ struct DegreeResult
     objective_values::Vector{Float64}  # Objective values at raw critical points
 
     # Best estimate (always present, may be outside domain)
-    best_estimate::Union{Vector{Float64}, Nothing}
-    best_objective::Union{Float64, Nothing}
-    recovery_error::Union{Float64, Nothing}  # Optional: if true params known
+    best_estimate::Union{Vector{Float64},Nothing}
+    best_objective::Union{Float64,Nothing}
+    recovery_error::Union{Float64,Nothing}  # Optional: if true params known
 
     # Quality metrics
     l2_approx_error::Float64
@@ -105,9 +105,9 @@ struct DegreeResult
     support_size::Int     # Nonzero coefficients: count(!iszero, pol.coeffs)
 
     # Truncation/sparsity metrics (nothing when no truncation applied)
-    truncation_original_nnz::Union{Int, Nothing}   # Nonzero coefficients before truncation
-    truncation_new_nnz::Union{Int, Nothing}         # Nonzero coefficients after truncation
-    truncation_l2_ratio::Union{Float64, Nothing}    # ||p_truncated||_L2 / ||p_original||_L2
+    truncation_original_nnz::Union{Int,Nothing}   # Nonzero coefficients before truncation
+    truncation_new_nnz::Union{Int,Nothing}         # Nonzero coefficients after truncation
+    truncation_l2_ratio::Union{Float64,Nothing}    # ||p_truncated||_L2 / ||p_original||_L2
 
     # Timing breakdown
     polynomial_construction_time::Float64
@@ -120,7 +120,7 @@ struct DegreeResult
     output_dir::String
 
     # Error information (if failed): Dict{String,Any} with rich context, or Nothing (success)
-    error::Union{Dict{String, Any}, Nothing}
+    error::Union{Dict{String,Any},Nothing}
 end
 
 """
@@ -149,12 +149,13 @@ and `run_sparsification_experiment` (sparsified polynomial variants).
 """
 function solve_and_transform(
     pol,  # ApproxPoly — not typed to avoid import dependency
-    bounds::Vector{Tuple{Float64, Float64}};
+    bounds::Vector{Tuple{Float64,Float64}};
     sparsify_threshold::Float64 = 0.0,
     start_system::Symbol = :auto,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
-    search_bounds::Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -162,8 +163,9 @@ function solve_and_transform(
 
     # Convert search_bounds from original domain to normalized [-1,1]^n
     normalized_search_bounds = if search_bounds !== nothing
-        [((sb[1] - center[i]) / sample_range[i], (sb[2] - center[i]) / sample_range[i])
-         for (i, sb) in enumerate(search_bounds)]
+        [
+            ((sb[1] - center[i]) / sample_range[i], (sb[2] - center[i]) / sample_range[i]) for (i, sb) in enumerate(search_bounds)
+        ]
     else
         nothing
     end
@@ -172,19 +174,20 @@ function solve_and_transform(
     @polyvar x[1:dimension]
     solve_time = @elapsed begin
         raw_critical_points = Globtim.solve_polynomial_system_from_approx(
-            x, pol;
+            x,
+            pol;
             sparsify_threshold = sparsify_threshold,
             start_system = start_system,
             solver = solver,
             msolve_threads = msolve_threads,
+            msolve_timeout_seconds = msolve_timeout_seconds,
             search_bounds = normalized_search_bounds,
         )
     end
 
     # Transform from normalized [-1,1]^n to original domain coordinates
     critical_points = [
-        sample_range .* [pt[i] for i in 1:dimension] .+ center
-        for pt in raw_critical_points
+        sample_range .* [pt[i] for i in 1:dimension] .+ center for pt in raw_critical_points
     ]
 
     return critical_points, solve_time
@@ -275,13 +278,14 @@ result = run_standard_experiment(
 function run_standard_experiment(;
     objective_function,
     objective_name::String,
-    bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64,Float64}},
     experiment_config,
     output_dir::String,
-    metadata::Dict{String, Any} = Dict(),
-    true_params::Union{Vector{Float64}, Nothing} = nothing,
+    metadata::Dict{String,Any} = Dict{String,Any}(),
+    true_params::Union{Vector{Float64},Nothing} = nothing,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
+    msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
 )
     mkpath(output_dir)
 
@@ -297,7 +301,7 @@ function run_standard_experiment(;
         dim = dimension,
         center = center,
         GN = experiment_config.GN,
-        sample_range = sample_range
+        sample_range = sample_range,
     )
 
     # Process each degree
@@ -308,16 +312,21 @@ function run_standard_experiment(;
         degree_start = time()
 
         try
-            result = process_single_degree(
-                degree,
-                objective_function,
-                TR,
-                bounds,
-                experiment_config,
-                output_dir,
-                true_params;
-                solver = solver,
-                msolve_threads = msolve_threads,
+            result = with_solver_timeout(
+                () -> process_single_degree(
+                    degree,
+                    objective_function,
+                    TR,
+                    bounds,
+                    experiment_config,
+                    output_dir,
+                    true_params;
+                    solver = solver,
+                    msolve_threads = msolve_threads,
+                    msolve_timeout_seconds = msolve_timeout_seconds,
+                ),
+                experiment_config.degree_timeout_seconds;
+                label = "degree $degree",
             )
 
             push!(degree_results, result)
@@ -326,45 +335,86 @@ function run_standard_experiment(;
             # Checkpoint: save accumulated results after each degree so partial
             # runs are recoverable if the job hits a wall-time limit.
             checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
-            jldsave(checkpoint_path; degree_results=degree_results, warn=false)
+            jldsave(checkpoint_path; degree_results = degree_results, warn = false)
 
         catch e
             degree_time = time() - degree_start
-            @error "Degree $degree failed" exception=(e, catch_backtrace())
-
-            # Capture rich error context for post-processing analysis
-            error_context = Dict{String, Any}(
-                "error_message" => string(e),
-                "error_type" => string(typeof(e)),
-                "stacktrace" => string.(stacktrace(catch_backtrace())),
-                "degree" => degree,
-                "dimension" => length(bounds),
-                "GN" => experiment_config.GN,
-                "basis" => string(experiment_config.basis),
-                "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
-                "total_computation_time" => degree_time
-            )
-
-            # Create failed result
-            failed_result = DegreeResult(
-                degree, "failed",
-                0,  # n_critical_points
-                Vector{Vector{Float64}}(),  # critical_points (empty)
-                Vector{Float64}(),  # objective_values (empty)
-                nothing, nothing, nothing,  # No best estimate
-                NaN, NaN, NaN,  # Quality metrics (l2, relative_l2, cond)
-                0, 0,  # n_total_coeffs, support_size (unknown for failed)
-                nothing, nothing, nothing,  # No truncation metrics
-                0.0, 0.0, 0.0, 0.0, degree_time,  # Timing
-                output_dir,
-                error_context  # Rich error context
-            )
-
-            push!(degree_results, failed_result)
-
-            # Checkpoint on failure too — records which degrees failed
             checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
-            jldsave(checkpoint_path; degree_results=degree_results, warn=false)
+
+            if e isa SolverTimeoutError
+                @warn "Degree $degree timed out" limit = e.seconds elapsed = degree_time
+
+                degree_result = DegreeResult(
+                    degree,
+                    "timeout",
+                    0,  # n_critical_points
+                    Vector{Vector{Float64}}(),
+                    Vector{Float64}(),
+                    nothing,
+                    nothing,
+                    nothing,
+                    NaN,
+                    NaN,
+                    NaN,
+                    0,
+                    0,
+                    nothing,
+                    nothing,
+                    nothing,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    degree_time,
+                    output_dir,
+                    Dict{String,Any}(
+                        "error_type" => "SolverTimeoutError",
+                        "error_message" => string(e),
+                        "limit_seconds" => e.seconds,
+                    ),
+                )
+            else
+                @error "Degree $degree failed" exception=(e, catch_backtrace())
+
+                degree_result = DegreeResult(
+                    degree,
+                    "failed",
+                    0,  # n_critical_points
+                    Vector{Vector{Float64}}(),
+                    Vector{Float64}(),
+                    nothing,
+                    nothing,
+                    nothing,
+                    NaN,
+                    NaN,
+                    NaN,
+                    0,
+                    0,
+                    nothing,
+                    nothing,
+                    nothing,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    degree_time,
+                    output_dir,
+                    Dict{String,Any}(
+                        "error_message" => string(e),
+                        "error_type" => string(typeof(e)),
+                        "stacktrace" => string.(stacktrace(catch_backtrace())),
+                        "degree" => degree,
+                        "dimension" => length(bounds),
+                        "GN" => experiment_config.GN,
+                        "basis" => string(experiment_config.basis),
+                        "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
+                        "total_computation_time" => degree_time,
+                    ),
+                )
+            end
+
+            push!(degree_results, degree_result)
+            jldsave(checkpoint_path; degree_results = degree_results, warn = false)
         end
     end
 
@@ -418,22 +468,24 @@ function process_single_degree(
     degree::Int,
     objective_function,
     TR,
-    bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64,Float64}},
     experiment_config,
     output_dir::String,
-    true_params::Union{Vector{Float64}, Nothing};
+    true_params::Union{Vector{Float64},Nothing};
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
+    msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
-    timing = Dict{String, Float64}()
+    timing = Dict{String,Float64}()
 
     # Phase 1: Polynomial Construction (TR is pre-computed, only Constructor is degree-dependent)
     poly_construction_start = time()
 
-    pol = Globtim.Constructor(TR, degree, basis = experiment_config.basis, normalized = false)
+    pol =
+        Globtim.Constructor(TR, degree, basis = experiment_config.basis, normalized = false)
 
     timing["polynomial_construction_time"] = time() - poly_construction_start
     timing["l2_approx_error"] = pol.nrm
@@ -443,8 +495,9 @@ function process_single_degree(
     # Phase 1b: Optional coefficient truncation
     if experiment_config.truncation_threshold !== nothing
         sparse_result = Globtim.sparsify_polynomial(
-            pol, experiment_config.truncation_threshold,
-            mode = experiment_config.truncation_mode
+            pol,
+            experiment_config.truncation_threshold,
+            mode = experiment_config.truncation_mode,
         )
         @info "  Truncation (threshold=$(experiment_config.truncation_threshold), " *
               "mode=$(experiment_config.truncation_mode)): " *
@@ -457,11 +510,9 @@ function process_single_degree(
     end
 
     # Phase 2: Critical Point Solving + coordinate transformation
-    critical_points_array, solve_time = solve_and_transform(
-        pol, bounds;
-        solver = solver,
-        msolve_threads = msolve_threads,
-    )
+    critical_points_array, solve_time =
+        solve_and_transform(pol, bounds; solver = solver, msolve_threads = msolve_threads,
+            msolve_timeout_seconds = msolve_timeout_seconds)
     n_critical_points = length(critical_points_array)
     timing["critical_point_solving_time"] = solve_time
 
@@ -476,7 +527,8 @@ function process_single_degree(
     processing_start = time()
 
     # Compute objective values at critical points (in original coordinates)
-    objective_values = [objective_function(critical_points_array[i]) for i in 1:n_critical_points]
+    objective_values =
+        [objective_function(critical_points_array[i]) for i in 1:n_critical_points]
 
     # Find best estimate (lowest objective value, even if outside domain)
     best_idx = argmin(objective_values)
@@ -498,9 +550,11 @@ function process_single_degree(
     # Create DataFrame with raw critical points
     df_critical = DataFrame(
         :index => 1:n_critical_points,
-        [Symbol("p$i") => [critical_points_array[j][i] for j in 1:n_critical_points]
-         for i in 1:dimension]...,
-        :objective => objective_values
+        [
+            Symbol("p$i") => [critical_points_array[j][i] for j in 1:n_critical_points]
+            for i in 1:dimension
+        ]...,
+        :objective => objective_values,
     )
 
     # Export raw critical points (add '_raw' suffix for globtimpostprocessing)
@@ -510,10 +564,12 @@ function process_single_degree(
     timing["file_io_time"] = time() - io_start
 
     # Calculate total time
-    total_time = (timing["polynomial_construction_time"] +
-                  timing["critical_point_solving_time"] +
-                  timing["critical_point_processing_time"] +
-                  timing["file_io_time"])
+    total_time = (
+        timing["polynomial_construction_time"] +
+        timing["critical_point_solving_time"] +
+        timing["critical_point_processing_time"] +
+        timing["file_io_time"]
+    )
 
     # Extract truncation metrics (nothing if no truncation was applied)
     trunc_original = get(timing, "truncation_original_nnz", nothing)
@@ -521,21 +577,29 @@ function process_single_degree(
     trunc_l2 = get(timing, "truncation_l2_ratio", nothing)
 
     return DegreeResult(
-        degree, "success",
+        degree,
+        "success",
         n_critical_points,
         critical_points_array,
         objective_values,
-        best_estimate, best_objective, recovery_error,
-        timing["l2_approx_error"], timing["relative_l2_error"], timing["condition_number"],
-        length(pol.coeffs), count(!iszero, pol.coeffs),
-        trunc_original, trunc_new, trunc_l2,
+        best_estimate,
+        best_objective,
+        recovery_error,
+        timing["l2_approx_error"],
+        timing["relative_l2_error"],
+        timing["condition_number"],
+        length(pol.coeffs),
+        count(!iszero, pol.coeffs),
+        trunc_original,
+        trunc_new,
+        trunc_l2,
         timing["polynomial_construction_time"],
         timing["critical_point_solving_time"],
         timing["critical_point_processing_time"],
         timing["file_io_time"],
         total_time,
         output_dir,
-        nothing
+        nothing,
     )
 end
 
@@ -550,18 +614,18 @@ function create_experiment_summary(
     degree_results::Vector{DegreeResult},
     experiment_config,
     output_dir::String,
-    metadata::Dict{String, Any},
+    metadata::Dict{String,Any},
     total_critical_points::Int,
     total_time::Float64,
     success_rate::Float64;
     objective_name::String,
-    bounds::Vector{Tuple{Float64, Float64}},
-    true_params::Union{Vector{Float64}, Nothing} = nothing,
+    bounds::Vector{Tuple{Float64,Float64}},
+    true_params::Union{Vector{Float64},Nothing} = nothing,
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
 )
     # Build results_summary dict
-    results_summary = Dict{String, Any}()
+    results_summary = Dict{String,Any}()
 
     for result in degree_results
         results_summary["degree_$(result.degree)"] = Dict(
@@ -599,29 +663,29 @@ function create_experiment_summary(
             "output_dir" => result.output_dir,
 
             # Error (if failed)
-            "error" => result.error
+            "error" => result.error,
         )
     end
 
     # Experiment definition: what problem was solved
-    experiment_definition = Dict{String, Any}(
+    experiment_definition = Dict{String,Any}(
         "objective_name" => objective_name,
-        "dimension"      => length(bounds),
-        "bounds"         => [[lb, ub] for (lb, ub) in bounds],
-        "true_params"    => true_params,
+        "dimension" => length(bounds),
+        "bounds" => [[lb, ub] for (lb, ub) in bounds],
+        "true_params" => true_params,
     )
 
     # Solver config: how it was solved (full ExperimentParams)
-    solver_config = Dict{String, Any}(
-        "GN"             => experiment_config.GN,
-        "degree_range"   => collect(experiment_config.degree_range),
-        "domain_size"    => experiment_config.domain_size,
-        "max_time"       => experiment_config.max_time,
-        "basis"          => string(experiment_config.basis),
-        "optim_f_tol"    => experiment_config.optim_f_tol,
-        "optim_x_tol"    => experiment_config.optim_x_tol,
+    solver_config = Dict{String,Any}(
+        "GN" => experiment_config.GN,
+        "degree_range" => collect(experiment_config.degree_range),
+        "domain_size" => experiment_config.domain_size,
+        "max_time" => experiment_config.max_time,
+        "basis" => string(experiment_config.basis),
+        "optim_f_tol" => experiment_config.optim_f_tol,
+        "optim_x_tol" => experiment_config.optim_x_tol,
         "max_iterations" => experiment_config.max_iterations,
-        "solver"         => string(solver),
+        "solver" => string(solver),
         "msolve_threads" => msolve_threads,
     )
 
@@ -690,13 +754,16 @@ function sanitize_for_json(obj)
             "truncation_original_nnz" => obj.truncation_original_nnz,
             "truncation_new_nnz" => obj.truncation_new_nnz,
             "truncation_l2_ratio" => sanitize_for_json(obj.truncation_l2_ratio),
-            "polynomial_construction_time" => sanitize_for_json(obj.polynomial_construction_time),
-            "critical_point_solving_time" => sanitize_for_json(obj.critical_point_solving_time),
-            "critical_point_processing_time" => sanitize_for_json(obj.critical_point_processing_time),
+            "polynomial_construction_time" =>
+                sanitize_for_json(obj.polynomial_construction_time),
+            "critical_point_solving_time" =>
+                sanitize_for_json(obj.critical_point_solving_time),
+            "critical_point_processing_time" =>
+                sanitize_for_json(obj.critical_point_processing_time),
             "file_io_time" => sanitize_for_json(obj.file_io_time),
             "total_computation_time" => sanitize_for_json(obj.total_computation_time),
             "output_dir" => obj.output_dir,
-            "error" => sanitize_for_json(obj.error)
+            "error" => sanitize_for_json(obj.error),
         )
     elseif obj isa Float64 || obj isa Float32
         if isnan(obj) || isinf(obj)
@@ -721,8 +788,8 @@ function save_experiment_summary(summary::Dict, output_dir::String)
 
     # Save JLD2 with Git provenance (DrWatson) - convert symbols to strings for JLD2
     jld2_path = joinpath(output_dir, "results_summary.jld2")
-    summary_for_jld2 = Dict{String, Any}(string(k) => v for (k, v) in summary)
-    tagsave(jld2_path, summary_for_jld2; warn=false)
+    summary_for_jld2 = Dict{String,Any}(string(k) => v for (k, v) in summary)
+    tagsave(jld2_path, summary_for_jld2; warn = false)
 end
 
 """

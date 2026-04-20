@@ -35,7 +35,10 @@ function compute_hessians(f, points::Matrix{Float64})::Vector{Matrix{Float64}}
         catch e
             push!(failed_points, i)
             push!(failure_types, string(typeof(e)))
-            @debug "Point $i: Hessian computation failed with error: $e" exception=(e, catch_backtrace())
+            @debug "Point $i: Hessian computation failed with error: $e" exception=(
+                e,
+                catch_backtrace(),
+            )
             # Fallback for points where Hessian computation fails
             hessians[i] = fill(NaN, n_dims, n_dims)
         end
@@ -44,7 +47,9 @@ function compute_hessians(f, points::Matrix{Float64})::Vector{Matrix{Float64}}
     # Report summary if any points failed
     if !isempty(failed_points)
         sample_points = first(failed_points, min(5, length(failed_points)))
-        @warn "Hessian computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(failure_types)
+        @warn "Hessian computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(
+            failure_types,
+        )
     end
 
     return hessians
@@ -69,7 +74,7 @@ function classify_critical_points(
     hessians::Vector{Matrix{Float64}};
     tol_zero = 1e-8,
     tol_pos = 1e-8,
-    tol_neg = 1e-8
+    tol_neg = 1e-8,
 )::Vector{Symbol}
     n_points = length(hessians)
     classifications = Vector{Symbol}(undef, n_points)
@@ -165,7 +170,7 @@ Tuple{Vector{Float64}, Vector{Float64}}:
 """
 function extract_critical_eigenvalues(
     classifications::Vector{Symbol},
-    all_eigenvalues::Vector{Vector{Float64}}
+    all_eigenvalues::Vector{Vector{Float64}},
 )
     n_points = length(classifications)
     smallest_positive_eigenvals = Vector{Float64}(undef, n_points)
@@ -293,7 +298,7 @@ function compute_eigenvalue_stats(hessians::Vector{Matrix{Float64}})::DataFrame
         eigenvalue_max = eigenvalue_max,
         condition_number = condition_number,
         determinant = determinant,
-        trace = trace
+        trace = trace,
     )
 end
 
@@ -312,7 +317,7 @@ Vector{Vector{Float64}}: All eigenvalues for each critical point, sorted by magn
 """
 function extract_all_eigenvalues_for_visualization(
     f::Function,
-    df::DataFrame
+    df::DataFrame,
 )::Vector{Vector{Float64}}
     n_points = nrow(df)
 
@@ -352,8 +357,8 @@ Vector{Tuple{Int,Int,Float64}}: (raw_index, refined_index, distance) pairs sorte
 """
 function match_raw_to_refined_points(
     df_raw::DataFrame,
-    df_refined::DataFrame
-)::Vector{Tuple{Int, Int, Float64}}
+    df_refined::DataFrame,
+)::Vector{Tuple{Int,Int,Float64}}
     # Determine dimensionality
     x_cols = [col for col in names(df_raw) if startswith(string(col), "x")]
     n_dims = length(x_cols)
@@ -378,7 +383,7 @@ function match_raw_to_refined_points(
     end
 
     # Find best matches using Hungarian-style greedy matching
-    matches = Tuple{Int, Int, Float64}[]
+    matches = Tuple{Int,Int,Float64}[]
     used_refined = Set{Int}()
 
     for i in 1:n_raw

@@ -99,7 +99,7 @@ function create_monitoring_environment()
         "system_type" => Sys.KERNEL,
         "environment_vars" => copy(ENV),
         "depot_paths" => copy(DEPOT_PATH),
-        "load_path" => copy(LOAD_PATH)
+        "load_path" => copy(LOAD_PATH),
     )
 end
 
@@ -115,8 +115,10 @@ function mock_hpc_environment()
     hpc_project = get(ENV, "GLOBTIM_HPC_PROJECT", "")
 
     if isempty(hpc_host) || isempty(hpc_user) || isempty(hpc_home) || isempty(hpc_project)
-        error("mock_hpc_environment() requires ENV variables: " *
-              "GLOBTIM_HPC_HOST, GLOBTIM_HPC_USER, GLOBTIM_HPC_HOME, GLOBTIM_HPC_PROJECT")
+        error(
+            "mock_hpc_environment() requires ENV variables: " *
+            "GLOBTIM_HPC_HOST, GLOBTIM_HPC_USER, GLOBTIM_HPC_HOME, GLOBTIM_HPC_PROJECT",
+        )
     end
 
     return Dict(
@@ -134,8 +136,8 @@ function mock_hpc_environment()
             "HOME" => hpc_home,
             "USER" => hpc_user,
             "JULIA_DEPOT_PATH" => "$(hpc_home)/.julia",
-            "JULIA_PROJECT" => hpc_project
-        )
+            "JULIA_PROJECT" => hpc_project,
+        ),
     )
 end
 
@@ -169,7 +171,7 @@ Check if specified functions are available in the given module.
 Returns a dict mapping function names to availability status.
 """
 function validate_function_availability(module_ref, function_names::Vector{Symbol})
-    results = Dict{Symbol, Bool}()
+    results = Dict{Symbol,Bool}()
 
     for func_name in function_names
         results[func_name] = isdefined(module_ref, func_name)
@@ -194,7 +196,7 @@ function test_datetime_functions_without_import()
         "today()",
         "Time(12, 0, 0)",
         "Date(2025, 9, 9)",
-        "DateTime(2025, 9, 9, 12, 0, 0)"
+        "DateTime(2025, 9, 9, 12, 0, 0)",
     ]
 
     for func_expr in datetime_functions
@@ -227,13 +229,13 @@ version = "0.1.0"
 
 [deps]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-"""
+""",
     )
 
     return Dict(
         "project_path" => temp_project,
         "project_toml" => project_toml,
-        "cleanup" => () -> rm(temp_project, recursive = true)
+        "cleanup" => () -> rm(temp_project, recursive = true),
     )
 end
 
@@ -307,7 +309,7 @@ function benchmark_import_time(module_name::String; trials::Int = 5)
             mean_time = Inf,
             min_time = Inf,
             max_time = Inf,
-            std_time = NaN
+            std_time = NaN,
         )
     end
 
@@ -318,8 +320,8 @@ function benchmark_import_time(module_name::String; trials::Int = 5)
         max_time = maximum(valid_times),
         std_time = sqrt(
             sum((t - sum(valid_times) / length(valid_times))^2 for t in valid_times) /
-            (length(valid_times) - 1)
-        )  # Manual std calculation
+            (length(valid_times) - 1),
+        ),  # Manual std calculation
     )
 end
 
@@ -351,7 +353,7 @@ function create_script_analyzer()
             (r"mean\(", "Statistics"),
             (r"std\(", "Statistics"),
             (r"norm\(", "LinearAlgebra"),
-            (r"versioninfo\(", "InteractiveUtils")
+            (r"versioninfo\(", "InteractiveUtils"),
         ]
 
         potential_missing = String[]
@@ -365,7 +367,7 @@ function create_script_analyzer()
             "file" => file_path,
             "explicit_imports" => unique(imports),
             "potential_missing" => unique(potential_missing),
-            "line_count" => count('\n', content) + 1
+            "line_count" => count('\n', content) + 1,
         )
     end
 
@@ -379,7 +381,7 @@ Simulate executing a function in an HPC environment.
 """
 function simulate_hpc_execution(func::Function; mock_env::Dict = mock_hpc_environment())
     # Store original environment
-    original_env = Dict{String, String}()
+    original_env = Dict{String,String}()
 
     # Set HPC environment variables
     for (key, value) in mock_env["environment_vars"]
@@ -410,11 +412,7 @@ end
 Create a function that tests error recovery mechanisms.
 """
 function create_error_recovery_tester()
-    function test_error_recovery(
-        primary_func::Function,
-        fallback_func::Function,
-        TestInput
-    )
+    function test_error_recovery(primary_func::Function, fallback_func::Function, TestInput)
         primary_result = nothing
         primary_error = nothing
         fallback_result = nothing
@@ -444,7 +442,7 @@ function create_error_recovery_tester()
             "fallback_result" => fallback_result,
             "fallback_error" => fallback_error,
             "recovery_successful" =>
-                (primary_error === nothing) || (fallback_error === nothing)
+                (primary_error === nothing) || (fallback_error === nothing),
         )
     end
 
@@ -469,7 +467,7 @@ function validate_monitoring_script_health(script_path::String)
         "import_analysis" => Dict(),
         "syntax_errors" => [],
         "potential_issues" => [],
-        "healthy" => false
+        "healthy" => false,
     )
 
     try

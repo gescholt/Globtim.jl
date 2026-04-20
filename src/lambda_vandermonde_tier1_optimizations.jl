@@ -24,7 +24,7 @@ Expected speedup: ~1.2x
 function lambda_vandermonde_opt1_loop_reorder(
     Lambda::NamedTuple,
     S::Matrix{T};
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 ) where {T}
     m, n_dim = Lambda.size
     n_points, n_dim_check = size(S)
@@ -36,7 +36,7 @@ function lambda_vandermonde_opt1_loop_reorder(
 
     # Extract unique points per dimension (same as baseline)
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dim)
-    point_to_index_per_dim = Vector{Dict{T, Int}}(undef, n_dim)
+    point_to_index_per_dim = Vector{Dict{T,Int}}(undef, n_dim)
     GN_per_dim = zeros(Int, n_dim)
 
     for d in 1:n_dim
@@ -69,11 +69,11 @@ function lambda_vandermonde_opt1_loop_reorder(
     end
 
     # Pre-compute polynomial evaluations (same as baseline)
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dim)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dim)
 
     if basis == :chebyshev
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
             GN = length(unique_points)
 
@@ -97,14 +97,14 @@ function lambda_vandermonde_opt1_loop_reorder(
 
     elseif basis == :legendre
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
                 eval_cache_per_dim[d][degree] =
                     T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]
@@ -158,7 +158,7 @@ Expected speedup: ~1.3x over baseline
 function lambda_vandermonde_opt2_recurrence(
     Lambda::NamedTuple,
     S::Matrix{T};
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 ) where {T}
     m, n_dim = Lambda.size
     n_points, n_dim_check = size(S)
@@ -169,7 +169,7 @@ function lambda_vandermonde_opt2_recurrence(
 
     # Extract unique points per dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dim)
-    point_to_index_per_dim = Vector{Dict{T, Int}}(undef, n_dim)
+    point_to_index_per_dim = Vector{Dict{T,Int}}(undef, n_dim)
     GN_per_dim = zeros(Int, n_dim)
 
     for d in 1:n_dim
@@ -202,11 +202,11 @@ function lambda_vandermonde_opt2_recurrence(
     end
 
     # OPTIMIZATION 2: Use recurrence relations for polynomial evaluation
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dim)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dim)
 
     if basis == :chebyshev
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
             GN = length(unique_points)
             max_deg = max_degrees[d]
@@ -230,8 +230,8 @@ function lambda_vandermonde_opt2_recurrence(
                 end
                 for deg in 2:max_deg
                     eval_cache_per_dim[d][deg][idx] =
-                        2 * T(point) * eval_cache_per_dim[d][deg - 1][idx] -
-                        eval_cache_per_dim[d][deg - 2][idx]
+                        2 * T(point) * eval_cache_per_dim[d][deg-1][idx] -
+                        eval_cache_per_dim[d][deg-2][idx]
                 end
             end
         end
@@ -240,14 +240,14 @@ function lambda_vandermonde_opt2_recurrence(
         # For Legendre, use symbolic_legendre for correct normalization
         # (The recurrence relation needs to account for the specific normalization used)
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
                 eval_cache_per_dim[d][degree] =
                     T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]
@@ -296,7 +296,7 @@ Expected speedup: 4-8x (linear with number of cores)
 function lambda_vandermonde_opt3_multithreaded(
     Lambda::NamedTuple,
     S::Matrix{T};
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 ) where {T}
     m, n_dim = Lambda.size
     n_points, n_dim_check = size(S)
@@ -307,7 +307,7 @@ function lambda_vandermonde_opt3_multithreaded(
 
     # Extract unique points per dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dim)
-    point_to_index_per_dim = Vector{Dict{T, Int}}(undef, n_dim)
+    point_to_index_per_dim = Vector{Dict{T,Int}}(undef, n_dim)
     GN_per_dim = zeros(Int, n_dim)
 
     for d in 1:n_dim
@@ -340,11 +340,11 @@ function lambda_vandermonde_opt3_multithreaded(
     end
 
     # Pre-compute polynomial evaluations
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dim)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dim)
 
     if basis == :chebyshev
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
             GN = length(unique_points)
 
@@ -368,14 +368,14 @@ function lambda_vandermonde_opt3_multithreaded(
 
     elseif basis == :legendre
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
                 eval_cache_per_dim[d][degree] =
                     T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]
@@ -423,7 +423,7 @@ Expected speedup: ~1.56x (1.2 × 1.3)
 function lambda_vandermonde_opt12_combined(
     Lambda::NamedTuple,
     S::Matrix{T};
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 ) where {T}
     m, n_dim = Lambda.size
     n_points, n_dim_check = size(S)
@@ -434,7 +434,7 @@ function lambda_vandermonde_opt12_combined(
 
     # Extract unique points per dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dim)
-    point_to_index_per_dim = Vector{Dict{T, Int}}(undef, n_dim)
+    point_to_index_per_dim = Vector{Dict{T,Int}}(undef, n_dim)
     GN_per_dim = zeros(Int, n_dim)
 
     for d in 1:n_dim
@@ -465,11 +465,11 @@ function lambda_vandermonde_opt12_combined(
     end
 
     # OPT 2: Recurrence relations
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dim)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dim)
 
     if basis == :chebyshev
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
             GN = length(unique_points)
             max_deg = max_degrees[d]
@@ -489,8 +489,8 @@ function lambda_vandermonde_opt12_combined(
                 end
                 for deg in 2:max_deg
                     eval_cache_per_dim[d][deg][idx] =
-                        2 * T(point) * eval_cache_per_dim[d][deg - 1][idx] -
-                        eval_cache_per_dim[d][deg - 2][idx]
+                        2 * T(point) * eval_cache_per_dim[d][deg-1][idx] -
+                        eval_cache_per_dim[d][deg-2][idx]
                 end
             end
         end
@@ -498,14 +498,14 @@ function lambda_vandermonde_opt12_combined(
     elseif basis == :legendre
         # For Legendre, use symbolic_legendre for correct normalization
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
                 eval_cache_per_dim[d][degree] =
                     T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]
@@ -556,7 +556,7 @@ Target performance: 0.2-0.5ms for 4D, GN=6, degree=5
 function lambda_vandermonde_opt123_all(
     Lambda::NamedTuple,
     S::Matrix{T};
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 ) where {T}
     m, n_dim = Lambda.size
     n_points, n_dim_check = size(S)
@@ -567,7 +567,7 @@ function lambda_vandermonde_opt123_all(
 
     # Extract unique points per dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dim)
-    point_to_index_per_dim = Vector{Dict{T, Int}}(undef, n_dim)
+    point_to_index_per_dim = Vector{Dict{T,Int}}(undef, n_dim)
     GN_per_dim = zeros(Int, n_dim)
 
     for d in 1:n_dim
@@ -598,11 +598,11 @@ function lambda_vandermonde_opt123_all(
     end
 
     # OPT 2: Recurrence relations for polynomial evaluation
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dim)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dim)
 
     if basis == :chebyshev
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
             GN = length(unique_points)
             max_deg = max_degrees[d]
@@ -622,8 +622,8 @@ function lambda_vandermonde_opt123_all(
                 end
                 for deg in 2:max_deg
                     eval_cache_per_dim[d][deg][idx] =
-                        2 * T(point) * eval_cache_per_dim[d][deg - 1][idx] -
-                        eval_cache_per_dim[d][deg - 2][idx]
+                        2 * T(point) * eval_cache_per_dim[d][deg-1][idx] -
+                        eval_cache_per_dim[d][deg-2][idx]
                 end
             end
         end
@@ -631,14 +631,14 @@ function lambda_vandermonde_opt123_all(
     elseif basis == :legendre
         # For Legendre, use symbolic_legendre for correct normalization
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
                 eval_cache_per_dim[d][degree] =
                     T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]

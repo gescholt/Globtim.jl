@@ -24,8 +24,8 @@ function symbolic_orthopoly(type::Symbol, n::Integer; kwargs...)
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial type: $type. Use :legendre or :chebyshev"
-            )
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
+            ),
         )
     end
 end
@@ -48,8 +48,8 @@ function evaluate_orthopoly(type::Symbol, P, x_val::Number)
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial type: $type. Use :legendre or :chebyshev"
-            )
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
+            ),
         )
     end
 end
@@ -72,12 +72,11 @@ function get_orthopoly_coeffs(type::Symbol, max_degree::Integer; kwargs...)
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial type: $type. Use :legendre or :chebyshev"
-            )
+                "Unsupported polynomial type: $type. Use :legendre or :chebyshev",
+            ),
         )
     end
 end
-
 
 """
     construct_orthopoly_polynomial(
@@ -116,7 +115,7 @@ function construct_orthopoly_polynomial(
     precision::PrecisionType = RationalPrecision;
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    verbose::Bool = false
+    verbose::Bool = false,
 )
     degree_tuple = normalize_degree(degree)
 
@@ -134,7 +133,7 @@ function construct_orthopoly_polynomial(
     if length(coeffs) != m
         if verbose
             println(
-                "The length of coeffs ($(length(coeffs))) does not match the dimension of the space we project onto ($m)"
+                "The length of coeffs ($(length(coeffs))) does not match the dimension of the space we project onto ($m)",
             )
         end
         error("The length of coeffs must match the dimension of the space we project onto")
@@ -147,7 +146,7 @@ function construct_orthopoly_polynomial(
         println("Converted coefficient types: ", typeof(coeffs_converted))
         println(
             "First few converted coefficients: ",
-            coeffs_converted[1:min(3, length(coeffs_converted))]
+            coeffs_converted[1:min(3, length(coeffs_converted))],
         )
     end
 
@@ -160,7 +159,7 @@ function construct_orthopoly_polynomial(
             _convert_value(coeffs[1], precision),
             " (",
             typeof(_convert_value(coeffs[1], precision)),
-            ")"
+            ")",
         )
     end
 
@@ -173,7 +172,7 @@ function construct_orthopoly_polynomial(
             degree;
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom
+            power_of_two_denom = power_of_two_denom,
         )
     elseif basis == :chebyshev
         result = construct_chebyshev_approx(
@@ -182,13 +181,13 @@ function construct_orthopoly_polynomial(
             degree;
             precision = precision,
             normalized = normalized,
-            power_of_two_denom = power_of_two_denom
+            power_of_two_denom = power_of_two_denom,
         )
     else
         throw(
             ArgumentError(
-                "Unsupported polynomial basis: $basis. Use :legendre or :chebyshev"
-            )
+                "Unsupported polynomial basis: $basis. Use :legendre or :chebyshev",
+            ),
         )
     end
 
@@ -244,7 +243,7 @@ function to_exact_monomial_basis(pol::ApproxPoly; variables = nothing)
         pol.basis,
         pol.precision;
         normalized = pol.normalized,
-        power_of_two_denom = pol.power_of_two_denom
+        power_of_two_denom = pol.power_of_two_denom,
     )
 
     # Scale the polynomial to account for domain transformation
@@ -292,7 +291,7 @@ function exact_polynomial_coefficients(
     center::Vector = zeros(dim),
     sample_range::Real = 1.0,
     tolerance::Real = 0.5,
-    precision = Float64Precision
+    precision = Float64Precision,
 )
     # Create test input
     TR = TestInput(
@@ -300,7 +299,7 @@ function exact_polynomial_coefficients(
         dim = dim,
         center = center,
         sample_range = sample_range,
-        tolerance = tolerance
+        tolerance = tolerance,
     )
 
     # Construct polynomial approximation

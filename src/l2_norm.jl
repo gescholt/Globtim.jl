@@ -43,7 +43,7 @@ No normalization of volumes is performed, so the sum of volumes might slightly d
 For large sample grids, the function may be slow due to the nested product loop over grid points. 
 """
 
-function discrete_l2_norm_riemann(f, grid::Array{SVector{N, Float64}, N}) where {N}
+function discrete_l2_norm_riemann(f, grid::Array{SVector{N,Float64},N}) where {N}
     # Get the actual grid dimensions (can be anisotropic)
     grid_dims = size(grid)
 
@@ -56,12 +56,11 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N, Float64}, N}) where 
     for d in 1:N
         n_points = length(coords[d])
         if n_points > 1
-            bounds =
-                vcat(
-                    -1.0,
-                    [(coords[d][i] + coords[d][i + 1]) / 2 for i in 1:(n_points - 1)],
-                    1.0
-                )
+            bounds = vcat(
+                -1.0,
+                [(coords[d][i] + coords[d][i+1]) / 2 for i in 1:(n_points-1)],
+                1.0,
+            )
         else
             bounds = [-1.0, 1.0]
         end
@@ -70,8 +69,8 @@ function discrete_l2_norm_riemann(f, grid::Array{SVector{N, Float64}, N}) where 
 
     # Compute cell volumes
     cell_volumes = [
-        SVector{N, Float64}(
-            ntuple(d -> cell_bounds[d][idx[d] + 1] - cell_bounds[d][idx[d]], N)
+        SVector{N,Float64}(
+            ntuple(d -> cell_bounds[d][idx[d]+1] - cell_bounds[d][idx[d]], N),
         ) for idx in Iterators.product((1:d for d in grid_dims)...)
     ]
 

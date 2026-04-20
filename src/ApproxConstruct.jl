@@ -58,7 +58,6 @@ function get_lambda_exponent_vectors(d, n)
     else
         throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim."))
     end
-
 end
 
 """
@@ -96,8 +95,8 @@ function SupportGen(n::Int, d)::NamedTuple
     else
         throw(
             ArgumentError(
-                "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."
-            )
+                "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom.",
+            ),
         )
     end
 
@@ -117,7 +116,7 @@ end
 TimerOutputs.@timeit _TO function lambda_vandermonde_original(
     Lambda::NamedTuple,
     S;
-    basis = :chebyshev
+    basis = :chebyshev,
 )
     T = eltype(S)  # Infer type from input
     m, n_dim = Lambda.size  # m = number of multi-indices, n_dim = number of dimensions  
@@ -139,7 +138,7 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
 
     if basis == :legendre
         # Precompute Legendre polynomial evaluations for all degrees at unique points
-        eval_cache = Dict{Int, Vector{T}}()  # Use type T instead of Float64
+        eval_cache = Dict{Int,Vector{T}}()  # Use type T instead of Float64
 
         # Compute polynomials and evaluations
         @views for degree in 0:max_degree
@@ -167,7 +166,7 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
 
     elseif basis == :chebyshev
         # Precompute Chebyshev polynomial evaluations
-        eval_cache = Dict{Int, Vector{T}}()
+        eval_cache = Dict{Int,Vector{T}}()
 
         # Special handling for exact types vs floating point
         if T <: Rational || T <: Integer
@@ -199,8 +198,8 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
                 end
                 for degree in 2:max_degree
                     eval_cache[degree][point_idx] =
-                        2 * T(point) * eval_cache[degree - 1][point_idx] -
-                        eval_cache[degree - 2][point_idx]
+                        2 * T(point) * eval_cache[degree-1][point_idx] -
+                        eval_cache[degree-2][point_idx]
                 end
             end
         end
@@ -219,8 +218,8 @@ TimerOutputs.@timeit _TO function lambda_vandermonde_original(
     else
         throw(
             ArgumentError(
-                "Unsupported basis: $basis. Supported bases are :legendre and :chebyshev"
-            )
+                "Unsupported basis: $basis. Supported bases are :legendre and :chebyshev",
+            ),
         )
     end
 
@@ -278,7 +277,7 @@ function lambda_vandermonde(
     S;
     basis::Symbol = :chebyshev,
     force_anisotropic::Bool = false,
-    force_tensorized::Bool = false
+    force_tensorized::Bool = false,
 )
     # Convert to matrix if needed for analysis
     S_matrix = isa(S, Matrix) ? S : S
@@ -349,14 +348,14 @@ function subdivide_domain(T::TestInput)::Vector{TestInput}
     subdivided_inputs = Vector{TestInput}()
     new_scale = isnothing(T.sample_range) ? nothing : T.sample_range / 2
 
-    for i in 0:(2^n - 1)
+    for i in 0:(2^n-1)
         new_center = copy(T.center)
         if !isnothing(T.sample_range)
-            for j in 0:(n - 1)
+            for j in 0:(n-1)
                 if (i >> j) & 1 == 1
-                    new_center[j + 1] += T.sample_range
+                    new_center[j+1] += T.sample_range
                 else
-                    new_center[j + 1] -= T.sample_range
+                    new_center[j+1] -= T.sample_range
                 end
             end
         end
@@ -378,8 +377,8 @@ function subdivide_domain(T::TestInput)::Vector{TestInput}
                 tolerance = T.tolerance,
                 sample_range = new_scale,
                 reduce_samples = T.reduce_samples,
-                degree_max = T.degree_max  # Added degree_max parameter
-            )
+                degree_max = T.degree_max,  # Added degree_max parameter
+            ),
         )
     end
 

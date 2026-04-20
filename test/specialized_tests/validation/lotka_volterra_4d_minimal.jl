@@ -21,12 +21,13 @@ println("Lotka-Volterra 4D: dim=$n, degree=$d, samples=$SMPL, total=$(SMPL^n) po
 
 # Step 1: Grid Generation and Sampling
 println("Step 1: Grid generation...")
-TR = TestInput(f,
+TR = TestInput(
+    f,
     dim = n,
     center = center,
     GN = SMPL,
     sample_range = 2.0,
-    params = params_4d
+    params = params_4d,
 )
 
 # Step 2: Polynomial Approximation
@@ -39,11 +40,14 @@ println("Step 3: Critical point solving...")
 @polyvar(x[1:n])
 
 real_pts = solve_polynomial_system(
-    x, n, d, pol_cheb.coeffs;
+    x,
+    n,
+    d,
+    pol_cheb.coeffs;
     basis = pol_cheb.basis,
     precision = pol_cheb.precision,
     normalized = false,
-    power_of_two_denom = pol_cheb.power_of_two_denom
+    power_of_two_denom = pol_cheb.power_of_two_denom,
 )
 println("Real critical points found: $(length(real_pts))")
 
@@ -59,12 +63,12 @@ println("Total critical points: $(nrow(df_analyzed)), Minimizers: $(nrow(df_min)
 
 # Summary
 println(
-    "Quality: $(pol_cheb.nrm < 1e-3 ? "Excellent" : pol_cheb.nrm < 0.1 ? "Good" : "Poor"), Critical points: $(nrow(df)), Minimizers: $(nrow(df_min))"
+    "Quality: $(pol_cheb.nrm < 1e-3 ? "Excellent" : pol_cheb.nrm < 0.1 ? "Good" : "Poor"), Critical points: $(nrow(df)), Minimizers: $(nrow(df_min))",
 )
 
 if nrow(df_min) > 0
     best_min = df_min[argmin(df_min.value), :]
     println(
-        "Best minimum: [$(round(best_min.x1, digits=3)), $(round(best_min.x2, digits=3)), $(round(best_min.x3, digits=3)), $(round(best_min.x4, digits=3))] = $(round(best_min.value, digits=6))"
+        "Best minimum: [$(round(best_min.x1, digits=3)), $(round(best_min.x2, digits=3)), $(round(best_min.x3, digits=3)), $(round(best_min.x4, digits=3))] = $(round(best_min.value, digits=6))",
     )
 end

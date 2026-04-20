@@ -24,13 +24,13 @@ coordinates), deduplicated by pairwise distance.
   classification and Nelder-Mead refinement.
 """
 function solve_tree_leaves(
-    tree      :: SubdivisionTree;
-    dedup_tol :: Float64 = 1e-6,
-    sparsify_threshold :: Float64 = 0.0,
-    start_system :: Symbol = :auto,
-    solver :: Symbol = :hc,
-    msolve_threads :: Int = 1,
-    search_bounds :: Union{Vector{Tuple{Float64,Float64}}, Nothing} = nothing,
+    tree::SubdivisionTree;
+    dedup_tol::Float64 = 1e-6,
+    sparsify_threshold::Float64 = 0.0,
+    start_system::Symbol = :auto,
+    solver::Symbol = :hc,
+    msolve_threads::Int = 1,
+    search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )
     all_cps = Vector{Float64}[]
     leaf_ids = vcat(tree.converged_leaves, tree.active_leaves)
@@ -43,7 +43,8 @@ function solve_tree_leaves(
 
         try
             cps, _ = solve_and_transform(
-                sd.polynomial, leaf_bounds;
+                sd.polynomial,
+                leaf_bounds;
                 sparsify_threshold = sparsify_threshold,
                 start_system = start_system,
                 solver = solver,

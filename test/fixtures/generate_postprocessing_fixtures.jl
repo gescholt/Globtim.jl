@@ -34,7 +34,8 @@ using Dates
 # Configuration
 # ============================================================================
 
-const OUTPUT_DIR = joinpath(@__DIR__, "..", "..", "..", "globtimpostprocessing", "test", "fixtures")
+const OUTPUT_DIR =
+    joinpath(@__DIR__, "..", "..", "..", "globtimpostprocessing", "test", "fixtures")
 const n = 4  # Dimension
 const SMPL = 10  # Samples per dimension (10^4 = 10,000 points - fast)
 const center = [0.0, 0.0, 0.0, 0.0]
@@ -69,12 +70,7 @@ mkpath(OUTPUT_DIR)
 println("Step 1: Grid Generation")
 println("-"^80)
 
-TR = TestInput(f,
-    dim = n,
-    center = center,
-    GN = SMPL,
-    sample_range = sample_range
-)
+TR = TestInput(f, dim = n, center = center, GN = SMPL, sample_range = sample_range)
 
 println("✓ Grid created: $(SMPL^n) points")
 println()
@@ -83,7 +79,7 @@ println()
 # Step 2: Run for Each Degree
 # ============================================================================
 
-results_summary = Dict{String, Any}()
+results_summary = Dict{String,Any}()
 all_degree_results = []
 
 for d in degrees
@@ -103,11 +99,14 @@ for d in degrees
 
     t_start = time()
     real_pts = solve_polynomial_system(
-        x, n, d, pol_cheb.coeffs;
+        x,
+        n,
+        d,
+        pol_cheb.coeffs;
         basis = pol_cheb.basis,
         precision = pol_cheb.precision,
         normalized = false,
-        power_of_two_denom = pol_cheb.power_of_two_denom
+        power_of_two_denom = pol_cheb.power_of_two_denom,
     )
     solving_time = time() - t_start
 
@@ -126,14 +125,14 @@ for d in degrees
     df_export = DataFrame(
         :index => 1:nrow(df),
         [Symbol("p$i") => df[!, Symbol("x$i")] for i in 1:n]...,
-        :objective => objective_values
+        :objective => objective_values,
     )
 
     # Save CSV
     csv_path = joinpath(OUTPUT_DIR, "critical_points_raw_deg_$d.csv")
     CSV.write(csv_path, df_export)
 
-    filesize_kb = round(stat(csv_path).size / 1024, digits=2)
+    filesize_kb = round(stat(csv_path).size / 1024, digits = 2)
     println("  ✓ Saved CSV:      $(basename(csv_path)) ($(filesize_kb) KB)")
 
     # Store degree result
@@ -143,7 +142,7 @@ for d in degrees
         "l2_norm" => pol_cheb.nrm,
         "construction_time_s" => construction_time,
         "solving_time_s" => solving_time,
-        "basis" => String(basis)
+        "basis" => String(basis),
     )
 
     push!(all_degree_results, degree_result)
@@ -171,7 +170,7 @@ config = Dict(
     "description" => "4D Deuflhard test function - composition of two 2D Deuflhard functions",
     "mathematical_form" => "f(p) = Deuflhard(p[1:2]) + Deuflhard(p[3:4])",
     "deuflhard_2d_form" => "(exp(x² + y²) - 3)² + (x + y - sin(3(x + y)))²",
-    "generated_at" => Dates.format(now(), "yyyy-mm-ddTHH:MM:SS")
+    "generated_at" => Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
 )
 
 config_path = joinpath(OUTPUT_DIR, "experiment_config.json")
@@ -191,7 +190,7 @@ summary = Dict(
     "total_degrees" => length(degrees),
     "degree_results" => all_degree_results,
     "generated_at" => Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
-    "generator_script" => "Globtim/test/fixtures/generate_postprocessing_fixtures.jl"
+    "generator_script" => "Globtim/test/fixtures/generate_postprocessing_fixtures.jl",
 )
 
 summary_path = joinpath(OUTPUT_DIR, "results_summary.json")
@@ -289,11 +288,16 @@ println("Files created in: $OUTPUT_DIR")
 println()
 
 # List generated files
-for file in ["critical_points_raw_deg_4.csv", "critical_points_raw_deg_6.csv",
-             "experiment_config.json", "results_summary.json", "test_functions.jl"]
+for file in [
+    "critical_points_raw_deg_4.csv",
+    "critical_points_raw_deg_6.csv",
+    "experiment_config.json",
+    "results_summary.json",
+    "test_functions.jl",
+]
     filepath = joinpath(OUTPUT_DIR, file)
     if isfile(filepath)
-        size_kb = round(stat(filepath).size / 1024, digits=2)
+        size_kb = round(stat(filepath).size / 1024, digits = 2)
         println("  ✓ $file ($(size_kb) KB)")
     end
 end

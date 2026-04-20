@@ -25,8 +25,6 @@ using TOML
     AdaptivePrecision      # BigFloat for expansion, Float64 for evaluation
 end
 
-import HomotopyContinuation: solve, real_solutions, System
-
 # TimerOutputs for performance tracking
 const _TO = TimerOutputs.TimerOutput()
 
@@ -122,15 +120,17 @@ export TestInput,
 
 # Precision type export
 export PrecisionType,
-    Float64Precision, RationalPrecision, BigFloatPrecision, BigIntPrecision,
+    Float64Precision,
+    RationalPrecision,
+    BigFloatPrecision,
+    BigIntPrecision,
     AdaptivePrecision
 
 # Legendre polynomial functions
 export symbolic_legendre, evaluate_legendre, get_legendre_coeffs, construct_legendre_approx
 
 # Chebyshev polynomial functions
-export symbolic_chebyshev,
-    evaluate_chebyshev, get_chebyshev_coeffs
+export symbolic_chebyshev, evaluate_chebyshev, get_chebyshev_coeffs
 
 # Unified orthogonal polynomial interface
 export symbolic_orthopoly,
@@ -171,15 +171,28 @@ export generate_anisotropic_grid
 # export get_grid_dimensions, is_anisotropic
 
 # Adaptive subdivision - error-driven domain refinement
-export Subdomain, SubdivisionTree,
-    adaptive_refine, two_phase_refine,
-    estimate_subdomain_error, subdivide_domain,
-    select_cut_dimension, find_optimal_cut_sparse,
-    get_bounds, n_leaves, n_active, total_error, error_balance_ratio,
-    dimension, volume,  # Subdomain utilities
+export Subdomain,
+    SubdivisionTree,
+    adaptive_refine,
+    two_phase_refine,
+    estimate_subdomain_error,
+    subdivide_domain,
+    select_cut_dimension,
+    find_optimal_cut_sparse,
+    get_bounds,
+    n_leaves,
+    n_active,
+    total_error,
+    error_balance_ratio,
+    dimension,
+    volume,  # Subdomain utilities
     select_cut_dimension_by_width,  # Fallback dimension selection
-    display_tree, get_max_depth,  # Tree visualization & info
-    RefinementAction, ActionConverged, ActionDegreeBump, ActionSplit  # hp-refinement
+    display_tree,
+    get_max_depth,  # Tree visualization & info
+    RefinementAction,
+    ActionConverged,
+    ActionDegreeBump,
+    ActionSplit  # hp-refinement
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -196,13 +209,20 @@ export GlobtimError,
 
 # Validation framework - consolidated from ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration
 export ValidationError, DataValidationError, PipelineBoundaryError
-export FilenameContaminationError, ParameterRangeError, SchemaValidationError, ContentValidationError
+export FilenameContaminationError,
+    ParameterRangeError, SchemaValidationError, ContentValidationError
 export DataLoadError, DataQualityError, DataProductionError
-export StageTransitionError, InterfaceCompatibilityError, ResourceBoundaryError, FileSystemBoundaryError
+export StageTransitionError,
+    InterfaceCompatibilityError, ResourceBoundaryError, FileSystemBoundaryError
 export DEFENSE_SUCCESS, DEFENSE_WARNING, DEFENSE_ERROR, DEFENSE_CRITICAL
-export PipelineBoundary, HPC_JOB_BOUNDARY, DATA_PROCESSING_BOUNDARY, VISUALIZATION_BOUNDARY, FILE_OPERATION_BOUNDARY
+export PipelineBoundary,
+    HPC_JOB_BOUNDARY,
+    DATA_PROCESSING_BOUNDARY,
+    VISUALIZATION_BOUNDARY,
+    FILE_OPERATION_BOUNDARY
 export chain_validation, validate_column_type, safe_read_csv
-export detect_filename_contamination, validate_parameter_ranges, validate_experiment_output_strict
+export detect_filename_contamination,
+    validate_parameter_ranges, validate_experiment_output_strict
 export save_experiment_results_safe, load_and_validate_experiment_data, verify_written_data
 export validate_stage_transition, detect_interface_issues, validate_pipeline_connection
 export enhanced_pipeline_validation, validate_hpc_pipeline_stage
@@ -228,6 +248,7 @@ include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("ApproxPolyEval.jl") #ApproxPoly evaluation and gradient functions.
 include("msolve_system.jl") #polynomial system solving with Msolve.
 include("poly_solver.jl") #polynomial system solving (HC + msolve backends)
+include("solver_timeout.jl") #production timeout wrapper for HC/msolve (dljm)
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
 include("data_structures.jl") #Enhanced data structures for multi-tolerance analysis
 include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)
@@ -283,7 +304,6 @@ export EnhancedMetrics
 # Level set data types (canonical definitions, used by GlobtimPlots)
 export LevelSetData, VisualizationParameters
 
-
 # Enhanced data structures - canonical result types
 export OrthantResult, ToleranceResult, MultiToleranceResults, BFGSConfig, BFGSResult
 export ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult
@@ -332,7 +352,6 @@ function plot_convergence_captured end
 function plot_filtered_y_distances end
 function plot_distance_statistics end
 
-
 # Type definitions for GLMakie extension
 # These types need to be defined in the main module to be exportable
 
@@ -346,17 +365,17 @@ Structure to hold level set computation results.
 - `values::Vector{T}`: Function values at the points
 - `level::T`: The target level value
 """
-struct LevelSetData{T <: AbstractFloat}
-    points::Vector{StaticArrays.SVector{3, T}}
+struct LevelSetData{T<:AbstractFloat}
+    points::Vector{StaticArrays.SVector{3,T}}
     values::Vector{T}
     level::T
 
     # Inner constructor for validation
     function LevelSetData{T}(
-        points::Vector{StaticArrays.SVector{3, T}},
+        points::Vector{StaticArrays.SVector{3,T}},
         values::Vector{T},
-        level::T
-    ) where {T <: AbstractFloat}
+        level::T,
+    ) where {T<:AbstractFloat}
         length(points) == length(values) ||
             throw(ArgumentError("Points and values must have same length"))
         new{T}(points, values, level)
@@ -365,10 +384,10 @@ end
 
 # Outer constructor for type inference
 LevelSetData(
-    points::Vector{StaticArrays.SVector{3, T}},
+    points::Vector{StaticArrays.SVector{3,T}},
     values::Vector{T},
-    level::T
-) where {T <: AbstractFloat} = LevelSetData{T}(points, values, level)
+    level::T,
+) where {T<:AbstractFloat} = LevelSetData{T}(points, values, level)
 
 """
     VisualizationParameters{T<:AbstractFloat}
@@ -380,25 +399,23 @@ Parameters for level set visualization.
 - `point_window::T`: Window size for point filtering (default: 2e-1)
 - `fig_size::Tuple{Int,Int}`: Figure size in pixels (default: (1000, 800))
 """
-struct VisualizationParameters{T <: AbstractFloat}
+struct VisualizationParameters{T<:AbstractFloat}
     point_tolerance::T
     point_window::T
-    fig_size::Tuple{Int, Int}
+    fig_size::Tuple{Int,Int}
 
     # Constructor with defaults
     function VisualizationParameters{T}(;
         point_tolerance::T = T(1e-1),
         point_window::T = T(2e-1),
-        fig_size::Tuple{Int, Int} = (1000, 800)
-    ) where {T <: AbstractFloat}
+        fig_size::Tuple{Int,Int} = (1000, 800),
+    ) where {T<:AbstractFloat}
         new{T}(point_tolerance, point_window, fig_size)
     end
 end
 
 # Convenience constructor
 VisualizationParameters(; kwargs...) = VisualizationParameters{Float64}(; kwargs...)
-
-
 
 # Include PolynomialImports module for robust @polyvar support
 include("PolynomialImports.jl")
@@ -415,21 +432,33 @@ include("ModelRegistry.jl")
 using .ModelRegistry
 
 # Export ModelRegistry types and functions
-export ModelInfo, get_model, list_models, validate_model_name, get_model_function, register_model!
+export ModelInfo,
+    get_model, list_models, validate_model_name, get_model_function, register_model!
 
 # PathManager - unified path management
 include("PathManager.jl")
 using .PathManager
 
 # Export PathManager functions
-export PathConfig, reset_config!,
-    get_project_root, get_results_root, get_src_dir, get_examples_dir,
-    create_experiment_dir, get_experiment_path,
-    validate_project_structure, validate_results_root,
-    is_valid_objective_name, sanitize_objective_name,
-    detect_environment, is_hpc_environment,
-    ensure_directory, with_project_root,
-    register_experiment, update_experiment_progress, finalize_experiment
+export PathConfig,
+    reset_config!,
+    get_project_root,
+    get_results_root,
+    get_src_dir,
+    get_examples_dir,
+    create_experiment_dir,
+    get_experiment_path,
+    validate_project_structure,
+    validate_results_root,
+    is_valid_objective_name,
+    sanitize_objective_name,
+    detect_environment,
+    is_hpc_environment,
+    ensure_directory,
+    with_project_root,
+    register_experiment,
+    update_experiment_progress,
+    finalize_experiment
 
 # Advanced Interactive Visualization Functions - Core analysis
 # Visualization exports removed - all plotting functionality moved to GlobtimPlots package
@@ -460,6 +489,7 @@ using .ExperimentCLI
 
 # Export ExperimentCLI types and functions (enables `using Globtim: ExperimentParams`)
 export ExperimentParams, parse_experiment_args, validate_params
+export SolverTimeoutError, with_solver_timeout
 
 # TOML experiment pipeline configuration
 include("config_loader.jl")
@@ -470,7 +500,13 @@ export ExperimentPipelineConfig, load_experiment_config, config_to_experiment_pa
 using .ErrorCategorization
 
 # Export ErrorCategorization types and functions
-export ErrorCategory, ErrorClassification, categorize_error, analyze_experiment_errors,
-    generate_error_report, ERROR_TAXONOMY, SEVERITY_LEVELS, FIX_SUGGESTIONS
+export ErrorCategory,
+    ErrorClassification,
+    categorize_error,
+    analyze_experiment_errors,
+    generate_error_report,
+    ERROR_TAXONOMY,
+    SEVERITY_LEVELS,
+    FIX_SUGGESTIONS
 
 end

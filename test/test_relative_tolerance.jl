@@ -2,15 +2,14 @@ using Test
 using Globtim
 
 @testset "Relative L2 tolerance" begin
-
     @testset "nrm bug fix: pol.nrm is residual norm, not polynomial norm" begin
         # Construct a polynomial on a subdomain and verify pol.nrm = ||f-p||_L2
         f(x) = sin(3*x[1]) * cos(3*x[2]) + 0.5
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-        tree = Globtim.SubdivisionTree(bounds; degree=4)
+        tree = Globtim.SubdivisionTree(bounds; degree = 4)
         sd = tree.subdomains[1]
 
-        l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
         pol = sd.polynomial
         @test pol !== nothing
 
@@ -29,10 +28,10 @@ using Globtim
     @testset "relative_l2_error stored on Subdomain" begin
         f(x) = x[1]^2 + x[2]^2 + 1.0  # Offset to ensure nonzero norm
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-        tree = Globtim.SubdivisionTree(bounds; degree=6)
+        tree = Globtim.SubdivisionTree(bounds; degree = 6)
         sd = tree.subdomains[1]
 
-        l2 = Globtim.estimate_subdomain_error(f, sd, 6, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(f, sd, 6, basis = :chebyshev)
         @test isfinite(sd.relative_l2_error)
         @test sd.relative_l2_error >= 0
         @test sd.relative_l2_error <= 1.0  # Good approx of a polynomial
@@ -46,10 +45,10 @@ using Globtim
         # but both should indicate a good approximation
         f(x) = sin(2*x[1]) + cos(3*x[2])
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-        tree = Globtim.SubdivisionTree(bounds; degree=6)
+        tree = Globtim.SubdivisionTree(bounds; degree = 6)
         sd = tree.subdomains[1]
 
-        Globtim.estimate_subdomain_error(f, sd, 6, basis=:chebyshev)
+        Globtim.estimate_subdomain_error(f, sd, 6, basis = :chebyshev)
         pol = sd.polynomial
         @test pol !== nothing
 
@@ -64,13 +63,16 @@ using Globtim
         f(x) = exp(-2*(x[1] - 0.5)^2 - 3*(x[2] + 0.3)^2)
         bounds = [(-1.2, 1.2), (-1.2, 1.2)]
 
-        tree = Globtim.adaptive_refine(f, bounds, 6;
-            l2_tolerance=0.03,
-            tolerance_mode=:relative,
-            max_depth=4,
-            max_leaves=50,
-            parallel=false,
-            verbose=false,
+        tree = Globtim.adaptive_refine(
+            f,
+            bounds,
+            6;
+            l2_tolerance = 0.03,
+            tolerance_mode = :relative,
+            max_depth = 4,
+            max_leaves = 50,
+            parallel = false,
+            verbose = false,
         )
 
         # All converged leaves should have relative_l2_error <= tolerance
@@ -87,13 +89,16 @@ using Globtim
         f(x) = sin(3*x[1]) * cos(3*x[2])
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 
-        tree = Globtim.adaptive_refine(f, bounds, 4;
-            l2_tolerance=1e-4,
-            tolerance_mode=:absolute,
-            max_depth=4,
-            max_leaves=50,
-            parallel=false,
-            verbose=false,
+        tree = Globtim.adaptive_refine(
+            f,
+            bounds,
+            4;
+            l2_tolerance = 1e-4,
+            tolerance_mode = :absolute,
+            max_depth = 4,
+            max_leaves = 50,
+            parallel = false,
+            verbose = false,
         )
 
         # All converged leaves should have absolute l2_error <= tolerance
@@ -106,10 +111,10 @@ using Globtim
     @testset "zero function edge case" begin
         f(x) = 0.0
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-        tree = Globtim.SubdivisionTree(bounds; degree=4)
+        tree = Globtim.SubdivisionTree(bounds; degree = 4)
         sd = tree.subdomains[1]
 
-        l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
         @test l2 ≈ 0.0 atol=1e-15
         @test sd.relative_l2_error == 0.0  # Not NaN or Inf
     end
@@ -117,10 +122,10 @@ using Globtim
     @testset "all-Inf stores relative_l2_error = Inf" begin
         f(x) = Inf
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-        tree = Globtim.SubdivisionTree(bounds; degree=4)
+        tree = Globtim.SubdivisionTree(bounds; degree = 4)
         sd = tree.subdomains[1]
 
-        l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
         @test l2 == Inf
         @test sd.relative_l2_error == Inf
     end
@@ -129,25 +134,42 @@ using Globtim
         f(x) = x[1]^2
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 
-        @test_throws ErrorException Globtim.adaptive_refine(f, bounds, 4;
-            tolerance_mode=:foo, max_depth=1, max_leaves=4, parallel=false)
+        @test_throws ErrorException Globtim.adaptive_refine(
+            f,
+            bounds,
+            4;
+            tolerance_mode = :foo,
+            max_depth = 1,
+            max_leaves = 4,
+            parallel = false,
+        )
 
-        @test_throws ErrorException Globtim.two_phase_refine(f, bounds, 4;
-            tolerance_mode=:foo, max_depth=1, max_leaves=4, parallel=false)
+        @test_throws ErrorException Globtim.two_phase_refine(
+            f,
+            bounds,
+            4;
+            tolerance_mode = :foo,
+            max_depth = 1,
+            max_leaves = 4,
+            parallel = false,
+        )
     end
 
     @testset "two_phase_refine with relative tolerance" begin
         f(x) = sin(2*x[1]) * cos(x[2]) + 0.3*x[1]^2
         bounds = [(-2.0, 2.0), (-2.0, 2.0)]
 
-        tree = Globtim.two_phase_refine(f, bounds, 6;
-            coarse_tolerance=0.05,
-            fine_tolerance=0.03,
-            tolerance_mode=:relative,
-            max_depth=4,
-            max_leaves=50,
-            parallel=false,
-            verbose=false,
+        tree = Globtim.two_phase_refine(
+            f,
+            bounds,
+            6;
+            coarse_tolerance = 0.05,
+            fine_tolerance = 0.03,
+            tolerance_mode = :relative,
+            max_depth = 4,
+            max_leaves = 50,
+            parallel = false,
+            verbose = false,
         )
 
         # Converged leaves should meet the fine relative tolerance
@@ -165,11 +187,14 @@ using Globtim
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 
         # Relative mode with default tolerance (0.03) — polynomial should converge quickly
-        tree = Globtim.adaptive_refine(f, bounds, 4;
-            tolerance_mode=:relative,
-            max_depth=2,
-            max_leaves=10,
-            parallel=false,
+        tree = Globtim.adaptive_refine(
+            f,
+            bounds,
+            4;
+            tolerance_mode = :relative,
+            max_depth = 2,
+            max_leaves = 10,
+            parallel = false,
         )
         @test length(tree.converged_leaves) > 0
     end

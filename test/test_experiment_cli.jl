@@ -24,7 +24,7 @@ using Globtim.ExperimentCLI
 
     # ── Base.pairs contract ─────────────────────────────────────────────────
     @testset "Base.pairs returns a proper Pairs iterator" begin
-        ep = ExperimentParams(GN=8, domain_size=0.5)
+        ep = ExperimentParams(GN = 8, domain_size = 0.5)
 
         p = pairs(ep)
 
@@ -37,13 +37,24 @@ using Globtim.ExperimentCLI
         @test haskey(d, :truncation_threshold)
         @test haskey(d, :truncation_mode)
 
-        # All 13 fields must appear
+        # All 15 fields must appear
         all_keys = Set(keys(d))
         expected_keys = Set([
-            :domain_size, :GN, :degree_range, :max_time, :basis,
-            :optim_f_tol, :optim_x_tol, :max_iterations,
-            :enable_gradient_computation, :enable_hessian_computation,
-            :enable_bfgs_refinement, :truncation_threshold, :truncation_mode
+            :domain_size,
+            :GN,
+            :degree_range,
+            :max_time,
+            :basis,
+            :optim_f_tol,
+            :optim_x_tol,
+            :max_iterations,
+            :enable_gradient_computation,
+            :enable_hessian_computation,
+            :enable_bfgs_refinement,
+            :truncation_threshold,
+            :truncation_mode,
+            :degree_timeout_seconds,
+            :msolve_timeout_seconds,
         ])
         @test all_keys == expected_keys
 
@@ -56,42 +67,54 @@ using Globtim.ExperimentCLI
     # ── Truncation field validation ─────────────────────────────────────────
     @testset "Truncation field validation" begin
         # Valid: threshold > 0
-        ep = ExperimentParams(truncation_threshold=0.01, truncation_mode=:relative)
+        ep = ExperimentParams(truncation_threshold = 0.01, truncation_mode = :relative)
         @test ep.truncation_threshold == 0.01
         @test ep.truncation_mode === :relative
 
-        ep2 = ExperimentParams(truncation_threshold=1e-4, truncation_mode=:absolute)
+        ep2 = ExperimentParams(truncation_threshold = 1e-4, truncation_mode = :absolute)
         @test ep2.truncation_threshold ≈ 1e-4
         @test ep2.truncation_mode === :absolute
 
         # Valid: threshold=nothing (disabled)
-        ep3 = ExperimentParams(truncation_threshold=nothing)
+        ep3 = ExperimentParams(truncation_threshold = nothing)
         @test ep3.truncation_threshold === nothing
 
         # Invalid: threshold <= 0
-        @test_throws Exception ExperimentParams(truncation_threshold=0.0)
-        @test_throws Exception ExperimentParams(truncation_threshold=-0.1)
+        @test_throws Exception ExperimentParams(truncation_threshold = 0.0)
+        @test_throws Exception ExperimentParams(truncation_threshold = -0.1)
 
         # Invalid: unknown truncation_mode
-        @test_throws Exception ExperimentParams(truncation_threshold=0.01, truncation_mode=:nonsense)
-        @test_throws Exception ExperimentParams(truncation_threshold=0.01, truncation_mode="bogus")
+        @test_throws Exception ExperimentParams(
+            truncation_threshold = 0.01,
+            truncation_mode = :nonsense,
+        )
+        @test_throws Exception ExperimentParams(
+            truncation_threshold = 0.01,
+            truncation_mode = "bogus",
+        )
 
         # String mode is accepted and converted
-        ep4 = ExperimentParams(truncation_threshold=0.01, truncation_mode="relative")
+        ep4 = ExperimentParams(truncation_threshold = 0.01, truncation_mode = "relative")
         @test ep4.truncation_mode === :relative
 
-        ep5 = ExperimentParams(truncation_threshold=0.01, truncation_mode="absolute")
+        ep5 = ExperimentParams(truncation_threshold = 0.01, truncation_mode = "absolute")
         @test ep5.truncation_mode === :absolute
     end
 
     # ── CLI parsing: truncation flags ───────────────────────────────────────
     @testset "CLI truncation args" begin
         # --truncation-threshold= and --truncation-mode= must be accepted
-        ep = parse_experiment_args(["--truncation-threshold=0.05", "--truncation-mode=relative"])
+        ep = parse_experiment_args([
+            "--truncation-threshold=0.05",
+            "--truncation-mode=relative",
+        ])
         @test ep.truncation_threshold ≈ 0.05
         @test ep.truncation_mode === :relative
 
-        ep2 = parse_experiment_args(["--truncation-threshold=1e-3", "--truncation-mode=absolute"])
+        ep2 = parse_experiment_args([
+            "--truncation-threshold=1e-3",
+            "--truncation-mode=absolute",
+        ])
         @test ep2.truncation_threshold ≈ 1e-3
         @test ep2.truncation_mode === :absolute
 
@@ -148,9 +171,9 @@ using Globtim.ExperimentCLI
     # ── print_params includes truncation and basis ──────────────────────────
     @testset "print_params includes basis and truncation info" begin
         ep = ExperimentParams(
-            basis=:legendre,
-            truncation_threshold=0.01,
-            truncation_mode=:absolute
+            basis = :legendre,
+            truncation_threshold = 0.01,
+            truncation_mode = :absolute,
         )
 
         output = sprint(print_params, ep)
@@ -163,7 +186,7 @@ using Globtim.ExperimentCLI
         @test occursin("absolute", output)
 
         # Without truncation: must not crash and must not show truncation line
-        ep2 = ExperimentParams(basis=:chebyshev)
+        ep2 = ExperimentParams(basis = :chebyshev)
         output2 = sprint(print_params, ep2)
         @test occursin("chebyshev", output2)
         @test !occursin("truncat", lowercase(output2))
@@ -172,19 +195,27 @@ using Globtim.ExperimentCLI
     # ── setproperties round-trips truncation fields ─────────────────────────
     # Call via ExperimentCLI which imports ConstructionBase internally
     @testset "setproperties preserves truncation fields" begin
-        ep = ExperimentParams(GN=10, truncation_threshold=0.05, truncation_mode=:absolute)
+        ep = ExperimentParams(
+            GN = 10,
+            truncation_threshold = 0.05,
+            truncation_mode = :absolute,
+        )
 
         # Update GN: truncation fields must be preserved
         ep2 = ExperimentParams(;
-            domain_size = ep.domain_size, GN = 20,
-            degree_range = ep.degree_range, max_time = ep.max_time,
-            basis = ep.basis, optim_f_tol = ep.optim_f_tol,
-            optim_x_tol = ep.optim_x_tol, max_iterations = ep.max_iterations,
+            domain_size = ep.domain_size,
+            GN = 20,
+            degree_range = ep.degree_range,
+            max_time = ep.max_time,
+            basis = ep.basis,
+            optim_f_tol = ep.optim_f_tol,
+            optim_x_tol = ep.optim_x_tol,
+            max_iterations = ep.max_iterations,
             enable_gradient_computation = ep.enable_gradient_computation,
             enable_hessian_computation = ep.enable_hessian_computation,
             enable_bfgs_refinement = ep.enable_bfgs_refinement,
             truncation_threshold = ep.truncation_threshold,
-            truncation_mode = ep.truncation_mode
+            truncation_mode = ep.truncation_mode,
         )
         @test ep2.GN == 20
         @test ep2.truncation_threshold ≈ 0.05
@@ -198,5 +229,4 @@ using Globtim.ExperimentCLI
         @test ep3.truncation_threshold ≈ 0.05
         @test ep3.truncation_mode === :absolute
     end
-
 end

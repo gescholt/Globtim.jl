@@ -3,11 +3,10 @@
 
 using Test
 using Globtim
-using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
-               combine_inherited_and_fresh
+using Globtim:
+    Subdomain, remap_parent_to_child, points_inside_child, combine_inherited_and_fresh
 
 @testset "subdivision_reuse" begin
-
     @testset "remap_parent_to_child — identity on non-split dims" begin
         # 3D parent centered at origin, unit half-widths in all dims.
         parent = Subdomain([0.0, 0.0, 0.0], [1.0, 1.0, 1.0])
@@ -56,11 +55,11 @@ using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
 
     @testset "points_inside_child — midpoint cut keeps ~half the points" begin
         parent = Subdomain([0.0, 0.0], [1.0, 1.0])
-        left  = Subdomain([-0.5, 0.0], [0.5, 1.0])
-        right = Subdomain([ 0.5, 0.0], [0.5, 1.0])
+        left = Subdomain([-0.5, 0.0], [0.5, 1.0])
+        right = Subdomain([0.5, 0.0], [0.5, 1.0])
 
         # 5×5 uniform grid in parent coords.
-        coords = range(-1.0, 1.0; length=5)
+        coords = range(-1.0, 1.0; length = 5)
         samples = Matrix{Float64}(undef, 25, 2)
         k = 0
         for xv in coords, yv in coords
@@ -69,14 +68,14 @@ using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
             samples[k, 2] = yv
         end
 
-        idx_left  = points_inside_child(samples, parent, left)
+        idx_left = points_inside_child(samples, parent, left)
         idx_right = points_inside_child(samples, parent, right)
 
         # On a symmetric midpoint cut, points with x_parent=0 sit exactly on the
         # boundary and are accepted into both children (that is the documented
         # boundary behaviour — de-duplication between children is not this
         # function's job).
-        @test length(idx_left)  == 15   # 3 columns × 5 rows (x ∈ {-1, -0.5, 0})
+        @test length(idx_left) == 15   # 3 columns × 5 rows (x ∈ {-1, -0.5, 0})
         @test length(idx_right) == 15   # 3 columns × 5 rows (x ∈ {0, 0.5, 1})
 
         # Every selected point, when remapped, must be inside [-1, 1]^2 up to tol.
@@ -89,10 +88,10 @@ using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
     @testset "points_inside_child — off-center cut is asymmetric" begin
         parent = Subdomain([0.0, 0.0], [1.0, 1.0])
         # cut at x=0.5 → left child covers 75 % of dim 1.
-        left  = Subdomain([-0.25, 0.0], [0.75, 1.0])
-        right = Subdomain([ 0.75, 0.0], [0.25, 1.0])
+        left = Subdomain([-0.25, 0.0], [0.75, 1.0])
+        right = Subdomain([0.75, 0.0], [0.25, 1.0])
 
-        coords = range(-1.0, 1.0; length=5)
+        coords = range(-1.0, 1.0; length = 5)
         samples = Matrix{Float64}(undef, 25, 2)
         k = 0
         for xv in coords, yv in coords
@@ -101,20 +100,22 @@ using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
             samples[k, 2] = yv
         end
 
-        idx_left  = points_inside_child(samples, parent, left)
+        idx_left = points_inside_child(samples, parent, left)
         idx_right = points_inside_child(samples, parent, right)
 
         # Points with x ∈ {-1, -0.5, 0, 0.5} lie in the left child = 4 cols × 5 rows.
-        @test length(idx_left)  == 20
+        @test length(idx_left) == 20
         # Points with x ∈ {0.5, 1} lie in the right child = 2 cols × 5 rows.
         @test length(idx_right) == 10
     end
 
     @testset "combine_inherited_and_fresh — drops duplicates" begin
         inherited = [0.0 0.0; 0.5 0.5]
-        fresh     = [0.5 0.5;  # duplicate of row 2 of inherited
-                     -0.5 -0.5;
-                     0.0 0.0]  # duplicate of row 1 of inherited
+        fresh = [
+            0.5 0.5;  # duplicate of row 2 of inherited
+            -0.5 -0.5;
+            0.0 0.0
+        ]  # duplicate of row 1 of inherited
         combined, new_idx = combine_inherited_and_fresh(inherited, fresh)
 
         @test new_idx == [2]
@@ -126,7 +127,7 @@ using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
 
     @testset "combine_inherited_and_fresh — no overlap, identity concat" begin
         inherited = reshape([0.1, 0.2], 1, 2)
-        fresh     = [0.9 0.9; -0.9 -0.9]
+        fresh = [0.9 0.9; -0.9 -0.9]
         combined, new_idx = combine_inherited_and_fresh(inherited, fresh)
         @test new_idx == [1, 2]
         @test size(combined) == (3, 2)
@@ -136,7 +137,7 @@ using Globtim: Subdomain, remap_parent_to_child, points_inside_child,
 
     @testset "combine_inherited_and_fresh — empty inherited passes through" begin
         inherited = zeros(0, 3)
-        fresh     = [0.0 0.0 0.0; 0.5 -0.5 0.25]
+        fresh = [0.0 0.0 0.0; 0.5 -0.5 0.25]
         combined, new_idx = combine_inherited_and_fresh(inherited, fresh)
         @test new_idx == [1, 2]
         @test combined == fresh

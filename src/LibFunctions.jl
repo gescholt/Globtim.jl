@@ -3,14 +3,14 @@
 @doc nothing struct GaussianParams
     centers::Matrix{Float64}
     variances::Vector{Float64}
-    alt_signs::Union{Vector{Float64}, Nothing}
+    alt_signs::Union{Vector{Float64},Nothing}
 
     GaussianParams(centers::Matrix{Float64}, variances::Vector{Float64}) =
         new(centers, variances, nothing)
     GaussianParams(
         centers::Matrix{Float64},
         variances::Vector{Float64},
-        alt_signs::Vector{Float64}
+        alt_signs::Vector{Float64},
     ) = new(centers, variances, alt_signs)
 end
 # ======================================================= Random noise =======================================================
@@ -94,8 +94,8 @@ end
 
     for i in 1:5
         for j in 1:5
-            A[1, (i - 1) * 5 + j] = a[j]
-            A[2, (i - 1) * 5 + j] = a[i]
+            A[1, (i-1)*5+j] = a[j]
+            A[2, (i-1)*5+j] = a[i]
         end
     end
 
@@ -121,7 +121,6 @@ end
     # =======================================================
     return -cos(xx[1]) * cos(xx[2]) * exp(-((xx[1] - pi)^2 + (xx[2] - pi)^2))
 end
-
 
 """
     init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64) -> GaussianParams
@@ -172,7 +171,7 @@ function init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64)::Gau
 
             # Check separation from all previously generated points
             valid_point = true
-            for j in 1:(i - 1)
+            for j in 1:(i-1)
                 if norm(candidate - centers[j, :]) < sep
                     valid_point = false
                     break
@@ -189,7 +188,7 @@ function init_gaussian_params(n::Int, N::Int, scale::Float64, sep::Float64)::Gau
         # If we couldn't find a valid point after max attempts, error out
         if !valid_point
             error(
-                "Could not generate centers with minimum separation $sep after $max_attempts attempts. Try reducing N or sep."
+                "Could not generate centers with minimum separation $sep after $max_attempts attempts. Try reducing N or sep.",
             )
         end
     end
@@ -200,7 +199,7 @@ end
 @doc nothing function rand_gaussian(
     xx::AbstractVector,
     params::GaussianParams;
-    verbose::Bool = false
+    verbose::Bool = false,
 )
     # =======================================================
     #   Not Rescaled
@@ -355,7 +354,7 @@ end
 @doc nothing function noisy_Deuflhard(
     xx::AbstractVector;
     mean::Float64 = 0.0,
-    stddev::Float64 = 5.0
+    stddev::Float64 = 5.0,
 )
     noise = randn() * stddev + mean
     return Deuflhard(xx) + noise
@@ -488,7 +487,6 @@ end
     #   Domain: [-10, 10]^n.
     # =======================================================
     return prod(sqrt(xx[i]) * sin(xx[i]) for i in eachindex(xx))
-
 end
 
 """
@@ -630,7 +628,7 @@ function Rosenbrock(x::AbstractVector)
         throw(ArgumentError("Rosenbrock function requires at least 2 dimensions"))
     end
 
-    return sum(100 * (x[i + 1] - x[i]^2)^2 + (1 - x[i])^2 for i in 1:(n - 1))
+    return sum(100 * (x[i+1] - x[i]^2)^2 + (1 - x[i])^2 for i in 1:(n-1))
 end
 
 """
@@ -779,7 +777,7 @@ function Levy(x::AbstractVector)
 
     term1 = sin(π * w[1])^2
 
-    term2 = sum((w[i] - 1)^2 * (1 + 10 * sin(π * w[i] + 1)^2) for i in 1:(n - 1))
+    term2 = sum((w[i] - 1)^2 * (1 + 10 * sin(π * w[i] + 1)^2) for i in 1:(n-1))
 
     term3 = (w[n] - 1)^2 * (1 + sin(2 * π * w[n])^2)
 
@@ -995,7 +993,7 @@ function Branin(
     c = 5 / π,
     r = 6,
     s = 10,
-    t = 1 / (8 * π)
+    t = 1 / (8 * π),
 )
     if length(x) != 2
         throw(ArgumentError("Branin function is only defined for 2D input"))
@@ -1366,7 +1364,7 @@ function Trid(x::AbstractVector)
     end
 
     term1 = sum((xi - 1)^2 for xi in x)
-    term2 = sum(x[i] * x[i - 1] for i in 2:n)
+    term2 = sum(x[i] * x[i-1] for i in 2:n)
 
     return term1 - term2
 end
@@ -1469,11 +1467,11 @@ function Powell(x::AbstractVector)
     end
 
     result = 0.0
-    for i in 1:4:(n - 3)
-        term1 = (x[i] + 10 * x[i + 1])^2
-        term2 = 5 * (x[i + 2] - x[i + 3])^2
-        term3 = (x[i + 1] - 2 * x[i + 2])^4
-        term4 = 10 * (x[i] - x[i + 3])^4
+    for i in 1:4:(n-3)
+        term1 = (x[i] + 10 * x[i+1])^2
+        term2 = 5 * (x[i+2] - x[i+3])^2
+        term3 = (x[i+1] - 2 * x[i+2])^4
+        term4 = 10 * (x[i] - x[i+3])^4
         result += term1 + term2 + term3 + term4
     end
 
@@ -1533,7 +1531,7 @@ println(entry.global_min_location(3))  # [1.0, 1.0, 1.0]
 println(entry.global_min_value(3))     # 0.0
 ```
 """
-const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
+const FUNCTION_REGISTRY = Dict{Function,FunctionRegistryEntry}(
     # ── Multimodal functions ──────────────────────────────────────────────
     Ackley => (
         name = "Ackley",
@@ -1585,15 +1583,23 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         default_bounds = (0.0, Float64(π)),
         global_min_location = n -> begin
             # Approximate known locations per dimension (from literature)
-            locs_1d = [2.20291, 1.57080, 1.28499, 1.10570, 0.98470,
-                       0.89284, 0.82033, 0.76048, 0.70955, 0.66537]
+            locs_1d = [
+                2.20291,
+                1.57080,
+                1.28499,
+                1.10570,
+                0.98470,
+                0.89284,
+                0.82033,
+                0.76048,
+                0.70955,
+                0.66537,
+            ]
             return [i <= length(locs_1d) ? locs_1d[i] : π / 2 for i in 1:n]
         end,
         # No closed-form for arbitrary dimension; tabulated from literature
-        global_min_value = n -> get(
-            Dict(2 => -1.8013, 5 => -4.6877, 10 => -9.6602),
-            n, NaN
-        ),
+        global_min_value = n ->
+            get(Dict(2 => -1.8013, 5 => -4.6877, 10 => -9.6602), n, NaN),
         properties = [:multimodal, :non_separable, :steep_ridges],
         min_dim = 2,
         max_dim = typemax(Int),
@@ -1621,10 +1627,7 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
         default_bounds = (0.0, 10.0),
         global_min_location = n -> fill(7.917, n),
         # No closed-form for arbitrary dimension; tabulated from literature
-        global_min_value = n -> get(
-            Dict(2 => -6.1295, 3 => -18.4519),
-            n, NaN
-        ),
+        global_min_value = n -> get(Dict(2 => -6.1295, 3 => -18.4519), n, NaN),
         properties = [:multimodal, :separable],
         min_dim = 2,
         max_dim = typemax(Int),
@@ -1707,7 +1710,8 @@ const FUNCTION_REGISTRY = Dict{Function, FunctionRegistryEntry}(
 
 # ── Fixed-dimension benchmark functions ──
 
-push!(FUNCTION_REGISTRY,
+push!(
+    FUNCTION_REGISTRY,
     Deuflhard => (
         name = "Deuflhard",
         default_bounds = (-1.2, 1.2),
@@ -1745,10 +1749,13 @@ bench = get_benchmark_config(Levy, 3)
 ```
 """
 function get_benchmark_config(func::Function, dim::Int; bounds = nothing)
-    haskey(FUNCTION_REGISTRY, func) || error("Function $(func) not found in FUNCTION_REGISTRY")
+    haskey(FUNCTION_REGISTRY, func) ||
+        error("Function $(func) not found in FUNCTION_REGISTRY")
     entry = FUNCTION_REGISTRY[func]
-    dim >= entry.min_dim || error("$(entry.name) requires at least $(entry.min_dim) dimensions, got $dim")
-    dim <= entry.max_dim || error("$(entry.name) supports at most $(entry.max_dim) dimensions, got $dim")
+    dim >= entry.min_dim ||
+        error("$(entry.name) requires at least $(entry.min_dim) dimensions, got $dim")
+    dim <= entry.max_dim ||
+        error("$(entry.name) supports at most $(entry.max_dim) dimensions, got $dim")
 
     actual_bounds = bounds !== nothing ? bounds : [entry.default_bounds for _ in 1:dim]
     return (
@@ -1785,8 +1792,10 @@ function get_benchmark_config_by_name(name::String, dim::Int; bounds = nothing)
         end
     end
     known = sort([entry.name for entry in values(FUNCTION_REGISTRY)])
-    error("Analytical function \"$name\" not found in FUNCTION_REGISTRY. " *
-          "Known functions: $(join(known, ", "))")
+    error(
+        "Analytical function \"$name\" not found in FUNCTION_REGISTRY. " *
+        "Known functions: $(join(known, ", "))",
+    )
 end
 
 """
@@ -1800,5 +1809,8 @@ function known_analytical_function_names()
 end
 
 # Export registry
-export FUNCTION_REGISTRY, FunctionRegistryEntry, get_benchmark_config,
-       get_benchmark_config_by_name, known_analytical_function_names
+export FUNCTION_REGISTRY,
+    FunctionRegistryEntry,
+    get_benchmark_config,
+    get_benchmark_config_by_name,
+    known_analytical_function_names

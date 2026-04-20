@@ -74,19 +74,19 @@ allowing natural use of scalar functions like `sin`, `cos`, etc.
 TimerOutputs.@timeit _TO function MainGenerate(
     f,
     n::Int,
-    d::Union{Tuple{Symbol, Int}, Tuple{Symbol, Vector{Int}}, Matrix{Float64}},
+    d::Union{Tuple{Symbol,Int},Tuple{Symbol,Vector{Int}},Matrix{Float64}},
     delta::Float64,
     alpha::Float64,
-    scale_factor::Union{Float64, Vector{Float64}},
+    scale_factor::Union{Float64,Vector{Float64}},
     scl::Float64;
     center::Vector{Float64} = fill(0.0, n),
     verbose = 1,
     basis::Symbol = :chebyshev,
-    GN::Union{Int, Nothing} = nothing,
+    GN::Union{Int,Nothing} = nothing,
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    thread_evals::Bool = false
+    thread_evals::Bool = false,
 )::ApproxPoly
     # Check if d is a grid (Matrix format)
     grid_provided = isa(d, Matrix)
@@ -111,8 +111,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
         expected_points = (actual_GN + 1)^n
         if total_points != expected_points
             @warn "Grid may not be a tensor product. Expected $(expected_points) points " *
-                "for $(n)D grid with $(n_per_dim) points per dimension, but got $(total_points) points. " *
-                "Proceeding with inferred degree=$(actual_GN), but results may have degraded accuracy."
+                  "for $(n)D grid with $(n_per_dim) points per dimension, but got $(total_points) points. " *
+                  "Proceeding with inferred degree=$(actual_GN), but results may have degraded accuracy."
         end
 
         # Degree equals GN for tensor product grids
@@ -138,8 +138,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
         else
             throw(
                 ArgumentError(
-                    "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom."
-                )
+                    "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom.",
+                ),
             )
         end
 
@@ -188,8 +188,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
                     ArgumentError(
                         "Grid memory requirement too high: $(grid_memory) GB. " *
                         "For $(n)D problems, use samples_per_dim ≤ $(max(2, floor(Int, 256^(1/n)))) " *
-                        "to prevent OutOfMemoryError during grid generation."
-                    )
+                        "to prevent OutOfMemoryError during grid generation.",
+                    ),
                 )
             end
         end
@@ -214,7 +214,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
             Lambda,
             matrix_from_grid,
             basis = basis,
-            force_anisotropic = is_anisotropic
+            force_anisotropic = is_anisotropic,
         )
     end
 
@@ -234,7 +234,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     end
 
     # Convert center to SVector
-    scaled_center = SVector{n, Float64}(center)
+    scaled_center = SVector{n,Float64}(center)
 
     # Handle different scale_factor types for function evaluation
     n_grid_points = grid_provided ? size(matrix_from_grid, 1) : length(grid)
@@ -246,7 +246,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         if grid_provided
             # Grid is already in matrix format, create SVectors for evaluation
             grid_points = [
-                SVector{n, Float64}(matrix_from_grid[i, :]) for
+                SVector{n,Float64}(matrix_from_grid[i, :]) for
                 i in 1:size(matrix_from_grid, 1)
             ]
         else
@@ -260,15 +260,15 @@ TimerOutputs.@timeit _TO function MainGenerate(
         # sequential `map` and a chunked `@spawn` pool based on thread_evals.
         eval_fn = if isa(scale_factor, Number)
             if n == 1
-                x -> f((scale_factor * x + scaled_center)[1])
+                x -> f((scale_factor*x+scaled_center)[1])
             else
                 x -> f(scale_factor * x + scaled_center)
             end
         else
             function apply_scale(x)
-                scaled_x = SVector{n, Float64}([scale_factor[i] * x[i] for i in 1:n])
+                scaled_x = SVector{n,Float64}([scale_factor[i] * x[i] for i in 1:n])
                 if n == 1
-                    return f((scaled_x + scaled_center)[1])
+                    return f((scaled_x+scaled_center)[1])
                 else
                     return f(scaled_x + scaled_center)
                 end
@@ -324,7 +324,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
             sol = LinearSolve.solve(
                 linear_prob,
                 LinearSolve.LUFactorization(),
-                verbose = true
+                verbose = true,
             )
         else
             sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization())
@@ -341,9 +341,11 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Guard: NaN/Inf norm means numerical breakdown — fail fast with diagnostics
     if isnan(nrm) || isinf(nrm)
-        error("L2 norm is $(nrm) at degree=$(grid_provided ? degree_est : d) — " *
-              "numerical instability (cond_vandermonde=$(cond_vandermonde), " *
-              "n_grid_points=$(size(matrix_from_grid, 1)), basis=$(basis))")
+        error(
+            "L2 norm is $(nrm) at degree=$(grid_provided ? degree_est : d) — " *
+            "numerical instability (cond_vandermonde=$(cond_vandermonde), " *
+            "n_grid_points=$(size(matrix_from_grid, 1)), basis=$(basis))",
+        )
     end
 
     # Store the basis parameters in the ApproxPoly object
@@ -365,7 +367,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         precision,
         normalized,
         power_of_two_denom,
-        cond_vandermonde
+        cond_vandermonde,
     )
 end
 
@@ -438,8 +440,8 @@ TimerOutputs.@timeit _TO function Constructor(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = false,
     power_of_two_denom::Bool = false,
-    grid::Union{Nothing, Matrix{Float64}} = nothing,
-    thread_evals::Bool = false
+    grid::Union{Nothing,Matrix{Float64}} = nothing,
+    thread_evals::Bool = false,
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
@@ -461,7 +463,7 @@ TimerOutputs.@timeit _TO function Constructor(
             precision = precision,
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
-            thread_evals = thread_evals
+            thread_evals = thread_evals,
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
@@ -483,7 +485,7 @@ TimerOutputs.@timeit _TO function Constructor(
             precision = precision,
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
-            thread_evals = thread_evals
+            thread_evals = thread_evals,
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
@@ -508,7 +510,7 @@ TimerOutputs.@timeit _TO function Constructor(
             precision = precision,
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
-            thread_evals = thread_evals
+            thread_evals = thread_evals,
         )
         if !isnothing(T.tolerance) && p.nrm < T.tolerance
             if verbose >= 1

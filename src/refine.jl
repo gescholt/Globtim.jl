@@ -16,7 +16,7 @@ Vector{Int}: Region ID (1 to n_regions_per_dim^n) for each point in df
 function assign_spatial_regions(
     df::DataFrame,
     TR::TestInput,
-    n_regions_per_dim::Int = 5
+    n_regions_per_dim::Int = 5,
 )::Vector{Int}
     n_dims = count(col -> startswith(string(col), "x"), names(df))
     n_points = nrow(df)
@@ -66,7 +66,7 @@ Vector{Int}: Cluster assignment (1 to n_clusters) for each point
 """
 function cluster_function_values(
     z_values::Vector{Float64},
-    n_clusters::Int = 5
+    n_clusters::Int = 5,
 )::Vector{Int}
     # Handle edge cases
     if length(z_values) <= n_clusters
@@ -154,7 +154,10 @@ function compute_gradients(f, points::Matrix{Float64})::Vector{Float64}
         catch e
             push!(failed_points, i)
             push!(failure_types, string(typeof(e)))
-            @debug "Point $i: Gradient computation failed with error: $e" exception=(e, catch_backtrace())
+            @debug "Point $i: Gradient computation failed with error: $e" exception=(
+                e,
+                catch_backtrace(),
+            )
             # Fallback for points where gradient computation fails
             grad_norms[i] = NaN
         end
@@ -163,7 +166,9 @@ function compute_gradients(f, points::Matrix{Float64})::Vector{Float64}
     # Report summary if any points failed
     if !isempty(failed_points)
         sample_points = first(failed_points, min(5, length(failed_points)))
-        @warn "Gradient computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(failure_types)
+        @warn "Gradient computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(
+            failure_types,
+        )
     end
 
     return grad_norms
@@ -184,8 +189,8 @@ function analyze_basins(
     df::DataFrame,
     df_min::DataFrame,
     n_dims::Int,
-    tol_dist::Float64
-)::Tuple{Vector{Int}, Vector{Float64}, Vector{Int}}
+    tol_dist::Float64,
+)::Tuple{Vector{Int},Vector{Float64},Vector{Int}}
     n_minimizers = nrow(df_min)
     basin_sizes = zeros(Int, n_minimizers)
     avg_steps = zeros(Float64, n_minimizers)
@@ -399,9 +404,16 @@ Run NelderMead optimization from each critical point to find nearby minimizers.
 Updates `df` in-place with refined coordinates and populates `df_min` with unique minimizers.
 """
 function _refine_critical_points!(
-    df::DataFrame, df_min::DataFrame, f, TR::TestInput, n_dims::Int;
-    max_iters_in_optim::Int=100, tol_dist::Float64=0.025,
-    bfgs_f_abstol::Float64=1e-8, bfgs_x_abstol::Float64=0.0, verbose::Bool=true
+    df::DataFrame,
+    df_min::DataFrame,
+    f,
+    TR::TestInput,
+    n_dims::Int;
+    max_iters_in_optim::Int = 100,
+    tol_dist::Float64 = 0.025,
+    bfgs_f_abstol::Float64 = 1e-8,
+    bfgs_x_abstol::Float64 = 0.0,
+    verbose::Bool = true,
 )
     for i in 1:nrow(df)
         try
@@ -410,9 +422,15 @@ function _refine_critical_points!(
 
             res = Logging.with_logger(Logging.NullLogger()) do
                 Optim.optimize(
-                    f, x0, Optim.NelderMead(),
-                    Optim.Options(show_trace=false, iterations=max_iters_in_optim,
-                                  f_tol=bfgs_f_abstol, x_tol=bfgs_x_abstol)
+                    f,
+                    x0,
+                    Optim.NelderMead(),
+                    Optim.Options(
+                        show_trace = false,
+                        iterations = max_iters_in_optim,
+                        f_tol = bfgs_f_abstol,
+                        x_tol = bfgs_x_abstol,
+                    ),
                 )
             end
 
@@ -429,11 +447,12 @@ function _refine_critical_points!(
             converged = optim_converged && within_bounds
 
             if verbose
-                green_check = "\e[32m✓\e[0m"; red_cross = "\e[31m✗\e[0m"
+                green_check = "\e[32m✓\e[0m";
+                red_cross = "\e[31m✗\e[0m"
                 println(
                     converged ? "Optimization has converged within bounds: $green_check" :
                     "Optimization status: $red_cross" *
-                    (optim_converged ? " (outside bounds)" : " (did not converge)")
+                    (optim_converged ? " (outside bounds)" : " (did not converge)"),
                 )
             end
 
@@ -462,7 +481,7 @@ function _refine_critical_points!(
                     norm([df[k, Symbol("x$j")] - minimizer[j] for j in 1:n_dims]) < tol_dist
                     for k in 1:nrow(df)
                 )
-                new_row = Dict{Symbol, Any}()
+                new_row = Dict{Symbol,Any}()
                 for j in 1:n_dims
                     new_row[Symbol("x$j")] = minimizer[j]
                 end
@@ -489,8 +508,14 @@ Compute spatial regions, function value clusters, nearest neighbors,
 gradient norms, and basin analysis. Updates `df` and `df_min` in-place.
 """
 function _compute_enhanced_statistics!(
-    df::DataFrame, df_min::DataFrame, f, TR::TestInput, n_dims::Int;
-    tol_dist::Float64=0.025, enable_gradient_computation::Bool=true, verbose::Bool=true
+    df::DataFrame,
+    df_min::DataFrame,
+    f,
+    TR::TestInput,
+    n_dims::Int;
+    tol_dist::Float64 = 0.025,
+    enable_gradient_computation::Bool = true,
+    verbose::Bool = true,
 )
     verbose && println("\n=== Computing Enhanced Statistics ===")
 
@@ -541,8 +566,12 @@ Compute Hessian matrices, eigenvalues, critical point classification,
 and related statistics. Updates `df` and `df_min` in-place.
 """
 function _compute_hessian_analysis!(
-    df::DataFrame, df_min::DataFrame, f, n_dims::Int;
-    hessian_tol_zero::Float64=1e-8, verbose::Bool=true
+    df::DataFrame,
+    df_min::DataFrame,
+    f,
+    n_dims::Int;
+    hessian_tol_zero::Float64 = 1e-8,
+    verbose::Bool = true,
 )
     verbose && println("\n=== Computing Complete Hessian Analysis ===")
 
@@ -558,7 +587,7 @@ function _compute_hessian_analysis!(
     all_eigenvalues = store_all_eigenvalues(hessians)
 
     verbose && println("Classifying critical points...")
-    classifications = classify_critical_points(hessians, tol_zero=hessian_tol_zero)
+    classifications = classify_critical_points(hessians, tol_zero = hessian_tol_zero)
     @debug "analyze_critical_points: Classifications: $classifications"
     df[!, :critical_point_type] = classifications
 
@@ -585,7 +614,8 @@ function _compute_hessian_analysis!(
         end
         min_hessians = compute_hessians(f, min_points)
         min_all_eigenvalues = store_all_eigenvalues(min_hessians)
-        min_classifications = classify_critical_points(min_hessians, tol_zero=hessian_tol_zero)
+        min_classifications =
+            classify_critical_points(min_hessians, tol_zero = hessian_tol_zero)
         min_smallest_pos, min_largest_neg =
             extract_critical_eigenvalues(min_classifications, min_all_eigenvalues)
 
@@ -617,7 +647,7 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     hessian_tol_zero = 1e-8,
     bfgs_g_tol = 1e-8,
     bfgs_f_abstol = 1e-8,
-    bfgs_x_abstol = 0.0
+    bfgs_x_abstol = 0.0,
 )
     n_dims = count(col -> startswith(string(col), "x"), names(df))
 
@@ -634,14 +664,23 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     for i in 1:n_dims
         pushfirst!(min_cols, Symbol("x$i"))
     end
-    df_min = DataFrame([name => Float64[] for name in min_cols[1:(end - 1)]])
+    df_min = DataFrame([name => Float64[] for name in min_cols[1:(end-1)]])
     df_min[!, :captured] = Bool[]
 
     # Stage 1: Refinement
     if enable_bfgs_refinement
-        _refine_critical_points!(df, df_min, f, TR, n_dims;
-            max_iters_in_optim, tol_dist=Float64(tol_dist),
-            bfgs_f_abstol=Float64(bfgs_f_abstol), bfgs_x_abstol=Float64(bfgs_x_abstol), verbose)
+        _refine_critical_points!(
+            df,
+            df_min,
+            f,
+            TR,
+            n_dims;
+            max_iters_in_optim,
+            tol_dist = Float64(tol_dist),
+            bfgs_f_abstol = Float64(bfgs_f_abstol),
+            bfgs_x_abstol = Float64(bfgs_x_abstol),
+            verbose,
+        )
     else
         verbose && println("BFGS refinement disabled, using raw critical points")
         for i in 1:nrow(df)
@@ -655,13 +694,27 @@ TimerOutputs.@timeit _TO function analyze_critical_points(
     end
 
     # Stage 2: Enhanced statistics
-    _compute_enhanced_statistics!(df, df_min, f, TR, n_dims;
-        tol_dist=Float64(tol_dist), enable_gradient_computation, verbose)
+    _compute_enhanced_statistics!(
+        df,
+        df_min,
+        f,
+        TR,
+        n_dims;
+        tol_dist = Float64(tol_dist),
+        enable_gradient_computation,
+        verbose,
+    )
 
     # Stage 3: Hessian analysis
     if enable_hessian
-        _compute_hessian_analysis!(df, df_min, f, n_dims;
-            hessian_tol_zero=Float64(hessian_tol_zero), verbose)
+        _compute_hessian_analysis!(
+            df,
+            df_min,
+            f,
+            n_dims;
+            hessian_tol_zero = Float64(hessian_tol_zero),
+            verbose,
+        )
     end
 
     return df, df_min
@@ -687,7 +740,7 @@ Analyze Optim result to determine why optimization stopped.
 function determine_convergence_reason(
     result::Optim.OptimizationResults,
     tolerance_used::Float64,
-    config::BFGSConfig
+    config::BFGSConfig,
 )
     if Optim.converged(result)
         # Check which convergence criterion was met
@@ -732,9 +785,8 @@ function enhanced_bfgs_refinement(
     orthant_labels::Vector{String},
     objective_function::Function,
     config::BFGSConfig = BFGSConfig();
-    expected_minimum::Union{Vector{Float64}, Nothing} = nothing
+    expected_minimum::Union{Vector{Float64},Nothing} = nothing,
 )
-
     results = BFGSResult[]
 
     for (i, (point, value, label)) in
@@ -765,8 +817,8 @@ function enhanced_bfgs_refinement(
                     x_tol = config.x_tol,
                     show_trace = config.show_trace,
                     store_trace = true,
-                    extended_trace = true
-                )
+                    extended_trace = true,
+                ),
             )
         end
 
@@ -779,7 +831,10 @@ function enhanced_bfgs_refinement(
         grad = try
             ForwardDiff.gradient(objective_function, refined_point)
         catch e
-            @warn "Gradient computation failed after refinement" exception=(e, catch_backtrace())
+            @warn "Gradient computation failed after refinement" exception=(
+                e,
+                catch_backtrace(),
+            )
             fill(NaN, length(refined_point))
         end
 
@@ -813,7 +868,7 @@ function enhanced_bfgs_refinement(
             abs(refined_value - value),
             label,
             distance_to_expected,
-            optimization_time
+            optimization_time,
         )
 
         push!(results, bfgs_result)
@@ -824,13 +879,13 @@ function enhanced_bfgs_refinement(
             println("  Tolerance used: $tolerance_used ($tolerance_reason)")
             println("  Converged: $(Optim.converged(result)) (reason: $convergence_reason)")
             println(
-                "  Iterations: $(bfgs_result.iterations_used), f_calls: $f_calls, g_calls: $g_calls"
+                "  Iterations: $(bfgs_result.iterations_used), f_calls: $f_calls, g_calls: $g_calls",
             )
             println(
-                "  Value improvement: $(round(bfgs_result.value_improvement, sigdigits=3))"
+                "  Value improvement: $(round(bfgs_result.value_improvement, sigdigits=3))",
             )
             println(
-                "  Final gradient norm: $(round(bfgs_result.final_grad_norm, sigdigits=3))"
+                "  Final gradient norm: $(round(bfgs_result.final_grad_norm, sigdigits=3))",
             )
             println("  Time: $(round(optimization_time, digits=3))s")
         end
@@ -859,7 +914,7 @@ function refine_with_enhanced_bfgs(
     df::DataFrame,
     objective_function::Function,
     config::BFGSConfig = BFGSConfig();
-    expected_minima::Union{Vector{Vector{Float64}}, Nothing} = nothing
+    expected_minima::Union{Vector{Vector{Float64}},Nothing} = nothing,
 )
 
     # Extract dimension
@@ -895,7 +950,7 @@ function refine_with_enhanced_bfgs(
         orthant_labels,
         objective_function,
         config;
-        expected_minimum = expected_minimum
+        expected_minimum = expected_minimum,
     )
 
     # Add results to DataFrame
@@ -962,7 +1017,7 @@ function detect_distinct_local_minima(
     objective_values::Vector{Float64},
     classifications::Vector{Symbol};
     distance_threshold::Float64 = 1e-3,
-    objective_threshold::Float64 = 1e-6
+    objective_threshold::Float64 = 1e-6,
 )
     # Filter for minima only
     minima_indices = findall(c -> c == :minimum, classifications)
@@ -972,7 +1027,7 @@ function detect_distinct_local_minima(
             n_distinct_minima = 0,
             cluster_representatives = Int[],
             cluster_sizes = Int[],
-            representative_objectives = Float64[]
+            representative_objectives = Float64[],
         )
     end
 
@@ -1032,7 +1087,7 @@ function detect_distinct_local_minima(
         n_distinct_minima = length(clusters),
         cluster_representatives = representatives,
         cluster_sizes = cluster_sizes,
-        representative_objectives = representative_objs
+        representative_objectives = representative_objs,
     )
 end
 

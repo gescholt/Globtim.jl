@@ -126,14 +126,13 @@ function evaluate(poly::ApproxPoly, x::AbstractVector{T})::T where {T<:Real}
         term = one(eltype(x_scaled))
         for k in 1:n
             deg = lambda[j, k]
-            term *= basis_evals[k, deg + 1]
+            term *= basis_evals[k, deg+1]
         end
         result += poly.coeffs[j] * term
     end
 
     return result
 end
-
 
 """
     gradient(poly::ApproxPoly, x::AbstractVector{<:Real})::Vector{Float64}
@@ -158,7 +157,6 @@ grad = gradient(poly, [0.5, 0.3])
 function gradient(poly::ApproxPoly, x::AbstractVector{<:Real})::Vector{Float64}
     return ForwardDiff.gradient(z -> evaluate(poly, z), collect(x))
 end
-
 
 """
     evaluate(poly::ApproxPoly, X::AbstractMatrix{<:Real})::Vector{Float64}

@@ -18,7 +18,7 @@ Stores information about an anisotropic grid including unique nodes per dimensio
 """
 struct AnisotropicGridInfo{T}
     unique_points_per_dim::Vector{Vector{T}}
-    point_indices_per_dim::Vector{Dict{T, Int}}
+    point_indices_per_dim::Vector{Dict{T,Int}}
     n_dims::Int
     n_points::Int
     is_tensor_product::Bool
@@ -56,7 +56,7 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
 
     # Extract unique points for each dimension
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dims)
-    point_indices_per_dim = Vector{Dict{T, Int}}(undef, n_dims)
+    point_indices_per_dim = Vector{Dict{T,Int}}(undef, n_dims)
 
     for d in 1:n_dims
         unique_points = sort(unique(S[:, d]))
@@ -91,7 +91,7 @@ function analyze_grid_structure(S::Matrix{T}) where {T}
         point_indices_per_dim,
         n_dims,
         n_points,
-        is_tensor_product
+        is_tensor_product,
     )
 end
 
@@ -149,7 +149,7 @@ function lambda_vandermonde_anisotropic(
     Lambda::NamedTuple,
     S::Matrix{T};
     basis::Symbol = :chebyshev,
-    grid_info::Union{Nothing, AnisotropicGridInfo} = nothing
+    grid_info::Union{Nothing,AnisotropicGridInfo} = nothing,
 ) where {T}
     # Analyze grid structure if not provided
     info = isnothing(grid_info) ? analyze_grid_structure(S) : grid_info
@@ -173,11 +173,11 @@ function lambda_vandermonde_anisotropic(
     end
 
     # Pre-compute polynomial evaluations for each dimension
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dims)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dims)
 
     if basis == :chebyshev
         for d in 1:n_dims
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = info.unique_points_per_dim[d]
 
             # Special handling for exact types vs floating point
@@ -204,7 +204,7 @@ function lambda_vandermonde_anisotropic(
 
     elseif basis == :legendre
         for d in 1:n_dims
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = info.unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
@@ -212,7 +212,7 @@ function lambda_vandermonde_anisotropic(
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
 
                 # Evaluate at unique points for this dimension

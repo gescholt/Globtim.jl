@@ -37,8 +37,8 @@ end
 function get_scale_factor_type(scale_factor::AbstractVector, dim::Int)
     length(scale_factor) == dim || throw(
         ArgumentError(
-            "scale_factor vector length ($( length(scale_factor))) must match dimension ($dim)"
-        )
+            "scale_factor vector length ($( length(scale_factor))) must match dimension ($dim)",
+        ),
     )
     return Vector{Float64}(scale_factor)
 end
@@ -91,7 +91,15 @@ function compute_norm(scale_factor::Float64, VL, sol, F, basis::Symbol, GN::Int,
     return sqrt(sum(abs2.(residuals) .* weights))
 end
 
-function compute_norm(scale_factor::Vector{Float64}, VL, sol, F, basis::Symbol, GN::Int, n::Int)
+function compute_norm(
+    scale_factor::Vector{Float64},
+    VL,
+    sol,
+    F,
+    basis::Symbol,
+    GN::Int,
+    n::Int,
+)
     # Compute residuals at grid points (no re-evaluation of function)
     residuals = VL * sol.u - F
 
@@ -140,7 +148,7 @@ Type-stable coordinate transformation for visualization.
 function transform_coordinates(
     scale_factor::Float64,
     grid::Matrix{Float64},
-    center::Vector{Float64}
+    center::Vector{Float64},
 )
     # Scalar version: simple broadcasting
     scale_factor * grid .+ center'
@@ -149,7 +157,7 @@ end
 function transform_coordinates(
     scale_factor::Vector{Float64},
     grid::Matrix{Float64},
-    center::Vector{Float64}
+    center::Vector{Float64},
 )
     # Vector version: element-wise scaling per dimension
     scaled_coords = similar(grid)

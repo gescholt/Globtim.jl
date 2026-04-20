@@ -16,9 +16,9 @@ using Globtim
     bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 
     @testset "estimate_subdomain_error handles Inf gracefully" begin
-        tree = Globtim.SubdivisionTree(bounds; degree=4)
+        tree = Globtim.SubdivisionTree(bounds; degree = 4)
         sd = tree.subdomains[1]
-        l2 = Globtim.estimate_subdomain_error(objective_with_inf, sd, 4, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(objective_with_inf, sd, 4, basis = :chebyshev)
 
         # Should get a finite (possibly large) L2 error, not Inf
         @test isfinite(l2)
@@ -29,15 +29,17 @@ using Globtim
 
     @testset "two_phase_refine handles Inf-returning objective" begin
         tree = Globtim.two_phase_refine(
-            objective_with_inf, bounds, 4;
-            coarse_tolerance=1e-2,
-            fine_tolerance=1e-4,
-            tolerance_mode=:absolute,
-            max_depth=3,
-            max_leaves=50,
-            parallel=false,
-            basis=:chebyshev,
-            verbose=false,
+            objective_with_inf,
+            bounds,
+            4;
+            coarse_tolerance = 1e-2,
+            fine_tolerance = 1e-4,
+            tolerance_mode = :absolute,
+            max_depth = 3,
+            max_leaves = 50,
+            parallel = false,
+            basis = :chebyshev,
+            verbose = false,
         )
 
         # Should produce a tree with leaves (not all failed)
@@ -62,15 +64,17 @@ using Globtim
         end
 
         tree = Globtim.two_phase_refine(
-            corner_inf, bounds, 6;
-            coarse_tolerance=1e-4,
-            fine_tolerance=1e-6,
-            tolerance_mode=:absolute,
-            max_depth=4,
-            max_leaves=100,
-            parallel=false,
-            basis=:chebyshev,
-            verbose=false,
+            corner_inf,
+            bounds,
+            6;
+            coarse_tolerance = 1e-4,
+            fine_tolerance = 1e-6,
+            tolerance_mode = :absolute,
+            max_depth = 4,
+            max_leaves = 100,
+            parallel = false,
+            basis = :chebyshev,
+            verbose = false,
         )
 
         # Most leaves should converge (the function is smooth almost everywhere)
@@ -85,9 +89,9 @@ using Globtim
         # If every grid point is Inf, there's nothing to fit
         all_inf(x) = Inf
 
-        tree = Globtim.SubdivisionTree(bounds; degree=4)
+        tree = Globtim.SubdivisionTree(bounds; degree = 4)
         sd = tree.subdomains[1]
-        l2 = Globtim.estimate_subdomain_error(all_inf, sd, 4, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(all_inf, sd, 4, basis = :chebyshev)
 
         @test l2 == Inf
         @test sd.l2_error == Inf
@@ -104,9 +108,9 @@ using Globtim
         end
 
         bounds_wide = [(-2.0, 2.0), (-2.0, 2.0)]
-        tree = Globtim.SubdivisionTree(bounds_wide; degree=6)
+        tree = Globtim.SubdivisionTree(bounds_wide; degree = 6)
         sd = tree.subdomains[1]
-        l2 = Globtim.estimate_subdomain_error(ode_like, sd, 6, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(ode_like, sd, 6, basis = :chebyshev)
 
         # Should produce a finite L2 even though some grid points are Inf
         @test isfinite(l2)

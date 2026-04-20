@@ -10,11 +10,9 @@
 using LinearAlgebra
 using Statistics
 using Base.Threads
-using Printf
+using Printf#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                           DATA STRUCTURES                                     #
-#==============================================================================#
 
 """
     Subdomain
@@ -43,32 +41,57 @@ mutable struct Subdomain
     relative_l2_error::Float64
     depth::Int
     degree::Int
-    parent_id::Union{Int, Nothing}
-    polynomial::Union{ApproxPoly, Nothing}
-    samples::Union{Matrix{Float64}, Nothing}
-    f_values::Union{Vector{Float64}, Nothing}
+    parent_id::Union{Int,Nothing}
+    polynomial::Union{ApproxPoly,Nothing}
+    samples::Union{Matrix{Float64},Nothing}
+    f_values::Union{Vector{Float64},Nothing}
     # Split tracking for tree visualization
-    children::Union{Tuple{Int,Int}, Nothing}
-    split_dim::Union{Int, Nothing}
-    split_pos::Union{Float64, Nothing}
+    children::Union{Tuple{Int,Int},Nothing}
+    split_dim::Union{Int,Nothing}
+    split_pos::Union{Float64,Nothing}
 end
 
 # Constructor for new subdomain (no polynomial yet)
-function Subdomain(center::Vector{Float64}, half_widths::Vector{Float64};
-                   depth::Int=0, degree::Int=0,
-                   parent_id::Union{Int, Nothing}=nothing)
-    return Subdomain(center, half_widths, Inf, Inf, depth, degree, parent_id,
-                     nothing, nothing, nothing,
-                     nothing, nothing, nothing)  # children, split_dim, split_pos
+function Subdomain(
+    center::Vector{Float64},
+    half_widths::Vector{Float64};
+    depth::Int = 0,
+    degree::Int = 0,
+    parent_id::Union{Int,Nothing} = nothing,
+)
+    return Subdomain(
+        center,
+        half_widths,
+        Inf,
+        Inf,
+        depth,
+        degree,
+        parent_id,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+    )  # children, split_dim, split_pos
 end
 
 # Constructor from bounds
-function Subdomain(bounds::Vector{Tuple{Float64, Float64}};
-                   depth::Int=0, degree::Int=0,
-                   parent_id::Union{Int, Nothing}=nothing)
+function Subdomain(
+    bounds::Vector{Tuple{Float64,Float64}};
+    depth::Int = 0,
+    degree::Int = 0,
+    parent_id::Union{Int,Nothing} = nothing,
+)
     center = [(b[1] + b[2]) / 2 for b in bounds]
     half_widths = [(b[2] - b[1]) / 2 for b in bounds]
-    return Subdomain(center, half_widths, depth=depth, degree=degree, parent_id=parent_id)
+    return Subdomain(
+        center,
+        half_widths,
+        depth = depth,
+        degree = degree,
+        parent_id = parent_id,
+    )
 end
 
 """
@@ -77,9 +100,12 @@ end
 Return bounds as vector of (min, max) tuples.
 """
 function get_bounds(subdomain::Subdomain)
-    return [(subdomain.center[d] - subdomain.half_widths[d],
-             subdomain.center[d] + subdomain.half_widths[d])
-            for d in 1:length(subdomain.center)]
+    return [
+        (
+            subdomain.center[d] - subdomain.half_widths[d],
+            subdomain.center[d] + subdomain.half_widths[d],
+        ) for d in 1:length(subdomain.center)
+    ]
 end
 
 """
@@ -120,8 +146,8 @@ function SubdivisionTree(initial_domain::Subdomain)
 end
 
 # Constructor from bounds (optional degree sets the root subdomain's degree)
-function SubdivisionTree(bounds::Vector{Tuple{Float64, Float64}}; degree::Int=0)
-    root = Subdomain(bounds; degree=degree)
+function SubdivisionTree(bounds::Vector{Tuple{Float64,Float64}}; degree::Int = 0)
+    root = Subdomain(bounds; degree = degree)
     return SubdivisionTree(root)
 end
 
@@ -189,7 +215,7 @@ tree = adaptive_refine(f, bounds, 4)
 display_tree(tree, max_leaves=10)
 ```
 """
-function display_tree(tree::SubdivisionTree; max_leaves::Int=20, sort_by::Symbol=:error)
+function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symbol = :error)
     all_leaves = vcat(tree.converged_leaves, tree.active_leaves)
     isempty(all_leaves) && return println("Empty tree")
 
@@ -198,19 +224,31 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int=20, sort_by::Symbol
     # Sort leaves
     sorted_leaves = copy(all_leaves)
     if sort_by == :error
-        sort!(sorted_leaves, by=id -> -tree.subdomains[id].l2_error)
+        sort!(sorted_leaves, by = id -> -tree.subdomains[id].l2_error)
     elseif sort_by == :depth
-        sort!(sorted_leaves, by=id -> -tree.subdomains[id].depth)
+        sort!(sorted_leaves, by = id -> -tree.subdomains[id].depth)
     end
 
     # Header
-    println("SubdivisionTree: $(n_leaves(tree)) leaves, depth=$(get_max_depth(tree)), dim=$n_dim")
+    println(
+        "SubdivisionTree: $(n_leaves(tree)) leaves, depth=$(get_max_depth(tree)), dim=$n_dim",
+    )
     println("Total L2 error: $(round(total_error(tree), sigdigits=4))")
-    println("Converged: $(length(tree.converged_leaves)), Active: $(length(tree.active_leaves))")
+    println(
+        "Converged: $(length(tree.converged_leaves)), Active: $(length(tree.active_leaves))",
+    )
     println()
 
     # Table
-    Printf.@printf("%-4s  %-5s  %-3s  %-10s  %-8s  %s\n", "ID", "Depth", "Deg", "L2 Error", "Status", "Bounds")
+    Printf.@printf(
+        "%-4s  %-5s  %-3s  %-10s  %-8s  %s\n",
+        "ID",
+        "Depth",
+        "Deg",
+        "L2 Error",
+        "Status",
+        "Bounds"
+    )
     println("-"^75)
 
     for id in sorted_leaves[1:min(max_leaves, length(sorted_leaves))]
@@ -218,16 +256,23 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int=20, sort_by::Symbol
         bounds = get_bounds(sd)
         bounds_str = join([Printf.@sprintf("[%.2f,%.2f]", b[1], b[2]) for b in bounds], "×")
         status = id in tree.converged_leaves ? "conv" : "active"
-        Printf.@printf("%-4d  %-5d  %-3d  %-10.2e  %-8s  %s\n", id, sd.depth, sd.degree, sd.l2_error, status, bounds_str)
+        Printf.@printf(
+            "%-4d  %-5d  %-3d  %-10.2e  %-8s  %s\n",
+            id,
+            sd.depth,
+            sd.degree,
+            sd.l2_error,
+            status,
+            bounds_str
+        )
     end
 
-    length(sorted_leaves) > max_leaves && println("... $(length(sorted_leaves) - max_leaves) more")
+    length(sorted_leaves) > max_leaves &&
+        println("... $(length(sorted_leaves) - max_leaves) more")
     nothing
-end
+end#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                       SUBDOMAIN OPERATIONS                                    #
-#==============================================================================#
 
 """
     subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
@@ -264,12 +309,20 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
     right_center[dim] = (cut_point + upper_bound) / 2
     right_half_widths[dim] = (upper_bound - cut_point) / 2
 
-    child_left = Subdomain(left_center, left_half_widths,
-                           depth=subdomain.depth + 1, degree=subdomain.degree,
-                           parent_id=nothing)  # parent_id set by update_tree!
-    child_right = Subdomain(right_center, right_half_widths,
-                            depth=subdomain.depth + 1, degree=subdomain.degree,
-                            parent_id=nothing)
+    child_left = Subdomain(
+        left_center,
+        left_half_widths,
+        depth = subdomain.depth + 1,
+        degree = subdomain.degree,
+        parent_id = nothing,
+    )  # parent_id set by update_tree!
+    child_right = Subdomain(
+        right_center,
+        right_half_widths,
+        depth = subdomain.depth + 1,
+        degree = subdomain.degree,
+        parent_id = nothing,
+    )
 
     return (child_left, child_right)
 end
@@ -279,11 +332,9 @@ end
 
 Convenience function to subdivide at the midpoint of dimension `dim`.
 """
-subdivide_midpoint(subdomain::Subdomain, dim::Int) = subdivide_domain(subdomain, dim, 0.0)
+subdivide_midpoint(subdomain::Subdomain, dim::Int) = subdivide_domain(subdomain, dim, 0.0)#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                     STATISTICAL DIMENSION SELECTION                           #
-#==============================================================================#
 
 """
     select_cut_dimension(subdomain::Subdomain)
@@ -352,9 +403,9 @@ function select_cut_dimension(subdomain::Subdomain)
 
             # Group points by their coordinates in other dimensions
             # Use rounded keys to handle floating point comparison
-            groups = Dict{Vector{Float64}, Vector{Int}}()
+            groups = Dict{Vector{Float64},Vector{Int}}()
             for i in 1:size(samples, 1)
-                key = round.(samples[i, other_dims], digits=10)
+                key = round.(samples[i, other_dims], digits = 10)
                 if !haskey(groups, key)
                     groups[key] = Int[]
                 end
@@ -401,15 +452,13 @@ function evaluate_polynomial_at_samples(pol::ApproxPoly, samples::Matrix{Float64
     # Create Vandermonde matrix for evaluation
     # samples is (n_samples, n_dim) which is the correct format for lambda_vandermonde
     Lambda = SupportGen(size(samples, 2), pol.degree)
-    V = lambda_vandermonde(Lambda, samples, basis=pol.basis)
+    V = lambda_vandermonde(Lambda, samples, basis = pol.basis)
 
     # Evaluate: V * coeffs
     return V * pol.coeffs
-end
+end#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                      DEGREE SPEC UTILITIES                                    #
-#==============================================================================#
 
 """
     _extract_per_dim_degrees(degree, n_dim) -> Vector{Int}
@@ -431,7 +480,8 @@ function _extract_per_dim_degrees(degree, n_dim::Int)::Vector{Int}
         if mode == :one_d_for_all
             return fill(Int(spec), n_dim)
         elseif mode == :one_d_per_dim
-            length(spec) == n_dim || error("per-dim degree vector length $(length(spec)) ≠ n_dim=$n_dim")
+            length(spec) == n_dim ||
+                error("per-dim degree vector length $(length(spec)) ≠ n_dim=$n_dim")
             return Int.(spec)
         else
             error("Unsupported degree mode: $mode")
@@ -439,11 +489,9 @@ function _extract_per_dim_degrees(degree, n_dim::Int)::Vector{Int}
     else
         error("Unsupported degree type: $(typeof(degree))")
     end
-end
+end#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                      ERROR ESTIMATION                                         #
-#==============================================================================#
 
 """
     estimate_subdomain_error(f, subdomain::Subdomain, degree;
@@ -471,10 +519,15 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
 # Side Effects
 Updates subdomain.l2_error, subdomain.polynomial, subdomain.samples, subdomain.f_values
 """
-function estimate_subdomain_error(f, subdomain::Subdomain, degree;
-                                   n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
-                                   eval_progress::Union{Function,Nothing}=nothing,
-                                   thread_evals::Bool=false)
+function estimate_subdomain_error(
+    f,
+    subdomain::Subdomain,
+    degree;
+    n_samples_per_dim::Int = 0,
+    basis::Symbol = :chebyshev,
+    eval_progress::Union{Function,Nothing} = nothing,
+    thread_evals::Bool = false,
+)
     n_dim = dimension(subdomain)
 
     # Determine per-dimension grid sizes (GN values; grid will have GN+1 points per dim)
@@ -488,9 +541,9 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
 
     # Generate normalized grid in [-1, 1]^n
     grid = if all(==(per_dim_GN[1]), per_dim_GN)
-        generate_grid(n_dim, per_dim_GN[1], basis=basis)
+        generate_grid(n_dim, per_dim_GN[1], basis = basis)
     else
-        generate_anisotropic_grid(per_dim_GN, basis=basis)
+        generate_anisotropic_grid(per_dim_GN, basis = basis)
     end
 
     # Convert to matrix format
@@ -516,7 +569,9 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
                 x_buf = Vector{Float64}(undef, n_dim)
                 for i in chunk_start:chunk_end
                     @inbounds for d in 1:n_dim
-                        x_buf[d] = subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
+                        x_buf[d] =
+                            subdomain.center[d] +
+                            grid_matrix[i, d] * subdomain.half_widths[d]
                     end
                     f_values[i] = f(x_buf)
                 end
@@ -527,7 +582,8 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
         for i in 1:n_total
             eval_progress !== nothing && eval_progress(i, n_total)
             @inbounds for d in 1:n_dim
-                x_physical[d] = subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
+                x_physical[d] =
+                    subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
             end
             f_values[i] = f(x_physical)
         end
@@ -558,7 +614,14 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
     end
 
     # Construct polynomial approximation
-    pol = construct_polynomial_on_subdomain(f, subdomain, degree, grid_matrix, f_values, basis)
+    pol = construct_polynomial_on_subdomain(
+        f,
+        subdomain,
+        degree,
+        grid_matrix,
+        f_values,
+        basis,
+    )
 
     # Compute L2 error
     poly_values = evaluate_polynomial_at_samples(pol, grid_matrix)
@@ -600,9 +663,14 @@ Construct polynomial approximation on a subdomain using least squares.
 
 This wraps the existing Globtim infrastructure (MainGenerate pattern).
 """
-function construct_polynomial_on_subdomain(_, subdomain::Subdomain,
-                                           degree, samples::Matrix{Float64},
-                                           f_values::Vector{Float64}, basis::Symbol)
+function construct_polynomial_on_subdomain(
+    _,
+    subdomain::Subdomain,
+    degree,
+    samples::Matrix{Float64},
+    f_values::Vector{Float64},
+    basis::Symbol,
+)
     n_dim = dimension(subdomain)
 
     # Generate support (multi-index set)
@@ -611,7 +679,7 @@ function construct_polynomial_on_subdomain(_, subdomain::Subdomain,
 
     # Build Vandermonde matrix
     # samples is (n_samples, n_dim) which is the correct format for lambda_vandermonde
-    V = lambda_vandermonde(Lambda, samples, basis=basis)
+    V = lambda_vandermonde(Lambda, samples, basis = basis)
 
     # Solve least squares for coefficients
     coeffs = V \ f_values
@@ -639,13 +707,11 @@ function construct_polynomial_on_subdomain(_, subdomain::Subdomain,
         Float64Precision,
         true,
         false,
-        cond(V)
+        cond(V),
     )
-end
+end#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                      OPTIMAL CUT SELECTION                                    #
-#==============================================================================#
 
 """
     find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
@@ -669,15 +735,21 @@ Evaluates L2 error at a few candidate cut positions and fits a parabola to find 
 # Notes
 Uses existing samples where possible to minimize new function evaluations.
 """
-function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
-                                  n_candidates::Int=3, basis::Symbol=:chebyshev,
-                                  thread_evals::Bool=false)
+function find_optimal_cut_sparse(
+    f,
+    subdomain::Subdomain,
+    dim::Int,
+    degree;
+    n_candidates::Int = 3,
+    basis::Symbol = :chebyshev,
+    thread_evals::Bool = false,
+)
     # Candidate positions in normalized [-1, 1] coordinates
     # Default: -0.5, 0.0, 0.5 (quarter, half, three-quarters)
     if n_candidates == 3
         candidates = [-0.5, 0.0, 0.5]
     else
-        candidates = range(-0.75, 0.75, length=n_candidates)
+        candidates = range(-0.75, 0.75, length = n_candidates)
     end
 
     # Evaluate combined error for each candidate
@@ -686,10 +758,20 @@ function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
         left, right = subdivide_domain(subdomain, dim, cut_pos)
 
         # Estimate error on both children
-        err_left = estimate_subdomain_error(f, left, degree, basis=basis,
-                                             thread_evals=thread_evals)
-        err_right = estimate_subdomain_error(f, right, degree, basis=basis,
-                                              thread_evals=thread_evals)
+        err_left = estimate_subdomain_error(
+            f,
+            left,
+            degree,
+            basis = basis,
+            thread_evals = thread_evals,
+        )
+        err_right = estimate_subdomain_error(
+            f,
+            right,
+            degree,
+            basis = basis,
+            thread_evals = thread_evals,
+        )
 
         # Combined error (sum weighted by volume for fair comparison)
         combined = err_left * sqrt(volume(left)) + err_right * sqrt(volume(right))
@@ -723,11 +805,9 @@ end
 
 Always return midpoint cut (for comparison/testing).
 """
-find_optimal_cut_midpoint(subdomain::Subdomain, dim::Int) = 0.0
+find_optimal_cut_midpoint(subdomain::Subdomain, dim::Int) = 0.0#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                      MAIN ADAPTIVE REFINEMENT                                 #
-#==============================================================================#
 
 """
     RefinementAction
@@ -752,10 +832,10 @@ struct ProcessResult
     subdomain_id::Int
     action::RefinementAction
     should_split::Bool  # backward compat: action == ActionSplit
-    split_dim::Union{Int, Nothing}
-    cut_position::Union{Float64, Nothing}
+    split_dim::Union{Int,Nothing}
+    cut_position::Union{Float64,Nothing}
     l2_error::Float64
-    new_degree::Union{Int, Nothing}  # for ActionDegreeBump: the degree to try next
+    new_degree::Union{Int,Nothing}  # for ActionDegreeBump: the degree to try next
 end
 
 """
@@ -789,15 +869,22 @@ the Vandermonde condition number staying below `cond_threshold`.
 # Returns
 - ProcessResult with decision
 """
-function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
-                           degree, l2_tolerance::Float64;
-                           optimize_cuts::Bool=true, basis::Symbol=:chebyshev,
-                           eval_progress::Union{Function,Nothing}=nothing,
-                           enable_p_refinement::Bool=false,
-                           max_degree::Int=40, degree_step::Int=6,
-                           cond_threshold::Float64=1e14,
-                           tolerance_mode::Symbol=:relative,
-                           thread_evals::Bool=false)
+function process_subdomain(
+    f,
+    tree::SubdivisionTree,
+    subdomain_id::Int,
+    degree,
+    l2_tolerance::Float64;
+    optimize_cuts::Bool = true,
+    basis::Symbol = :chebyshev,
+    eval_progress::Union{Function,Nothing} = nothing,
+    enable_p_refinement::Bool = false,
+    max_degree::Int = 40,
+    degree_step::Int = 6,
+    cond_threshold::Float64 = 1e14,
+    tolerance_mode::Symbol = :relative,
+    thread_evals::Bool = false,
+)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -805,26 +892,51 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
 
     # Use per-leaf degree if previously set (from a degree bump), otherwise use the passed degree
     n_dim = length(subdomain.center)
-    effective_degree = subdomain.degree > 0 ? subdomain.degree : maximum(_extract_per_dim_degrees(degree, n_dim))
+    effective_degree =
+        subdomain.degree > 0 ? subdomain.degree :
+        maximum(_extract_per_dim_degrees(degree, n_dim))
     subdomain.degree = effective_degree
 
     # Estimate error on this subdomain
-    l2_error = estimate_subdomain_error(f, subdomain, effective_degree, basis=basis,
-                                         eval_progress=eval_progress,
-                                         thread_evals=thread_evals)
+    l2_error = estimate_subdomain_error(
+        f,
+        subdomain,
+        effective_degree,
+        basis = basis,
+        eval_progress = eval_progress,
+        thread_evals = thread_evals,
+    )
 
     # Check convergence using the selected error metric
     effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
     if effective_error <= l2_tolerance
-        return ProcessResult(subdomain_id, ActionConverged, false, nothing, nothing, l2_error, nothing)
+        return ProcessResult(
+            subdomain_id,
+            ActionConverged,
+            false,
+            nothing,
+            nothing,
+            l2_error,
+            nothing,
+        )
     end
 
     # Check if p-refinement is possible
     if enable_p_refinement
         next_degree = effective_degree + degree_step
-        cond_ok = subdomain.polynomial !== nothing && subdomain.polynomial.cond_vandermonde < cond_threshold
+        cond_ok =
+            subdomain.polynomial !== nothing &&
+            subdomain.polynomial.cond_vandermonde < cond_threshold
         if next_degree <= max_degree && cond_ok
-            return ProcessResult(subdomain_id, ActionDegreeBump, false, nothing, nothing, l2_error, next_degree)
+            return ProcessResult(
+                subdomain_id,
+                ActionDegreeBump,
+                false,
+                nothing,
+                nothing,
+                l2_error,
+                next_degree,
+            )
         end
     end
 
@@ -836,13 +948,27 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
     end
 
     if optimize_cuts
-        cut_pos = find_optimal_cut_sparse(f, subdomain, split_dim, effective_degree,
-                                           basis=basis, thread_evals=thread_evals)
+        cut_pos = find_optimal_cut_sparse(
+            f,
+            subdomain,
+            split_dim,
+            effective_degree,
+            basis = basis,
+            thread_evals = thread_evals,
+        )
     else
         cut_pos = 0.0  # Midpoint
     end
 
-    return ProcessResult(subdomain_id, ActionSplit, true, split_dim, cut_pos, l2_error, nothing)
+    return ProcessResult(
+        subdomain_id,
+        ActionSplit,
+        true,
+        split_dim,
+        cut_pos,
+        l2_error,
+        nothing,
+    )
 end
 
 """
@@ -891,7 +1017,7 @@ function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::S
         subdomain.samples = nothing
         subdomain.f_values = nothing
         subdomain.l2_error = Inf  # will be recomputed at new degree
-        # Leave in active_leaves — will be re-processed next iteration
+    # Leave in active_leaves — will be re-processed next iteration
     else  # ActionConverged
         # Mark as converged
         filter!(id -> id != result.subdomain_id, tree.active_leaves)
@@ -949,25 +1075,27 @@ tree = adaptive_refine(f, bounds, 10; l2_tolerance=1e-4, tolerance_mode=:absolut
                        enable_p_refinement=true, max_degree=40, degree_step=6)
 ```
 """
-function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
-                         degree;
-                         l2_tolerance::Float64=NaN,
-                         tolerance_mode::Symbol=:relative,
-                         max_depth::Int=10,
-                         max_leaves::Int=1000,
-                         optimize_cuts::Bool=true,
-                         parallel::Bool=true,
-                         basis::Symbol=:chebyshev,
-                         verbose::Bool=false,
-                         iteration_callback::Union{Function,Nothing}=nothing,
-                         eval_progress::Union{Function,Nothing}=nothing,
-                         phase_callback::Union{Function,Nothing}=nothing,
-                         enable_p_refinement::Bool=false,
-                         max_degree::Int=40,
-                         degree_step::Int=6,
-                         cond_threshold::Float64=1e14,
-                         thread_evals::Bool=false)
-
+function adaptive_refine(
+    f,
+    bounds::Vector{Tuple{Float64,Float64}},
+    degree;
+    l2_tolerance::Float64 = NaN,
+    tolerance_mode::Symbol = :relative,
+    max_depth::Int = 10,
+    max_leaves::Int = 1000,
+    optimize_cuts::Bool = true,
+    parallel::Bool = true,
+    basis::Symbol = :chebyshev,
+    verbose::Bool = false,
+    iteration_callback::Union{Function,Nothing} = nothing,
+    eval_progress::Union{Function,Nothing} = nothing,
+    phase_callback::Union{Function,Nothing} = nothing,
+    enable_p_refinement::Bool = false,
+    max_degree::Int = 40,
+    degree_step::Int = 6,
+    cond_threshold::Float64 = 1e14,
+    thread_evals::Bool = false,
+)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -979,7 +1107,7 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     # Initialize tree with root degree
     n_dim = length(bounds)
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
-    tree = SubdivisionTree(bounds; degree=root_degree)
+    tree = SubdivisionTree(bounds; degree = root_degree)
 
     # Notify phase callback that we're starting (single-phase refinement)
     if phase_callback !== nothing
@@ -1001,28 +1129,54 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
             break
         end
 
-        verbose && println("Iteration $iteration: $(n_active(tree)) active leaves, " *
-                          "$(n_leaves(tree)) total leaves")
+        verbose && println(
+            "Iteration $iteration: $(n_active(tree)) active leaves, " *
+            "$(n_leaves(tree)) total leaves",
+        )
 
         # Process all active leaves
         current_active = copy(tree.active_leaves)
 
-        hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode, thread_evals)
+        hp_kwargs = (;
+            enable_p_refinement,
+            max_degree,
+            degree_step,
+            cond_threshold,
+            tolerance_mode,
+            thread_evals,
+        )
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             # CPU parallel processing
             tasks = map(current_active) do leaf_id
-                Threads.@spawn process_subdomain(f, tree, leaf_id, degree, l2_tolerance;
-                                                 optimize_cuts=optimize_cuts, basis=basis,
-                                                 eval_progress=eval_progress, hp_kwargs...)
+                Threads.@spawn process_subdomain(
+                    f,
+                    tree,
+                    leaf_id,
+                    degree,
+                    l2_tolerance;
+                    optimize_cuts = optimize_cuts,
+                    basis = basis,
+                    eval_progress = eval_progress,
+                    hp_kwargs...,
+                )
             end
             results = fetch.(tasks)
         else
             # Sequential processing
-            results = [process_subdomain(f, tree, leaf_id, degree, l2_tolerance;
-                                        optimize_cuts=optimize_cuts, basis=basis,
-                                        eval_progress=eval_progress, hp_kwargs...)
-                       for leaf_id in current_active]
+            results = [
+                process_subdomain(
+                    f,
+                    tree,
+                    leaf_id,
+                    degree,
+                    l2_tolerance;
+                    optimize_cuts = optimize_cuts,
+                    basis = basis,
+                    eval_progress = eval_progress,
+                    hp_kwargs...,
+                ) for leaf_id in current_active
+            ]
         end
 
         # Update tree sequentially (not thread-safe)
@@ -1043,9 +1197,14 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         if sd.l2_error == Inf
             # Record the degree used (same logic as process_subdomain)
             sd.degree = root_degree
-            estimate_subdomain_error(f, sd, degree, basis=basis,
-                                      eval_progress=eval_progress,
-                                      thread_evals=thread_evals)
+            estimate_subdomain_error(
+                f,
+                sd,
+                degree,
+                basis = basis,
+                eval_progress = eval_progress,
+                thread_evals = thread_evals,
+            )
         end
         # Check if leaf now meets tolerance → mark as converged
         check_error = tolerance_mode == :relative ? sd.relative_l2_error : sd.l2_error
@@ -1055,16 +1214,16 @@ function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         end
     end
 
-    verbose && println("Final: $(n_leaves(tree)) leaves " *
-                      "($(length(tree.converged_leaves)) converged, " *
-                      "$(length(tree.active_leaves)) active)")
+    verbose && println(
+        "Final: $(n_leaves(tree)) leaves " *
+        "($(length(tree.converged_leaves)) converged, " *
+        "$(length(tree.active_leaves)) active)",
+    )
 
     return tree
-end
+end#==============================================================================##==============================================================================#
 
-#==============================================================================#
 #                      TWO-PHASE REFINEMENT                                     #
-#==============================================================================#
 
 """
     two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
@@ -1100,25 +1259,27 @@ Phase 2 refines to meet the final tolerance.
 # Returns
 - SubdivisionTree with refined subdomains
 """
-function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
-                          degree;
-                          coarse_tolerance::Float64=NaN,
-                          fine_tolerance::Float64=NaN,
-                          tolerance_mode::Symbol=:relative,
-                          balance_threshold::Float64=3.0,
-                          max_depth::Int=10,
-                          max_leaves::Int=1000,
-                          parallel::Bool=true,
-                          basis::Symbol=:chebyshev,
-                          verbose::Bool=false,
-                          iteration_callback::Union{Function,Nothing}=nothing,
-                          phase_callback::Union{Function,Nothing}=nothing,
-                          enable_p_refinement::Bool=false,
-                          max_degree::Int=40,
-                          degree_step::Int=6,
-                          cond_threshold::Float64=1e14,
-                          thread_evals::Bool=false)
-
+function two_phase_refine(
+    f,
+    bounds::Vector{Tuple{Float64,Float64}},
+    degree;
+    coarse_tolerance::Float64 = NaN,
+    fine_tolerance::Float64 = NaN,
+    tolerance_mode::Symbol = :relative,
+    balance_threshold::Float64 = 3.0,
+    max_depth::Int = 10,
+    max_leaves::Int = 1000,
+    parallel::Bool = true,
+    basis::Symbol = :chebyshev,
+    verbose::Bool = false,
+    iteration_callback::Union{Function,Nothing} = nothing,
+    phase_callback::Union{Function,Nothing} = nothing,
+    enable_p_refinement::Bool = false,
+    max_degree::Int = 40,
+    degree_step::Int = 6,
+    cond_threshold::Float64 = 1e14,
+    thread_evals::Bool = false,
+)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -1141,9 +1302,16 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     # Phase 1: Coarse balancing pass
     n_dim = length(bounds)
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
-    tree = SubdivisionTree(bounds; degree=root_degree)
+    tree = SubdivisionTree(bounds; degree = root_degree)
 
-    hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold, tolerance_mode, thread_evals)
+    hp_kwargs = (;
+        enable_p_refinement,
+        max_degree,
+        degree_step,
+        cond_threshold,
+        tolerance_mode,
+        thread_evals,
+    )
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100
@@ -1154,14 +1322,31 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             tasks = map(current_active) do leaf_id
-                Threads.@spawn process_subdomain(f, tree, leaf_id, degree, coarse_tolerance;
-                                                 optimize_cuts=true, basis=basis, hp_kwargs...)
+                Threads.@spawn process_subdomain(
+                    f,
+                    tree,
+                    leaf_id,
+                    degree,
+                    coarse_tolerance;
+                    optimize_cuts = true,
+                    basis = basis,
+                    hp_kwargs...,
+                )
             end
             results = fetch.(tasks)
         else
-            results = [process_subdomain(f, tree, leaf_id, degree, coarse_tolerance;
-                                        optimize_cuts=true, basis=basis, hp_kwargs...)
-                       for leaf_id in current_active]
+            results = [
+                process_subdomain(
+                    f,
+                    tree,
+                    leaf_id,
+                    degree,
+                    coarse_tolerance;
+                    optimize_cuts = true,
+                    basis = basis,
+                    hp_kwargs...,
+                ) for leaf_id in current_active
+            ]
         end
 
         # Update tree
@@ -1203,13 +1388,17 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
     # Phase 2: Accuracy refinement
     # Only re-activate leaves whose error exceeds fine_tolerance;
     # leaves already below fine_tolerance from Phase 1 stay converged.
-    _leaf_error(id) = tolerance_mode == :relative ? tree.subdomains[id].relative_l2_error : tree.subdomains[id].l2_error
+    _leaf_error(id) =
+        tolerance_mode == :relative ? tree.subdomains[id].relative_l2_error :
+        tree.subdomains[id].l2_error
     needs_reeval = filter(id -> _leaf_error(id) > fine_tolerance, tree.converged_leaves)
     already_fine = filter(id -> _leaf_error(id) <= fine_tolerance, tree.converged_leaves)
     append!(tree.active_leaves, needs_reeval)
     tree.converged_leaves = already_fine
 
-    verbose && length(already_fine) > 0 && println("  Skipping $(length(already_fine)) leaves already below fine_tolerance")
+    verbose &&
+        length(already_fine) > 0 &&
+        println("  Skipping $(length(already_fine)) leaves already below fine_tolerance")
 
     phase2_iter = 0
     while !isempty(tree.active_leaves) && phase2_iter < 100
@@ -1219,14 +1408,31 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             tasks = map(current_active) do leaf_id
-                Threads.@spawn process_subdomain(f, tree, leaf_id, degree, fine_tolerance;
-                                                 optimize_cuts=true, basis=basis, hp_kwargs...)
+                Threads.@spawn process_subdomain(
+                    f,
+                    tree,
+                    leaf_id,
+                    degree,
+                    fine_tolerance;
+                    optimize_cuts = true,
+                    basis = basis,
+                    hp_kwargs...,
+                )
             end
             results = fetch.(tasks)
         else
-            results = [process_subdomain(f, tree, leaf_id, degree, fine_tolerance;
-                                        optimize_cuts=true, basis=basis, hp_kwargs...)
-                       for leaf_id in current_active]
+            results = [
+                process_subdomain(
+                    f,
+                    tree,
+                    leaf_id,
+                    degree,
+                    fine_tolerance;
+                    optimize_cuts = true,
+                    basis = basis,
+                    hp_kwargs...,
+                ) for leaf_id in current_active
+            ]
         end
 
         for (leaf_id, result) in zip(current_active, results)
@@ -1238,9 +1444,11 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
             iteration_callback(tree, phase2_iter)
         end
 
-        verbose && println("Phase 2 iteration $phase2_iter: " *
-                          "$(length(tree.active_leaves)) active, " *
-                          "$(length(tree.converged_leaves)) converged")
+        verbose && println(
+            "Phase 2 iteration $phase2_iter: " *
+            "$(length(tree.active_leaves)) active, " *
+            "$(length(tree.converged_leaves)) converged",
+        )
 
         if get_max_depth(tree) >= max_depth || n_leaves(tree) >= max_leaves
             break
@@ -1252,12 +1460,20 @@ function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
             sd.degree = root_degree
-            estimate_subdomain_error(f, sd, degree, basis=basis, thread_evals=thread_evals)
+            estimate_subdomain_error(
+                f,
+                sd,
+                degree,
+                basis = basis,
+                thread_evals = thread_evals,
+            )
         end
     end
 
-    verbose && println("\nFinal: $(n_leaves(tree)) leaves " *
-                      "($(length(tree.converged_leaves)) converged)")
+    verbose && println(
+        "\nFinal: $(n_leaves(tree)) leaves " *
+        "($(length(tree.converged_leaves)) converged)",
+    )
 
     return tree
 end

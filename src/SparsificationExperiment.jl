@@ -109,7 +109,7 @@ or any other post-processing from GlobtimPostProcessing.
 """
 function run_sparsification_experiment(;
     objective::Function,
-    bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64,Float64}},
     degree_range,
     thresholds::Vector{Float64},
     threshold_labels::Vector{String},
@@ -125,7 +125,7 @@ function run_sparsification_experiment(;
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
     # Build degree_results lookup for reuse (if provided)
-    dr_by_degree = Dict{Int, Any}()
+    dr_by_degree = Dict{Int,Any}()
     if degree_results !== nothing
         for dr in degree_results
             dr_by_degree[dr.degree] = dr
@@ -133,7 +133,10 @@ function run_sparsification_experiment(;
     end
 
     # Build tensor representation ONCE (invariant across degrees)
-    println(io, "  Building tensor representation ($(GN)^$(dimension) = $(GN^dimension) grid points)...")
+    println(
+        io,
+        "  Building tensor representation ($(GN)^$(dimension) = $(GN^dimension) grid points)...",
+    )
     TR = Globtim.TestInput(
         objective,
         dim = dimension,
@@ -146,23 +149,33 @@ function run_sparsification_experiment(;
 
     for deg in degree_range
         println(io, "\n  Degree $deg: constructing polynomial...")
-        pol = Globtim.Constructor(TR, deg, basis=basis, normalized=false)
+        pol = Globtim.Constructor(TR, deg, basis = basis, normalized = false)
         n_total_coeffs = length(pol.coeffs)
         n_nonzero_coeffs = count(!iszero, pol.coeffs)
-        println(io, "  $n_total_coeffs coefficients ($n_nonzero_coeffs nonzero), L2 approx error = $(@sprintf("%.2e", pol.nrm))")
+        println(
+            io,
+            "  $n_total_coeffs coefficients ($n_nonzero_coeffs nonzero), L2 approx error = $(@sprintf("%.2e", pol.nrm))",
+        )
 
         # Full solve: reuse from degree_results if available, otherwise solve now
-        full_cps, full_solve_time = if haskey(dr_by_degree, deg) && dr_by_degree[deg].status == "success"
-            dr = dr_by_degree[deg]
-            println(io, "  Full solve: reusing $(dr.n_critical_points) CPs from standard experiment " *
-                        "($((@sprintf("%.2f", dr.critical_point_solving_time)))s)")
-            (dr.critical_points, dr.critical_point_solving_time)
-        else
-            println(io, "  Solving full polynomial system...")
-            cps, st = Globtim.solve_and_transform(pol, bounds)
-            println(io, "  Full: $(length(cps)) CPs, solve time = $(@sprintf("%.2f", st))s")
-            (cps, st)
-        end
+        full_cps, full_solve_time =
+            if haskey(dr_by_degree, deg) && dr_by_degree[deg].status == "success"
+                dr = dr_by_degree[deg]
+                println(
+                    io,
+                    "  Full solve: reusing $(dr.n_critical_points) CPs from standard experiment " *
+                    "($((@sprintf("%.2f", dr.critical_point_solving_time)))s)",
+                )
+                (dr.critical_points, dr.critical_point_solving_time)
+            else
+                println(io, "  Solving full polynomial system...")
+                cps, st = Globtim.solve_and_transform(pol, bounds)
+                println(
+                    io,
+                    "  Full: $(length(cps)) CPs, solve time = $(@sprintf("%.2f", st))s",
+                )
+                (cps, st)
+            end
 
         # Sparsified variants
         variants = SparsifiedVariant[]
@@ -170,29 +183,47 @@ function run_sparsification_experiment(;
             label = threshold_labels[tidx]
             println(io, "  Sparsifying at threshold $(label)...")
 
-            sparse_result = Globtim.sparsify_polynomial(pol, threshold, mode=:relative)
-            sparse_cps, sparse_solve_time = Globtim.solve_and_transform(
-                sparse_result.polynomial, bounds
-            )
+            sparse_result = Globtim.sparsify_polynomial(pol, threshold, mode = :relative)
+            sparse_cps, sparse_solve_time =
+                Globtim.solve_and_transform(sparse_result.polynomial, bounds)
 
             sparsity_pct = 100.0 * (1.0 - sparse_result.sparsity)
             speedup = full_solve_time / max(sparse_solve_time, 1e-10)
 
-            println(io, "    -> $(sparse_result.new_nnz)/$n_total_coeffs coeffs retained " *
-                        "($(@sprintf("%.1f%%", sparsity_pct)) zeroed), " *
-                        "$(length(sparse_cps)) CPs, " *
-                        "solve = $(@sprintf("%.2f", sparse_solve_time))s ($(@sprintf("%.1f×", speedup)) speedup)")
+            println(
+                io,
+                "    -> $(sparse_result.new_nnz)/$n_total_coeffs coeffs retained " *
+                "($(@sprintf("%.1f%%", sparsity_pct)) zeroed), " *
+                "$(length(sparse_cps)) CPs, " *
+                "solve = $(@sprintf("%.2f", sparse_solve_time))s ($(@sprintf("%.1f×", speedup)) speedup)",
+            )
 
-            push!(variants, SparsifiedVariant(
-                threshold, label,
-                sparse_cps, sparse_result.new_nnz,
-                sparse_result.l2_ratio, sparse_solve_time, sparsity_pct,
-            ))
+            push!(
+                variants,
+                SparsifiedVariant(
+                    threshold,
+                    label,
+                    sparse_cps,
+                    sparse_result.new_nnz,
+                    sparse_result.l2_ratio,
+                    sparse_solve_time,
+                    sparsity_pct,
+                ),
+            )
         end
 
-        push!(results, SparsificationDegreeResult(
-            deg, n_total_coeffs, n_nonzero_coeffs, full_cps, full_solve_time, pol.nrm, variants,
-        ))
+        push!(
+            results,
+            SparsificationDegreeResult(
+                deg,
+                n_total_coeffs,
+                n_nonzero_coeffs,
+                full_cps,
+                full_solve_time,
+                pol.nrm,
+                variants,
+            ),
+        )
     end
 
     return results

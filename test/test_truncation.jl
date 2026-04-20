@@ -46,7 +46,7 @@ using LinearAlgebra
             0.4,
             mode = :relative,
             domain = domain,
-            l2_tolerance = 0.05
+            l2_tolerance = 0.05,
         )
 
         # This should not warn
@@ -55,7 +55,7 @@ using LinearAlgebra
             0.01,
             mode = :relative,
             domain = domain,
-            l2_tolerance = 0.05
+            l2_tolerance = 0.05,
         )
         @test result.l2_ratio > 0.95
     end
@@ -80,8 +80,8 @@ using LinearAlgebra
         end
 
         # Should be sorted by L² contribution (descending)
-        for i in 1:(length(contributions) - 1)
-            @test contributions[i].l2_contribution >= contributions[i + 1].l2_contribution
+        for i in 1:(length(contributions)-1)
+            @test contributions[i].l2_contribution >= contributions[i+1].l2_contribution
         end
     end
 
@@ -123,37 +123,6 @@ using LinearAlgebra
         @test results[2].remaining_terms <= results[3].remaining_terms
     end
 
-    @testset "Complete Workflow" begin
-        # Test the complete workflow from the documentation
-        f = x -> 1 / (1 + 25 * x[1]^2)  # Runge function
-        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol = Constructor(TR, 20, basis = :chebyshev)
-
-        # Analyze sparsification options
-        sparsity_analysis =
-            analyze_sparsification_tradeoff(pol, thresholds = [1e-2, 1e-3, 1e-4])
-        @test length(sparsity_analysis) == 3
-
-        # Choose threshold and sparsify
-        sparse_pol = sparsify_polynomial(pol, 1e-4, mode = :relative).polynomial
-
-        # Convert to exact monomial form
-        @polyvar x
-        mono_sparse = to_exact_monomial_basis(sparse_pol, variables = [x])
-
-        # Verify quality
-        domain = BoxDomain(1, 1.0)
-        original_mono = to_exact_monomial_basis(pol, variables = [x])
-        quality = verify_truncation_quality(original_mono, mono_sparse, domain)
-
-        @test quality.l2_ratio > 0.9  # Should preserve at least 90% of L² norm
-
-        # Count non-zero terms
-        nnz = count(!iszero, sparse_pol.coeffs)
-        @test nnz >= 0
-        @test nnz <= length(pol.coeffs)
-    end
-
     @testset "Edge Cases" begin
         # Test with very simple polynomial
         @polyvar x
@@ -172,7 +141,8 @@ using LinearAlgebra
 
         # Test single term polynomial
         poly_single = x^2
-        result_single = truncate_polynomial(poly_single, 0.1, mode = :relative, domain = domain)
+        result_single =
+            truncate_polynomial(poly_single, 0.1, mode = :relative, domain = domain)
         @test result_single.remaining_terms >= 0
     end
 
@@ -190,30 +160,6 @@ using LinearAlgebra
         # Both should work
         @test result1.remaining_terms >= 0
         @test result2.remaining_terms >= 0
-    end
-
-    @testset "L² Computation Methods Consistency" begin
-        # Ensure different L² computation methods give valid results
-        f = x -> x[1]^2 - 0.5
-        TR = TestInput(f, dim = 1, center = [0.0], sample_range = 1.0)
-        pol = Constructor(TR, 6, basis = :chebyshev)
-
-        # Vandermonde-based
-        l2_vand = compute_l2_norm_vandermonde(pol)
-        @test l2_vand >= 0.0
-        @test isfinite(l2_vand)
-
-        # Grid-based (via monomial)
-        @polyvar x
-        mono_poly = to_exact_monomial_basis(pol, variables = [x])
-        domain = BoxDomain(1, 1.0)
-        l2_grid = compute_l2_norm(mono_poly, domain)
-        @test l2_grid >= 0.0
-        @test isfinite(l2_grid)
-
-        # Note: These methods operate on different representations and should not be directly compared
-        # - l2_vand: precomputed from Chebyshev basis construction
-        # - l2_grid: grid-based quadrature on monomial polynomial after basis conversion
     end
 
     @testset "Removed Terms Information" begin

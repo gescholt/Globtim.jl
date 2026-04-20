@@ -16,8 +16,14 @@ using Statistics
 using Dates
 using StatsBase
 
-export ErrorCategory, ErrorClassification, categorize_error, analyze_experiment_errors,
-    generate_error_report, ERROR_TAXONOMY, SEVERITY_LEVELS, FIX_SUGGESTIONS
+export ErrorCategory,
+    ErrorClassification,
+    categorize_error,
+    analyze_experiment_errors,
+    generate_error_report,
+    ERROR_TAXONOMY,
+    SEVERITY_LEVELS,
+    FIX_SUGGESTIONS
 
 # ============================================================================
 # ERROR TAXONOMY DEFINITIONS
@@ -41,7 +47,7 @@ Enumeration of error severity levels for prioritization.
 Error taxonomy patterns organized by category.
 Each category maps to a vector of regex patterns for detection.
 """
-const ERROR_TAXONOMY = Dict{ErrorCategory, Vector{Regex}}(
+const ERROR_TAXONOMY = Dict{ErrorCategory,Vector{Regex}}(
     INTERFACE_BUG => [
         r"df_critical\.val"i,
         r"column name :val not found"i,
@@ -49,7 +55,7 @@ const ERROR_TAXONOMY = Dict{ErrorCategory, Vector{Regex}}(
         r"no method matching.*signature mismatch"i,
         r"function.*exists.*no method.*defined"i,
         r"API.*deprecated"i,
-        r"interface.*changed"i
+        r"interface.*changed"i,
     ],
     MATHEMATICAL_FAILURE => [
         r"failed to converge"i,
@@ -60,7 +66,7 @@ const ERROR_TAXONOMY = Dict{ErrorCategory, Vector{Regex}}(
         r"condition number.*too large"i,
         r"eigenvalue.*computation.*failed"i,
         r"optimization.*convergence.*failed"i,
-        r"critical point.*solving.*failed"i
+        r"critical point.*solving.*failed"i,
     ],
     INFRASTRUCTURE_ISSUE => [
         r"OutOfMemoryError"i,
@@ -71,7 +77,7 @@ const ERROR_TAXONOMY = Dict{ErrorCategory, Vector{Regex}}(
         r"file.*not.*found"i,
         r"precompilation.*failed"i,
         r"dependency.*missing"i,
-        r"environment.*inconsistent"i
+        r"environment.*inconsistent"i,
     ],
     CONFIGURATION_ERROR => [
         r"DimensionMismatch"i,
@@ -82,31 +88,31 @@ const ERROR_TAXONOMY = Dict{ErrorCategory, Vector{Regex}}(
         r"degree.*too.*high"i,
         r"sample.*count.*insufficient"i,
         r"precision.*type.*incompatible"i,
-        r"grid.*generation.*invalid"i
-    ]
+        r"grid.*generation.*invalid"i,
+    ],
 )
 
 """
 Severity mapping for each error category.
 """
-const SEVERITY_LEVELS = Dict{ErrorCategory, SeverityLevel}(
+const SEVERITY_LEVELS = Dict{ErrorCategory,SeverityLevel}(
     INTERFACE_BUG => LOW,           # Easy to fix, low impact
     MATHEMATICAL_FAILURE => MEDIUM, # Requires parameter tuning
     INFRASTRUCTURE_ISSUE => HIGH,   # System-level problems
     CONFIGURATION_ERROR => MEDIUM,  # Parameter adjustment needed
-    UNKNOWN_ERROR => UNKNOWN
+    UNKNOWN_ERROR => UNKNOWN,
 )
 
 """
 Fix suggestions for each error category.
 """
-const FIX_SUGGESTIONS = Dict{ErrorCategory, Vector{String}}(
+const FIX_SUGGESTIONS = Dict{ErrorCategory,Vector{String}}(
     INTERFACE_BUG => [
         "Update script to use df_critical.z instead of df_critical.val",
         "Check API documentation for recent interface changes",
         "Validate function signatures match current Globtim version",
         "Review parameter names and field access patterns",
-        "Update deprecated function calls to new API"
+        "Update deprecated function calls to new API",
     ],
     MATHEMATICAL_FAILURE => [
         "Reduce polynomial degree to improve numerical stability",
@@ -114,7 +120,7 @@ const FIX_SUGGESTIONS = Dict{ErrorCategory, Vector{String}}(
         "Increase sampling density (GN parameter)",
         "Try different precision type (e.g., RationalPrecision)",
         "Check objective function for singularities or discontinuities",
-        "Validate initial conditions are within valid domain"
+        "Validate initial conditions are within valid domain",
     ],
     INFRASTRUCTURE_ISSUE => [
         "Increase memory allocation or use smaller problem size",
@@ -122,7 +128,7 @@ const FIX_SUGGESTIONS = Dict{ErrorCategory, Vector{String}}(
         "Check disk space availability on target system",
         "Restart Julia session to clear memory leaks",
         "Verify network connectivity for package downloads",
-        "Check file system permissions"
+        "Check file system permissions",
     ],
     CONFIGURATION_ERROR => [
         "Validate parameter bounds and constraints",
@@ -130,14 +136,14 @@ const FIX_SUGGESTIONS = Dict{ErrorCategory, Vector{String}}(
         "Increase sample count for better coverage",
         "Check domain range is appropriate for objective function",
         "Verify precision type compatibility with problem size",
-        "Review grid generation parameters"
+        "Review grid generation parameters",
     ],
     UNKNOWN_ERROR => [
         "Review full error message and stack trace",
         "Check Globtim documentation for similar issues",
         "Create minimal reproduction case",
-        "Report issue to Globtim maintainers with full context"
-    ]
+        "Report issue to Globtim maintainers with full context",
+    ],
 )
 
 # ============================================================================
@@ -165,7 +171,7 @@ struct ErrorClassification
     patterns_matched::Vector{String}
     suggested_fixes::Vector{String}
     priority_score::Int
-    context::Dict{String, Any}
+    context::Dict{String,Any}
 end
 
 # ============================================================================
@@ -193,11 +199,13 @@ println("Category: \$(classification.category)")
 println("Severity: \$(classification.severity)")
 ```
 """
-function categorize_error(error_message::String;
-    context::Dict{String, Any} = Dict{String, Any}())::ErrorClassification
+function categorize_error(
+    error_message::String;
+    context::Dict{String,Any} = Dict{String,Any}(),
+)::ErrorClassification
 
     # Initialize tracking variables
-    matched_categories = Vector{Tuple{ErrorCategory, Vector{String}, Float64}}()
+    matched_categories = Vector{Tuple{ErrorCategory,Vector{String},Float64}}()
 
     # Check each category for pattern matches
     for (category, patterns) in ERROR_TAXONOMY
@@ -245,8 +253,8 @@ function categorize_error(error_message::String;
         Dict(
             "classification_timestamp" => string(now()),
             "total_categories_matched" => length(matched_categories),
-            "error_message_length" => length(error_message)
-        )
+            "error_message_length" => length(error_message),
+        ),
     )
 
     return ErrorClassification(
@@ -256,7 +264,7 @@ function categorize_error(error_message::String;
         patterns_matched,
         suggested_fixes,
         priority_score,
-        enhanced_context
+        enhanced_context,
     )
 end
 
@@ -297,8 +305,11 @@ end
 Calculate numerical priority score for error ordering.
 Higher scores indicate higher priority.
 """
-function calculate_priority_score(severity::SeverityLevel, confidence::Float64,
-    patterns::Vector{String})::Int
+function calculate_priority_score(
+    severity::SeverityLevel,
+    confidence::Float64,
+    patterns::Vector{String},
+)::Int
     # Base score from severity
     severity_score = if severity == CRITICAL
         100
@@ -343,8 +354,7 @@ error_analysis = analyze_experiment_errors(results)
 ```
 """
 function analyze_experiment_errors(results::Vector{<:Dict})::DataFrame
-
-    error_classifications = Vector{Dict{String, Any}}()
+    error_classifications = Vector{Dict{String,Any}}()
 
     for (idx, result) in enumerate(results)
         # Extract error information
@@ -358,19 +368,19 @@ function analyze_experiment_errors(results::Vector{<:Dict})::DataFrame
         end
 
         # Build context for classification
-        context = Dict{String, Any}(
+        context = Dict{String,Any}(
             "experiment_id" => experiment_id,
             "computation_time" => get(result, "total_computation_time", 0.0),
             "degree" => get(result, "degree", 0),
             "domain_range" => get(result, "domain_range", 0.0),
-            "result_index" => idx
+            "result_index" => idx,
         )
 
         # Categorize the error
         classification = categorize_error(error_msg; context = context)
 
         # Build result dictionary
-        error_data = Dict{String, Any}(
+        error_data = Dict{String,Any}(
             "experiment_id" => experiment_id,
             "error_message" => error_msg,
             "category" => string(classification.category),
@@ -381,7 +391,7 @@ function analyze_experiment_errors(results::Vector{<:Dict})::DataFrame
             "suggested_fixes" => join(classification.suggested_fixes, " | "),
             "computation_time" => get(context, "computation_time", 0.0),
             "degree" => get(context, "degree", 0),
-            "domain_range" => get(context, "domain_range", 0.0)
+            "domain_range" => get(context, "domain_range", 0.0),
         )
 
         push!(error_classifications, error_data)
@@ -401,7 +411,7 @@ function analyze_experiment_errors(results::Vector{<:Dict})::DataFrame
             suggested_fixes = String[],
             computation_time = Float64[],
             degree = Int[],
-            domain_range = Float64[]
+            domain_range = Float64[],
         )
     end
 
@@ -419,13 +429,12 @@ Generate comprehensive error analysis report.
 # Returns
 - `Dict{String,Any}`: Comprehensive report with statistics and recommendations
 """
-function generate_error_report(error_df::DataFrame)::Dict{String, Any}
-
+function generate_error_report(error_df::DataFrame)::Dict{String,Any}
     if nrow(error_df) == 0
-        return Dict{String, Any}(
+        return Dict{String,Any}(
             "total_errors" => 0,
             "summary" => "No errors found in the analyzed experiments.",
-            "recommendations" => String[]
+            "recommendations" => String[],
         )
     end
 
@@ -459,31 +468,36 @@ function generate_error_report(error_df::DataFrame)::Dict{String, Any}
     mathematical_failures =
         nrow(filter(row -> row.category == "MATHEMATICAL_FAILURE", error_df))
 
-    return Dict{String, Any}(
+    return Dict{String,Any}(
         "analysis_timestamp" => string(now()),
         "total_errors" => total_errors,
         "average_confidence" => round(avg_confidence, digits = 3),
         "high_priority_count" => nrow(high_priority_errors),
         "category_distribution" => [
-            Dict("category" => row.category, "count" => row.count,
-                "percentage" => round(100 * row.count / total_errors, digits = 1))
-            for row in eachrow(category_counts)
+            Dict(
+                "category" => row.category,
+                "count" => row.count,
+                "percentage" => round(100 * row.count / total_errors, digits = 1),
+            ) for row in eachrow(category_counts)
         ],
         "severity_distribution" => [
-            Dict("severity" => row.severity, "count" => row.count,
-                "percentage" => round(100 * row.count / total_errors, digits = 1))
-            for row in eachrow(severity_counts)
+            Dict(
+                "severity" => row.severity,
+                "count" => row.count,
+                "percentage" => round(100 * row.count / total_errors, digits = 1),
+            ) for row in eachrow(severity_counts)
         ],
         "most_common_patterns" => [
-            Dict("pattern" => pattern, "count" => count)
-            for (pattern, count) in pattern_counts[1:min(5, length(pattern_counts))]
+            Dict("pattern" => pattern, "count" => count) for
+            (pattern, count) in pattern_counts[1:min(5, length(pattern_counts))]
         ],
         "key_insights" => [
             "Interface bugs: $interface_bugs errors ($(round(100*interface_bugs/total_errors, digits=1))%)",
             "Mathematical failures: $mathematical_failures errors ($(round(100*mathematical_failures/total_errors, digits=1))%)",
             "Average classification confidence: $(round(100*avg_confidence, digits=1))%",
-            "High priority errors requiring immediate attention: $(nrow(high_priority_errors))"
-        ], "recommendations" => recommendations,
+            "High priority errors requiring immediate attention: $(nrow(high_priority_errors))",
+        ],
+        "recommendations" => recommendations,
         "detailed_errors" => [
             Dict(
                 "experiment_id" => row.experiment_id,
@@ -491,12 +505,11 @@ function generate_error_report(error_df::DataFrame)::Dict{String, Any}
                 "severity" => row.severity,
                 "priority_score" => row.priority_score,
                 "confidence" => row.confidence,
-                "suggested_fixes" => split(row.suggested_fixes, " | ")
+                "suggested_fixes" => split(row.suggested_fixes, " | "),
+            ) for row in eachrow(
+                first(sort(error_df, :priority_score, rev = true), min(10, nrow(error_df))),
             )
-            for row in eachrow(
-                first(sort(error_df, :priority_score, rev = true), min(10, nrow(error_df)))
-            )
-        ]
+        ],
     )
 end
 
@@ -507,7 +520,7 @@ Generate actionable recommendations based on error analysis.
 """
 function generate_recommendations(
     error_df::DataFrame,
-    category_counts::DataFrame
+    category_counts::DataFrame,
 )::Vector{String}
     recommendations = String[]
 
@@ -524,9 +537,11 @@ function generate_recommendations(
         top_percentage = round(100 * top_count / total_errors, digits = 1)
 
         if top_percentage > 50
-            push!(recommendations,
+            push!(
+                recommendations,
                 "PRIMARY FOCUS: $top_category represents $top_percentage% of errors. " *
-                "Addressing this category will have maximum impact.")
+                "Addressing this category will have maximum impact.",
+            )
         end
     end
 
@@ -534,9 +549,10 @@ function generate_recommendations(
     interface_bugs = nrow(filter(row -> row.category == "INTERFACE_BUG", error_df))
     if interface_bugs > 0
         interface_percentage = round(100 * interface_bugs / total_errors, digits = 1)
-        push!(recommendations,
+        push!(
+            recommendations,
             "INTERFACE ISSUES: $interface_bugs errors ($interface_percentage%) are interface bugs. " *
-            "These are typically quick fixes - review API usage and update deprecated patterns."
+            "These are typically quick fixes - review API usage and update deprecated patterns.",
         )
     end
 
@@ -544,27 +560,32 @@ function generate_recommendations(
     math_failures = nrow(filter(row -> row.category == "MATHEMATICAL_FAILURE", error_df))
     if math_failures > 0
         math_percentage = round(100 * math_failures / total_errors, digits = 1)
-        push!(recommendations,
+        push!(
+            recommendations,
             "MATHEMATICAL TUNING: $math_failures errors ($math_percentage%) are mathematical failures. " *
-            "Consider reducing polynomial degrees, adjusting domain ranges, or increasing sampling density."
+            "Consider reducing polynomial degrees, adjusting domain ranges, or increasing sampling density.",
         )
     end
 
     # High priority recommendations
     high_priority = nrow(filter(row -> row.priority_score > 75, error_df))
     if high_priority > 0
-        push!(recommendations,
+        push!(
+            recommendations,
             "URGENT ACTION: $high_priority errors have high priority scores (>75). " *
-            "Address these first for maximum stability improvement.")
+            "Address these first for maximum stability improvement.",
+        )
     end
 
     # Low confidence recommendations
     low_confidence = nrow(filter(row -> row.confidence < 0.5, error_df))
     if low_confidence > 0
         low_conf_percentage = round(100 * low_confidence / total_errors, digits = 1)
-        push!(recommendations,
+        push!(
+            recommendations,
             "INVESTIGATION NEEDED: $low_confidence errors ($low_conf_percentage%) have low classification confidence. " *
-            "Manual review may be needed to properly categorize these issues.")
+            "Manual review may be needed to properly categorize these issues.",
+        )
     end
 
     return recommendations

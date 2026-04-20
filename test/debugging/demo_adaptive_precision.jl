@@ -69,9 +69,7 @@ println("  Smallest kept coeff: $(stats.smallest_kept:.2e)")
 println("\n🎯 Step 5: Accuracy Validation")
 
 # Test evaluation at multiple points
-test_points = [
-    [0.0, 0.0], [0.5, 0.5], [-0.3, 0.7], [0.9, -0.2], [-0.8, -0.6]
-]
+test_points = [[0.0, 0.0], [0.5, 0.5], [-0.3, 0.7], [0.9, -0.2], [-0.8, -0.6]]
 
 max_error_original = 0.0
 max_error_truncated = 0.0
@@ -101,7 +99,7 @@ println("="^50)
 println("✅ Float64 evaluation: Fast polynomial construction")
 println("✅ BigFloat expansion: Extended precision coefficients")
 println(
-    "✅ Smart truncation: $(round(stats.sparsity_ratio*100, digits=1))% sparsity with minimal accuracy loss"
+    "✅ Smart truncation: $(round(stats.sparsity_ratio*100, digits=1))% sparsity with minimal accuracy loss",
 )
 println("✅ Performance: Best of both worlds!")
 

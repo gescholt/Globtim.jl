@@ -52,9 +52,8 @@ function execute_single_tolerance_analysis(
     center::Vector{Float64},
     sample_range::Float64,
     outlier_threshold::Float64,
-    verbose::Bool
+    verbose::Bool,
 )
-
     verbose && @info "Setting up test input" tolerance = tolerance
 
     # Create test input with specified tolerance
@@ -63,7 +62,7 @@ function execute_single_tolerance_analysis(
         dim = 4,
         center = center,
         sample_range = sample_range,
-        tolerance = tolerance
+        tolerance = tolerance,
     )
 
     # Construct polynomial with automatic degree adaptation
@@ -127,8 +126,8 @@ function execute_single_tolerance_analysis(
                 0.01,
                 0,
                 actual_degree,
-                1.0
-            )
+                1.0,
+            ),
         )
     end
 
@@ -145,7 +144,7 @@ function execute_single_tolerance_analysis(
         [actual_degree],
         [pol.GN],
         1.0,
-        success_rates
+        success_rates,
     )
 
     return tolerance_result
@@ -181,7 +180,7 @@ function execute_multi_tolerance_analysis(
     sample_range::Float64 = 0.5,
     outlier_threshold::Float64 = 2.0,
     max_retries::Int = 3,
-    verbose::Bool = true
+    verbose::Bool = true,
 )
 
     # Validate inputs
@@ -201,7 +200,7 @@ function execute_multi_tolerance_analysis(
     end
 
     # Initialize results storage
-    results_by_tolerance = Dict{Float64, ToleranceResult}()
+    results_by_tolerance = Dict{Float64,ToleranceResult}()
     total_start_time = time()
 
     verbose &&
@@ -231,7 +230,7 @@ function execute_multi_tolerance_analysis(
                     center,
                     sample_range,
                     outlier_threshold,
-                    verbose
+                    verbose,
                 )
 
                 success = true
@@ -263,7 +262,7 @@ function execute_multi_tolerance_analysis(
         center = center,
         sample_range = sample_range,
         outlier_threshold = outlier_threshold,
-        dimension = 4
+        dimension = 4,
     )
 
     # Build final results container
@@ -273,7 +272,7 @@ function execute_multi_tolerance_analysis(
         total_time,
         analysis_timestamp,
         function_name,
-        domain_config
+        domain_config,
     )
 
     verbose && @info "Multi-tolerance analysis completed" total_time_seconds =

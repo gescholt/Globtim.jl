@@ -32,7 +32,7 @@ function default_benchmark_config()
         100,                 # test points for error
         10000,               # evaluation points for timing
         "benchmark_results", # output directory
-        true                 # verbose
+        true,                 # verbose
     )
 end
 
@@ -50,7 +50,7 @@ function run_single_benchmark(
     threshold::Float64;
     n_test_points::Int = 100,
     n_eval_points::Int = 10000,
-    verbose::Bool = true
+    verbose::Bool = true,
 )
     fname = test_func.name
     f = test_func.func
@@ -64,30 +64,38 @@ function run_single_benchmark(
     end
 
     # Phase 1: Baseline Construction
-    if verbose; println("Phase 1: Baseline construction..."); end
+    if verbose
+        ;
+        println("Phase 1: Baseline construction...");
+    end
 
-    TR = TestInput(f, dim=dim, center=zeros(dim), sample_range=1.0)
+    TR = TestInput(f, dim = dim, center = zeros(dim), sample_range = 1.0)
 
     t_baseline = @elapsed begin
-        pol_baseline = Constructor(TR, degree, basis=:chebyshev, verbose=0)
+        pol_baseline = Constructor(TR, degree, basis = :chebyshev, verbose = 0)
     end
 
     n_coeffs_total = length(pol_baseline.coeffs)
 
     if verbose
-        println("  ✓ Baseline: $n_coeffs_total coefficients, time=$(round(t_baseline, digits=3))s")
+        println(
+            "  ✓ Baseline: $n_coeffs_total coefficients, time=$(round(t_baseline, digits=3))s",
+        )
         println("  Condition number: $(pol_baseline.cond_vandermonde)")
     end
 
     # Phase 2: Simple Truncation
-    if verbose; println("\nPhase 2: Simple truncation..."); end
+    if verbose
+        ;
+        println("\nPhase 2: Simple truncation...");
+    end
 
     t_truncation = @elapsed begin
         result_trunc = to_exact_monomial_basis_sparse(
             pol_baseline,
             threshold = threshold,
             mode = :relative,
-            reoptimize = false
+            reoptimize = false,
         )
     end
 
@@ -95,13 +103,18 @@ function run_single_benchmark(
     sparsity_trunc = n_coeffs_trunc / n_coeffs_total
 
     if verbose
-        println("  ✓ Truncation: $n_coeffs_trunc coefficients ($(round(sparsity_trunc*100, digits=1))%)")
+        println(
+            "  ✓ Truncation: $n_coeffs_trunc coefficients ($(round(sparsity_trunc*100, digits=1))%)",
+        )
         println("  Time: $(round(t_truncation, digits=3))s")
         println("  L2-norm ratio: $(round(result_trunc.l2_ratio*100, digits=1))%")
     end
 
     # Phase 3: Re-optimization (Float64)
-    if verbose; println("\nPhase 3: Re-optimization (Float64)..."); end
+    if verbose
+        ;
+        println("\nPhase 3: Re-optimization (Float64)...");
+    end
 
     t_reopt_f64 = @elapsed begin
         result_f64 = to_exact_monomial_basis_sparse(
@@ -110,7 +123,7 @@ function run_single_benchmark(
             mode = :relative,
             reoptimize = true,
             precision = Float64,
-            solver = :qr
+            solver = :qr,
         )
     end
 
@@ -118,13 +131,18 @@ function run_single_benchmark(
 
     if verbose
         println("  ✓ Float64 reopt: $n_coeffs_f64 coefficients")
-        println("  Time: $(round(t_reopt_f64, digits=3))s ($(round(t_reopt_f64/t_truncation, digits=1))x slower)")
+        println(
+            "  Time: $(round(t_reopt_f64, digits=3))s ($(round(t_reopt_f64/t_truncation, digits=1))x slower)",
+        )
         println("  L2-norm ratio: $(round(result_f64.l2_ratio*100, digits=1))%")
         println("  Condition number: $(result_f64.optimization_info.condition_number)")
     end
 
     # Phase 4: Re-optimization (BigFloat)
-    if verbose; println("\nPhase 4: Re-optimization (BigFloat)..."); end
+    if verbose
+        ;
+        println("\nPhase 4: Re-optimization (BigFloat)...");
+    end
 
     t_reopt_bf = @elapsed begin
         result_bf = to_exact_monomial_basis_sparse(
@@ -133,7 +151,7 @@ function run_single_benchmark(
             mode = :relative,
             reoptimize = true,
             precision = BigFloat,
-            solver = :qr
+            solver = :qr,
         )
     end
 
@@ -141,13 +159,18 @@ function run_single_benchmark(
 
     if verbose
         println("  ✓ BigFloat reopt: $n_coeffs_bf coefficients")
-        println("  Time: $(round(t_reopt_bf, digits=3))s ($(round(t_reopt_bf/t_truncation, digits=1))x slower)")
+        println(
+            "  Time: $(round(t_reopt_bf, digits=3))s ($(round(t_reopt_bf/t_truncation, digits=1))x slower)",
+        )
         println("  L2-norm ratio: $(round(result_bf.l2_ratio*100, digits=1))%")
         println("  Condition number: $(result_bf.optimization_info.condition_number)")
     end
 
     # Phase 5: Accuracy Evaluation
-    if verbose; println("\nPhase 5: Accuracy evaluation..."); end
+    if verbose
+        ;
+        println("\nPhase 5: Accuracy evaluation...");
+    end
 
     test_grid = generate_test_grid(dim, Int(round(n_test_points^(1/dim))))
 
@@ -171,18 +194,33 @@ function run_single_benchmark(
     end
 
     # Phase 6: Evaluation Speed
-    if verbose; println("\nPhase 6: Evaluation speed test..."); end
+    if verbose
+        ;
+        println("\nPhase 6: Evaluation speed test...");
+    end
 
     eval_points = generate_random_test_points(dim, n_eval_points)
 
     # Dense baseline
     mono_dense = to_exact_monomial_basis(pol_baseline)
-    t_eval_dense = @elapsed for pt in eval_points; mono_dense(pt...); end
+    t_eval_dense = @elapsed for pt in eval_points
+        ;
+        mono_dense(pt...);
+    end
 
     # Sparse variants
-    t_eval_trunc = @elapsed for pt in eval_points; result_trunc.polynomial(pt...); end
-    t_eval_f64 = @elapsed for pt in eval_points; result_f64.polynomial(pt...); end
-    t_eval_bf = @elapsed for pt in eval_points; result_bf.polynomial(pt...); end
+    t_eval_trunc = @elapsed for pt in eval_points
+        ;
+        result_trunc.polynomial(pt...);
+    end
+    t_eval_f64 = @elapsed for pt in eval_points
+        ;
+        result_f64.polynomial(pt...);
+    end
+    t_eval_bf = @elapsed for pt in eval_points
+        ;
+        result_bf.polynomial(pt...);
+    end
 
     speedup_trunc = t_eval_dense / t_eval_trunc
     speedup_f64 = t_eval_dense / t_eval_f64
@@ -250,8 +288,10 @@ function run_single_benchmark(
         # Improvements
         l2_improvement_f64 = result_f64.l2_ratio - result_trunc.l2_ratio,
         l2_improvement_bf = result_bf.l2_ratio - result_trunc.l2_ratio,
-        error_reduction_f64 = (metrics_trunc.mean_error - metrics_f64.mean_error) / metrics_trunc.mean_error,
-        error_reduction_bf = (metrics_trunc.mean_error - metrics_bf.mean_error) / metrics_trunc.mean_error
+        error_reduction_f64 = (metrics_trunc.mean_error - metrics_f64.mean_error) /
+                              metrics_trunc.mean_error,
+        error_reduction_bf = (metrics_trunc.mean_error - metrics_bf.mean_error) /
+                             metrics_trunc.mean_error,
     )
 
     if verbose
@@ -303,7 +343,7 @@ function run_full_benchmark(config::BenchmarkConfig = default_benchmark_config()
                             threshold;
                             n_test_points = config.n_test_points,
                             n_eval_points = config.n_eval_points,
-                            verbose = config.verbose
+                            verbose = config.verbose,
                         )
 
                         push!(results, DataFrame(result))
@@ -362,7 +402,9 @@ function generate_comparison_report(results::DataFrame)
 
     println("L2-norm ratio improvement:")
     println("  Mean: $(round(mean_l2_improvement*100, digits=1))%")
-    println("  Cases with improvement: $cases_l2_better / $(nrow(results)) ($(round(cases_l2_better/nrow(results)*100, digits=1))%)")
+    println(
+        "  Cases with improvement: $cases_l2_better / $(nrow(results)) ($(round(cases_l2_better/nrow(results)*100, digits=1))%)",
+    )
     println("  Cases with >5% improvement: $cases_l2_much_better / $(nrow(results))")
 
     mean_error_reduction = mean(filter(!isnan, results.error_reduction_bf)) * 100
@@ -399,8 +441,12 @@ function generate_comparison_report(results::DataFrame)
         n_cat = nrow(cat_results)
 
         println("Category: $cat ($n_cat cases)")
-        println("  Mean L2 improvement: $(round(mean(cat_results.l2_improvement_bf)*100, digits=1))%")
-        println("  Mean error reduction: $(round(mean(filter(!isnan, cat_results.error_reduction_bf))*100, digits=1))%")
+        println(
+            "  Mean L2 improvement: $(round(mean(cat_results.l2_improvement_bf)*100, digits=1))%",
+        )
+        println(
+            "  Mean error reduction: $(round(mean(filter(!isnan, cat_results.error_reduction_bf))*100, digits=1))%",
+        )
         println("  Mean overhead: $(round(mean(cat_results.overhead_bf), digits=1))x")
         println()
     end
@@ -412,8 +458,12 @@ function generate_comparison_report(results::DataFrame)
         dim_results = results[results.dimension .== dim, :]
 
         println("Dimension: $(dim)D ($(nrow(dim_results)) cases)")
-        println("  Mean L2 improvement: $(round(mean(dim_results.l2_improvement_bf)*100, digits=1))%")
-        println("  Mean error reduction: $(round(mean(filter(!isnan, dim_results.error_reduction_bf))*100, digits=1))%")
+        println(
+            "  Mean L2 improvement: $(round(mean(dim_results.l2_improvement_bf)*100, digits=1))%",
+        )
+        println(
+            "  Mean error reduction: $(round(mean(filter(!isnan, dim_results.error_reduction_bf))*100, digits=1))%",
+        )
         println("  Mean overhead: $(round(mean(dim_results.overhead_bf), digits=1))x")
         println("  Mean condition number: $(scientific(mean(dim_results.cond_bf)))")
         println()
@@ -429,7 +479,9 @@ function generate_comparison_report(results::DataFrame)
         println("✓ Re-optimization recommended for:")
         for row in eachrow(significant_improvement)
             println("  • $(row.function_name) ($(row.dimension)D, degree=$(row.degree))")
-            println("    L2 improvement: $(round(row.l2_improvement_bf*100, digits=1))%, overhead: $(round(row.overhead_bf, digits=1))x")
+            println(
+                "    L2 improvement: $(round(row.l2_improvement_bf*100, digits=1))%, overhead: $(round(row.overhead_bf, digits=1))x",
+            )
         end
     end
 
@@ -459,8 +511,8 @@ end
 
 # Export main functions
 export run_single_benchmark,
-       run_full_benchmark,
-       generate_comparison_report,
-       run_benchmark,
-       BenchmarkConfig,
-       default_benchmark_config
+    run_full_benchmark,
+    generate_comparison_report,
+    run_benchmark,
+    BenchmarkConfig,
+    default_benchmark_config

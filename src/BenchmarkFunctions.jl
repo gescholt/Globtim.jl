@@ -104,33 +104,57 @@ Each function includes comprehensive documentation with:
 """
 
 # Function categorization for easy reference
-const BOWL_SHAPED_FUNCTIONS = [
-    :Sphere, :Rosenbrock, :Zakharov, :SumOfDifferentPowers,
-    :Trid, :RotatedHyperEllipsoid
-]
+const BOWL_SHAPED_FUNCTIONS =
+    [:Sphere, :Rosenbrock, :Zakharov, :SumOfDifferentPowers, :Trid, :RotatedHyperEllipsoid]
 
 const MULTIMODAL_FUNCTIONS = [
-    :Ackley, :Griewank, :Schwefel, :Rastrigin, :Levy,
-    :Michalewicz, :StyblinskiTang, :shubert, :dejong5
+    :Ackley,
+    :Griewank,
+    :Schwefel,
+    :Rastrigin,
+    :Levy,
+    :Michalewicz,
+    :StyblinskiTang,
+    :shubert,
+    :dejong5,
 ]
 
-const VALLEY_SHAPED_FUNCTIONS = [
-    :Rosenbrock, :camel_3, :camel
-]
+const VALLEY_SHAPED_FUNCTIONS = [:Rosenbrock, :camel_3, :camel]
 
-const PLATE_SHAPED_FUNCTIONS = [
-    :Booth, :Matyas, :Zakharov
-]
+const PLATE_SHAPED_FUNCTIONS = [:Booth, :Matyas, :Zakharov]
 
 const TWO_D_FUNCTIONS = [
-    :Beale, :Booth, :Branin, :GoldsteinPrice, :Matyas, :McCormick,
-    :HolderTable, :CrossInTray, :camel, :camel_3, :easom, :dejong5
+    :Beale,
+    :Booth,
+    :Branin,
+    :GoldsteinPrice,
+    :Matyas,
+    :McCormick,
+    :HolderTable,
+    :CrossInTray,
+    :camel,
+    :camel_3,
+    :easom,
+    :dejong5,
 ]
 
 const HIGHER_D_FUNCTIONS = [
-    :Sphere, :Rosenbrock, :Griewank, :Schwefel, :Levy, :Zakharov,
-    :Michalewicz, :StyblinskiTang, :SumOfDifferentPowers, :Trid,
-    :RotatedHyperEllipsoid, :Powell, :Ackley, :Rastrigin, :alpine1, :alpine2
+    :Sphere,
+    :Rosenbrock,
+    :Griewank,
+    :Schwefel,
+    :Levy,
+    :Zakharov,
+    :Michalewicz,
+    :StyblinskiTang,
+    :SumOfDifferentPowers,
+    :Trid,
+    :RotatedHyperEllipsoid,
+    :Powell,
+    :Ackley,
+    :Rastrigin,
+    :alpine1,
+    :alpine2,
 ]
 
 """
@@ -231,7 +255,7 @@ println(info[:global_min])  # [1.0, 1.0, ..., 1.0]
 ```
 """
 function get_function_info(func_name::Symbol)
-    info = Dict{Symbol, Any}()
+    info = Dict{Symbol,Any}()
     info[:name] = func_name
     info[:categories] = get_function_category(func_name)
 

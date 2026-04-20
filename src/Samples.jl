@@ -30,7 +30,7 @@ nodes = chebyshev_nodes_exact(4, Rational{BigInt})
 nodes = chebyshev_nodes_exact(4, BigFloat)
 ```
 """
-function chebyshev_nodes_exact(n::Int, ::Type{T}) where T
+function chebyshev_nodes_exact(n::Int, ::Type{T}) where {T}
     # For rational types, we need to compute cos of rational multiples of π
     # Since cos(π·r) for rational r is generally irrational, we use high-precision
     # approximation and convert to the target type
@@ -45,7 +45,9 @@ function chebyshev_nodes_exact(n::Int, ::Type{T}) where T
             nodes_bf = [cos(BigFloat(π) * BigFloat(2i + 1) / BigFloat(2n + 2)) for i in 0:n]
             # rationalize for Rational types uses (Int_type, value, tolerance) format
             Int_T = typeof(T(1).num)
-            return [Rational{Int_T}(rationalize(Int_T, x, eps(Float64)^2)) for x in nodes_bf]
+            return [
+                Rational{Int_T}(rationalize(Int_T, x, eps(Float64)^2)) for x in nodes_bf
+            ]
         end
     else
         # Generic fallback: compute with BigFloat and convert
@@ -80,7 +82,7 @@ nodes = legendre_nodes_exact(4, Float64)
 nodes = legendre_nodes_exact(4, Rational{BigInt})
 ```
 """
-function legendre_nodes_exact(n::Int, ::Type{T}) where T
+function legendre_nodes_exact(n::Int, ::Type{T}) where {T}
     # These are exact rational values: -1 + 2i/n for i = 0:n
     if T <: Rational
         # Compute exactly as rationals
@@ -114,13 +116,13 @@ nodes = chebyshev_nodes_exact(5, Rational{BigInt})
 grid = tensor_grid_exact([nodes, nodes, nodes])
 ```
 """
-function tensor_grid_exact(nodes::Vector{Vector{T}}) where T
+function tensor_grid_exact(nodes::Vector{Vector{T}}) where {T}
     n = length(nodes)
     grid_sizes = length.(nodes)
 
     # Create the tensor product grid
     [
-        SVector{n, T}(ntuple(d -> nodes[d][idx[d]], n)) for
+        SVector{n,T}(ntuple(d -> nodes[d][idx[d]], n)) for
         idx in Iterators.product([1:sz for sz in grid_sizes]...)
     ]
 end
@@ -214,7 +216,7 @@ TimerOutputs.@timeit _TO function generate_grid(
     n::Int,
     GN::Int;
     basis::Symbol = :chebyshev,
-    T::Type{<:Real} = Float64
+    T::Type{<:Real} = Float64,
 )
     # Use exact node computation functions
     nodes_vec = if basis == :chebyshev
@@ -228,7 +230,7 @@ TimerOutputs.@timeit _TO function generate_grid(
     # Use array comprehension with direct SVector construction
     [
         SVector{n}(ntuple(d -> nodes_vec[idx[d]], n)) for
-        idx in Iterators.product(fill(1:(GN + 1), n)...)
+        idx in Iterators.product(fill(1:(GN+1), n)...)
     ]
 end
 
@@ -269,7 +271,7 @@ TimerOutputs.@timeit _TO function generate_grid_small_n(
     N::Int,
     GN::Int;
     basis::Symbol = :chebyshev,
-    T::Type{<:Real} = Float64
+    T::Type{<:Real} = Float64,
 )
     # Use exact node computation functions
     nodes = if basis == :chebyshev
@@ -283,8 +285,8 @@ TimerOutputs.@timeit _TO function generate_grid_small_n(
     reshape(
         [
             SVector{N}(ntuple(d -> nodes[idx[d]], N)) for
-            idx in Iterators.product(fill(1:(GN + 1), N)...)
+            idx in Iterators.product(fill(1:(GN+1), N)...)
         ],
-        fill(GN + 1, N)...
+        fill(GN + 1, N)...,
     )
 end

@@ -23,13 +23,23 @@ using Dates
 using JSON
 
 export PathConfig,
-    get_project_root, get_results_root, get_src_dir, get_examples_dir,
-    create_experiment_dir, get_experiment_path,
-    validate_project_structure, validate_results_root,
-    is_valid_objective_name, sanitize_objective_name,
-    detect_environment, is_hpc_environment,
-    ensure_directory, with_project_root,
-    register_experiment, update_experiment_progress, finalize_experiment,
+    get_project_root,
+    get_results_root,
+    get_src_dir,
+    get_examples_dir,
+    create_experiment_dir,
+    get_experiment_path,
+    validate_project_structure,
+    validate_results_root,
+    is_valid_objective_name,
+    sanitize_objective_name,
+    detect_environment,
+    is_hpc_environment,
+    ensure_directory,
+    with_project_root,
+    register_experiment,
+    update_experiment_progress,
+    finalize_experiment,
     reset_config!  # For testing
 
 # =============================================================================
@@ -65,9 +75,9 @@ struct PathConfig
     environment::Symbol  # :hpc or :local
 
     function PathConfig(;
-        project_root::Union{String,Nothing}=nothing,
-        results_root::Union{String,Nothing}=nothing,
-        environment::Union{Symbol,Nothing}=nothing
+        project_root::Union{String,Nothing} = nothing,
+        results_root::Union{String,Nothing} = nothing,
+        environment::Union{Symbol,Nothing} = nothing,
     )
         # Determine project root
         proj_root = if isnothing(project_root)
@@ -87,7 +97,8 @@ struct PathConfig
         env = if isnothing(environment)
             detect_environment()
         else
-            environment in (:hpc, :local) || error("Invalid environment: $environment (must be :hpc or :local)")
+            environment in (:hpc, :local) ||
+                error("Invalid environment: $environment (must be :hpc or :local)")
             environment
         end
 
@@ -203,7 +214,9 @@ function _find_project_root()::String
         iteration += 1
     end
 
-    error("Could not find project root after $max_iterations iterations (possible symlink loop?)")
+    error(
+        "Could not find project root after $max_iterations iterations (possible symlink loop?)",
+    )
 end
 
 """
@@ -264,11 +277,13 @@ function _find_results_root()::String
 
         # Validate write permissions
         if !_is_writable(results_root)
-            error("""
-                GLOBTIM_RESULTS_ROOT exists but is not writable: $results_root
+            error(
+                """
+              GLOBTIM_RESULTS_ROOT exists but is not writable: $results_root
 
-                Please check permissions or set GLOBTIM_RESULTS_ROOT to a writable directory.
-                """)
+              Please check permissions or set GLOBTIM_RESULTS_ROOT to a writable directory.
+              """,
+            )
         end
 
         return results_root
@@ -283,12 +298,14 @@ function _find_results_root()::String
             mkpath(results_root)
             @info "Created default results directory: $results_root (set GLOBTIM_RESULTS_ROOT to override)"
         catch e
-            error("""
-                Cannot create default results directory: $results_root
-                Error: $e
+            error(
+                """
+              Cannot create default results directory: $results_root
+              Error: $e
 
-                Please set GLOBTIM_RESULTS_ROOT environment variable to a writable location.
-                """)
+              Please set GLOBTIM_RESULTS_ROOT environment variable to a writable location.
+              """,
+            )
         end
     end
 
@@ -377,8 +394,8 @@ path = create_experiment_dir("lotka_volterra_4d", "recovery_exp_12")
 """
 function create_experiment_dir(
     objective_name::String,
-    experiment_id::String="";
-    timestamp::DateTime=now()
+    experiment_id::String = "";
+    timestamp::DateTime = now(),
 )::String
     # Validate objective name
     if !is_valid_objective_name(objective_name)
@@ -412,7 +429,7 @@ function create_experiment_dir(
     end
 
     # Build path
-    path = get_experiment_path(objective_name, experiment_id; timestamp=timestamp)
+    path = get_experiment_path(objective_name, experiment_id; timestamp = timestamp)
 
     # Check if already exists
     if isdir(path)
@@ -468,7 +485,7 @@ path = get_experiment_path("lotka_volterra_4d", "exp_test", timestamp=DateTime(2
 function get_experiment_path(
     objective_name::String,
     experiment_id::String;
-    timestamp::DateTime=now()
+    timestamp::DateTime = now(),
 )::String
     results_root = get_results_root()
 
@@ -476,11 +493,7 @@ function get_experiment_path(
     timestamp_str = Dates.format(timestamp, "yyyymmdd_HHMMSS")
     dir_name = "$(experiment_id)_$(timestamp_str)"
 
-    experiment_path = joinpath(
-        results_root,
-        objective_name,
-        dir_name
-    )
+    experiment_path = joinpath(results_root, objective_name, dir_name)
 
     return abspath(experiment_path)
 end
@@ -490,7 +503,7 @@ end
 
 Internal: Generate unique experiment ID based on timestamp.
 """
-function _generate_experiment_id(timestamp::DateTime=now())::String
+function _generate_experiment_id(timestamp::DateTime = now())::String
     timestamp_str = Dates.format(timestamp, "yyyymmdd_HHMMSS")
     return "exp_$(timestamp_str)"
 end
@@ -594,8 +607,8 @@ Validate that project directory has required files and structure.
 - `ErrorException` if critical files are missing or path is invalid
 """
 function validate_project_structure(
-    project_root::String=get_project_root();
-    strict::Bool=false
+    project_root::String = get_project_root();
+    strict::Bool = false,
 )::Bool
     # Check directory exists
     if !isdir(project_root)
@@ -603,18 +616,10 @@ function validate_project_structure(
     end
 
     # Critical files (must exist)
-    critical_files = [
-        "Project.toml",
-        "src",
-        "Examples"
-    ]
+    critical_files = ["Project.toml", "src", "Examples"]
 
     # Important files (should exist, but not critical)
-    important_files = [
-        "Manifest.toml",
-        "Examples/systems/",
-        "test"
-    ]
+    important_files = ["Manifest.toml", "Examples/systems/", "test"]
 
     errors = String[]
     warnings = String[]
@@ -675,7 +680,7 @@ Validate that results root directory is properly configured and writable.
 # Throws
 - `ErrorException` if results root doesn't exist or is not writable
 """
-function validate_results_root(results_root::String=get_results_root())::Bool
+function validate_results_root(results_root::String = get_results_root())::Bool
     if !isdir(results_root)
         error("Results root does not exist: $results_root")
     end
@@ -836,25 +841,22 @@ metadata = Dict("GN" => 8, "degree_range" => [4, 12])
 session_file = register_experiment(exp_path, metadata)
 ```
 """
-function register_experiment(
-    output_dir::String,
-    metadata::Dict{String, Any}
-)::String
+function register_experiment(output_dir::String, metadata::Dict{String,Any})::String
     session_file = joinpath(output_dir, ".session_info.json")
 
     # Create session info with initial progress state
-    data = Dict{String, Any}(
+    data = Dict{String,Any}(
         "output_dir" => output_dir,
         "started_at" => now(),
         "status" => "running",
         "host" => gethostname(),
         "parameters" => metadata,
-        "progress" => Dict{String, Any}(
+        "progress" => Dict{String,Any}(
             "percent_complete" => 0.0,
             "current_step" => 0,
             "total_steps" => 0,
-            "last_heartbeat" => now()
-        )
+            "last_heartbeat" => now(),
+        ),
     )
 
     # Write to file
@@ -893,18 +895,18 @@ function update_experiment_progress(
     output_dir::String,
     completed::Int,
     total::Int;
-    current_step_name::String=""
+    current_step_name::String = "",
 )
     session_file = joinpath(output_dir, ".session_info.json")
 
     if !isfile(session_file)
         @warn "Session info file not found, creating minimal version" session_file
         # Create minimal session info if missing
-        data = Dict{String, Any}(
+        data = Dict{String,Any}(
             "output_dir" => output_dir,
             "started_at" => now(),
             "status" => "running",
-            "progress" => Dict{String, Any}()
+            "progress" => Dict{String,Any}(),
         )
     else
         # Read existing data
@@ -912,11 +914,12 @@ function update_experiment_progress(
     end
 
     # Update progress
-    data["progress"] = Dict{String, Any}(
-        "percent_complete" => total > 0 ? round(100 * completed / total, digits=1) : 0.0,
+    data["progress"] = Dict{String,Any}(
+        "percent_complete" =>
+            total > 0 ? round(100 * completed / total, digits = 1) : 0.0,
         "current_step" => completed,
         "total_steps" => total,
-        "last_heartbeat" => now()
+        "last_heartbeat" => now(),
     )
 
     if !isempty(current_step_name)
@@ -952,11 +955,7 @@ catch e
 end
 ```
 """
-function finalize_experiment(
-    output_dir::String,
-    success::Bool,
-    message::String=""
-)
+function finalize_experiment(output_dir::String, success::Bool, message::String = "")
     session_file = joinpath(output_dir, ".session_info.json")
 
     if !isfile(session_file)

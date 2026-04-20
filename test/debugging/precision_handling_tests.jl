@@ -14,7 +14,6 @@ using Globtim
 using DynamicPolynomials
 
 @testset "Precision Handling Pipeline Tests" begin
-
     @testset "Basic Precision Type Conversions" begin
         @testset "_convert_value Function Tests" begin
 
@@ -72,7 +71,6 @@ using DynamicPolynomials
     end
 
     @testset "Coefficient Vector Conversion Tests" begin
-
         @testset "Mixed Coefficient Types" begin
             # Test coefficient vectors with different value types
             mixed_coeffs = [1.0, 0.0, -2.5, 1e-10, 1e10]
@@ -128,7 +126,6 @@ using DynamicPolynomials
     end
 
     @testset "Polynomial Construction Precision Flow" begin
-
         @testset "Simple 1D Polynomial Precision Consistency" begin
             @polyvar x
             coeffs_1d = [1.0, 0.0, -2.0, 0.0, 1.5]  # x^4 + 1.5x^3 - 2x^2 + 1
@@ -137,14 +134,22 @@ using DynamicPolynomials
             for precision_type in [Float64Precision, AdaptivePrecision]  # Skip RationalPrecision for now due to known issues
                 @test_nowarn begin
                     pol = Globtim.construct_orthopoly_polynomial(
-                        [x], coeffs_1d, (:one_d_for_all, 4), :chebyshev, precision_type;
-                        verbose = false
+                        [x],
+                        coeffs_1d,
+                        (:one_d_for_all, 4),
+                        :chebyshev,
+                        precision_type;
+                        verbose = false,
                     )
                 end
 
                 pol = Globtim.construct_orthopoly_polynomial(
-                    [x], coeffs_1d, (:one_d_for_all, 4), :chebyshev, precision_type;
-                    verbose = false
+                    [x],
+                    coeffs_1d,
+                    (:one_d_for_all, 4),
+                    :chebyshev,
+                    precision_type;
+                    verbose = false,
                 )
 
                 # Polynomial should be non-trivial
@@ -169,15 +174,22 @@ using DynamicPolynomials
 
             @test_nowarn begin
                 pol = Globtim.construct_orthopoly_polynomial(
-                    x, coeffs_2d, (:one_d_for_all, degree), :chebyshev,
+                    x,
+                    coeffs_2d,
+                    (:one_d_for_all, degree),
+                    :chebyshev,
                     Float64Precision;
-                    verbose = false
+                    verbose = false,
                 )
             end
 
             pol = Globtim.construct_orthopoly_polynomial(
-                x, coeffs_2d, (:one_d_for_all, degree), :chebyshev, Float64Precision;
-                verbose = false
+                x,
+                coeffs_2d,
+                (:one_d_for_all, degree),
+                :chebyshev,
+                Float64Precision;
+                verbose = false,
             )
 
             @test !iszero(pol)
@@ -190,7 +202,6 @@ using DynamicPolynomials
     end
 
     @testset "End-to-End Precision Pipeline Tests" begin
-
         @testset "Constructor → Polynomial System Precision Consistency" begin
             # Create a minimal 2D optimization problem similar to the failing 4D case
             function simple_2d_objective(θ)
@@ -214,7 +225,7 @@ using DynamicPolynomials
                         center[1] +
                         sample_range * (2 * (i - 1) / (samples_per_dim - 1) - 1),
                         center[2] +
-                        sample_range * (2 * (j - 1) / (samples_per_dim - 1) - 1)
+                        sample_range * (2 * (j - 1) / (samples_per_dim - 1) - 1),
                     ]
                     push!(sample_points, θ)
                     push!(sample_values, simple_2d_objective(θ))
@@ -244,32 +255,46 @@ using DynamicPolynomials
 
                         @test_nowarn begin
                             pol = Globtim.construct_orthopoly_polynomial(
-                                y, mock_coeffs, (:one_d_for_all, 2), :chebyshev,
+                                y,
+                                mock_coeffs,
+                                (:one_d_for_all, 2),
+                                :chebyshev,
                                 const_prec;
-                                verbose = false
+                                verbose = false,
                             )
                         end
 
                         pol = Globtim.construct_orthopoly_polynomial(
-                            y, mock_coeffs, (:one_d_for_all, 2), :chebyshev, const_prec;
-                            verbose = false
+                            y,
+                            mock_coeffs,
+                            (:one_d_for_all, 2),
+                            :chebyshev,
+                            const_prec;
+                            verbose = false,
                         )
 
                         # Test that we can solve the polynomial system with specified precision
                         @test_nowarn begin
-                            real_pts, (poly, system, nsols) = Globtim.solve_polynomial_system(
-                                y, n, (:one_d_for_all, 2), mock_coeffs;
-                                basis = :chebyshev,
-                                precision = solve_prec,
-                                return_system = true
-                            )
+                            real_pts, (poly, system, nsols) =
+                                Globtim.solve_polynomial_system(
+                                    y,
+                                    n,
+                                    (:one_d_for_all, 2),
+                                    mock_coeffs;
+                                    basis = :chebyshev,
+                                    precision = solve_prec,
+                                    return_system = true,
+                                )
                         end
 
                         real_pts, (poly, system, nsols) = Globtim.solve_polynomial_system(
-                            y, n, (:one_d_for_all, 2), mock_coeffs;
+                            y,
+                            n,
+                            (:one_d_for_all, 2),
+                            mock_coeffs;
                             basis = :chebyshev,
                             precision = solve_prec,
-                            return_system = true
+                            return_system = true,
                         )
 
                         # Basic sanity checks
@@ -284,7 +309,6 @@ using DynamicPolynomials
     end
 
     @testset "Numerical Stability Tests" begin
-
         @testset "Condition Number Behavior Across Precisions" begin
             # Test how condition numbers behave with different precision types
             @polyvar z
@@ -299,9 +323,12 @@ using DynamicPolynomials
                 for precision_type in [Float64Precision, AdaptivePrecision]
                     @test_nowarn begin
                         pol = Globtim.construct_orthopoly_polynomial(
-                            [z], coeffs, (:one_d_for_all, length(coeffs) - 1),
-                            :chebyshev, precision_type;
-                            verbose = false
+                            [z],
+                            coeffs,
+                            (:one_d_for_all, length(coeffs) - 1),
+                            :chebyshev,
+                            precision_type;
+                            verbose = false,
                         )
                     end
                 end
@@ -318,7 +345,7 @@ using DynamicPolynomials
                 nextfloat(0.0),      # Smallest positive Float64
                 prevfloat(0.0),      # Largest negative Float64 (closest to zero)
                 floatmax(Float64),   # Largest representable Float64
-                floatmin(Float64)    # Smallest normal Float64
+                floatmin(Float64),    # Smallest normal Float64
             ]
 
             # Test that AdaptivePrecision preserves more precision than Float64Precision
@@ -338,7 +365,6 @@ using DynamicPolynomials
     end
 
     @testset "Performance and Memory Tests" begin
-
         @testset "Precision Conversion Performance" begin
             # Test that precision conversions don't have unexpected performance regressions
             large_coeffs = randn(1000)
@@ -372,7 +398,6 @@ using DynamicPolynomials
             @test true
         end
     end
-
 end
 
 # Helper function to check if tests can run (dependencies available)

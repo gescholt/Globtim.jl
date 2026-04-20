@@ -26,7 +26,7 @@ function process_crit_pts(
     f::Function,
     TR::TestInput;
     skip_filtering::Bool = false,
-    kwargs...
+    kwargs...,
 )::DataFrame
     # Validate input dimensions
     if !all(p -> length(p) == TR.dim, real_pts)
@@ -97,8 +97,8 @@ function process_crit_pts(
                     ArgumentError(
                         "Function doesn't accept expected input format. " *
                         "For 1D problems, function should accept either scalar (e.g., x -> sin(x)) " *
-                        "or vector input (e.g., x -> sin(x[1]))."
-                    )
+                        "or vector input (e.g., x -> sin(x[1])).",
+                    ),
                 )
             end
         end
@@ -118,8 +118,8 @@ function process_crit_pts(
     return DataFrame(
         merge(
             Dict(Symbol("x$i") => [p[i] for p in points_to_process] for i in 1:(TR.dim)),
-            Dict(:z => z)
-        )
+            Dict(:z => z),
+        ),
     )
 end
 
@@ -197,12 +197,14 @@ function parse_msolve_output(content::AbstractString, n::Int)::Vector{Vector{Flo
     # Find the solution data after the header [0, [1, ...]
     start_idx = findfirst("[0, [1,", content)
     if start_idx === nothing
-        error("Unexpected msolve output format — missing '[0, [1,' header.\n" *
-              "Content preview: $(first(content, min(300, length(content))))")
+        error(
+            "Unexpected msolve output format — missing '[0, [1,' header.\n" *
+            "Content preview: $(first(content, min(300, length(content))))",
+        )
     end
 
     # Extract everything after "[0, [1,"
-    inner = content[(start_idx[end] + 1):end]
+    inner = content[(start_idx[end]+1):end]
 
     # Strategy: walk the string character-by-character tracking bracket depth
     # to split into individual solution blocks. Each solution is
@@ -262,8 +264,9 @@ Returns `(points, intervals)` where:
 See [`parse_msolve_output`](@ref) for format details.
 """
 function parse_msolve_output_with_intervals(
-    content::AbstractString, n::Int
-)::Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+    content::AbstractString,
+    n::Int,
+)::Tuple{Vector{Vector{Float64}},Vector{Vector{Tuple{Float64,Float64}}}}
     content = strip(rstrip(strip(content), ':'))
 
     if contains(content, "[-1]")
@@ -276,11 +279,13 @@ function parse_msolve_output_with_intervals(
 
     start_idx = findfirst("[0, [1,", content)
     if start_idx === nothing
-        error("Unexpected msolve output format — missing '[0, [1,' header.\n" *
-              "Content preview: $(first(content, min(300, length(content))))")
+        error(
+            "Unexpected msolve output format — missing '[0, [1,' header.\n" *
+            "Content preview: $(first(content, min(300, length(content))))",
+        )
     end
 
-    inner = content[(start_idx[end] + 1):end]
+    inner = content[(start_idx[end]+1):end]
 
     points = Vector{Float64}[]
     all_intervals = Vector{Tuple{Float64,Float64}}[]
@@ -323,7 +328,10 @@ end
 Parse a single msolve solution block `[[lo1, hi1], [lo2, hi2], ...]` into
 coordinate midpoints. Returns `nothing` if parsing fails.
 """
-function _parse_solution_block(block::AbstractString, n::Int)::Union{Vector{Float64}, Nothing}
+function _parse_solution_block(
+    block::AbstractString,
+    n::Int,
+)::Union{Vector{Float64},Nothing}
     result = _parse_solution_block_intervals(block, n)
     result === nothing && return nothing
     return result[1]  # return midpoints only
@@ -343,8 +351,9 @@ Returns `(midpoints, intervals)` where:
 Returns `nothing` if parsing fails or dimension mismatch.
 """
 function _parse_solution_block_intervals(
-    block::AbstractString, n::Int
-)::Union{Tuple{Vector{Float64}, Vector{Tuple{Float64,Float64}}}, Nothing}
+    block::AbstractString,
+    n::Int,
+)::Union{Tuple{Vector{Float64},Vector{Tuple{Float64,Float64}}},Nothing}
     coords = Float64[]
     intervals = Tuple{Float64,Float64}[]
     depth = 0
@@ -361,7 +370,7 @@ function _parse_solution_block_intervals(
         elseif c == ']'
             depth -= 1
             if depth == 1 && interval_start > 0
-                interval_str = block[(interval_start + 1):(i - 1)]
+                interval_str = block[(interval_start+1):(i-1)]
                 parts = split(interval_str, ',')
                 if length(parts) == 2
                     lo = parse_msolve_rational(parts[1])
@@ -422,8 +431,9 @@ File is cleaned up after parsing.
 See [`parse_msolve_output_with_intervals`](@ref) for return format.
 """
 function msolve_raw_points_with_intervals(
-    file_path::String, n::Int
-)::Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+    file_path::String,
+    n::Int,
+)::Tuple{Vector{Vector{Float64}},Vector{Vector{Tuple{Float64,Float64}}}}
     if !isfile(file_path)
         error("msolve output file not found: $file_path")
     end
@@ -511,7 +521,7 @@ function filter_solutions_by_box(
     points::Vector{Vector{Float64}},
     intervals::Vector{Vector{Tuple{Float64,Float64}}},
     box::Vector{Tuple{Float64,Float64}},
-)::Tuple{Vector{Vector{Float64}}, Vector{Vector{Tuple{Float64,Float64}}}}
+)::Tuple{Vector{Vector{Float64}},Vector{Vector{Tuple{Float64,Float64}}}}
     kept_pts = Vector{Float64}[]
     kept_ivs = Vector{Tuple{Float64,Float64}}[]
     for (pt, iv) in zip(points, intervals)
@@ -547,7 +557,7 @@ function msolve_parser(
     file_path::String,
     f::Function,
     TR::TestInput;
-    skip_filtering::Bool = false
+    skip_filtering::Bool = false,
 )::DataFrame
     @debug "Starting msolve parser (dimension: $(TR.dim))"
 

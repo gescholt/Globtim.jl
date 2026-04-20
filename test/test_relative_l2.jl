@@ -8,7 +8,7 @@
         dim = n,
         center = [0.0, 0.0],
         GN = 20,
-        sample_range = scale_factor
+        sample_range = scale_factor,
     )
 
     @testset "Basic properties" begin

@@ -49,11 +49,10 @@ println("  Skip Integration Tests: $SKIP_INTEGRATION_TESTS")
 println()
 
 # Test results tracking
-test_results = Dict{String, Any}()
+test_results = Dict{String,Any}()
 test_start_time = now()
 
 @testset "Globtim Monitoring Variable Scope Tests" begin
-
     @testset "Core Variable Scope Detection" begin
         println("🔍 Running Core Variable Scope Tests...")
         test_start = now()
@@ -63,14 +62,14 @@ test_start_time = now()
             test_results["variable_scope"] = Dict(
                 "status" => "passed",
                 "duration" => now() - test_start,
-                "error" => nothing
+                "error" => nothing,
             )
             println("✅ Core Variable Scope Tests: PASSED")
         catch e
             test_results["variable_scope"] = Dict(
                 "status" => "failed",
                 "duration" => now() - test_start,
-                "error" => string(e)
+                "error" => string(e),
             )
             println("❌ Core Variable Scope Tests: FAILED")
             @warn "Variable scope tests failed" exception = e
@@ -87,14 +86,14 @@ test_start_time = now()
             test_results["package_validator"] = Dict(
                 "status" => "passed",
                 "duration" => now() - test_start,
-                "error" => nothing
+                "error" => nothing,
             )
             println("✅ Package Validator Tests: PASSED")
         catch e
             test_results["package_validator"] = Dict(
                 "status" => "failed",
                 "duration" => now() - test_start,
-                "error" => string(e)
+                "error" => string(e),
             )
             println("❌ Package Validator Tests: FAILED")
             @warn "Package validator tests failed" exception = e
@@ -119,14 +118,14 @@ test_start_time = now()
             test_results["import_dependencies"] = Dict(
                 "status" => "passed",
                 "duration" => now() - test_start,
-                "error" => nothing
+                "error" => nothing,
             )
             println("✅ Import Dependency Tests: PASSED")
         catch e
             test_results["import_dependencies"] = Dict(
                 "status" => "failed",
                 "duration" => now() - test_start,
-                "error" => string(e)
+                "error" => string(e),
             )
             println("❌ Import Dependency Tests: FAILED")
             @warn "Import dependency tests failed" exception = e
@@ -137,12 +136,12 @@ test_start_time = now()
     @testset "Lotka-Volterra Integration Tests" begin
         if SKIP_INTEGRATION_TESTS
             println(
-                "⏭️  Skipping Lotka-Volterra Integration Tests (SKIP_INTEGRATION_TESTS=true)"
+                "⏭️  Skipping Lotka-Volterra Integration Tests (SKIP_INTEGRATION_TESTS=true)",
             )
             test_results["lotka_volterra_integration"] = Dict(
                 "status" => "skipped",
                 "duration" => Millisecond(0),
-                "error" => nothing
+                "error" => nothing,
             )
         else
             println("🧬 Running Lotka-Volterra Integration Tests...")
@@ -153,14 +152,14 @@ test_start_time = now()
                 test_results["lotka_volterra_integration"] = Dict(
                     "status" => "passed",
                     "duration" => now() - test_start,
-                    "error" => nothing
+                    "error" => nothing,
                 )
                 println("✅ Lotka-Volterra Integration Tests: PASSED")
             catch e
                 test_results["lotka_volterra_integration"] = Dict(
                     "status" => "failed",
                     "duration" => now() - test_start,
-                    "error" => string(e)
+                    "error" => string(e),
                 )
                 println("❌ Lotka-Volterra Integration Tests: FAILED")
                 @warn "Lotka-Volterra integration tests failed" exception = e
@@ -175,7 +174,7 @@ test_start_time = now()
             test_results["performance"] = Dict(
                 "status" => "skipped",
                 "duration" => Millisecond(0),
-                "error" => nothing
+                "error" => nothing,
             )
         else
             println("⚡ Running Performance Tests...")
@@ -186,14 +185,14 @@ test_start_time = now()
                 test_results["performance"] = Dict(
                     "status" => "passed",
                     "duration" => now() - test_start,
-                    "error" => nothing
+                    "error" => nothing,
                 )
                 println("✅ Performance Tests: PASSED")
             catch e
                 test_results["performance"] = Dict(
                     "status" => "failed",
                     "duration" => now() - test_start,
-                    "error" => string(e)
+                    "error" => string(e),
                 )
                 println("❌ Performance Tests: FAILED")
                 @warn "Performance tests failed" exception = e
@@ -201,9 +200,10 @@ test_start_time = now()
                 # Performance tests may be environment-sensitive
                 # Allow them to fail without failing the entire suite in CI/HPC environments
                 hpc_host = get(ENV, "GLOBTIM_HPC_HOST", "")
-                if get(ENV, "CI", "false") == "true" || (!isempty(hpc_host) && occursin(hpc_host, gethostname()))
+                if get(ENV, "CI", "false") == "true" ||
+                   (!isempty(hpc_host) && occursin(hpc_host, gethostname()))
                     println(
-                        "⚠️  Performance test failure in CI/HPC environment - continuing"
+                        "⚠️  Performance test failure in CI/HPC environment - continuing",
                     )
                     test_results["performance"]["status"] = "ci_failure"
                 else
@@ -222,14 +222,14 @@ test_start_time = now()
             test_results["cross_environment"] = Dict(
                 "status" => "passed",
                 "duration" => now() - test_start,
-                "error" => nothing
+                "error" => nothing,
             )
             println("✅ Cross-Environment Tests: PASSED")
         catch e
             test_results["cross_environment"] = Dict(
                 "status" => "failed",
                 "duration" => now() - test_start,
-                "error" => string(e)
+                "error" => string(e),
             )
             println("❌ Cross-Environment Tests: FAILED")
             @warn "Cross-environment tests failed" exception = e
@@ -306,7 +306,7 @@ if validator_status == "passed"
 elseif validator_status == "expected_failure"
     println("  ⚠️  Package validator failed as expected due to now() function bug")
     println(
-        "     ACTION REQUIRED: Fix missing 'using Dates' import in package_validator.jl line 314"
+        "     ACTION REQUIRED: Fix missing 'using Dates' import in package_validator.jl line 314",
     )
 else
     println("  ❌ Package validator tests failed unexpectedly")
@@ -327,8 +327,8 @@ success_criteria = [
     ("Import validation", test_results["import_dependencies"]["status"] == "passed"),
     (
         "Cross-environment compatibility",
-        test_results["cross_environment"]["status"] == "passed"
-    )
+        test_results["cross_environment"]["status"] == "passed",
+    ),
 ]
 
 critical_success = all(criterion[2] for criterion in success_criteria)

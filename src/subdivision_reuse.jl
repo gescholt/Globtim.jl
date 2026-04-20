@@ -25,9 +25,11 @@ In a non-split dimension, `parent.center[d] == child.center[d]` and
 `parent.half_widths[d] == child.half_widths[d]`, so the output matches the
 input (no drift accumulation).
 """
-function remap_parent_to_child(x_parent::AbstractVector{<:Real},
-                                parent::Subdomain,
-                                child::Subdomain)
+function remap_parent_to_child(
+    x_parent::AbstractVector{<:Real},
+    parent::Subdomain,
+    child::Subdomain,
+)
     n = length(x_parent)
     n == length(parent.center) == length(child.center) ||
         throw(ArgumentError("dimension mismatch between point, parent, and child"))
@@ -49,10 +51,12 @@ parent-normalized points) whose remapped coordinates all lie within
 The tolerance is a defensive guard for floating-point noise at the cut
 boundary; `tol=1e-10` is far tighter than any subdivision precision.
 """
-function points_inside_child(parent_samples::AbstractMatrix{<:Real},
-                              parent::Subdomain,
-                              child::Subdomain;
-                              tol::Float64=1e-10)
+function points_inside_child(
+    parent_samples::AbstractMatrix{<:Real},
+    parent::Subdomain,
+    child::Subdomain;
+    tol::Float64 = 1e-10,
+)
     n_rows, n_dims = size(parent_samples)
     n_dims == length(parent.center) == length(child.center) ||
         throw(ArgumentError("column count must equal subdomain dimension"))
@@ -85,12 +89,16 @@ are not within `tol` of any inherited row. `combined` is `[inherited; fresh[new_
 evaluation — inherited rows already have `f`-values copied from the parent
 cache, so no re-evaluation is needed for them.
 """
-function combine_inherited_and_fresh(inherited::AbstractMatrix{<:Real},
-                                      fresh::AbstractMatrix{<:Real};
-                                      tol::Float64=1e-10)
+function combine_inherited_and_fresh(
+    inherited::AbstractMatrix{<:Real},
+    fresh::AbstractMatrix{<:Real};
+    tol::Float64 = 1e-10,
+)
     n_inh, n_dims_inh = size(inherited)
     n_fresh, n_dims_fresh = size(fresh)
-    n_inh == 0 || n_fresh == 0 || n_dims_inh == n_dims_fresh ||
+    n_inh == 0 ||
+        n_fresh == 0 ||
+        n_dims_inh == n_dims_fresh ||
         throw(ArgumentError("inherited and fresh must have the same number of columns"))
     n_dims = n_inh == 0 ? n_dims_fresh : n_dims_inh
 
@@ -119,7 +127,7 @@ function combine_inherited_and_fresh(inherited::AbstractMatrix{<:Real},
     end
     @inbounds for (k, j) in enumerate(new_idx)
         for d in 1:n_dims
-            combined[n_inh + k, d] = fresh[j, d]
+            combined[n_inh+k, d] = fresh[j, d]
         end
     end
     return combined, new_idx

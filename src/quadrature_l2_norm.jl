@@ -27,7 +27,7 @@ l2_norm = compute_l2_norm_quadrature(f, [10, 10], :chebyshev)
 function compute_l2_norm_quadrature(
     f::Function,
     n_points::Vector{Int},
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 )
     n_dims = length(n_points)
 

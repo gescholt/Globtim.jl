@@ -31,11 +31,11 @@ The type parameter `S` makes the scale_factor field type-stable, eliminating run
 """
 # Type alias for the degree specification in ApproxPoly.
 # Either a bare Int (legacy) or a tuple like (:one_d_for_all, 6) or (:one_d_per_dim, [4, 6]).
-const DegreeSpec = Union{Int, Tuple{Symbol, Int}, Tuple{Symbol, Vector{Int}}}
+const DegreeSpec = Union{Int,Tuple{Symbol,Int},Tuple{Symbol,Vector{Int}}}
 
 # Type alias for the support matrix in ApproxPoly.
 # Nothing for legacy constructors, or an integer matrix (possibly transposed) for the lambda matrix.
-const SupportMatrix = Union{Nothing, AbstractMatrix{Int}}
+const SupportMatrix = Union{Nothing,AbstractMatrix{Int}}
 
 """
     normalize_degree(d) -> DegreeSpec
@@ -46,7 +46,7 @@ If already a tuple, returns it unchanged.
 normalize_degree(d::Int)::DegreeSpec = (:one_d_for_all, d)
 normalize_degree(d::Tuple)::DegreeSpec = d
 
-struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
+struct ApproxPoly{T<:Number,S<:Union{Float64,Vector{Float64}}}
     coeffs::Vector{T}
     support::SupportMatrix
     degree::DegreeSpec
@@ -77,9 +77,9 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         precision::PrecisionType,
         normalized::Bool,
         power_of_two_denom::Bool,
-        cond_vandermonde::Float64
-    ) where {T <: Number}
-        new{T, Float64}(
+        cond_vandermonde::Float64,
+    ) where {T<:Number}
+        new{T,Float64}(
             coeffs,
             support,
             degree,
@@ -93,7 +93,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde
+            cond_vandermonde,
         )
     end
 
@@ -112,9 +112,9 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         precision::PrecisionType,
         normalized::Bool,
         power_of_two_denom::Bool,
-        cond_vandermonde::Float64
-    ) where {T <: Number}
-        new{T, Vector{Float64}}(
+        cond_vandermonde::Float64,
+    ) where {T<:Number}
+        new{T,Vector{Float64}}(
             coeffs,
             support,
             degree,
@@ -128,12 +128,12 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde
+            cond_vandermonde,
         )
     end
 
     # General constructor with both type parameters
-    function ApproxPoly{T, S}(
+    function ApproxPoly{T,S}(
         coeffs::Vector{T},
         support,
         degree,
@@ -147,9 +147,9 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
         precision::PrecisionType,
         normalized::Bool,
         power_of_two_denom::Bool,
-        cond_vandermonde::Float64
-    ) where {T <: Number, S <: Union{Float64, Vector{Float64}}}
-        new{T, S}(
+        cond_vandermonde::Float64,
+    ) where {T<:Number,S<:Union{Float64,Vector{Float64}}}
+        new{T,S}(
             coeffs,
             support,
             degree,
@@ -163,7 +163,7 @@ struct ApproxPoly{T <: Number, S <: Union{Float64, Vector{Float64}}}
             precision,
             normalized,
             power_of_two_denom,
-            cond_vandermonde
+            cond_vandermonde,
         )
     end
 end
@@ -183,8 +183,8 @@ function ApproxPoly(
     precision::PrecisionType = RationalPrecision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
-    cond_vandermonde::Float64 = 1.0
-) where {T <: Number, S <: Union{Float64, Vector{Float64}}}
+    cond_vandermonde::Float64 = 1.0,
+) where {T<:Number,S<:Union{Float64,Vector{Float64}}}
     return ApproxPoly{T}(
         coeffs,
         support,
@@ -199,10 +199,9 @@ function ApproxPoly(
         precision,
         normalized,
         power_of_two_denom,
-        cond_vandermonde
+        cond_vandermonde,
     )
 end
-
 
 # Convenience accessor functions
 get_basis(p::ApproxPoly) = p.basis
@@ -232,14 +231,14 @@ Fields:
 struct TestInput
     dim::Int
     center::Vector{Float64}
-    GN::Union{Int, Nothing}
-    prec::Union{Tuple{Float64, Float64}, Nothing}
-    tolerance::Union{Float64, Nothing}
-    noise::Union{Tuple{Float64, Float64}, Nothing}
-    sample_range::Union{Float64, Vector{Float64}, Nothing}
-    reduce_samples::Union{Float64, Nothing}
-    degree_max::Union{Int, Nothing}
-    objective  # Any callable: Function, functor struct, etc.
+    GN::Union{Int,Nothing}
+    prec::Union{Tuple{Float64,Float64},Nothing}
+    tolerance::Union{Float64,Nothing}
+    noise::Union{Tuple{Float64,Float64},Nothing}
+    sample_range::Union{Float64,Vector{Float64},Nothing}
+    reduce_samples::Union{Float64,Nothing}
+    degree_max::Union{Int,Nothing}
+    objective::Any  # Any callable: Function, functor struct, etc.
 
     """
         TestInput(f; kwargs...) -> TestInput
@@ -287,15 +286,15 @@ struct TestInput
         f;
         dim::Int = 2,
         center::AbstractVector{<:Real} = fill(0.0, dim),
-        GN::Union{Int, Nothing} = nothing,
-        alpha::Union{Real, Nothing} = 0.1,
-        delta::Union{Real, Nothing} = 0.5,
-        tolerance::Union{Real, Nothing} = 2e-3,
-        sample_range::Union{Real, AbstractVector{<:Real}, Nothing} = 1.0,
-        reduce_samples::Union{Real, Nothing} = 1.0,
+        GN::Union{Int,Nothing} = nothing,
+        alpha::Union{Real,Nothing} = 0.1,
+        delta::Union{Real,Nothing} = 0.5,
+        tolerance::Union{Real,Nothing} = 2e-3,
+        sample_range::Union{Real,AbstractVector{<:Real},Nothing} = 1.0,
+        reduce_samples::Union{Real,Nothing} = 1.0,
         degree_max::Int = 6,
-        model::Union{Nothing, Any} = nothing,
-        outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
+        model::Union{Nothing,Any} = nothing,
+        outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
     )
         # Type conversions
         center_vec = Vector{Float64}(float.(center))
@@ -354,7 +353,7 @@ struct TestInput
             sample_range_converted,
             reduce_samples_float,
             degree_max,
-            objective
+            objective,
         )
     end
 end
@@ -383,12 +382,12 @@ function create_test_input(
     center::AbstractVector{Float64} = fill(0.0, n),
     tolerance::Float64 = 2e-3,
     alpha::Float64 = 0.1,
-    delta::Union{Real, Nothing} = nothing,
-    sample_range::Union{Float64, AbstractVector{<:Real}} = 1.0,
-    reduce_samples::Union{Real, Nothing} = nothing,
+    delta::Union{Real,Nothing} = nothing,
+    sample_range::Union{Float64,AbstractVector{<:Real}} = 1.0,
+    reduce_samples::Union{Real,Nothing} = nothing,
     degree_max::Int = 6,
-    model::Union{Nothing, Any} = nothing,
-    outputs::Union{Nothing, AbstractVector{<:Real}} = nothing
+    model::Union{Nothing,Any} = nothing,
+    outputs::Union{Nothing,AbstractVector{<:Real}} = nothing,
 )::TestInput
     return TestInput(
         f;
@@ -401,6 +400,6 @@ function create_test_input(
         reduce_samples = reduce_samples,
         degree_max = degree_max,
         model = model,
-        outputs = outputs
+        outputs = outputs,
     )
 end

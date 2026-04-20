@@ -22,18 +22,19 @@ end
 Create a test batch manifest with N experiments, all in "pending" status.
 Returns a proper Manifest object.
 """
-function create_test_batch_manifest(n_experiments::Int;
-                                   batch_id="test_batch",
-                                   batch_type="parameter_sweep")
+function create_test_batch_manifest(
+    n_experiments::Int;
+    batch_id = "test_batch",
+    batch_type = "parameter_sweep",
+)
     experiments = [
         ExperimentEntry(
             "exp_$i",
             "scripts/exp_$i.jl",
             "configs/exp_$i.toml",
             "results/exp_$i",
-            "pending"
-        )
-        for i in 1:n_experiments
+            "pending",
+        ) for i in 1:n_experiments
     ]
 
     return Manifest(
@@ -42,8 +43,8 @@ function create_test_batch_manifest(n_experiments::Int;
         now(),
         n_experiments,
         experiments,
-        Dict{String, Any}("test_param" => "test_value"),
-        "pending"
+        Dict{String,Any}("test_param" => "test_value"),
+        "pending",
     )
 end
 
@@ -52,8 +53,8 @@ end
 
 Generate a Schema v1.1.0 compliant results_summary.json structure.
 """
-function generate_test_results_summary(; degrees=3:5, schema_version="1.1.0")
-    results = Dict{String, Any}("schema_version" => schema_version)
+function generate_test_results_summary(; degrees = 3:5, schema_version = "1.1.0")
+    results = Dict{String,Any}("schema_version" => schema_version)
 
     for d in degrees
         results["degree_$d"] = Dict(
@@ -68,8 +69,8 @@ function generate_test_results_summary(; degrees=3:5, schema_version="1.1.0")
                 "failed" => 0,
                 "mean_improvement" => 1e8 * rand(),
                 "max_improvement" => 2e8 * rand(),
-                "mean_iterations" => 20 + rand() * 10
-            )
+                "mean_iterations" => 20 + rand() * 10,
+            ),
         )
     end
 
@@ -82,7 +83,7 @@ end
 Generate test critical points data as a DataFrame (for CSV export).
 Note: degree parameter is available for future use in generating degree-specific patterns.
 """
-function generate_test_critical_points(; degree=3, n_points=6)
+function generate_test_critical_points(; degree = 3, n_points = 6)
     _ = degree  # Reserved for future degree-specific generation
     df = DataFrame(
         x1 = randn(n_points),
@@ -92,7 +93,7 @@ function generate_test_critical_points(; degree=3, n_points=6)
         f_value = rand(n_points) .* 1e-6,
         in_domain = rand(Bool, n_points),
         converged = fill(true, n_points),
-        iterations = rand(10:50, n_points)
+        iterations = rand(10:50, n_points),
     )
 
     return df
@@ -111,7 +112,7 @@ Create a temporary directory with experiment results for the specified experimen
 # Returns
 - Path to temporary directory containing the results
 """
-function create_test_results_dir(manifest::Dict, complete_exps::Vector{Int}; degrees=3:5)
+function create_test_results_dir(manifest::Dict, complete_exps::Vector{Int}; degrees = 3:5)
     tmpdir = mktempdir()
 
     for i in complete_exps
@@ -120,14 +121,14 @@ function create_test_results_dir(manifest::Dict, complete_exps::Vector{Int}; deg
         mkpath(exp_dir)
 
         # Generate results_summary.json
-        results = generate_test_results_summary(degrees=degrees)
+        results = generate_test_results_summary(degrees = degrees)
         open(joinpath(exp_dir, "results_summary.json"), "w") do io
             JSON3.pretty(io, results)
         end
 
         # Generate CSV files for each degree
         for deg in degrees
-            df = generate_test_critical_points(degree=deg)
+            df = generate_test_critical_points(degree = deg)
             CSV.write(joinpath(exp_dir, "critical_points_raw_deg_$deg.csv"), df)
         end
     end
@@ -150,11 +151,13 @@ Create a test results directory with various error conditions for testing error 
 # Returns
 - Path to temporary directory containing the results
 """
-function create_test_results_dir_with_errors(manifest::Dict,
-                                            complete::Vector{Int},
-                                            missing_output::Vector{Int},
-                                            missing_results::Vector{Int},
-                                            invalid_json::Vector{Int})
+function create_test_results_dir_with_errors(
+    manifest::Dict,
+    complete::Vector{Int},
+    missing_output::Vector{Int},
+    missing_results::Vector{Int},
+    invalid_json::Vector{Int},
+)
     tmpdir = mktempdir()
 
     # Create complete experiments
@@ -202,9 +205,11 @@ Create a complete test batch with manifest and all results files.
 # Returns
 - Tuple of (batch_dir, manifest) where batch_dir contains the manifest and results
 """
-function setup_complete_test_batch(; n_experiments=3,
-                                    degrees=3:5,
-                                    domain_sizes=[0.1, 0.5, 1.0])
+function setup_complete_test_batch(;
+    n_experiments = 3,
+    degrees = 3:5,
+    domain_sizes = [0.1, 0.5, 1.0],
+)
     @assert n_experiments == length(domain_sizes) "n_experiments must match length of domain_sizes"
 
     batch_dir = mktempdir()
@@ -212,8 +217,8 @@ function setup_complete_test_batch(; n_experiments=3,
     # Create manifest with metadata about domain sizes
     manifest = create_test_batch_manifest(
         n_experiments,
-        batch_id="test_complete_batch",
-        batch_type="domain_sweep"
+        batch_id = "test_complete_batch",
+        batch_type = "domain_sweep",
     )
 
     # Add domain size to batch params
@@ -230,14 +235,14 @@ function setup_complete_test_batch(; n_experiments=3,
         mkpath(exp_dir)
 
         # Generate results
-        results = generate_test_results_summary(degrees=degrees)
+        results = generate_test_results_summary(degrees = degrees)
         open(joinpath(exp_dir, "results_summary.json"), "w") do io
             JSON3.pretty(io, results)
         end
 
         # Generate CSV files
         for deg in degrees
-            df = generate_test_critical_points(degree=deg)
+            df = generate_test_critical_points(degree = deg)
             CSV.write(joinpath(exp_dir, "critical_points_raw_deg_$deg.csv"), df)
         end
     end

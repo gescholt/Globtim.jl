@@ -52,7 +52,7 @@ struct OrthantResult
         median_distance,
         outlier_count,
         polynomial_degree,
-        computation_time
+        computation_time,
     )
         @assert 1 <= orthant_id <= 16 "Orthant ID must be between 1 and 16 for 4D analysis"
         @assert length(center) == 4 "Center must be 4D for orthant analysis"
@@ -75,7 +75,7 @@ struct OrthantResult
             median_distance,
             outlier_count,
             polynomial_degree,
-            computation_time
+            computation_time,
         )
     end
 end
@@ -106,7 +106,7 @@ struct ToleranceResult
     polynomial_degrees::Vector{Int}
     sample_counts::Vector{Int}
     computation_time::Float64
-    success_rates::NamedTuple{(:raw, :bfgs, :combined), Tuple{Float64, Float64, Float64}}
+    success_rates::NamedTuple{(:raw, :bfgs, :combined),Tuple{Float64,Float64,Float64}}
 
     # Validation constructor
     function ToleranceResult(
@@ -118,7 +118,7 @@ struct ToleranceResult
         polynomial_degrees,
         sample_counts,
         computation_time,
-        success_rates
+        success_rates,
     )
         @assert tolerance > 0 "Tolerance must be positive"
         @assert length(raw_distances) == length(bfgs_distances) == length(point_types) "Distance arrays must have equal length"
@@ -137,7 +137,7 @@ struct ToleranceResult
             polynomial_degrees,
             sample_counts,
             computation_time,
-            success_rates
+            success_rates,
         )
     end
 end
@@ -158,7 +158,7 @@ Designed for publication-quality visualization and statistical analysis.
 """
 struct MultiToleranceResults
     tolerance_sequence::Vector{Float64}
-    results_by_tolerance::Dict{Float64, ToleranceResult}
+    results_by_tolerance::Dict{Float64,ToleranceResult}
     total_computation_time::Float64
     analysis_timestamp::String
     function_name::String
@@ -170,7 +170,7 @@ struct MultiToleranceResults
         total_computation_time,
         analysis_timestamp,
         function_name,
-        domain_config
+        domain_config,
     )
         @assert length(tolerance_sequence) >= 2 "Need at least 2 tolerance levels for convergence analysis"
         @assert all(t -> haskey(results_by_tolerance, t), tolerance_sequence) "All tolerances must have corresponding results"
@@ -183,7 +183,7 @@ struct MultiToleranceResults
             total_computation_time,
             analysis_timestamp,
             function_name,
-            domain_config
+            domain_config,
         )
     end
 end
@@ -221,7 +221,7 @@ mutable struct BFGSConfig
         f_abs_tol = 1e-20,
         x_tol = 1e-12,
         show_trace = false,
-        track_hyperparameters = true
+        track_hyperparameters = true,
     )
         new(
             standard_tolerance,
@@ -231,7 +231,7 @@ mutable struct BFGSConfig
             f_abs_tol,
             x_tol,
             show_trace,
-            track_hyperparameters
+            track_hyperparameters,
         )
     end
 end
@@ -305,20 +305,20 @@ Unifies validation results across the codebase.
 """
 struct ValidationResult{T}
     success::Bool
-    data::Union{T, Nothing}
+    data::Union{T,Nothing}
     errors::Vector  # Generic to support different error types
     warnings::Vector{String}
     quality_score::Float64
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
     function ValidationResult{T}(
         success::Bool,
-        data::Union{T, Nothing},
+        data::Union{T,Nothing},
         errors::Vector = [],
         warnings::Vector{String} = String[],
         quality_score::Float64 = 100.0,
-        metadata::Dict{String, Any} = Dict{String, Any}()
-    ) where T
+        metadata::Dict{String,Any} = Dict{String,Any}(),
+    ) where {T}
         @assert 0.0 <= quality_score <= 100.0 "Quality score must be between 0 and 100"
         new{T}(success, data, errors, warnings, quality_score, metadata)
     end
@@ -340,21 +340,21 @@ Result structure for CSV loading operations with defensive error handling.
 """
 struct CSVLoadResult
     success::Bool
-    data::Union{DataFrame, Nothing}
+    data::Union{DataFrame,Nothing}
     warnings::Vector{String}
-    error::Union{String, Nothing}
+    error::Union{String,Nothing}
     file::String
     load_time::Float64
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
     function CSVLoadResult(
         success::Bool,
-        data::Union{DataFrame, Nothing},
+        data::Union{DataFrame,Nothing},
         warnings::Vector{String} = String[],
-        error::Union{String, Nothing} = nothing,
+        error::Union{String,Nothing} = nothing,
         file::String = "",
         load_time::Float64 = 0.0,
-        metadata::Dict{String, Any} = Dict{String, Any}()
+        metadata::Dict{String,Any} = Dict{String,Any}(),
     )
         new(success, data, warnings, error, file, load_time, metadata)
     end
@@ -381,7 +381,7 @@ struct BoundaryResult
     errors::Vector  # Generic to support different error types
     warnings::Vector{String}
     recovery_actions::Vector{String}
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
     function BoundaryResult(
         success::Bool,
@@ -390,10 +390,18 @@ struct BoundaryResult
         errors::Vector = [],
         warnings::Vector{String} = String[],
         recovery_actions::Vector{String} = String[],
-        metadata::Dict{String, Any} = Dict{String, Any}()
+        metadata::Dict{String,Any} = Dict{String,Any}(),
     )
         @assert validation_time >= 0.0 "Validation time must be non-negative"
-        new(success, boundary_name, validation_time, errors, warnings, recovery_actions, metadata)
+        new(
+            success,
+            boundary_name,
+            validation_time,
+            errors,
+            warnings,
+            recovery_actions,
+            metadata,
+        )
     end
 end
 
@@ -417,28 +425,37 @@ struct DefenseResult
     overall_status::String
     validation_time::Float64
     boundary_results::Vector{BoundaryResult}
-    csv_result::Union{CSVLoadResult, Nothing}
-    validation_result::Union{ValidationResult, Nothing}
-    error_category::Union{Dict{String, Any}, Nothing}
+    csv_result::Union{CSVLoadResult,Nothing}
+    validation_result::Union{ValidationResult,Nothing}
+    error_category::Union{Dict{String,Any},Nothing}
     actionable_steps::Vector{String}
     critical_failures::Vector{String}
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
     function DefenseResult(
         overall_status::String,
         validation_time::Float64 = 0.0,
         boundary_results::Vector{BoundaryResult} = BoundaryResult[],
-        csv_result::Union{CSVLoadResult, Nothing} = nothing,
-        validation_result::Union{ValidationResult, Nothing} = nothing,
-        error_category::Union{Dict{String, Any}, Nothing} = nothing,
+        csv_result::Union{CSVLoadResult,Nothing} = nothing,
+        validation_result::Union{ValidationResult,Nothing} = nothing,
+        error_category::Union{Dict{String,Any},Nothing} = nothing,
         actionable_steps::Vector{String} = String[],
         critical_failures::Vector{String} = String[],
-        metadata::Dict{String, Any} = Dict{String, Any}()
+        metadata::Dict{String,Any} = Dict{String,Any}(),
     )
         @assert overall_status in ["passed", "failed", "warning"] "Status must be 'passed', 'failed', or 'warning'"
         @assert validation_time >= 0.0 "Validation time must be non-negative"
-        new(overall_status, validation_time, boundary_results, csv_result, validation_result,
-            error_category, actionable_steps, critical_failures, metadata)
+        new(
+            overall_status,
+            validation_time,
+            boundary_results,
+            csv_result,
+            validation_result,
+            error_category,
+            actionable_steps,
+            critical_failures,
+            metadata,
+        )
     end
 end
 
@@ -466,7 +483,7 @@ struct PolynomialApproximationResult
     degree::Int
     basis::Symbol
     sample_count::Int
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
     function PolynomialApproximationResult(
         coefficients::Vector{Float64},
@@ -476,7 +493,7 @@ struct PolynomialApproximationResult
         degree::Int,
         basis::Symbol,
         sample_count::Int,
-        metadata::Dict{String, Any} = Dict{String, Any}()
+        metadata::Dict{String,Any} = Dict{String,Any}(),
     )
         @assert !isempty(coefficients) "Coefficient vector cannot be empty"
         @assert condition_number >= 0.0 "Condition number must be non-negative"
@@ -484,7 +501,16 @@ struct PolynomialApproximationResult
         @assert computation_time >= 0.0 "Computation time must be non-negative"
         @assert degree >= 1 "Polynomial degree must be positive"
         @assert sample_count >= 1 "Sample count must be positive"
-        new(coefficients, condition_number, l2_error, computation_time, degree, basis, sample_count, metadata)
+        new(
+            coefficients,
+            condition_number,
+            l2_error,
+            computation_time,
+            degree,
+            basis,
+            sample_count,
+            metadata,
+        )
     end
 end
 
@@ -510,30 +536,39 @@ struct CriticalPointAnalysisResult
     minima_count::Int
     maxima_count::Int
     saddle_count::Int
-    global_minimum::Union{Vector{Float64}, Nothing}
-    global_minimum_value::Union{Float64, Nothing}
+    global_minimum::Union{Vector{Float64},Nothing}
+    global_minimum_value::Union{Float64,Nothing}
     convergence_rate::Float64
     computation_time::Float64
-    metadata::Dict{String, Any}
+    metadata::Dict{String,Any}
 
     function CriticalPointAnalysisResult(
         critical_points::DataFrame,
         minima_count::Int,
         maxima_count::Int,
         saddle_count::Int,
-        global_minimum::Union{Vector{Float64}, Nothing} = nothing,
-        global_minimum_value::Union{Float64, Nothing} = nothing,
+        global_minimum::Union{Vector{Float64},Nothing} = nothing,
+        global_minimum_value::Union{Float64,Nothing} = nothing,
         convergence_rate::Float64 = 0.0,
         computation_time::Float64 = 0.0,
-        metadata::Dict{String, Any} = Dict{String, Any}()
+        metadata::Dict{String,Any} = Dict{String,Any}(),
     )
         @assert minima_count >= 0 "Minima count must be non-negative"
         @assert maxima_count >= 0 "Maxima count must be non-negative"
         @assert saddle_count >= 0 "Saddle count must be non-negative"
         @assert 0.0 <= convergence_rate <= 1.0 "Convergence rate must be between 0 and 1"
         @assert computation_time >= 0.0 "Computation time must be non-negative"
-        new(critical_points, minima_count, maxima_count, saddle_count,
-            global_minimum, global_minimum_value, convergence_rate, computation_time, metadata)
+        new(
+            critical_points,
+            minima_count,
+            maxima_count,
+            saddle_count,
+            global_minimum,
+            global_minimum_value,
+            convergence_rate,
+            computation_time,
+            metadata,
+        )
     end
 end
 

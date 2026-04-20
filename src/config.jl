@@ -27,7 +27,7 @@ end
 
 struct ConfigParseError <: ConfigError
     message::String
-    filepath::Union{String, Nothing}
+    filepath::Union{String,Nothing}
 end
 
 # ============================================================================
@@ -39,17 +39,26 @@ const VALID_PRECISION_TYPES = [
     "AdaptivePrecision",
     "RationalPrecision",
     "BigFloatPrecision",
-    "BigIntPrecision"
+    "BigIntPrecision",
 ]
 const VALID_BASIS_TYPES = ["chebyshev", "legendre"]
 const VALID_RESULT_FORMATS = ["json", "hdf5"]
 const VALID_DOMAIN_STRATEGIES = ["centered_at_true", "explicit_bounds", "random_offset"]
 const VALID_ODE_SOLVERS = [
-    "Rosenbrock23", "Rodas4", "Rodas5", "Rodas5P",  # Rosenbrock methods
-    "Tsit5", "Vern7", "Vern8", "Vern9",             # Runge-Kutta methods
-    "TRBDF2", "KenCarp4", "KenCarp5"                # SDIRK methods
+    "Rosenbrock23",
+    "Rodas4",
+    "Rodas5",
+    "Rodas5P",  # Rosenbrock methods
+    "Tsit5",
+    "Vern7",
+    "Vern8",
+    "Vern9",             # Runge-Kutta methods
+    "TRBDF2",
+    "KenCarp4",
+    "KenCarp5",                # SDIRK methods
 ]
-const VALID_PRECISION_MODES = ["float64", "adaptive", "Float64Precision", "AdaptivePrecision"]
+const VALID_PRECISION_MODES =
+    ["float64", "adaptive", "Float64Precision", "AdaptivePrecision"]
 
 # ============================================================================
 # VALIDATION FUNCTIONS

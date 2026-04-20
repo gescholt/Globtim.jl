@@ -48,7 +48,7 @@ V = lambda_vandermonde_tensorized(Lambda, S, basis=:chebyshev)
 function lambda_vandermonde_tensorized(
     Lambda::NamedTuple,
     S::Matrix{T};
-    basis::Symbol = :chebyshev
+    basis::Symbol = :chebyshev,
 ) where {T}
     m, n_dim = Lambda.size
     n_points, n_dim_check = size(S)
@@ -62,7 +62,7 @@ function lambda_vandermonde_tensorized(
     # IMPORTANT: We need to preserve the order in which points appear in the grid,
     # not sort them, to match the original implementation's ordering
     unique_points_per_dim = Vector{Vector{T}}(undef, n_dim)
-    point_to_index_per_dim = Vector{Dict{T, Int}}(undef, n_dim)
+    point_to_index_per_dim = Vector{Dict{T,Int}}(undef, n_dim)
     GN_per_dim = zeros(Int, n_dim)
 
     for d in 1:n_dim
@@ -101,11 +101,11 @@ function lambda_vandermonde_tensorized(
 
     # Pre-compute polynomial evaluations for each dimension
     # eval_cache_per_dim[d][degree][point_idx] = P_degree(unique_points_per_dim[d][point_idx])
-    eval_cache_per_dim = Vector{Dict{Int, Vector{T}}}(undef, n_dim)
+    eval_cache_per_dim = Vector{Dict{Int,Vector{T}}}(undef, n_dim)
 
     if basis == :chebyshev
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
             GN = length(unique_points)
             max_deg = max_degrees[d]
@@ -142,8 +142,8 @@ function lambda_vandermonde_tensorized(
                     end
                     for deg in 2:max_deg
                         eval_cache_per_dim[d][deg][idx] =
-                            2 * T(point) * eval_cache_per_dim[d][deg - 1][idx] -
-                            eval_cache_per_dim[d][deg - 2][idx]
+                            2 * T(point) * eval_cache_per_dim[d][deg-1][idx] -
+                            eval_cache_per_dim[d][deg-2][idx]
                     end
                 end
             end
@@ -151,14 +151,14 @@ function lambda_vandermonde_tensorized(
 
     elseif basis == :legendre
         for d in 1:n_dim
-            eval_cache_per_dim[d] = Dict{Int, Vector{T}}()
+            eval_cache_per_dim[d] = Dict{Int,Vector{T}}()
             unique_points = unique_points_per_dim[d]
 
             for degree in 0:max_degrees[d]
                 poly = symbolic_legendre(
                     degree,
                     precision = Float64Precision,
-                    normalized = true
+                    normalized = true,
                 )
                 eval_cache_per_dim[d][degree] =
                     T[evaluate_legendre(poly, Float64(pt)) for pt in unique_points]

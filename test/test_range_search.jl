@@ -14,6 +14,7 @@ Covers:
 
 using Test
 using Globtim
+using HomotopyContinuation
 using Globtim.StandardExperiment: solve_and_transform
 using DynamicPolynomials
 using Printf
@@ -23,7 +24,7 @@ using Printf
 if !@isdefined(msolve_available)
     function msolve_available()
         try
-            run(pipeline(`msolve -h`, devnull), wait=true)
+            run(pipeline(`msolve -h`, devnull), wait = true)
             return true
         catch
             return false
@@ -123,12 +124,16 @@ end
 
     # 3D overlap tests
     box_3d = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
-    @test Globtim.interval_overlaps_box([(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == true
-    @test Globtim.interval_overlaps_box([(0.0, 0.1), (0.0, 0.1), (2.0, 3.0)], box_3d) == false
+    @test Globtim.interval_overlaps_box([(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)], box_3d) ==
+          true
+    @test Globtim.interval_overlaps_box([(0.0, 0.1), (0.0, 0.1), (2.0, 3.0)], box_3d) ==
+          false
     # 3D: one dimension barely overlapping
-    @test Globtim.interval_overlaps_box([(0.9, 1.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == true
+    @test Globtim.interval_overlaps_box([(0.9, 1.1), (0.0, 0.1), (0.0, 0.1)], box_3d) ==
+          true
     # 3D: one dimension just outside
-    @test Globtim.interval_overlaps_box([(1.01, 1.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == false
+    @test Globtim.interval_overlaps_box([(1.01, 1.1), (0.0, 0.1), (0.0, 0.1)], box_3d) ==
+          false
 end
 
 @testset "RANGE-03: interval_certified_inside" begin
@@ -145,8 +150,10 @@ end
 
     # 3D certified inside
     box_3d = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
-    @test Globtim.interval_certified_inside([(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)], box_3d) == true
-    @test Globtim.interval_certified_inside([(0.0, 0.1), (0.0, 0.1), (0.9, 1.1)], box_3d) == false
+    @test Globtim.interval_certified_inside([(0.0, 0.1), (0.0, 0.1), (0.0, 0.1)], box_3d) ==
+          true
+    @test Globtim.interval_certified_inside([(0.0, 0.1), (0.0, 0.1), (0.9, 1.1)], box_3d) ==
+          false
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -182,11 +189,16 @@ end
     # Non-trivial intervals: midpoint inside but interval may straddle
     pts_iv = [[0.5, 0.5]]
     ivs_iv = [[(0.4, 0.6), (0.4, 0.6)]]
-    @test length(Globtim.filter_solutions_by_box(pts_iv, ivs_iv, [(0.0, 1.0), (0.0, 1.0)])[1]) == 1
-    @test length(Globtim.filter_solutions_by_box(pts_iv, ivs_iv, [(0.7, 1.0), (0.0, 1.0)])[1]) == 0
+    @test length(
+        Globtim.filter_solutions_by_box(pts_iv, ivs_iv, [(0.0, 1.0), (0.0, 1.0)])[1],
+    ) == 1
+    @test length(
+        Globtim.filter_solutions_by_box(pts_iv, ivs_iv, [(0.7, 1.0), (0.0, 1.0)])[1],
+    ) == 0
 
     # 3D filtering: 8 solutions at (±1, ±1, ±1)
-    pts_3d = [[s1, s2, s3] for s1 in [-1.0, 1.0] for s2 in [-1.0, 1.0] for s3 in [-1.0, 1.0]]
+    pts_3d =
+        [[s1, s2, s3] for s1 in [-1.0, 1.0] for s2 in [-1.0, 1.0] for s3 in [-1.0, 1.0]]
     ivs_3d = [[(p, p) for p in pt] for pt in pts_3d]  # exact intervals
 
     # Positive octant → only (1,1,1)
@@ -228,17 +240,19 @@ if HAS_MSOLVE
 
     @testset "RANGE-06: _solve_msolve with search_bounds — 2D" begin
         f = Levy
-        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
-        pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
+        TR =
+            TestInput(f, dim = 2, center = [0.0, 0.0], GN = 12, sample_range = [10.0, 10.0])
+        pol = Constructor(TR, 6, basis = :chebyshev, normalized = false)
 
         @polyvar x_all[1:2]
-        all_pts = solve_polynomial_system(x_all, pol; solver=:msolve)
+        all_pts = solve_polynomial_system(x_all, pol; solver = :msolve)
 
         @polyvar x_tight[1:2]
         tight_pts = solve_polynomial_system(
-            x_tight, pol;
-            solver=:msolve,
-            search_bounds=[(-0.5, 0.5), (-0.5, 0.5)]
+            x_tight,
+            pol;
+            solver = :msolve,
+            search_bounds = [(-0.5, 0.5), (-0.5, 0.5)],
         )
 
         @test length(tight_pts) <= length(all_pts)
@@ -254,23 +268,26 @@ if HAS_MSOLVE
 
         @info @sprintf(
             "Levy 2D deg 6: all=%d CPs, tight=[-0.5,0.5]²=%d CPs",
-            length(all_pts), length(tight_pts)
+            length(all_pts),
+            length(tight_pts)
         )
     end
 
     @testset "RANGE-06: HC search_bounds — midpoint filter" begin
         f = Levy
-        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
-        pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
+        TR =
+            TestInput(f, dim = 2, center = [0.0, 0.0], GN = 12, sample_range = [10.0, 10.0])
+        pol = Constructor(TR, 6, basis = :chebyshev, normalized = false)
 
         @polyvar x_hc_all[1:2]
-        all_hc = solve_polynomial_system(x_hc_all, pol; solver=:hc)
+        all_hc = solve_polynomial_system(x_hc_all, pol; solver = :hc)
 
         @polyvar x_hc_tight[1:2]
         tight_hc = solve_polynomial_system(
-            x_hc_tight, pol;
-            solver=:hc,
-            search_bounds=[(-0.5, 0.5), (-0.5, 0.5)]
+            x_hc_tight,
+            pol;
+            solver = :hc,
+            search_bounds = [(-0.5, 0.5), (-0.5, 0.5)],
         )
 
         @test length(tight_hc) <= length(all_hc)
@@ -283,15 +300,17 @@ if HAS_MSOLVE
 
     @testset "RANGE-06: solve_and_transform with search_bounds — 2D" begin
         f = Levy
-        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
-        pol = Constructor(TR, 6, basis=:chebyshev, normalized=false)
+        TR =
+            TestInput(f, dim = 2, center = [0.0, 0.0], GN = 12, sample_range = [10.0, 10.0])
+        pol = Constructor(TR, 6, basis = :chebyshev, normalized = false)
         bounds = [(-10.0, 10.0), (-10.0, 10.0)]
 
-        cps_all, _ = solve_and_transform(pol, bounds; solver=:msolve)
+        cps_all, _ = solve_and_transform(pol, bounds; solver = :msolve)
         cps_sub, _ = solve_and_transform(
-            pol, bounds;
-            solver=:msolve,
-            search_bounds=[(-5.0, 5.0), (-5.0, 5.0)]
+            pol,
+            bounds;
+            solver = :msolve,
+            search_bounds = [(-5.0, 5.0), (-5.0, 5.0)],
         )
 
         @test length(cps_sub) <= length(cps_all)
@@ -302,7 +321,8 @@ if HAS_MSOLVE
 
         @info @sprintf(
             "solve_and_transform 2D: all=%d CPs, [-5,5]²=%d CPs",
-            length(cps_all), length(cps_sub)
+            length(cps_all),
+            length(cps_sub)
         )
     end
 
@@ -310,17 +330,24 @@ if HAS_MSOLVE
 
     @testset "RANGE-07: 3D search_bounds — msolve" begin
         f = Sphere
-        TR = TestInput(f, dim=3, center=[0.0, 0.0, 0.0], GN=8, sample_range=[5.12, 5.12, 5.12])
-        pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
+        TR = TestInput(
+            f,
+            dim = 3,
+            center = [0.0, 0.0, 0.0],
+            GN = 8,
+            sample_range = [5.12, 5.12, 5.12],
+        )
+        pol = Constructor(TR, 4, basis = :chebyshev, normalized = false)
 
         @polyvar x_all3[1:3]
-        all_pts_3d = solve_polynomial_system(x_all3, pol; solver=:msolve)
+        all_pts_3d = solve_polynomial_system(x_all3, pol; solver = :msolve)
 
         @polyvar x_tight3[1:3]
         tight_pts_3d = solve_polynomial_system(
-            x_tight3, pol;
-            solver=:msolve,
-            search_bounds=[(-0.3, 0.3), (-0.3, 0.3), (-0.3, 0.3)]
+            x_tight3,
+            pol;
+            solver = :msolve,
+            search_bounds = [(-0.3, 0.3), (-0.3, 0.3), (-0.3, 0.3)],
         )
 
         @test length(tight_pts_3d) <= length(all_pts_3d)
@@ -332,23 +359,31 @@ if HAS_MSOLVE
 
         @info @sprintf(
             "Sphere 3D deg 4: all=%d CPs, tight=[-0.3,0.3]³=%d CPs",
-            length(all_pts_3d), length(tight_pts_3d)
+            length(all_pts_3d),
+            length(tight_pts_3d)
         )
     end
 
     @testset "RANGE-07: 3D search_bounds — HC midpoint filter" begin
         f = Sphere
-        TR = TestInput(f, dim=3, center=[0.0, 0.0, 0.0], GN=8, sample_range=[5.12, 5.12, 5.12])
-        pol = Constructor(TR, 4, basis=:chebyshev, normalized=false)
+        TR = TestInput(
+            f,
+            dim = 3,
+            center = [0.0, 0.0, 0.0],
+            GN = 8,
+            sample_range = [5.12, 5.12, 5.12],
+        )
+        pol = Constructor(TR, 4, basis = :chebyshev, normalized = false)
 
         @polyvar x_hc3_all[1:3]
-        all_hc_3d = solve_polynomial_system(x_hc3_all, pol; solver=:hc)
+        all_hc_3d = solve_polynomial_system(x_hc3_all, pol; solver = :hc)
 
         @polyvar x_hc3_tight[1:3]
         tight_hc_3d = solve_polynomial_system(
-            x_hc3_tight, pol;
-            solver=:hc,
-            search_bounds=[(-0.3, 0.3), (-0.3, 0.3), (-0.3, 0.3)]
+            x_hc3_tight,
+            pol;
+            solver = :hc,
+            search_bounds = [(-0.3, 0.3), (-0.3, 0.3), (-0.3, 0.3)],
         )
 
         @test length(tight_hc_3d) <= length(all_hc_3d)
@@ -363,8 +398,9 @@ if HAS_MSOLVE
 
     @testset "RANGE-08: monotonicity — nested boxes yield non-increasing CP count" begin
         f = Levy
-        TR = TestInput(f, dim=2, center=[0.0, 0.0], GN=12, sample_range=[10.0, 10.0])
-        pol = Constructor(TR, 8, basis=:chebyshev, normalized=false)
+        TR =
+            TestInput(f, dim = 2, center = [0.0, 0.0], GN = 12, sample_range = [10.0, 10.0])
+        pol = Constructor(TR, 8, basis = :chebyshev, normalized = false)
 
         # Nested boxes: full ⊃ medium ⊃ tight
         boxes = [
@@ -376,7 +412,7 @@ if HAS_MSOLVE
         counts = Int[]
         for sb in boxes
             @polyvar xm[1:2]
-            pts = solve_polynomial_system(xm, pol; solver=:msolve, search_bounds=sb)
+            pts = solve_polynomial_system(xm, pol; solver = :msolve, search_bounds = sb)
             push!(counts, length(pts))
         end
 
@@ -386,14 +422,16 @@ if HAS_MSOLVE
 
         @info @sprintf(
             "Levy 2D deg 8 monotonicity: full=%d, [-0.8,0.8]²=%d, [-0.4,0.4]²=%d",
-            counts[1], counts[2], counts[3]
+            counts[1],
+            counts[2],
+            counts[3]
         )
 
         # Same for HC
         counts_hc = Int[]
         for sb in boxes
             @polyvar xh[1:2]
-            pts = solve_polynomial_system(xh, pol; solver=:hc, search_bounds=sb)
+            pts = solve_polynomial_system(xh, pol; solver = :hc, search_bounds = sb)
             push!(counts_hc, length(pts))
         end
 

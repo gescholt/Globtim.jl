@@ -28,7 +28,7 @@ will interrupt pure-Julia compute loops and most HomotopyContinuation work.
 
 Set ENV["GLOBTIM_TEST_TIMEOUT_MULTIPLIER"] = "0" to disable all timeouts.
 """
-function with_timeout(f::Function, seconds::Real; label::String="operation")
+function with_timeout(f::Function, seconds::Real; label::String = "operation")
     mult_str = get(ENV, "GLOBTIM_TEST_TIMEOUT_MULTIPLIER", "1.0")
     multiplier = parse(Float64, mult_str)
 
@@ -38,7 +38,7 @@ function with_timeout(f::Function, seconds::Real; label::String="operation")
     end
 
     limit = seconds * multiplier
-    ch = Channel{Tuple{Symbol, Any}}(1)
+    ch = Channel{Tuple{Symbol,Any}}(1)
 
     t = Threads.@spawn begin
         try
@@ -54,7 +54,11 @@ function with_timeout(f::Function, seconds::Real; label::String="operation")
     while !isready(ch)
         if time() > deadline
             # Try to interrupt the task
-            try; schedule(t, InterruptException(); error=true); catch; end
+            try
+                ; schedule(t, InterruptException(); error = true);
+            catch
+                ;
+            end
             # Give it a moment to clean up
             sleep(0.5)
             throw(TimeoutError(label, limit))

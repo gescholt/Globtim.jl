@@ -87,10 +87,14 @@ mono_moderate = to_exact_monomial_basis(sparse_moderate.polynomial, variables = 
 mono_conservative = to_exact_monomial_basis(sparse_conservative.polynomial, variables = x)
 
 println("\nSparsification comparison:")
-println("  Aggressive (1e-3):    $(length(monomials(mono_aggressive))) terms, L2=$(round(sparse_aggressive.l2_ratio*100, digits=1))%")
-println("  Moderate (1e-4):      $(length(monomials(mono_moderate))) terms, L2=$(round(sparse_moderate.l2_ratio*100, digits=1))%")
 println(
-    "  Conservative (1e-5):  $(length(monomials(mono_conservative))) terms, L2=$(round(sparse_conservative.l2_ratio*100, digits=1))%"
+    "  Aggressive (1e-3):    $(length(monomials(mono_aggressive))) terms, L2=$(round(sparse_aggressive.l2_ratio*100, digits=1))%",
+)
+println(
+    "  Moderate (1e-4):      $(length(monomials(mono_moderate))) terms, L2=$(round(sparse_moderate.l2_ratio*100, digits=1))%",
+)
+println(
+    "  Conservative (1e-5):  $(length(monomials(mono_conservative))) terms, L2=$(round(sparse_conservative.l2_ratio*100, digits=1))%",
 )
 
 # Verify quality
@@ -184,9 +188,21 @@ l2_coeffs = compute_l2_norm_coeffs(pol6, sparse_coeffs)
 
 println("\nL2-norm computation methods:")
 @printf("  Vandermonde:        %.10f\n", l2_vand)
-@printf("  Grid (15 pts/dim):  %.10f  (diff: %.2f%%)\n", l2_grid_coarse, abs(l2_vand - l2_grid_coarse) / l2_vand * 100)
-@printf("  Grid (25 pts/dim):  %.10f  (diff: %.2f%%)\n", l2_grid_fine, abs(l2_vand - l2_grid_fine) / l2_vand * 100)
-@printf("  Modified coeffs:    %.10f  (diff: %.2f%%)\n", l2_coeffs, abs(l2_vand - l2_coeffs) / l2_vand * 100)
+@printf(
+    "  Grid (15 pts/dim):  %.10f  (diff: %.2f%%)\n",
+    l2_grid_coarse,
+    abs(l2_vand - l2_grid_coarse) / l2_vand * 100
+)
+@printf(
+    "  Grid (25 pts/dim):  %.10f  (diff: %.2f%%)\n",
+    l2_grid_fine,
+    abs(l2_vand - l2_grid_fine) / l2_vand * 100
+)
+@printf(
+    "  Modified coeffs:    %.10f  (diff: %.2f%%)\n",
+    l2_coeffs,
+    abs(l2_vand - l2_coeffs) / l2_vand * 100
+)
 
 # Test 7: 4D High-Degree Polynomial Sparsification
 println("\n7. Testing 4D High-Degree Polynomial Sparsification...")
@@ -215,7 +231,9 @@ end
 
 # Test 8: 4D Coefficient Importance Ranking
 println("\n8. Testing 4D Coefficient Importance Ranking...")
-f8 = x -> x[1]^2 + 2 * x[2]^2 + 0.5 * x[3]^2 + 0.1 * x[4]^2 + 0.05 * x[1] * x[2] * x[3] * x[4]
+f8 =
+    x ->
+        x[1]^2 + 2 * x[2]^2 + 0.5 * x[3]^2 + 0.1 * x[4]^2 + 0.05 * x[1] * x[2] * x[3] * x[4]
 TR8 = TestInput(f8, dim = 4, center = zeros(4), sample_range = 1.0)
 pol8 = Constructor(TR8, 8, basis = :chebyshev)
 
@@ -236,13 +254,15 @@ result_selective = sparsify_polynomial(
     pol8,
     1e-3,
     mode = :relative,
-    preserve_indices = sorted_indices[1:preserve_top]
+    preserve_indices = sorted_indices[1:preserve_top],
 )
 
 println("\nSelective sparsification (preserve top $preserve_top):")
 println("  Non-zero after: $(result_selective.new_nnz)")
 println("  L2 ratio: $(round(result_selective.l2_ratio*100, digits=2))%")
-println("  Top coefficients preserved: $(all(idx ∉ result_selective.zeroed_indices for idx in sorted_indices[1:preserve_top]))")
+println(
+    "  Top coefficients preserved: $(all(idx ∉ result_selective.zeroed_indices for idx in sorted_indices[1:preserve_top]))",
+)
 
 # Test 9: 4D Monomial L2 Contributions
 println("\n9. Analyzing 4D Monomial L2 Contributions...")

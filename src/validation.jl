@@ -53,7 +53,11 @@ struct FilenameContaminationError <: DataValidationError
     contaminated_rows::Vector{Int}
     contamination_percentage::Float64
 
-    function FilenameContaminationError(column::String, contaminated_rows::Vector{Int}, total_rows::Int)
+    function FilenameContaminationError(
+        column::String,
+        contaminated_rows::Vector{Int},
+        total_rows::Int,
+    )
         pct = (length(contaminated_rows) / total_rows) * 100
         new(column, contaminated_rows, pct)
     end
@@ -61,8 +65,8 @@ end
 
 struct ParameterRangeError <: DataValidationError
     parameter::String
-    expected_range::Tuple{Float64, Float64}
-    actual_range::Tuple{Float64, Float64}
+    expected_range::Tuple{Float64,Float64}
+    actual_range::Tuple{Float64,Float64}
     invalid_values::Vector{Float64}
 end
 
@@ -93,7 +97,7 @@ end
 struct DataProductionError <: DataValidationError
     stage::String
     message::String
-    context::Dict{String, Any}
+    context::Dict{String,Any}
 end
 
 # Pipeline Boundary Errors (from PipelineErrorBoundaries.jl)
@@ -104,7 +108,7 @@ struct StageTransitionError <: PipelineBoundaryError
     to_stage::String
     failure_point::String
     recovery_action::String
-    context::Dict{String, Any}
+    context::Dict{String,Any}
 end
 
 struct InterfaceCompatibilityError <: PipelineBoundaryError
@@ -149,9 +153,13 @@ struct PipelineBoundary
     recovery_function::Function
     timeout_seconds::Int
 
-    function PipelineBoundary(name::String, description::String,
-                            validation_func::Function, recovery_func::Function,
-                            timeout::Int=30)
+    function PipelineBoundary(
+        name::String,
+        description::String,
+        validation_func::Function,
+        recovery_func::Function,
+        timeout::Int = 30,
+    )
         new(name, description, validation_func, recovery_func, timeout)
     end
 end
@@ -171,7 +179,10 @@ const FILE_OPERATION_BOUNDARY = "file_operations_to_data_loading"
 
 Chain validation functions using the Railway Pattern for composable validation.
 """
-function chain_validation(result::ValidationResult{T}, next_validator::Function)::ValidationResult{T} where T
+function chain_validation(
+    result::ValidationResult{T},
+    next_validator::Function,
+)::ValidationResult{T} where {T}
     !result.success && return result
 
     try
@@ -181,11 +192,19 @@ function chain_validation(result::ValidationResult{T}, next_validator::Function)
             next_result.success ? next_result.data : result.data,
             vcat(result.errors, next_result.errors),
             vcat(result.warnings, next_result.warnings),
-            min(result.quality_score, next_result.quality_score)
+            min(result.quality_score, next_result.quality_score),
         )
     catch e
-        error_obj = e isa DataValidationError ? e : ContentValidationError("validation_chain", [e], "Chain validation failed")
-        return ValidationResult{T}(false, result.data, vcat(result.errors, [error_obj]), result.warnings, 0.0)
+        error_obj =
+            e isa DataValidationError ? e :
+            ContentValidationError("validation_chain", [e], "Chain validation failed")
+        return ValidationResult{T}(
+            false,
+            result.data,
+            vcat(result.errors, [error_obj]),
+            result.warnings,
+            0.0,
+        )
     end
 end
 
@@ -194,9 +213,17 @@ end
 
 Validate that a DataFrame column has the expected type.
 """
-function validate_column_type(df::DataFrame, col::Symbol, expected_type::Type)::ValidationResult{DataFrame}
+function validate_column_type(
+    df::DataFrame,
+    col::Symbol,
+    expected_type::Type,
+)::ValidationResult{DataFrame}
     !hasproperty(df, col) && return ValidationResult{DataFrame}(
-        false, nothing, [SchemaValidationError(string(col), expected_type, Missing, "Column missing")], [], 0.0
+        false,
+        nothing,
+        [SchemaValidationError(string(col), expected_type, Missing, "Column missing")],
+        [],
+        0.0,
     )
 
     col_values = df[!, col]
@@ -205,10 +232,18 @@ function validate_column_type(df::DataFrame, col::Symbol, expected_type::Type)::
     if !isempty(non_matching)
         actual_types = unique([typeof(df[i, col]) for i in non_matching])
         return ValidationResult{DataFrame}(
-            false, nothing,
-            [SchemaValidationError(string(col), expected_type, first(actual_types),
-                                 "Found $(length(non_matching)) values of incorrect type")],
-            [], 50.0
+            false,
+            nothing,
+            [
+                SchemaValidationError(
+                    string(col),
+                    expected_type,
+                    first(actual_types),
+                    "Found $(length(non_matching)) values of incorrect type",
+                ),
+            ],
+            [],
+            50.0,
         )
     end
 
@@ -221,19 +256,26 @@ end
 
 Defensive CSV reading with type checking and validation.
 """
-function safe_read_csv(filepath::String;
-                      required_columns::Vector{Symbol}=Symbol[],
-                      expected_types::Dict{Symbol, DataType}=Dict{Symbol, DataType}())::ValidationResult{DataFrame}
-
+function safe_read_csv(
+    filepath::String;
+    required_columns::Vector{Symbol} = Symbol[],
+    expected_types::Dict{Symbol,DataType} = Dict{Symbol,DataType}(),
+)::ValidationResult{DataFrame}
     !isfile(filepath) && return ValidationResult{DataFrame}(
-        false, nothing, [DataLoadError(filepath, "File not found")], [], 0.0
+        false,
+        nothing,
+        [DataLoadError(filepath, "File not found")],
+        [],
+        0.0,
     )
 
     try
-        df = CSV.read(filepath, DataFrame;
-            silencewarnings=true,
-            types=Dict(),
-            strict=false
+        df = CSV.read(
+            filepath,
+            DataFrame;
+            silencewarnings = true,
+            types = Dict(),
+            strict = false,
         )
 
         errors = []
@@ -243,11 +285,15 @@ function safe_read_csv(filepath::String;
         # Validate required columns exist
         missing_cols = setdiff(required_columns, Symbol.(names(df)))
         if !isempty(missing_cols)
-            push!(errors, SchemaValidationError(
-                join(string.(missing_cols), ", "),
-                Any, Missing,
-                "Missing required columns: $(join(missing_cols, ", "))"
-            ))
+            push!(
+                errors,
+                SchemaValidationError(
+                    join(string.(missing_cols), ", "),
+                    Any,
+                    Missing,
+                    "Missing required columns: $(join(missing_cols, ", "))",
+                ),
+            )
             quality_score = 0.0
         end
 
@@ -263,11 +309,21 @@ function safe_read_csv(filepath::String;
         end
 
         success = isempty(errors)
-        return ValidationResult{DataFrame}(success, success ? df : nothing, errors, warnings, quality_score)
+        return ValidationResult{DataFrame}(
+            success,
+            success ? df : nothing,
+            errors,
+            warnings,
+            quality_score,
+        )
 
     catch e
         return ValidationResult{DataFrame}(
-            false, nothing, [DataLoadError(filepath, "CSV read failed: $e")], [], 0.0
+            false,
+            nothing,
+            [DataLoadError(filepath, "CSV read failed: $e")],
+            [],
+            0.0,
         )
     end
 end
@@ -277,17 +333,28 @@ end
 
 Detect filename contamination in DataFrame columns with specific patterns.
 """
-function detect_filename_contamination(df::DataFrame, threshold_pct::Float64=10.0)::ValidationResult{DataFrame}
+function detect_filename_contamination(
+    df::DataFrame,
+    threshold_pct::Float64 = 10.0,
+)::ValidationResult{DataFrame}
     contamination_errors = []
     warnings = String[]
     quality_score = 100.0
 
     filename_patterns = [
-        r"\.csv$"i, r"\.jl$"i, r"\.txt$"i, r"\.dat$"i, r"\.h5$"i, r"\.json$"i,
-        r"\.xlsx?$"i, r"\.pdf$"i, r"\.png$"i, r"\.jpg$"i,
+        r"\.csv$"i,
+        r"\.jl$"i,
+        r"\.txt$"i,
+        r"\.dat$"i,
+        r"\.h5$"i,
+        r"\.json$"i,
+        r"\.xlsx?$"i,
+        r"\.pdf$"i,
+        r"\.png$"i,
+        r"\.jpg$"i,
         r"^[a-zA-Z_][a-zA-Z0-9_]*\.(csv|txt|dat|jl|json)$"i,
         r"comparison_data\.csv$"i,
-        r"_\d{8}_\d{6}\.csv$"i  # timestamp pattern
+        r"_\d{8}_\d{6}\.csv$"i,  # timestamp pattern
     ]
 
     for col in names(df)
@@ -307,16 +374,28 @@ function detect_filename_contamination(df::DataFrame, threshold_pct::Float64=10.
         contamination_pct = (length(filename_rows) / nrow(df)) * 100
 
         if contamination_pct > threshold_pct
-            push!(contamination_errors, FilenameContaminationError(col, filename_rows, nrow(df)))
+            push!(
+                contamination_errors,
+                FilenameContaminationError(col, filename_rows, nrow(df)),
+            )
             quality_score = min(quality_score, 100.0 - contamination_pct)
         elseif contamination_pct > 1.0
-            push!(warnings, "Column '$col' has $(round(contamination_pct, digits=1))% potential filename contamination")
+            push!(
+                warnings,
+                "Column '$col' has $(round(contamination_pct, digits=1))% potential filename contamination",
+            )
             quality_score = min(quality_score, 90.0)
         end
     end
 
     success = isempty(contamination_errors)
-    return ValidationResult{DataFrame}(success, success ? df : nothing, contamination_errors, warnings, quality_score)
+    return ValidationResult{DataFrame}(
+        success,
+        success ? df : nothing,
+        contamination_errors,
+        warnings,
+        quality_score,
+    )
 end
 
 """
@@ -325,10 +404,11 @@ end
 
 Validate parameter ranges for biological/scientific parameters.
 """
-function validate_parameter_ranges(df::DataFrame,
-                                 param_columns::Vector{Symbol}=[:x1, :x2, :x3, :x4],
-                                 expected_range::Tuple{Float64, Float64}=(0.0, 10.0))::ValidationResult{DataFrame}
-
+function validate_parameter_ranges(
+    df::DataFrame,
+    param_columns::Vector{Symbol} = [:x1, :x2, :x3, :x4],
+    expected_range::Tuple{Float64,Float64} = (0.0, 10.0),
+)::ValidationResult{DataFrame}
     range_errors = []
     warnings = String[]
     quality_score = 100.0
@@ -342,11 +422,14 @@ function validate_parameter_ranges(df::DataFrame,
         # Check if values are numeric
         non_numeric = findall(x -> !isa(x, Real), values)
         if !isempty(non_numeric)
-            push!(range_errors, ContentValidationError(
-                string(param),
-                values[non_numeric],
-                "All parameter values must be numeric"
-            ))
+            push!(
+                range_errors,
+                ContentValidationError(
+                    string(param),
+                    values[non_numeric],
+                    "All parameter values must be numeric",
+                ),
+            )
             quality_score = 0.0
             continue
         end
@@ -356,27 +439,40 @@ function validate_parameter_ranges(df::DataFrame,
         actual_range = (actual_min, actual_max)
 
         # Check for values outside expected range
-        invalid_indices = findall(x -> x < expected_range[1] || x > expected_range[2], numeric_values)
+        invalid_indices =
+            findall(x -> x < expected_range[1] || x > expected_range[2], numeric_values)
         if !isempty(invalid_indices)
-            push!(range_errors, ParameterRangeError(
-                string(param),
-                expected_range,
-                actual_range,
-                numeric_values[invalid_indices]
-            ))
+            push!(
+                range_errors,
+                ParameterRangeError(
+                    string(param),
+                    expected_range,
+                    actual_range,
+                    numeric_values[invalid_indices],
+                ),
+            )
             quality_score = min(quality_score, 50.0)
         end
 
         # Check for suspiciously narrow ranges
         range_span = actual_max - actual_min
         if range_span < 0.1 && actual_min > 0
-            push!(warnings, "Parameter '$param' has very narrow range: $(round(range_span, digits=4))")
+            push!(
+                warnings,
+                "Parameter '$param' has very narrow range: $(round(range_span, digits=4))",
+            )
             quality_score = min(quality_score, 75.0)
         end
     end
 
     success = isempty(range_errors)
-    return ValidationResult{DataFrame}(success, success ? df : nothing, range_errors, warnings, quality_score)
+    return ValidationResult{DataFrame}(
+        success,
+        success ? df : nothing,
+        range_errors,
+        warnings,
+        quality_score,
+    )
 end
 
 """
@@ -387,8 +483,12 @@ Comprehensive data validation pipeline for experiment output.
 function validate_experiment_output_strict(df::DataFrame)::ValidationResult{DataFrame}
     # Define expected schema for experiment data
     expected_types = Dict(
-        :x1 => Float64, :x2 => Float64, :x3 => Float64, :x4 => Float64,
-        :z => Float64, :experiment_id => AbstractString
+        :x1 => Float64,
+        :x2 => Float64,
+        :x3 => Float64,
+        :x4 => Float64,
+        :z => Float64,
+        :experiment_id => AbstractString,
     )
 
     # Validation pipeline using railway pattern
@@ -396,7 +496,8 @@ function validate_experiment_output_strict(df::DataFrame)::ValidationResult{Data
 
     # Chain validations
     for (col, expected_type) in expected_types
-        result = chain_validation(result, data -> validate_column_type(data, col, expected_type))
+        result =
+            chain_validation(result, data -> validate_column_type(data, col, expected_type))
         !result.success && break
     end
 
@@ -419,16 +520,26 @@ end
 
 Save experiment results with validation and verification.
 """
-function save_experiment_results_safe(results::DataFrame, filepath::String;
-                                    validation_required::Bool=true)::ValidationResult{String}
+function save_experiment_results_safe(
+    results::DataFrame,
+    filepath::String;
+    validation_required::Bool = true,
+)::ValidationResult{String}
     try
         if validation_required
             validation = validate_experiment_output_strict(results)
             if !validation.success
                 error_msg = "CRITICAL: Data validation failed: $(join([string(e) for e in validation.errors], "; "))"
-                throw(DataProductionError("data_generation", error_msg,
-                                        Dict("quality_score" => validation.quality_score,
-                                             "error_count" => length(validation.errors))))
+                throw(
+                    DataProductionError(
+                        "data_generation",
+                        error_msg,
+                        Dict(
+                            "quality_score" => validation.quality_score,
+                            "error_count" => length(validation.errors),
+                        ),
+                    ),
+                )
             end
         end
 
@@ -444,9 +555,19 @@ function save_experiment_results_safe(results::DataFrame, filepath::String;
         if e isa DataValidationError
             return ValidationResult{String}(false, nothing, [e], [], 0.0)
         else
-            return ValidationResult{String}(false, nothing,
-                                          [DataProductionError("file_write", string(e), Dict("filepath" => filepath))],
-                                          [], 0.0)
+            return ValidationResult{String}(
+                false,
+                nothing,
+                [
+                    DataProductionError(
+                        "file_write",
+                        string(e),
+                        Dict("filepath" => filepath),
+                    ),
+                ],
+                [],
+                0.0,
+            )
         end
     end
 end
@@ -456,27 +577,48 @@ end
 
 Verify that written data matches original data.
 """
-function verify_written_data(filepath::String, original_data::DataFrame)::ValidationResult{DataFrame}
+function verify_written_data(
+    filepath::String,
+    original_data::DataFrame,
+)::ValidationResult{DataFrame}
     try
         read_back = CSV.read(filepath, DataFrame)
 
         if size(read_back) != size(original_data)
-            return ValidationResult{DataFrame}(false, nothing,
-                                             [DataProductionError("file_verification",
-                                                                 "Data dimensions changed during write",
-                                                                 Dict("original" => size(original_data),
-                                                                      "read_back" => size(read_back)))],
-                                             [], 0.0)
+            return ValidationResult{DataFrame}(
+                false,
+                nothing,
+                [
+                    DataProductionError(
+                        "file_verification",
+                        "Data dimensions changed during write",
+                        Dict(
+                            "original" => size(original_data),
+                            "read_back" => size(read_back),
+                        ),
+                    ),
+                ],
+                [],
+                0.0,
+            )
         end
 
         return ValidationResult(true, read_back, [], String[], 100.0)
 
     catch e
-        return ValidationResult{DataFrame}(false, nothing,
-                                         [DataProductionError("file_verification",
-                                                             "Could not verify written data: $e",
-                                                             Dict("filepath" => filepath))],
-                                         [], 0.0)
+        return ValidationResult{DataFrame}(
+            false,
+            nothing,
+            [
+                DataProductionError(
+                    "file_verification",
+                    "Could not verify written data: $e",
+                    Dict("filepath" => filepath),
+                ),
+            ],
+            [],
+            0.0,
+        )
     end
 end
 
@@ -486,21 +628,40 @@ end
 
 Load and validate experiment data with quality gates.
 """
-function load_and_validate_experiment_data(filepath::String;
-                                         quality_threshold::Float64=70.0)::DataFrame
-    load_result = safe_read_csv(filepath;
-        required_columns=[:x1, :x2, :x3, :x4, :z, :experiment_id],
-        expected_types=Dict(:x1=>Float64, :x2=>Float64, :x3=>Float64, :x4=>Float64, :z=>Float64)
+function load_and_validate_experiment_data(
+    filepath::String;
+    quality_threshold::Float64 = 70.0,
+)::DataFrame
+    load_result = safe_read_csv(
+        filepath;
+        required_columns = [:x1, :x2, :x3, :x4, :z, :experiment_id],
+        expected_types = Dict(
+            :x1=>Float64,
+            :x2=>Float64,
+            :x3=>Float64,
+            :x4=>Float64,
+            :z=>Float64,
+        ),
     )
 
-    !load_result.success && throw(DataLoadError(filepath, "Failed to load: $(join([string(e) for e in load_result.errors], "; "))"))
+    !load_result.success && throw(
+        DataLoadError(
+            filepath,
+            "Failed to load: $(join([string(e) for e in load_result.errors], "; "))",
+        ),
+    )
 
     # Validate data quality
     validation = validate_experiment_output_strict(load_result.data)
 
     if validation.quality_score < quality_threshold
-        throw(DataQualityError(validation.quality_score, quality_threshold,
-                              "Data quality insufficient: $(validation.quality_score) < $quality_threshold"))
+        throw(
+            DataQualityError(
+                validation.quality_score,
+                quality_threshold,
+                "Data quality insufficient: $(validation.quality_score) < $quality_threshold",
+            ),
+        )
     end
 
     return load_result.data
@@ -516,8 +677,12 @@ end
 
 Validate transition between pipeline stages with comprehensive error detection.
 """
-function validate_stage_transition(from_stage::String, to_stage::String, data::Any;
-                                 context::Dict{String, Any}=Dict{String, Any}())
+function validate_stage_transition(
+    from_stage::String,
+    to_stage::String,
+    data::Any;
+    context::Dict{String,Any} = Dict{String,Any}(),
+)
     start_time = time()
     errors = []
     warnings = String[]
@@ -562,29 +727,51 @@ function validate_stage_transition(from_stage::String, to_stage::String, data::A
         validation_time = time() - start_time
         success = isempty(errors)
 
-        metadata = Dict{String, Any}(
+        metadata = Dict{String,Any}(
             "from_stage" => from_stage,
             "to_stage" => to_stage,
             "data_type" => string(typeof(data)),
             "validation_duration" => validation_time,
-            "timestamp" => Dates.now()
+            "timestamp" => Dates.now(),
         )
 
-        return BoundaryResult(success, boundary_name, validation_time, errors, warnings, recovery_actions, metadata)
+        return BoundaryResult(
+            success,
+            boundary_name,
+            validation_time,
+            errors,
+            warnings,
+            recovery_actions,
+            metadata,
+        )
 
     catch e
         validation_time = time() - start_time
-        push!(errors, StageTransitionError(from_stage, to_stage, "validation_exception",
-                                         "Check stage transition logic",
-                                         Dict("exception" => string(e))))
+        push!(
+            errors,
+            StageTransitionError(
+                from_stage,
+                to_stage,
+                "validation_exception",
+                "Check stage transition logic",
+                Dict("exception" => string(e)),
+            ),
+        )
 
-        return BoundaryResult(false, boundary_name, validation_time, errors, warnings, recovery_actions,
-                            Dict("validation_failed" => true, "exception" => string(e)))
+        return BoundaryResult(
+            false,
+            boundary_name,
+            validation_time,
+            errors,
+            warnings,
+            recovery_actions,
+            Dict("validation_failed" => true, "exception" => string(e)),
+        )
     end
 end
 
 # Individual boundary validators
-function validate_hpc_to_collection_boundary(data::Any, context::Dict{String, Any})
+function validate_hpc_to_collection_boundary(data::Any, context::Dict{String,Any})
     errors = []
     warnings = String[]
     recovery_actions = String[]
@@ -594,26 +781,41 @@ function validate_hpc_to_collection_boundary(data::Any, context::Dict{String, An
         missing_columns = setdiff(expected_hpc_columns, Symbol.(names(data)))
 
         if !isempty(missing_columns)
-            push!(errors, InterfaceCompatibilityError(
-                "hpc_result_schema",
-                "Standard HPC experiment columns: $(join(expected_hpc_columns, ", "))",
-                "Found columns: $(join(names(data), ", "))",
-                ["Missing critical columns: $(join(missing_columns, ", "))"],
-                ["Verify HPC script output format", "Check experiment data generation"]
-            ))
-            push!(recovery_actions, "IMMEDIATE: Verify HPC experiment script generates required columns")
+            push!(
+                errors,
+                InterfaceCompatibilityError(
+                    "hpc_result_schema",
+                    "Standard HPC experiment columns: $(join(expected_hpc_columns, ", "))",
+                    "Found columns: $(join(names(data), ", "))",
+                    ["Missing critical columns: $(join(missing_columns, ", "))"],
+                    ["Verify HPC script output format", "Check experiment data generation"],
+                ),
+            )
+            push!(
+                recovery_actions,
+                "IMMEDIATE: Verify HPC experiment script generates required columns",
+            )
         end
 
         # Check for interface issues (val vs z column naming)
         if "val" in names(data) && !("z" in names(data))
-            push!(errors, InterfaceCompatibilityError(
-                "column_naming_interface",
-                "L2 norm column should be named 'z'",
-                "Found column named 'val' instead",
-                ["Column 'val' detected instead of expected 'z'"],
-                ["Rename 'val' column to 'z' in HPC script", "Update data collection logic"]
-            ))
-            push!(recovery_actions, "CRITICAL: Fix column naming in HPC experiment script (val → z)")
+            push!(
+                errors,
+                InterfaceCompatibilityError(
+                    "column_naming_interface",
+                    "L2 norm column should be named 'z'",
+                    "Found column named 'val' instead",
+                    ["Column 'val' detected instead of expected 'z'"],
+                    [
+                        "Rename 'val' column to 'z' in HPC script",
+                        "Update data collection logic",
+                    ],
+                ),
+            )
+            push!(
+                recovery_actions,
+                "CRITICAL: Fix column naming in HPC experiment script (val → z)",
+            )
         end
 
         # Check for suspicious data quality patterns
@@ -621,56 +823,88 @@ function validate_hpc_to_collection_boundary(data::Any, context::Dict{String, An
             z_values = collect(skipmissing(data.z))
             if !isempty(z_values) && all(isa.(z_values, Number))
                 if any(z -> z < 0, z_values)
-                    push!(warnings, "Negative L2 norm values detected - indicates computation errors")
-                    push!(recovery_actions, "INVESTIGATE: Check HPC computation logic for L2 norm calculation")
+                    push!(
+                        warnings,
+                        "Negative L2 norm values detected - indicates computation errors",
+                    )
+                    push!(
+                        recovery_actions,
+                        "INVESTIGATE: Check HPC computation logic for L2 norm calculation",
+                    )
                 end
 
                 if any(z -> z > 100, z_values)
-                    push!(warnings, "Very large L2 norm values (>100) - may indicate convergence failures")
-                    push!(recovery_actions, "OPTIMIZE: Review convergence criteria in HPC experiments")
+                    push!(
+                        warnings,
+                        "Very large L2 norm values (>100) - may indicate convergence failures",
+                    )
+                    push!(
+                        recovery_actions,
+                        "OPTIMIZE: Review convergence criteria in HPC experiments",
+                    )
                 end
             end
         end
 
     elseif isa(data, String) && isfile(data)
-        result = defensive_csv_read(data, detect_interface_issues=true)
+        result = defensive_csv_read(data, detect_interface_issues = true)
         if !result.success
-            push!(errors, FileSystemBoundaryError(
-                "hpc_result_file_loading",
-                data,
-                result.error,
-                ["Verify file integrity", "Check file permissions", "Validate CSV format"]
-            ))
+            push!(
+                errors,
+                FileSystemBoundaryError(
+                    "hpc_result_file_loading",
+                    data,
+                    result.error,
+                    [
+                        "Verify file integrity",
+                        "Check file permissions",
+                        "Validate CSV format",
+                    ],
+                ),
+            )
             push!(recovery_actions, "IMMEDIATE: Fix HPC result file: $(result.error)")
         else
             for warning in result.warnings
                 if contains(warning, "INTERFACE ISSUE")
-                    push!(errors, InterfaceCompatibilityError(
-                        "csv_interface_issue",
-                        "Standard interface format",
-                        "Detected interface problem",
-                        [warning],
-                        ["Fix column naming in HPC output", "Update data generation logic"]
-                    ))
+                    push!(
+                        errors,
+                        InterfaceCompatibilityError(
+                            "csv_interface_issue",
+                            "Standard interface format",
+                            "Detected interface problem",
+                            [warning],
+                            [
+                                "Fix column naming in HPC output",
+                                "Update data generation logic",
+                            ],
+                        ),
+                    )
                     push!(recovery_actions, "FIX: $warning")
                 end
             end
         end
 
     else
-        push!(errors, StageTransitionError(
-            "hpc_execution", "result_collection",
-            "data_type_validation",
-            "Provide DataFrame or file path for HPC results",
-            Dict("received_type" => string(typeof(data)))
-        ))
-        push!(recovery_actions, "IMMEDIATE: Provide valid HPC result data (DataFrame or file path)")
+        push!(
+            errors,
+            StageTransitionError(
+                "hpc_execution",
+                "result_collection",
+                "data_type_validation",
+                "Provide DataFrame or file path for HPC results",
+                Dict("received_type" => string(typeof(data))),
+            ),
+        )
+        push!(
+            recovery_actions,
+            "IMMEDIATE: Provide valid HPC result data (DataFrame or file path)",
+        )
     end
 
-    return (errors=errors, warnings=warnings, recovery_actions=recovery_actions)
+    return (errors = errors, warnings = warnings, recovery_actions = recovery_actions)
 end
 
-function validate_collection_to_processing_boundary(data::Any, context::Dict{String, Any})
+function validate_collection_to_processing_boundary(data::Any, context::Dict{String,Any})
     errors = []
     warnings = String[]
     recovery_actions = String[]
@@ -679,12 +913,15 @@ function validate_collection_to_processing_boundary(data::Any, context::Dict{Str
         # Memory boundary check
         data_size_mb = Base.summarysize(data) / (1024^2)
         if data_size_mb > 1000  # 1GB limit
-            push!(errors, ResourceBoundaryError(
-                "memory",
-                "Data size exceeds 1GB limit",
-                "$(round(data_size_mb, digits=1)) MB",
-                "Consider data chunking or filtering"
-            ))
+            push!(
+                errors,
+                ResourceBoundaryError(
+                    "memory",
+                    "Data size exceeds 1GB limit",
+                    "$(round(data_size_mb, digits=1)) MB",
+                    "Consider data chunking or filtering",
+                ),
+            )
             push!(recovery_actions, "OPTIMIZE: Implement data chunking for large datasets")
         end
 
@@ -693,30 +930,43 @@ function validate_collection_to_processing_boundary(data::Any, context::Dict{Str
         missing_cols = setdiff(processing_required_columns, Symbol.(names(data)))
 
         if !isempty(missing_cols)
-            push!(errors, InterfaceCompatibilityError(
-                "processing_pipeline_schema",
-                "Processing requires: $(join(processing_required_columns, ", "))",
-                "Missing: $(join(missing_cols, ", "))",
-                ["Required columns not found for processing pipeline"],
-                ["Verify data collection includes all required metadata", "Update collection logic"]
-            ))
-            push!(recovery_actions, "CRITICAL: Ensure data collection includes processing metadata")
+            push!(
+                errors,
+                InterfaceCompatibilityError(
+                    "processing_pipeline_schema",
+                    "Processing requires: $(join(processing_required_columns, ", "))",
+                    "Missing: $(join(missing_cols, ", "))",
+                    ["Required columns not found for processing pipeline"],
+                    [
+                        "Verify data collection includes all required metadata",
+                        "Update collection logic",
+                    ],
+                ),
+            )
+            push!(
+                recovery_actions,
+                "CRITICAL: Ensure data collection includes processing metadata",
+            )
         end
 
     else
-        push!(errors, StageTransitionError(
-            "data_collection", "processing_pipeline",
-            "data_format_validation",
-            "Processing pipeline requires DataFrame input",
-            Dict("received_type" => string(typeof(data)))
-        ))
+        push!(
+            errors,
+            StageTransitionError(
+                "data_collection",
+                "processing_pipeline",
+                "data_format_validation",
+                "Processing pipeline requires DataFrame input",
+                Dict("received_type" => string(typeof(data))),
+            ),
+        )
         push!(recovery_actions, "IMMEDIATE: Convert collected data to DataFrame format")
     end
 
-    return (errors=errors, warnings=warnings, recovery_actions=recovery_actions)
+    return (errors = errors, warnings = warnings, recovery_actions = recovery_actions)
 end
 
-function validate_processing_to_visualization_boundary(data::Any, context::Dict{String, Any})
+function validate_processing_to_visualization_boundary(data::Any, context::Dict{String,Any})
     errors = []
     warnings = String[]
     recovery_actions = String[]
@@ -727,105 +977,163 @@ function validate_processing_to_visualization_boundary(data::Any, context::Dict{
 
         if isempty(available_viz_cols)
             if "z" in names(data) && "experiment_id" in names(data)
-                push!(warnings, "Raw data detected - requires aggregation for visualization")
-                push!(recovery_actions, "TRANSFORM: Aggregate raw critical point data for visualization")
+                push!(
+                    warnings,
+                    "Raw data detected - requires aggregation for visualization",
+                )
+                push!(
+                    recovery_actions,
+                    "TRANSFORM: Aggregate raw critical point data for visualization",
+                )
             else
-                push!(errors, InterfaceCompatibilityError(
-                    "visualization_data_format",
-                    "Visualization requires aggregated metrics: $(join(viz_columns, ", "))",
-                    "Found columns: $(join(names(data), ", "))",
-                    ["No visualization-ready aggregations found"],
-                    ["Transform raw data to experiment summaries", "Include aggregation step"]
-                ))
-                push!(recovery_actions, "CRITICAL: Transform data for visualization compatibility")
+                push!(
+                    errors,
+                    InterfaceCompatibilityError(
+                        "visualization_data_format",
+                        "Visualization requires aggregated metrics: $(join(viz_columns, ", "))",
+                        "Found columns: $(join(names(data), ", "))",
+                        ["No visualization-ready aggregations found"],
+                        [
+                            "Transform raw data to experiment summaries",
+                            "Include aggregation step",
+                        ],
+                    ),
+                )
+                push!(
+                    recovery_actions,
+                    "CRITICAL: Transform data for visualization compatibility",
+                )
             end
         end
 
     else
-        push!(errors, StageTransitionError(
-            "processing_pipeline", "visualization",
-            "visualization_input_validation",
-            "Visualization requires processed DataFrame",
-            Dict("received_type" => string(typeof(data)))
-        ))
-        push!(recovery_actions, "IMMEDIATE: Ensure processing outputs DataFrame for visualization")
+        push!(
+            errors,
+            StageTransitionError(
+                "processing_pipeline",
+                "visualization",
+                "visualization_input_validation",
+                "Visualization requires processed DataFrame",
+                Dict("received_type" => string(typeof(data))),
+            ),
+        )
+        push!(
+            recovery_actions,
+            "IMMEDIATE: Ensure processing outputs DataFrame for visualization",
+        )
     end
 
-    return (errors=errors, warnings=warnings, recovery_actions=recovery_actions)
+    return (errors = errors, warnings = warnings, recovery_actions = recovery_actions)
 end
 
-function validate_filesystem_to_loading_boundary(data::Any, context::Dict{String, Any})
+function validate_filesystem_to_loading_boundary(data::Any, context::Dict{String,Any})
     errors = []
     warnings = String[]
     recovery_actions = String[]
 
     if isa(data, String)
         if !isfile(data)
-            push!(errors, FileSystemBoundaryError(
-                "file_access",
-                data,
-                "File not found or inaccessible",
-                ["Verify file path", "Check file permissions", "Confirm file creation completed"]
-            ))
+            push!(
+                errors,
+                FileSystemBoundaryError(
+                    "file_access",
+                    data,
+                    "File not found or inaccessible",
+                    [
+                        "Verify file path",
+                        "Check file permissions",
+                        "Confirm file creation completed",
+                    ],
+                ),
+            )
             push!(recovery_actions, "IMMEDIATE: Verify file exists at path: $data")
         else
             file_size = stat(data).size
             if file_size == 0
-                push!(errors, FileSystemBoundaryError(
-                    "file_integrity",
-                    data,
-                    "File is empty",
-                    ["Check file generation process", "Verify write operations completed"]
-                ))
+                push!(
+                    errors,
+                    FileSystemBoundaryError(
+                        "file_integrity",
+                        data,
+                        "File is empty",
+                        [
+                            "Check file generation process",
+                            "Verify write operations completed",
+                        ],
+                    ),
+                )
                 push!(recovery_actions, "CRITICAL: Fix empty file generation")
             end
 
             if endswith(data, ".csv")
-                result = defensive_csv_read(data, validate_columns=false)
+                result = defensive_csv_read(data, validate_columns = false)
                 if !result.success
-                    push!(errors, FileSystemBoundaryError(
-                        "csv_format_validation",
-                        data,
-                        result.error,
-                        ["Fix CSV format issues", "Validate data generation", "Check encoding"]
-                    ))
+                    push!(
+                        errors,
+                        FileSystemBoundaryError(
+                            "csv_format_validation",
+                            data,
+                            result.error,
+                            [
+                                "Fix CSV format issues",
+                                "Validate data generation",
+                                "Check encoding",
+                            ],
+                        ),
+                    )
                     push!(recovery_actions, "FIX: $(result.error)")
                 end
             end
         end
 
     else
-        push!(errors, StageTransitionError(
-            "file_system", "data_loading",
-            "file_path_validation",
-            "Provide valid file path string",
-            Dict("received_type" => string(typeof(data)))
-        ))
+        push!(
+            errors,
+            StageTransitionError(
+                "file_system",
+                "data_loading",
+                "file_path_validation",
+                "Provide valid file path string",
+                Dict("received_type" => string(typeof(data))),
+            ),
+        )
         push!(recovery_actions, "IMMEDIATE: Provide valid file path for data loading")
     end
 
-    return (errors=errors, warnings=warnings, recovery_actions=recovery_actions)
+    return (errors = errors, warnings = warnings, recovery_actions = recovery_actions)
 end
 
-function validate_generic_stage_transition(from_stage::String, to_stage::String, data::Any, context::Dict{String, Any})
+function validate_generic_stage_transition(
+    from_stage::String,
+    to_stage::String,
+    data::Any,
+    context::Dict{String,Any},
+)
     errors = []
     warnings = String[]
     recovery_actions = String[]
 
     if data === nothing
-        push!(errors, StageTransitionError(
-            from_stage, to_stage,
-            "null_data_validation",
-            "Provide non-null data for stage transition",
-            Dict("context" => context)
-        ))
+        push!(
+            errors,
+            StageTransitionError(
+                from_stage,
+                to_stage,
+                "null_data_validation",
+                "Provide non-null data for stage transition",
+                Dict("context" => context),
+            ),
+        )
         push!(recovery_actions, "IMMEDIATE: Ensure previous stage outputs valid data")
     end
 
     push!(warnings, "Unknown stage transition - using generic validation")
-    push!(recovery_actions, "ENHANCE: Implement specific validation for $(from_stage) → $(to_stage)")
+    push!(
+        recovery_actions,
+        "ENHANCE: Implement specific validation for $(from_stage) → $(to_stage)",
+    )
 
-    return (errors=errors, warnings=warnings, recovery_actions=recovery_actions)
+    return (errors = errors, warnings = warnings, recovery_actions = recovery_actions)
 end
 
 """
@@ -833,7 +1141,7 @@ end
 
 Detect common interface issues across data formats and pipeline connections.
 """
-function detect_interface_issues(data::Any; context::Dict{String, Any}=Dict{String, Any}())
+function detect_interface_issues(data::Any; context::Dict{String,Any} = Dict{String,Any}())
     start_time = time()
     errors = []
     warnings = String[]
@@ -844,13 +1152,19 @@ function detect_interface_issues(data::Any; context::Dict{String, Any}=Dict{Stri
 
         # Critical interface issues
         if "val" in column_names && !("z" in column_names)
-            push!(errors, InterfaceCompatibilityError(
-                "critical_column_naming",
-                "L2 norm column must be named 'z'",
-                "Found 'val' column instead",
-                ["Column 'val' breaks downstream computations expecting 'z'"],
-                ["Rename 'val' → 'z' in data generation", "Update column mapping logic"]
-            ))
+            push!(
+                errors,
+                InterfaceCompatibilityError(
+                    "critical_column_naming",
+                    "L2 norm column must be named 'z'",
+                    "Found 'val' column instead",
+                    ["Column 'val' breaks downstream computations expecting 'z'"],
+                    [
+                        "Rename 'val' → 'z' in data generation",
+                        "Update column mapping logic",
+                    ],
+                ),
+            )
             push!(recovery_actions, "CRITICAL: Fix val→z column naming immediately")
         end
 
@@ -865,36 +1179,45 @@ function detect_interface_issues(data::Any; context::Dict{String, Any}=Dict{Stri
 
         if !isempty(param_issues)
             push!(warnings, "Parameter naming inconsistencies detected")
-            push!(recovery_actions, "STANDARDIZE: Fix parameter naming: $(join(param_issues, ", "))")
+            push!(
+                recovery_actions,
+                "STANDARDIZE: Fix parameter naming: $(join(param_issues, ", "))",
+            )
         end
 
         # Data type interface issues
         if "degree" in column_names
             degrees = collect(skipmissing(data.degree))
             if !isempty(degrees) && !all(isa.(degrees, Number))
-                push!(errors, InterfaceCompatibilityError(
-                    "degree_data_type",
-                    "Degree column must contain numeric values",
-                    "Found non-numeric degree values",
-                    ["String/categorical degree values break numeric processing"],
-                    ["Convert degree column to numeric", "Fix data generation types"]
-                ))
+                push!(
+                    errors,
+                    InterfaceCompatibilityError(
+                        "degree_data_type",
+                        "Degree column must contain numeric values",
+                        "Found non-numeric degree values",
+                        ["String/categorical degree values break numeric processing"],
+                        ["Convert degree column to numeric", "Fix data generation types"],
+                    ),
+                )
                 push!(recovery_actions, "CRITICAL: Fix non-numeric degree values")
             end
         end
 
     elseif isa(data, String) && isfile(data)
-        result = defensive_csv_read(data, detect_interface_issues=true)
+        result = defensive_csv_read(data, detect_interface_issues = true)
 
         for warning in result.warnings
             if contains(warning, "INTERFACE ISSUE")
-                push!(errors, InterfaceCompatibilityError(
-                    "csv_interface_compatibility",
-                    "Standard pipeline interface format",
-                    "CSV file interface issue detected",
-                    [warning],
-                    ["Fix data generation format", "Update CSV export logic"]
-                ))
+                push!(
+                    errors,
+                    InterfaceCompatibilityError(
+                        "csv_interface_compatibility",
+                        "Standard pipeline interface format",
+                        "CSV file interface issue detected",
+                        [warning],
+                        ["Fix data generation format", "Update CSV export logic"],
+                    ),
+                )
                 push!(recovery_actions, "FIX CSV: $warning")
             elseif contains(warning, "DATA ISSUE")
                 push!(warnings, warning)
@@ -906,15 +1229,22 @@ function detect_interface_issues(data::Any; context::Dict{String, Any}=Dict{Stri
     validation_time = time() - start_time
     success = isempty(errors)
 
-    metadata = Dict{String, Any}(
+    metadata = Dict{String,Any}(
         "detection_duration" => validation_time,
         "data_type" => string(typeof(data)),
         "timestamp" => Dates.now(),
-        "context" => context
+        "context" => context,
     )
 
-    return BoundaryResult(success, "interface_issue_detection", validation_time,
-                        errors, warnings, recovery_actions, metadata)
+    return BoundaryResult(
+        success,
+        "interface_issue_detection",
+        validation_time,
+        errors,
+        warnings,
+        recovery_actions,
+        metadata,
+    )
 end
 
 """
@@ -923,19 +1253,25 @@ end
 
 Validate multiple pipeline connection points in sequence.
 """
-function validate_pipeline_connection(connection_points::Vector{Pair{String, Any}};
-                                    context::Dict{String, Any}=Dict{String, Any}())
+function validate_pipeline_connection(
+    connection_points::Vector{Pair{String,Any}};
+    context::Dict{String,Any} = Dict{String,Any}(),
+)
     results = BoundaryResult[]
 
-    for i in 1:(length(connection_points) - 1)
+    for i in 1:(length(connection_points)-1)
         from_stage, from_data = connection_points[i]
-        to_stage, to_data = connection_points[i + 1]
+        to_stage, to_data = connection_points[i+1]
 
-        result = validate_stage_transition(from_stage, to_stage, from_data, context=context)
+        result =
+            validate_stage_transition(from_stage, to_stage, from_data, context = context)
         push!(results, result)
 
         # If critical errors, stop validation chain
-        if !result.success && any(e -> isa(e, StageTransitionError) || isa(e, InterfaceCompatibilityError), result.errors)
+        if !result.success && any(
+            e -> isa(e, StageTransitionError) || isa(e, InterfaceCompatibilityError),
+            result.errors,
+        )
             break
         end
     end
@@ -953,8 +1289,11 @@ end
 
 Comprehensive pipeline validation using all available defensive systems.
 """
-function enhanced_pipeline_validation(data::Any, stage_info::Dict{String, Any};
-                                    context::Dict{String, Any}=Dict{String, Any}())
+function enhanced_pipeline_validation(
+    data::Any,
+    stage_info::Dict{String,Any};
+    context::Dict{String,Any} = Dict{String,Any}(),
+)
     start_time = time()
 
     boundary_results = BoundaryResult[]
@@ -970,13 +1309,15 @@ function enhanced_pipeline_validation(data::Any, stage_info::Dict{String, Any};
 
         # 1. Pipeline boundary validation
         @debug "Running pipeline boundary validation..."
-        boundary_result = validate_stage_transition(from_stage, to_stage, data, context=context)
+        boundary_result =
+            validate_stage_transition(from_stage, to_stage, data, context = context)
         push!(boundary_results, boundary_result)
 
         append!(actionable_steps, boundary_result.recovery_actions)
         if !boundary_result.success
             for error in boundary_result.errors
-                if isa(error, InterfaceCompatibilityError) || isa(error, StageTransitionError)
+                if isa(error, InterfaceCompatibilityError) ||
+                   isa(error, StageTransitionError)
                     push!(critical_failures, format_boundary_error(error))
                 end
             end
@@ -984,16 +1325,18 @@ function enhanced_pipeline_validation(data::Any, stage_info::Dict{String, Any};
 
         # 2. Interface issue detection
         @debug "Running interface issue detection..."
-        interface_result = detect_interface_issues(data, context=context)
+        interface_result = detect_interface_issues(data, context = context)
         push!(boundary_results, interface_result)
         append!(actionable_steps, interface_result.recovery_actions)
 
         # 3. CSV specific validation if applicable
         if isa(data, String) && isfile(data) && endswith(data, ".csv")
             @debug "Running defensive CSV validation..."
-            csv_result = defensive_csv_read(data,
-                                          validate_columns=true,
-                                          detect_interface_issues=true)
+            csv_result = defensive_csv_read(
+                data,
+                validate_columns = true,
+                detect_interface_issues = true,
+            )
 
             for warning in csv_result.warnings
                 if contains(warning, "INTERFACE ISSUE") || contains(warning, "DATA ISSUE")
@@ -1018,11 +1361,20 @@ function enhanced_pipeline_validation(data::Any, stage_info::Dict{String, Any};
                     push!(critical_failures, format_validation_error(error))
 
                     if isa(error, FilenameContaminationError)
-                        push!(actionable_steps, "CRITICAL: Clean filename contamination in column '$(error.column)'")
+                        push!(
+                            actionable_steps,
+                            "CRITICAL: Clean filename contamination in column '$(error.column)'",
+                        )
                     elseif isa(error, ParameterRangeError)
-                        push!(actionable_steps, "FIX: Correct parameter '$(error.parameter)' values outside range")
+                        push!(
+                            actionable_steps,
+                            "FIX: Correct parameter '$(error.parameter)' values outside range",
+                        )
                     elseif isa(error, SchemaValidationError)
-                        push!(actionable_steps, "SCHEMA: Fix column '$(error.column)' type mismatch")
+                        push!(
+                            actionable_steps,
+                            "SCHEMA: Fix column '$(error.column)' type mismatch",
+                        )
                     end
                 end
             end
@@ -1032,13 +1384,17 @@ function enhanced_pipeline_validation(data::Any, stage_info::Dict{String, Any};
         if !isempty(critical_failures)
             @debug "Running error categorization..."
             error_text = join(critical_failures, "\n")
-            error_category = categorize_error(error_text, context=Dict{String, Any}("source" => "pipeline_validation"))
+            error_category = categorize_error(
+                error_text,
+                context = Dict{String,Any}("source" => "pipeline_validation"),
+            )
         end
 
         # Determine overall status
         overall_status = if !isempty(critical_failures)
             DEFENSE_CRITICAL
-        elseif any(r -> !r.success, boundary_results) || (csv_result !== nothing && !csv_result.success) ||
+        elseif any(r -> !r.success, boundary_results) ||
+               (csv_result !== nothing && !csv_result.success) ||
                (validation_result !== nothing && !validation_result.success)
             DEFENSE_ERROR
         elseif any(r -> !isempty(r.warnings), boundary_results) ||
@@ -1050,29 +1406,49 @@ function enhanced_pipeline_validation(data::Any, stage_info::Dict{String, Any};
 
         validation_time = time() - start_time
 
-        metadata = Dict{String, Any}(
+        metadata = Dict{String,Any}(
             "stages" => "$(from_stage) → $(to_stage)",
             "data_type" => string(typeof(data)),
-            "validation_systems" => ["BoundaryValidation", "DefensiveCSV", "DataValidation", "ErrorCategorization"],
+            "validation_systems" => [
+                "BoundaryValidation",
+                "DefensiveCSV",
+                "DataValidation",
+                "ErrorCategorization",
+            ],
             "timestamp" => Dates.now(),
-            "context" => context
+            "context" => context,
         )
 
-        return DefenseResult(overall_status, validation_time, boundary_results,
-                           csv_result, validation_result, error_category,
-                           unique(actionable_steps), critical_failures, metadata)
+        return DefenseResult(
+            overall_status,
+            validation_time,
+            boundary_results,
+            csv_result,
+            validation_result,
+            error_category,
+            unique(actionable_steps),
+            critical_failures,
+            metadata,
+        )
 
     catch e
         validation_time = time() - start_time
         push!(critical_failures, "Defense integration failed: $e")
 
-        metadata = Dict{String, Any}(
-            "integration_error" => string(e),
-            "timestamp" => Dates.now()
-        )
+        metadata =
+            Dict{String,Any}("integration_error" => string(e), "timestamp" => Dates.now())
 
-        return DefenseResult(DEFENSE_CRITICAL, validation_time, boundary_results,
-                           nothing, nothing, nothing, actionable_steps, critical_failures, metadata)
+        return DefenseResult(
+            DEFENSE_CRITICAL,
+            validation_time,
+            boundary_results,
+            nothing,
+            nothing,
+            nothing,
+            actionable_steps,
+            critical_failures,
+            metadata,
+        )
     end
 end
 
@@ -1082,33 +1458,38 @@ end
 
 Specialized validation for HPC pipeline stages.
 """
-function validate_hpc_pipeline_stage(stage_name::String, data_path::String;
-                                   experiment_context::Dict{String, Any}=Dict{String, Any}())
-
+function validate_hpc_pipeline_stage(
+    stage_name::String,
+    data_path::String;
+    experiment_context::Dict{String,Any} = Dict{String,Any}(),
+)
     stage_mapping = Dict(
         "validation" => ("pre_execution", "hpc_submission"),
         "preparation" => ("hpc_submission", "resource_allocation"),
         "execution" => ("resource_allocation", "hpc_computation"),
         "monitoring" => ("hpc_computation", "result_generation"),
         "completion" => ("result_generation", "result_collection"),
-        "recovery" => ("error_state", "recovery_action")
+        "recovery" => ("error_state", "recovery_action"),
     )
 
     from_stage, to_stage = get(stage_mapping, stage_name, ("unknown_from", "unknown_to"))
 
-    stage_info = Dict{String, Any}(
+    stage_info = Dict{String,Any}(
         "from_stage" => from_stage,
         "to_stage" => to_stage,
-        "hpc_stage" => stage_name
+        "hpc_stage" => stage_name,
     )
 
-    context = merge(experiment_context, Dict{String, Any}(
-        "hpc_pipeline_stage" => stage_name,
-        "orchestrator_integration" => true,
-        "data_path" => data_path
-    ))
+    context = merge(
+        experiment_context,
+        Dict{String,Any}(
+            "hpc_pipeline_stage" => stage_name,
+            "orchestrator_integration" => true,
+            "data_path" => data_path,
+        ),
+    )
 
-    return enhanced_pipeline_validation(data_path, stage_info, context=context)
+    return enhanced_pipeline_validation(data_path, stage_info, context = context)
 end
 
 # ============================================================================
@@ -1214,7 +1595,10 @@ function create_boundary_report(result::BoundaryResult)::String
 
     push!(report, "═══ PIPELINE BOUNDARY VALIDATION REPORT ═══")
     push!(report, "🎯 Boundary: $(result.boundary_name)")
-    push!(report, "⏱️  Validation Time: $(round(result.validation_time * 1000, digits=1))ms")
+    push!(
+        report,
+        "⏱️  Validation Time: $(round(result.validation_time * 1000, digits=1))ms",
+    )
     push!(report, "📊 Status: $(result.success ? "✅ VALID" : "❌ BOUNDARY VIOLATION")")
     push!(report, "📅 Timestamp: $(get(result.metadata, "timestamp", "N/A"))")
 
@@ -1235,7 +1619,9 @@ function create_boundary_report(result::BoundaryResult)::String
     if !isempty(result.recovery_actions)
         push!(report, "\n🔧 IMMEDIATE RECOVERY ACTIONS:")
         for (i, action) in enumerate(result.recovery_actions)
-            priority = contains(action, "CRITICAL") ? "🚨" : contains(action, "IMMEDIATE") ? "⚡" : "🔧"
+            priority =
+                contains(action, "CRITICAL") ? "🚨" :
+                contains(action, "IMMEDIATE") ? "⚡" : "🔧"
             push!(report, "$(i). $priority $action")
         end
     end
@@ -1266,7 +1652,10 @@ function create_defense_report(result::DefenseResult)::String
     end
 
     push!(report, "$status_icon Overall Status: $(result.overall_status)")
-    push!(report, "⏱️  Total Validation Time: $(round(result.validation_time * 1000, digits=1))ms")
+    push!(
+        report,
+        "⏱️  Total Validation Time: $(round(result.validation_time * 1000, digits=1))ms",
+    )
     push!(report, "🎯 Pipeline Stage: $(get(result.metadata, "stages", "unknown"))")
     push!(report, "📅 Timestamp: $(get(result.metadata, "timestamp", "N/A"))")
 
@@ -1284,10 +1673,15 @@ function create_defense_report(result::DefenseResult)::String
 
         critical_actions = filter(s -> contains(s, "CRITICAL"), result.actionable_steps)
         immediate_actions = filter(s -> contains(s, "IMMEDIATE"), result.actionable_steps)
-        other_actions = filter(s -> !contains(s, "CRITICAL") && !contains(s, "IMMEDIATE"), result.actionable_steps)
+        other_actions = filter(
+            s -> !contains(s, "CRITICAL") && !contains(s, "IMMEDIATE"),
+            result.actionable_steps,
+        )
 
         for (i, action) in enumerate([critical_actions; immediate_actions; other_actions])
-            priority = contains(action, "CRITICAL") ? "🚨" : contains(action, "IMMEDIATE") ? "⚡" : "🔧"
+            priority =
+                contains(action, "CRITICAL") ? "🚨" :
+                contains(action, "IMMEDIATE") ? "⚡" : "🔧"
             push!(report, "$(i). $priority $action")
         end
     end
@@ -1297,7 +1691,10 @@ function create_defense_report(result::DefenseResult)::String
         push!(report, "="^40)
         for (i, boundary_result) in enumerate(result.boundary_results)
             status = boundary_result.success ? "✅" : "❌"
-            push!(report, "$(i). $status $(boundary_result.boundary_name) ($(round(boundary_result.validation_time * 1000, digits=1))ms)")
+            push!(
+                report,
+                "$(i). $status $(boundary_result.boundary_name) ($(round(boundary_result.validation_time * 1000, digits=1))ms)",
+            )
 
             if !boundary_result.success && !isempty(boundary_result.errors)
                 push!(report, "   Errors: $(length(boundary_result.errors))")
@@ -1313,10 +1710,16 @@ function create_defense_report(result::DefenseResult)::String
         push!(report, "="^35)
         csv_status = result.csv_result.success ? "✅" : "❌"
         push!(report, "$csv_status File: $(result.csv_result.file)")
-        push!(report, "⏱️  Load Time: $(round(result.csv_result.load_time * 1000, digits=1))ms")
+        push!(
+            report,
+            "⏱️  Load Time: $(round(result.csv_result.load_time * 1000, digits=1))ms",
+        )
 
         if result.csv_result.success && result.csv_result.data !== nothing
-            push!(report, "📊 Data: $(nrow(result.csv_result.data)) rows × $(ncol(result.csv_result.data)) columns")
+            push!(
+                report,
+                "📊 Data: $(nrow(result.csv_result.data)) rows × $(ncol(result.csv_result.data)) columns",
+            )
         end
 
         if !isempty(result.csv_result.warnings)
@@ -1329,7 +1732,10 @@ function create_defense_report(result::DefenseResult)::String
         push!(report, "="^35)
         val_status = result.validation_result.success ? "✅" : "❌"
         push!(report, "$val_status Validation Status")
-        push!(report, "📈 Quality Score: $(round(result.validation_result.quality_score, digits=1))/100")
+        push!(
+            report,
+            "📈 Quality Score: $(round(result.validation_result.quality_score, digits=1))/100",
+        )
 
         if !isempty(result.validation_result.errors)
             push!(report, "❌ Validation Errors: $(length(result.validation_result.errors))")
@@ -1358,19 +1764,26 @@ end
 
 # Error types
 export ValidationError, DataValidationError, PipelineBoundaryError
-export FilenameContaminationError, ParameterRangeError, SchemaValidationError, ContentValidationError
+export FilenameContaminationError,
+    ParameterRangeError, SchemaValidationError, ContentValidationError
 export DataLoadError, DataQualityError, DataProductionError
-export StageTransitionError, InterfaceCompatibilityError, ResourceBoundaryError, FileSystemBoundaryError
+export StageTransitionError,
+    InterfaceCompatibilityError, ResourceBoundaryError, FileSystemBoundaryError
 
 # Defense severity levels
 export DEFENSE_SUCCESS, DEFENSE_WARNING, DEFENSE_ERROR, DEFENSE_CRITICAL
 
 # Boundary definitions
-export PipelineBoundary, HPC_JOB_BOUNDARY, DATA_PROCESSING_BOUNDARY, VISUALIZATION_BOUNDARY, FILE_OPERATION_BOUNDARY
+export PipelineBoundary,
+    HPC_JOB_BOUNDARY,
+    DATA_PROCESSING_BOUNDARY,
+    VISUALIZATION_BOUNDARY,
+    FILE_OPERATION_BOUNDARY
 
 # DataFrame validation functions
 export chain_validation, validate_column_type, safe_read_csv
-export detect_filename_contamination, validate_parameter_ranges, validate_experiment_output_strict
+export detect_filename_contamination,
+    validate_parameter_ranges, validate_experiment_output_strict
 export save_experiment_results_safe, load_and_validate_experiment_data, verify_written_data
 
 # Pipeline validation functions

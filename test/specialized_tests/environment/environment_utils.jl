@@ -24,9 +24,15 @@ Issue: #40 - Environment-Aware Path Resolution System for HPC Deployments
 
 module EnvironmentUtils
 
-export detect_environment, auto_detect_environment, translate_path,
-    get_project_directory, resolve_cross_environment_path, resolve_hook_path,
-    generate_ssh_command, generate_scp_command, generate_experiment_collection_command,
+export detect_environment,
+    auto_detect_environment,
+    translate_path,
+    get_project_directory,
+    resolve_cross_environment_path,
+    resolve_hook_path,
+    generate_ssh_command,
+    generate_scp_command,
+    generate_experiment_collection_command,
     resolve_hook_config
 
 using JSON
@@ -38,24 +44,26 @@ using JSON
 function _require_env(key::String)::String
     val = get(ENV, key, "")
     if isempty(val)
-        error("Required environment variable '$key' is not set. " *
-              "See environment_utils.jl header for configuration instructions.")
+        error(
+            "Required environment variable '$key' is not set. " *
+            "See environment_utils.jl header for configuration instructions.",
+        )
     end
     return val
 end
 
-function _get_env(key::String, default::String="")::String
+function _get_env(key::String, default::String = "")::String
     return get(ENV, key, default)
 end
 
 # Convenience accessors
-_local_home()       = _require_env("GLOBTIM_LOCAL_HOME")
-_local_project()    = _require_env("GLOBTIM_LOCAL_PROJECT")
-_hpc_user()         = _require_env("GLOBTIM_HPC_USER")
-_hpc_host()         = _require_env("GLOBTIM_HPC_HOST")
-_hpc_home()         = _require_env("GLOBTIM_HPC_HOME")
-_hpc_project()      = _require_env("GLOBTIM_HPC_PROJECT")
-_hpc_nfs_home()     = _require_env("GLOBTIM_HPC_NFS_HOME")
+_local_home() = _require_env("GLOBTIM_LOCAL_HOME")
+_local_project() = _require_env("GLOBTIM_LOCAL_PROJECT")
+_hpc_user() = _require_env("GLOBTIM_HPC_USER")
+_hpc_host() = _require_env("GLOBTIM_HPC_HOST")
+_hpc_home() = _require_env("GLOBTIM_HPC_HOME")
+_hpc_project() = _require_env("GLOBTIM_HPC_PROJECT")
+_hpc_nfs_home() = _require_env("GLOBTIM_HPC_NFS_HOME")
 
 """
     detect_environment(base_path::String) -> Symbol
@@ -77,8 +85,7 @@ function detect_environment(base_path::String)::Symbol
     hpc_project = _hpc_project()
 
     # HPC environment patterns
-    if startswith(base_path, hpc_project) ||
-       startswith(base_path, hpc_home)
+    if startswith(base_path, hpc_project) || startswith(base_path, hpc_home)
         return :hpc
     end
 
@@ -91,8 +98,7 @@ function detect_environment(base_path::String)::Symbol
     # Local patterns
     local_project = _local_project()
     local_home = _local_home()
-    if startswith(base_path, local_project) ||
-       startswith(base_path, local_home)
+    if startswith(base_path, local_project) || startswith(base_path, local_home)
         return :local
     end
 
@@ -167,13 +173,13 @@ function translate_path(path::String, from_env::Symbol, to_env::Symbol)::String
     local_to_hpc_mappings = [
         (local_project, hpc_project),
         ("$(local_home)/.julia", "$(hpc_home)/.julia"),
-        (local_home, hpc_home)
+        (local_home, hpc_home),
     ]
 
     hpc_to_local_mappings = [
         (hpc_project, local_project),
         ("$(hpc_home)/.julia", "$(local_home)/.julia"),
-        (hpc_home, local_home)
+        (hpc_home, local_home),
     ]
 
     # Apply appropriate translation
@@ -199,11 +205,7 @@ function translate_path(path::String, from_env::Symbol, to_env::Symbol)::String
         # First translate to regular HPC, then to NFS
         hpc_path = translate_path(path, from_env, :hpc)
         if startswith(hpc_path, hpc_home)
-            return replace(
-                hpc_path,
-                hpc_home => hpc_nfs_home,
-                count = 1
-            )
+            return replace(hpc_path, hpc_home => hpc_nfs_home, count = 1)
         end
     end
 
@@ -236,7 +238,7 @@ Resolve a relative path to absolute path in target environment.
 function resolve_cross_environment_path(
     relative_path::String,
     from_env::Symbol,
-    to_env::Symbol
+    to_env::Symbol,
 )::String
     if isabspath(relative_path)
         return translate_path(relative_path, from_env, to_env)
@@ -270,7 +272,7 @@ end
 
 Generate SSH commands for common operations.
 """
-function generate_ssh_command(command_type::String; kwargs...)::Dict{String, String}
+function generate_ssh_command(command_type::String; kwargs...)::Dict{String,String}
     project_dir = get(kwargs, :project_dir, _hpc_project())
     user = _hpc_user()
     host = _hpc_host()
@@ -284,7 +286,7 @@ function generate_ssh_command(command_type::String; kwargs...)::Dict{String, Str
             "command" => command,
             "full_command" => full_command,
             "project_dir" => project_dir,
-            "pattern" => pattern
+            "pattern" => pattern,
         )
     elseif command_type == "check_status"
         session_name = get(kwargs, :session_name, "experiment")
@@ -294,7 +296,7 @@ function generate_ssh_command(command_type::String; kwargs...)::Dict{String, Str
         return Dict(
             "command" => command,
             "full_command" => full_command,
-            "session_name" => session_name
+            "session_name" => session_name,
         )
     else
         error("Unknown command type: $command_type")
@@ -318,7 +320,7 @@ Generate SSH command for collecting experiment results.
 function generate_experiment_collection_command(
     from_env::Symbol,
     to_env::Symbol,
-    date_pattern::String
+    date_pattern::String,
 )::String
     if to_env != :hpc
         error("Currently only supports collecting FROM HPC environment")
@@ -327,9 +329,11 @@ function generate_experiment_collection_command(
     project_dir = get_project_directory(to_env)
     pattern = "lotka_volterra_4d_exp*_$date_pattern*"
 
-    ssh_info = generate_ssh_command("list_experiments",
+    ssh_info = generate_ssh_command(
+        "list_experiments",
         project_dir = project_dir,
-        pattern = pattern)
+        pattern = pattern,
+    )
 
     return ssh_info["full_command"]
 end
@@ -340,7 +344,7 @@ end
 Resolve hook configuration with environment-aware path translation.
 """
 function resolve_hook_config(config::Dict, from_env::Symbol, to_env::Symbol)::Dict
-    resolved_config = Dict{String, Any}()
+    resolved_config = Dict{String,Any}()
 
     # Copy all original config entries
     for (key, value) in config
@@ -351,10 +355,10 @@ function resolve_hook_config(config::Dict, from_env::Symbol, to_env::Symbol)::Di
         resolved_path = resolve_hook_path(string(config["path"]), from_env, to_env)
         resolved_config["resolved_path"] = resolved_path
         resolved_config["original_path"] = string(config["path"])
-        resolved_config["translation"] = Dict{String, Any}(
+        resolved_config["translation"] = Dict{String,Any}(
             "from_env" => string(from_env),
             "to_env" => string(to_env),
-            "translated" => resolved_path != string(config["path"])
+            "translated" => resolved_path != string(config["path"]),
         )
     end
 

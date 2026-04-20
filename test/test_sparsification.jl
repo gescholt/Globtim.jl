@@ -46,7 +46,8 @@ using LinearAlgebra
         pol = Constructor(TR, 15, basis = :chebyshev)
 
         # Sparsify with preservation of first 3 coefficients
-        result = sparsify_polynomial(pol, 0.05, mode = :relative, preserve_indices = [1, 2, 3])
+        result =
+            sparsify_polynomial(pol, 0.05, mode = :relative, preserve_indices = [1, 2, 3])
 
         # Check that preserved coefficients are not zeroed
         for idx in [1, 2, 3]

@@ -40,57 +40,61 @@ Base.@kwdef struct ExperimentPipelineConfig
     description::String = ""
 
     # [model] — exactly one mode: catalogue XOR analytical
-    catalogue_path::Union{Nothing, String} = nothing
-    entry_name::Union{Nothing, String} = nothing
-    analytical_function::Union{Nothing, String} = nothing
-    dimension::Union{Nothing, Int} = nothing
-    time_interval::Union{Nothing, Vector{Float64}} = nothing  # override catalogue default
-    sample_times::Union{Nothing, Vector{Float64}} = nothing   # explicit time sample points (overrides time_interval + numpoints)
-    p_true::Union{Nothing, Vector{Float64}} = nothing         # override catalogue p_true
+    catalogue_path::Union{Nothing,String} = nothing
+    entry_name::Union{Nothing,String} = nothing
+    analytical_function::Union{Nothing,String} = nothing
+    dimension::Union{Nothing,Int} = nothing
+    time_interval::Union{Nothing,Vector{Float64}} = nothing  # override catalogue default
+    sample_times::Union{Nothing,Vector{Float64}} = nothing   # explicit time sample points (overrides time_interval + numpoints)
+    p_true::Union{Nothing,Vector{Float64}} = nothing         # override catalogue p_true
 
     # [domain] — exactly one mode: radius XOR radii XOR bounds
-    radius::Union{Nothing, Float64} = nothing
-    radii::Union{Nothing, Vector{Float64}} = nothing
-    bounds::Union{Nothing, Vector{Tuple{Float64, Float64}}} = nothing
-    p_center::Union{Nothing, Vector{Float64}} = nothing       # domain center (default: p_true)
+    radius::Union{Nothing,Float64} = nothing
+    radii::Union{Nothing,Vector{Float64}} = nothing
+    bounds::Union{Nothing,Vector{Tuple{Float64,Float64}}} = nothing
+    p_center::Union{Nothing,Vector{Float64}} = nothing       # domain center (default: p_true)
 
     # [polynomial]
     GN::Int
-    degree_range::StepRange{Int, Int}
+    degree_range::StepRange{Int,Int}
     basis::Symbol = :chebyshev
-    truncation_threshold::Union{Nothing, Float64} = nothing  # opt-in coefficient truncation
+    truncation_threshold::Union{Nothing,Float64} = nothing  # opt-in coefficient truncation
     truncation_mode::Symbol = :relative                      # :relative or :absolute
 
+    # [polynomial] — cluster timeout protection (dljm)
+    degree_timeout_seconds::Union{Nothing,Float64} = nothing  # per-degree wall-clock limit
+    msolve_timeout_seconds::Union{Nothing,Float64} = nothing  # per-msolve-call process limit
+
     # [solver] — optional solver overrides
-    solver_method::Union{Nothing, String} = nothing
-    solver_abstol::Union{Nothing, Float64} = nothing
-    solver_reltol::Union{Nothing, Float64} = nothing
-    solver_numpoints::Union{Nothing, Int} = nothing
+    solver_method::Union{Nothing,String} = nothing
+    solver_abstol::Union{Nothing,Float64} = nothing
+    solver_reltol::Union{Nothing,Float64} = nothing
+    solver_numpoints::Union{Nothing,Int} = nothing
 
     # [refinement] — optional post-processing
     refinement_enabled::Bool = false
-    refinement_method::Union{Nothing, String} = nothing
-    refinement_max_time::Union{Nothing, Float64} = nothing
-    refinement_gradient_method::Union{Nothing, String} = nothing
-    refinement_gradient_tolerance::Union{Nothing, Float64} = nothing
+    refinement_method::Union{Nothing,String} = nothing
+    refinement_max_time::Union{Nothing,Float64} = nothing
+    refinement_gradient_method::Union{Nothing,String} = nothing
+    refinement_gradient_tolerance::Union{Nothing,Float64} = nothing
 
     # [analysis] — optional CP refinement and classification
     analysis_enabled::Bool = false
-    analysis_refinement_goal::Union{Nothing, String} = nothing  # "minimum" or "critical_point"
-    analysis_gradient_method::Union{Nothing, String} = nothing
-    analysis_newton_tol::Union{Nothing, Float64} = nothing
-    analysis_newton_max_iterations::Union{Nothing, Int} = nothing
-    analysis_max_time_per_point::Union{Nothing, Float64} = nothing
-    analysis_hessian_tol::Union{Nothing, Float64} = nothing
-    analysis_dedup_fraction::Union{Nothing, Float64} = nothing
-    analysis_top_k::Union{Nothing, Int} = nothing
-    analysis_accept_tol::Union{Nothing, Float64} = nothing
-    analysis_f_accept_tol::Union{Nothing, Float64} = nothing
+    analysis_refinement_goal::Union{Nothing,String} = nothing  # "minimum" or "critical_point"
+    analysis_gradient_method::Union{Nothing,String} = nothing
+    analysis_newton_tol::Union{Nothing,Float64} = nothing
+    analysis_newton_max_iterations::Union{Nothing,Int} = nothing
+    analysis_max_time_per_point::Union{Nothing,Float64} = nothing
+    analysis_hessian_tol::Union{Nothing,Float64} = nothing
+    analysis_dedup_fraction::Union{Nothing,Float64} = nothing
+    analysis_top_k::Union{Nothing,Int} = nothing
+    analysis_accept_tol::Union{Nothing,Float64} = nothing
+    analysis_f_accept_tol::Union{Nothing,Float64} = nothing
     analysis_valley_walking::Bool = false
     analysis_deep_diagnostics::Bool = false
 
     # [output]
-    output_dir::Union{Nothing, String} = nothing
+    output_dir::Union{Nothing,String} = nothing
 
     # [visualization] — optional level set / landscape visualization
     viz_enabled::Bool = false
@@ -100,7 +104,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     viz_domain_mode::Symbol = :catalogue       # :catalogue or :tight
     viz_tight_frac::Float64 = 0.1
     viz_level_tol::Float64 = 0.005
-    viz_figure_size::Tuple{Int, Int} = (1200, 900)
+    viz_figure_size::Tuple{Int,Int} = (1200, 900)
     viz_record_animation::Bool = false
     viz_animation_fps::Int = 30
     viz_animation_duration::Int = 15
@@ -117,8 +121,14 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 const KNOWN_SOLVER_METHODS = Set([
-    "Tsit5", "Vern7", "Vern9", "Rodas5", "Rosenbrock23",
-    "AutoTsit5", "TRBDF2", "KenCarp4"
+    "Tsit5",
+    "Vern7",
+    "Vern9",
+    "Rodas5",
+    "Rosenbrock23",
+    "AutoTsit5",
+    "TRBDF2",
+    "KenCarp4",
 ])
 
 const KNOWN_REFINEMENT_METHODS = Set(["NelderMead", "BFGS"])
@@ -136,8 +146,8 @@ function validate_experiment_toml(d::Dict)
 
     # --- Required sections ---
     haskey(d, "experiment") || push!(errors, "Missing required section [experiment]")
-    haskey(d, "model")      || push!(errors, "Missing required section [model]")
-    haskey(d, "polynomial")  || push!(errors, "Missing required section [polynomial]")
+    haskey(d, "model") || push!(errors, "Missing required section [model]")
+    haskey(d, "polynomial") || push!(errors, "Missing required section [polynomial]")
 
     # Bail early if required sections are missing — can't validate further
     if !isempty(errors)
@@ -153,7 +163,7 @@ function validate_experiment_toml(d::Dict)
 
     # --- [domain] mode flags (needed early for cross-validation) ---
     has_radius = haskey(dom, "radius")
-    has_radii  = haskey(dom, "radii")
+    has_radii = haskey(dom, "radii")
     has_bounds = haskey(dom, "bounds")
     n_domain_modes = count([has_radius, has_radii, has_bounds])
 
@@ -165,20 +175,32 @@ function validate_experiment_toml(d::Dict)
     has_analytical = haskey(mod, "analytical_function")
 
     if has_catalogue && has_analytical
-        push!(errors, "[model] cannot specify both catalogue (catalogue_path/entry_name) and analytical_function")
+        push!(
+            errors,
+            "[model] cannot specify both catalogue (catalogue_path/entry_name) and analytical_function",
+        )
     elseif !has_catalogue && !has_analytical
-        push!(errors, "[model] must specify either catalogue_path+entry_name or analytical_function")
+        push!(
+            errors,
+            "[model] must specify either catalogue_path+entry_name or analytical_function",
+        )
     elseif has_catalogue
-        haskey(mod, "catalogue_path") || push!(errors, "[model] catalogue mode requires 'catalogue_path'")
-        haskey(mod, "entry_name")     || push!(errors, "[model] catalogue mode requires 'entry_name'")
+        haskey(mod, "catalogue_path") ||
+            push!(errors, "[model] catalogue mode requires 'catalogue_path'")
+        haskey(mod, "entry_name") ||
+            push!(errors, "[model] catalogue mode requires 'entry_name'")
     elseif has_analytical
-        haskey(mod, "dimension") || push!(errors, "[model] analytical mode requires 'dimension'")
+        haskey(mod, "dimension") ||
+            push!(errors, "[model] analytical mode requires 'dimension'")
         # Validate function name against FUNCTION_REGISTRY
         if haskey(mod, "analytical_function")
             known = known_analytical_function_names()
             fname = mod["analytical_function"]
             if !(lowercase(fname) in [lowercase(n) for n in known])
-                push!(errors, "[model] unknown analytical_function \"$fname\". Known: $(join(known, ", "))")
+                push!(
+                    errors,
+                    "[model] unknown analytical_function \"$fname\". Known: $(join(known, ", "))",
+                )
             end
         end
     end
@@ -186,7 +208,10 @@ function validate_experiment_toml(d::Dict)
     # Validate p_true (only valid in catalogue mode)
     if haskey(mod, "p_true")
         if has_analytical
-            push!(errors, "[model] p_true is only valid in catalogue mode, not with analytical_function")
+            push!(
+                errors,
+                "[model] p_true is only valid in catalogue mode, not with analytical_function",
+            )
         else
             pt = mod["p_true"]
             if !(pt isa AbstractVector && all(x -> x isa Number, pt))
@@ -202,7 +227,10 @@ function validate_experiment_toml(d::Dict)
             push!(errors, "[domain] p_center must be a numeric array, got: $pc")
         end
         if has_bounds
-            push!(errors, "[domain] p_center is not used with explicit bounds (bounds already define the domain)")
+            push!(
+                errors,
+                "[domain] p_center is not used with explicit bounds (bounds already define the domain)",
+            )
         end
         if !has_radius && !has_radii && !has_catalogue
             push!(errors, "[domain] p_center requires radius or radii to define the domain")
@@ -212,7 +240,10 @@ function validate_experiment_toml(d::Dict)
     # Validate time_interval override (only valid in catalogue mode)
     if haskey(mod, "time_interval")
         if has_analytical
-            push!(errors, "[model] time_interval is only valid in catalogue mode, not with analytical_function")
+            push!(
+                errors,
+                "[model] time_interval is only valid in catalogue mode, not with analytical_function",
+            )
         else
             ti = mod["time_interval"]
             if !(ti isa AbstractVector && length(ti) == 2)
@@ -220,7 +251,10 @@ function validate_experiment_toml(d::Dict)
             elseif !(ti[1] isa Number && ti[2] isa Number)
                 push!(errors, "[model] time_interval values must be numbers")
             elseif ti[2] <= ti[1]
-                push!(errors, "[model] time_interval end ($(ti[2])) must be > start ($(ti[1]))")
+                push!(
+                    errors,
+                    "[model] time_interval end ($(ti[2])) must be > start ($(ti[1]))",
+                )
             end
         end
     end
@@ -228,13 +262,22 @@ function validate_experiment_toml(d::Dict)
     # Validate sample_times (only valid in catalogue mode, conflicts with time_interval)
     if haskey(mod, "sample_times")
         if has_analytical
-            push!(errors, "[model] sample_times is only valid in catalogue mode, not with analytical_function")
+            push!(
+                errors,
+                "[model] sample_times is only valid in catalogue mode, not with analytical_function",
+            )
         elseif haskey(mod, "time_interval")
-            push!(errors, "[model] cannot specify both sample_times and time_interval (sample_times implies the time interval)")
+            push!(
+                errors,
+                "[model] cannot specify both sample_times and time_interval (sample_times implies the time interval)",
+            )
         else
             st = mod["sample_times"]
             if !(st isa AbstractVector && length(st) >= 2)
-                push!(errors, "[model] sample_times must be an array with at least 2 time points, got: $st")
+                push!(
+                    errors,
+                    "[model] sample_times must be an array with at least 2 time points, got: $st",
+                )
             elseif !all(x -> x isa Number, st)
                 push!(errors, "[model] sample_times values must be numbers")
             else
@@ -254,20 +297,30 @@ function validate_experiment_toml(d::Dict)
         dim = mod["dimension"]
         b = dom["bounds"]
         if b isa AbstractVector && length(b) != dim
-            push!(errors, "[domain] bounds has $(length(b)) entries but [model] dimension is $dim")
+            push!(
+                errors,
+                "[domain] bounds has $(length(b)) entries but [model] dimension is $dim",
+            )
         end
     end
 
     # --- [domain] mode validation ---
     if n_domain_modes == 0 && !has_catalogue
-        push!(errors, "[domain] must specify one of: radius, radii, or bounds (required for analytical models)")
+        push!(
+            errors,
+            "[domain] must specify one of: radius, radii, or bounds (required for analytical models)",
+        )
     elseif n_domain_modes > 1
-        push!(errors, "[domain] must specify exactly one of: radius, radii, or bounds (got $(n_domain_modes))")
+        push!(
+            errors,
+            "[domain] must specify exactly one of: radius, radii, or bounds (got $(n_domain_modes))",
+        )
     end
 
     if has_radius
         r = dom["radius"]
-        (r isa Number && r > 0) || push!(errors, "[domain] radius must be a positive number, got: $r")
+        (r isa Number && r > 0) ||
+            push!(errors, "[domain] radius must be a positive number, got: $r")
     end
 
     if has_radii
@@ -288,7 +341,10 @@ function validate_experiment_toml(d::Dict)
                 if !(pair isa AbstractVector && length(pair) == 2)
                     push!(errors, "[domain] bounds[$i] must be a [lo, hi] pair")
                 elseif pair[1] >= pair[2]
-                    push!(errors, "[domain] bounds[$i]: lo ($(pair[1])) must be < hi ($(pair[2]))")
+                    push!(
+                        errors,
+                        "[domain] bounds[$i]: lo ($(pair[1])) must be < hi ($(pair[2]))",
+                    )
                 end
             end
         end
@@ -297,7 +353,8 @@ function validate_experiment_toml(d::Dict)
     # --- [polynomial] ---
     if haskey(poly, "GN")
         gn = poly["GN"]
-        (gn isa Integer && 2 <= gn <= 100) || push!(errors, "[polynomial] GN must be an integer in [2, 100], got: $gn")
+        (gn isa Integer && 2 <= gn <= 100) ||
+            push!(errors, "[polynomial] GN must be an integer in [2, 100], got: $gn")
     else
         push!(errors, "[polynomial] missing required field 'GN'")
     end
@@ -312,7 +369,10 @@ function validate_experiment_toml(d::Dict)
             elseif dr[1] < 1
                 push!(errors, "[polynomial] degree_range start must be >= 1, got: $dr")
             elseif dr[1] > dr[3]
-                push!(errors, "[polynomial] degree_range start ($(dr[1])) must be <= stop ($(dr[3]))")
+                push!(
+                    errors,
+                    "[polynomial] degree_range start ($(dr[1])) must be <= stop ($(dr[3]))",
+                )
             elseif dr[2] < 1
                 push!(errors, "[polynomial] degree_range step must be >= 1, got: $(dr[2])")
             end
@@ -323,130 +383,175 @@ function validate_experiment_toml(d::Dict)
 
     if haskey(poly, "basis")
         b = poly["basis"]
-        b in ["chebyshev", "legendre"] || push!(errors, "[polynomial] basis must be 'chebyshev' or 'legendre', got: '$b'")
+        b in ["chebyshev", "legendre"] ||
+            push!(errors, "[polynomial] basis must be 'chebyshev' or 'legendre', got: '$b'")
     end
 
     if haskey(poly, "truncation_threshold")
         t = poly["truncation_threshold"]
-        (t isa Number && t > 0) || push!(errors, "[polynomial] truncation_threshold must be positive, got: $t")
+        (t isa Number && t > 0) ||
+            push!(errors, "[polynomial] truncation_threshold must be positive, got: $t")
     end
     if haskey(poly, "truncation_mode")
         m = poly["truncation_mode"]
-        m in ["relative", "absolute"] || push!(errors, "[polynomial] truncation_mode must be 'relative' or 'absolute', got: '$m'")
+        m in ["relative", "absolute"] || push!(
+            errors,
+            "[polynomial] truncation_mode must be 'relative' or 'absolute', got: '$m'",
+        )
     end
 
     # --- [solver] (optional) ---
     if haskey(sol, "method")
-        sol["method"] in KNOWN_SOLVER_METHODS || push!(errors,
-            "[solver] unknown method '$(sol["method"])'. Known: $(join(sort(collect(KNOWN_SOLVER_METHODS)), ", "))")
+        sol["method"] in KNOWN_SOLVER_METHODS || push!(
+            errors,
+            "[solver] unknown method '$(sol["method"])'. Known: $(join(sort(collect(KNOWN_SOLVER_METHODS)), ", "))",
+        )
     end
     if haskey(sol, "abstol")
-        (sol["abstol"] isa Number && sol["abstol"] > 0) || push!(errors, "[solver] abstol must be positive")
+        (sol["abstol"] isa Number && sol["abstol"] > 0) ||
+            push!(errors, "[solver] abstol must be positive")
     end
     if haskey(sol, "reltol")
-        (sol["reltol"] isa Number && sol["reltol"] > 0) || push!(errors, "[solver] reltol must be positive")
+        (sol["reltol"] isa Number && sol["reltol"] > 0) ||
+            push!(errors, "[solver] reltol must be positive")
     end
     if haskey(sol, "numpoints")
         np = sol["numpoints"]
-        (np isa Integer && 5 <= np <= 1000) || push!(errors, "[solver] numpoints must be an integer in [5, 1000], got: $np")
+        (np isa Integer && 5 <= np <= 1000) ||
+            push!(errors, "[solver] numpoints must be an integer in [5, 1000], got: $np")
     end
 
     # --- [analysis] (optional — Newton CP validation) ---
     ana = get(d, "analysis", Dict())
     if haskey(ana, "gradient_method")
-        ana["gradient_method"] in KNOWN_GRADIENT_METHODS || push!(errors,
-            "[analysis] unknown gradient_method '$(ana["gradient_method"])'. Known: $(join(sort(collect(KNOWN_GRADIENT_METHODS)), ", "))")
+        ana["gradient_method"] in KNOWN_GRADIENT_METHODS || push!(
+            errors,
+            "[analysis] unknown gradient_method '$(ana["gradient_method"])'. Known: $(join(sort(collect(KNOWN_GRADIENT_METHODS)), ", "))",
+        )
     end
     if haskey(ana, "newton_tol")
-        (ana["newton_tol"] isa Number && ana["newton_tol"] > 0) || push!(errors,
-            "[analysis] newton_tol must be positive")
+        (ana["newton_tol"] isa Number && ana["newton_tol"] > 0) ||
+            push!(errors, "[analysis] newton_tol must be positive")
     end
     if haskey(ana, "newton_max_iterations")
         nmi = ana["newton_max_iterations"]
-        (nmi isa Integer && nmi > 0) || push!(errors,
-            "[analysis] newton_max_iterations must be a positive integer, got: $nmi")
+        (nmi isa Integer && nmi > 0) || push!(
+            errors,
+            "[analysis] newton_max_iterations must be a positive integer, got: $nmi",
+        )
     end
     if haskey(ana, "hessian_tol")
-        (ana["hessian_tol"] isa Number && ana["hessian_tol"] > 0) || push!(errors,
-            "[analysis] hessian_tol must be positive")
+        (ana["hessian_tol"] isa Number && ana["hessian_tol"] > 0) ||
+            push!(errors, "[analysis] hessian_tol must be positive")
     end
     if haskey(ana, "dedup_fraction")
         df = ana["dedup_fraction"]
-        (df isa Number && 0 < df < 1) || push!(errors,
-            "[analysis] dedup_fraction must be in (0, 1), got: $df")
+        (df isa Number && 0 < df < 1) ||
+            push!(errors, "[analysis] dedup_fraction must be in (0, 1), got: $df")
     end
     if haskey(ana, "accept_tol")
-        (ana["accept_tol"] isa Number && ana["accept_tol"] > 0) || push!(errors,
-            "[analysis] accept_tol must be positive")
+        (ana["accept_tol"] isa Number && ana["accept_tol"] > 0) ||
+            push!(errors, "[analysis] accept_tol must be positive")
     end
     if haskey(ana, "f_accept_tol")
-        (ana["f_accept_tol"] isa Number && ana["f_accept_tol"] > 0) || push!(errors,
-            "[analysis] f_accept_tol must be positive")
+        (ana["f_accept_tol"] isa Number && ana["f_accept_tol"] > 0) ||
+            push!(errors, "[analysis] f_accept_tol must be positive")
     end
 
     # --- [refinement] (optional) ---
     if haskey(ref, "method")
-        ref["method"] in KNOWN_REFINEMENT_METHODS || push!(errors,
-            "[refinement] unknown method '$(ref["method"])'. Known: $(join(sort(collect(KNOWN_REFINEMENT_METHODS)), ", "))")
+        ref["method"] in KNOWN_REFINEMENT_METHODS || push!(
+            errors,
+            "[refinement] unknown method '$(ref["method"])'. Known: $(join(sort(collect(KNOWN_REFINEMENT_METHODS)), ", "))",
+        )
     end
     if haskey(ref, "gradient_method")
-        ref["gradient_method"] in KNOWN_GRADIENT_METHODS || push!(errors,
-            "[refinement] unknown gradient_method '$(ref["gradient_method"])'. Known: $(join(sort(collect(KNOWN_GRADIENT_METHODS)), ", "))")
+        ref["gradient_method"] in KNOWN_GRADIENT_METHODS || push!(
+            errors,
+            "[refinement] unknown gradient_method '$(ref["gradient_method"])'. Known: $(join(sort(collect(KNOWN_GRADIENT_METHODS)), ", "))",
+        )
     end
     if haskey(ref, "max_time")
-        (ref["max_time"] isa Number && ref["max_time"] > 0) || push!(errors, "[refinement] max_time must be positive")
+        (ref["max_time"] isa Number && ref["max_time"] > 0) ||
+            push!(errors, "[refinement] max_time must be positive")
     end
     if haskey(ref, "gradient_tolerance")
-        (ref["gradient_tolerance"] isa Number && ref["gradient_tolerance"] > 0) || push!(errors,
-            "[refinement] gradient_tolerance must be positive")
+        (ref["gradient_tolerance"] isa Number && ref["gradient_tolerance"] > 0) ||
+            push!(errors, "[refinement] gradient_tolerance must be positive")
     end
 
     # --- [visualization] (optional) ---
     viz = get(d, "visualization", Dict())
     if haskey(viz, "n_coarse")
         nc = viz["n_coarse"]
-        (nc isa Integer && 5 <= nc <= 50) || push!(errors, "[visualization] n_coarse must be an integer in [5, 50], got: $nc")
+        (nc isa Integer && 5 <= nc <= 50) || push!(
+            errors,
+            "[visualization] n_coarse must be an integer in [5, 50], got: $nc",
+        )
     end
     if haskey(viz, "n_refine")
         nr = viz["n_refine"]
-        (nr isa Integer && 1 <= nr <= 10) || push!(errors, "[visualization] n_refine must be an integer in [1, 10], got: $nr")
+        (nr isa Integer && 1 <= nr <= 10) || push!(
+            errors,
+            "[visualization] n_refine must be an integer in [1, 10], got: $nr",
+        )
     end
     if haskey(viz, "level_max")
         lm = viz["level_max"]
-        (lm isa Number && lm > 0) || push!(errors, "[visualization] level_max must be positive, got: $lm")
+        (lm isa Number && lm > 0) ||
+            push!(errors, "[visualization] level_max must be positive, got: $lm")
     end
     if haskey(viz, "domain_mode")
         dm = viz["domain_mode"]
-        dm in ["catalogue", "tight"] || push!(errors, "[visualization] domain_mode must be 'catalogue' or 'tight', got: '$dm'")
+        dm in ["catalogue", "tight"] || push!(
+            errors,
+            "[visualization] domain_mode must be 'catalogue' or 'tight', got: '$dm'",
+        )
     end
     if haskey(viz, "tight_frac")
         tf = viz["tight_frac"]
-        (tf isa Number && 0 < tf < 10) || push!(errors, "[visualization] tight_frac must be in (0, 10), got: $tf")
+        (tf isa Number && 0 < tf < 10) ||
+            push!(errors, "[visualization] tight_frac must be in (0, 10), got: $tf")
     end
     if haskey(viz, "level_tol")
         lt = viz["level_tol"]
-        (lt isa Number && lt > 0) || push!(errors, "[visualization] level_tol must be positive, got: $lt")
+        (lt isa Number && lt > 0) ||
+            push!(errors, "[visualization] level_tol must be positive, got: $lt")
     end
     if haskey(viz, "figure_size")
         fs = viz["figure_size"]
-        (fs isa AbstractVector && length(fs) == 2 && all(x -> x isa Integer && x > 0, fs)) || push!(errors,
-            "[visualization] figure_size must be [width, height] with positive integers, got: $fs")
+        (
+            fs isa AbstractVector &&
+            length(fs) == 2 &&
+            all(x -> x isa Integer && x > 0, fs)
+        ) || push!(
+            errors,
+            "[visualization] figure_size must be [width, height] with positive integers, got: $fs",
+        )
     end
     if haskey(viz, "animation_fps")
         af = viz["animation_fps"]
-        (af isa Integer && 1 <= af <= 120) || push!(errors, "[visualization] animation_fps must be in [1, 120], got: $af")
+        (af isa Integer && 1 <= af <= 120) ||
+            push!(errors, "[visualization] animation_fps must be in [1, 120], got: $af")
     end
     if haskey(viz, "animation_duration")
         ad = viz["animation_duration"]
-        (ad isa Integer && 1 <= ad <= 300) || push!(errors, "[visualization] animation_duration must be in [1, 300], got: $ad")
+        (ad isa Integer && 1 <= ad <= 300) || push!(
+            errors,
+            "[visualization] animation_duration must be in [1, 300], got: $ad",
+        )
     end
     if haskey(viz, "augment_fraction")
         af = viz["augment_fraction"]
-        (af isa Number && 0 < af <= 1) || push!(errors, "[visualization] augment_fraction must be in (0, 1], got: $af")
+        (af isa Number && 0 < af <= 1) ||
+            push!(errors, "[visualization] augment_fraction must be in (0, 1], got: $af")
     end
     if haskey(viz, "augment_n")
         an = viz["augment_n"]
-        (an isa Integer && 2 <= an <= 10) || push!(errors, "[visualization] augment_n must be an integer in [2, 10], got: $an")
+        (an isa Integer && 2 <= an <= 10) || push!(
+            errors,
+            "[visualization] augment_n must be an integer in [2, 10], got: $an",
+        )
     end
 
     # --- Raise all errors ---
@@ -483,7 +588,7 @@ function _resolve_config_path(p::AbstractString, config_dir::AbstractString)
 
     if startswith(p, _RESULTS_PREFIX)
         # "globtim_results/lv4d_catalogue.jsonl" → get_results_root() * "/lv4d_catalogue.jsonl"
-        return joinpath(get_results_root(), p[length(_RESULTS_PREFIX)+1:end])
+        return joinpath(get_results_root(), p[(length(_RESULTS_PREFIX)+1):end])
     end
 
     # Other relative paths resolve relative to the TOML file's directory
@@ -514,13 +619,13 @@ function load_experiment_config(path::String)
     d = TOML.parsefile(path)
     validate_experiment_toml(d)
 
-    exp  = d["experiment"]
-    mod  = d["model"]
+    exp = d["experiment"]
+    mod = d["model"]
     poly = d["polynomial"]
-    dom  = get(d, "domain", Dict())
-    sol  = get(d, "solver", Dict())
-    ref  = get(d, "refinement", Dict())
-    out  = get(d, "output", Dict())
+    dom = get(d, "domain", Dict())
+    sol = get(d, "solver", Dict())
+    ref = get(d, "refinement", Dict())
+    out = get(d, "output", Dict())
 
     # Parse degree_range: [start, step, stop] -> StepRange
     dr = poly["degree_range"]
@@ -530,29 +635,43 @@ function load_experiment_config(path::String)
     basis = Symbol(get(poly, "basis", "chebyshev"))
 
     # Parse truncation (optional)
-    truncation_threshold = haskey(poly, "truncation_threshold") ? Float64(poly["truncation_threshold"]) : nothing
+    truncation_threshold =
+        haskey(poly, "truncation_threshold") ? Float64(poly["truncation_threshold"]) :
+        nothing
     truncation_mode = Symbol(get(poly, "truncation_mode", "relative"))
+
+    # Parse timeout protection (dljm)
+    degree_timeout_seconds =
+        haskey(poly, "degree_timeout_seconds") ? Float64(poly["degree_timeout_seconds"]) :
+        nothing
+    msolve_timeout_seconds =
+        haskey(poly, "msolve_timeout_seconds") ? Float64(poly["msolve_timeout_seconds"]) :
+        nothing
 
     # Parse domain
     radius = nothing
-    radii  = nothing
+    radii = nothing
     bounds = nothing
     if haskey(dom, "radius")
         radius = Float64(dom["radius"])
     elseif haskey(dom, "radii")
         radii = Float64.(dom["radii"])
     elseif haskey(dom, "bounds")
-        bounds = [Tuple{Float64,Float64}((Float64(pair[1]), Float64(pair[2]))) for pair in dom["bounds"]]
+        bounds = [
+            Tuple{Float64,Float64}((Float64(pair[1]), Float64(pair[2]))) for
+            pair in dom["bounds"]
+        ]
     end
 
     # Parse model mode
-    catalogue_path     = haskey(mod, "catalogue_path") ? String(mod["catalogue_path"]) : nothing
-    entry_name         = haskey(mod, "entry_name") ? String(mod["entry_name"]) : nothing
-    analytical_function = haskey(mod, "analytical_function") ? String(mod["analytical_function"]) : nothing
-    model_dimension    = haskey(mod, "dimension") ? Int(mod["dimension"]) : nothing
-    time_interval      = haskey(mod, "time_interval") ? Float64.(mod["time_interval"]) : nothing
-    sample_times       = haskey(mod, "sample_times") ? Float64.(mod["sample_times"]) : nothing
-    p_true             = haskey(mod, "p_true") ? Float64.(mod["p_true"]) : nothing
+    catalogue_path = haskey(mod, "catalogue_path") ? String(mod["catalogue_path"]) : nothing
+    entry_name = haskey(mod, "entry_name") ? String(mod["entry_name"]) : nothing
+    analytical_function =
+        haskey(mod, "analytical_function") ? String(mod["analytical_function"]) : nothing
+    model_dimension = haskey(mod, "dimension") ? Int(mod["dimension"]) : nothing
+    time_interval = haskey(mod, "time_interval") ? Float64.(mod["time_interval"]) : nothing
+    sample_times = haskey(mod, "sample_times") ? Float64.(mod["sample_times"]) : nothing
+    p_true = haskey(mod, "p_true") ? Float64.(mod["p_true"]) : nothing
 
     # Parse p_center from [domain]
     p_center = haskey(dom, "p_center") ? Float64.(dom["p_center"]) : nothing
@@ -567,19 +686,27 @@ function load_experiment_config(path::String)
     refinement_enabled = get(ref, "enabled", false)::Bool
     refinement_method = haskey(ref, "method") ? String(ref["method"]) : nothing
     refinement_max_time = haskey(ref, "max_time") ? Float64(ref["max_time"]) : nothing
-    refinement_gradient_method = haskey(ref, "gradient_method") ? String(ref["gradient_method"]) : nothing
-    refinement_gradient_tolerance = haskey(ref, "gradient_tolerance") ? Float64(ref["gradient_tolerance"]) : nothing
+    refinement_gradient_method =
+        haskey(ref, "gradient_method") ? String(ref["gradient_method"]) : nothing
+    refinement_gradient_tolerance =
+        haskey(ref, "gradient_tolerance") ? Float64(ref["gradient_tolerance"]) : nothing
 
     # Parse analysis
     ana = get(d, "analysis", Dict())
     analysis_enabled = get(ana, "enabled", false)::Bool
-    analysis_refinement_goal = haskey(ana, "refinement_goal") ? String(ana["refinement_goal"]) : nothing
-    analysis_gradient_method = haskey(ana, "gradient_method") ? String(ana["gradient_method"]) : nothing
+    analysis_refinement_goal =
+        haskey(ana, "refinement_goal") ? String(ana["refinement_goal"]) : nothing
+    analysis_gradient_method =
+        haskey(ana, "gradient_method") ? String(ana["gradient_method"]) : nothing
     analysis_newton_tol = haskey(ana, "newton_tol") ? Float64(ana["newton_tol"]) : nothing
-    analysis_newton_max_iterations = haskey(ana, "newton_max_iterations") ? Int(ana["newton_max_iterations"]) : nothing
-    analysis_max_time_per_point = haskey(ana, "max_time_per_point") ? Float64(ana["max_time_per_point"]) : nothing
-    analysis_hessian_tol = haskey(ana, "hessian_tol") ? Float64(ana["hessian_tol"]) : nothing
-    analysis_dedup_fraction = haskey(ana, "dedup_fraction") ? Float64(ana["dedup_fraction"]) : nothing
+    analysis_newton_max_iterations =
+        haskey(ana, "newton_max_iterations") ? Int(ana["newton_max_iterations"]) : nothing
+    analysis_max_time_per_point =
+        haskey(ana, "max_time_per_point") ? Float64(ana["max_time_per_point"]) : nothing
+    analysis_hessian_tol =
+        haskey(ana, "hessian_tol") ? Float64(ana["hessian_tol"]) : nothing
+    analysis_dedup_fraction =
+        haskey(ana, "dedup_fraction") ? Float64(ana["dedup_fraction"]) : nothing
     analysis_top_k = haskey(ana, "top_k") ? Int(ana["top_k"]) : nothing
 
     # Parse output
@@ -593,7 +720,7 @@ function load_experiment_config(path::String)
     # resolved relative to the TOML file's directory.
     config_dir = dirname(realpath(path))  # realpath: resolve symlinks so copied/linked TOMLs find their relative paths
     catalogue_path = _resolve_config_path(catalogue_path, config_dir)
-    output_dir     = _resolve_config_path(output_dir, config_dir)
+    output_dir = _resolve_config_path(output_dir, config_dir)
 
     # Parse visualization
     viz = get(d, "visualization", Dict())
@@ -611,17 +738,21 @@ function load_experiment_config(path::String)
     end
     viz_record_animation = get(viz, "record_animation", false)::Bool
     viz_animation_fps = haskey(viz, "animation_fps") ? Int(viz["animation_fps"]) : 30
-    viz_animation_duration = haskey(viz, "animation_duration") ? Int(viz["animation_duration"]) : 15
+    viz_animation_duration =
+        haskey(viz, "animation_duration") ? Int(viz["animation_duration"]) : 15
     viz_augment_enabled = get(viz, "augment_enabled", true)::Bool
-    viz_augment_fraction = haskey(viz, "augment_fraction") ? Float64(viz["augment_fraction"]) : 0.25
+    viz_augment_fraction =
+        haskey(viz, "augment_fraction") ? Float64(viz["augment_fraction"]) : 0.25
     viz_augment_n = haskey(viz, "augment_n") ? Int(viz["augment_n"]) : 4
     viz_near_zero_enabled = get(viz, "near_zero_enabled", true)::Bool
-    viz_near_zero_threshold = haskey(viz, "near_zero_threshold") ? Float64(viz["near_zero_threshold"]) : 0.5
+    viz_near_zero_threshold =
+        haskey(viz, "near_zero_threshold") ? Float64(viz["near_zero_threshold"]) : 0.5
     viz_near_zero_n = haskey(viz, "near_zero_n") ? Int(viz["near_zero_n"]) : 8
 
     # Parse analysis accept tolerances and valley walking
     analysis_accept_tol = haskey(ana, "accept_tol") ? Float64(ana["accept_tol"]) : nothing
-    analysis_f_accept_tol = haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
+    analysis_f_accept_tol =
+        haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
     analysis_valley_walking = Bool(get(ana, "valley_walking", false))
     analysis_deep_diagnostics = Bool(get(ana, "deep_diagnostics", false))
 
@@ -648,6 +779,8 @@ function load_experiment_config(path::String)
         basis = basis,
         truncation_threshold = truncation_threshold,
         truncation_mode = truncation_mode,
+        degree_timeout_seconds = degree_timeout_seconds,
+        msolve_timeout_seconds = msolve_timeout_seconds,
         # [solver]
         solver_method = solver_method,
         solver_abstol = solver_abstol,
@@ -718,6 +851,8 @@ function config_to_experiment_params(config::ExperimentPipelineConfig)
         enable_bfgs_refinement = !is_ode,
         truncation_threshold = config.truncation_threshold,
         truncation_mode = config.truncation_mode,
+        degree_timeout_seconds = config.degree_timeout_seconds,
+        msolve_timeout_seconds = config.msolve_timeout_seconds,
     )
 end
 

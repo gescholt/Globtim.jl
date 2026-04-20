@@ -48,7 +48,7 @@ struct ReproducibilityMetadata
     julia_version::VersionNumber
     package_manifest_hash::String
     hostname::String
-    cluster_node::Union{String, Nothing}
+    cluster_node::Union{String,Nothing}
     execution_timestamp::DateTime
     experiment_id::String
 end
@@ -67,10 +67,10 @@ Metrics assessing the mathematical quality of polynomial approximations.
 """
 struct MathematicalQualityMetrics
     polynomial_sparsity::Float64
-    coefficient_stats::Dict{String, Float64}
-    basis_utilization::Union{Vector{Float64}, Nothing}
-    gradient_magnitude_stats::Union{Dict{String, Float64}, Nothing}
-    domain_coverage_score::Union{Float64, Nothing}
+    coefficient_stats::Dict{String,Float64}
+    basis_utilization::Union{Vector{Float64},Nothing}
+    gradient_magnitude_stats::Union{Dict{String,Float64},Nothing}
+    domain_coverage_score::Union{Float64,Nothing}
 end
 
 """
@@ -86,10 +86,10 @@ Analysis of convergence behavior across polynomial degrees.
 - `stagnation_detected::Bool`: Whether convergence has stagnated
 """
 struct ConvergenceMetrics
-    convergence_rate::Union{Float64, Nothing}
-    rate_type::Union{String, Nothing}
-    optimal_degree_estimate::Union{Int, Nothing}
-    degree_improvements::Union{Vector{Float64}, Nothing}
+    convergence_rate::Union{Float64,Nothing}
+    rate_type::Union{String,Nothing}
+    optimal_degree_estimate::Union{Int,Nothing}
+    degree_improvements::Union{Vector{Float64},Nothing}
     stagnation_detected::Bool
 end
 
@@ -108,13 +108,13 @@ Computational resource usage metrics.
 - `network_transfer_mb::Union{Float64, Nothing}`: Network transfer volume (future)
 """
 struct ResourceUtilization
-    cpu_utilization_percent::Union{Float64, Nothing}
+    cpu_utilization_percent::Union{Float64,Nothing}
     peak_memory_gb::Float64
     mean_memory_gb::Float64
     execution_time_seconds::Float64
-    disk_read_mb::Union{Float64, Nothing}
-    disk_write_mb::Union{Float64, Nothing}
-    network_transfer_mb::Union{Float64, Nothing}
+    disk_read_mb::Union{Float64,Nothing}
+    disk_write_mb::Union{Float64,Nothing}
+    network_transfer_mb::Union{Float64,Nothing}
 end
 
 """
@@ -130,11 +130,11 @@ Comparison against baseline or historical experiments.
 - `percentile_rank::Union{Float64, Nothing}`: Percentile rank (0-100)
 """
 struct ComparisonMetrics
-    baseline_name::Union{String, Nothing}
-    performance_delta_percent::Union{Float64, Nothing}
-    quality_improvement_percent::Union{Float64, Nothing}
-    experiment_rank_in_campaign::Union{Int, Nothing}
-    percentile_rank::Union{Float64, Nothing}
+    baseline_name::Union{String,Nothing}
+    performance_delta_percent::Union{Float64,Nothing}
+    quality_improvement_percent::Union{Float64,Nothing}
+    experiment_rank_in_campaign::Union{Int,Nothing}
+    percentile_rank::Union{Float64,Nothing}
 end
 
 """
@@ -154,13 +154,13 @@ Complete enhanced metrics for a Globtim experiment.
 """
 struct EnhancedExperimentMetrics
     experiment_id::String
-    batch_id::Union{String, Nothing}
-    issue_id::Union{Int, Nothing}
+    batch_id::Union{String,Nothing}
+    issue_id::Union{Int,Nothing}
     reproducibility::ReproducibilityMetadata
     mathematical_quality::MathematicalQualityMetrics
     convergence::ConvergenceMetrics
     resources::ResourceUtilization
-    comparison::Union{ComparisonMetrics, Nothing}
+    comparison::Union{ComparisonMetrics,Nothing}
 end
 
 # ============================================================================
@@ -237,7 +237,7 @@ end
 
 Generate unique experiment ID based on timestamp and random component.
 """
-function generate_experiment_id(config=nothing)
+function generate_experiment_id(config = nothing)
     timestamp = Dates.format(now(), "yyyymmdd_HHMMSS")
     random_suffix = bytes2hex(rand(UInt8, 4))
     return "exp_$(timestamp)_$(random_suffix)"
@@ -252,7 +252,7 @@ end
 
 Compute percentage of polynomial coefficients below threshold (near-zero).
 """
-function compute_sparsity(coeffs::Vector, threshold=1e-12)
+function compute_sparsity(coeffs::Vector, threshold = 1e-12)
     total = length(coeffs)
     if total == 0
         return 0.0
@@ -274,7 +274,7 @@ function analyze_coefficients(coeffs::Vector)
         "min" => minimum(abs_coeffs),
         "max" => maximum(abs_coeffs),
         "mean" => mean(abs_coeffs),
-        "std" => std(abs_coeffs)
+        "std" => std(abs_coeffs),
     )
 end
 
@@ -320,7 +320,7 @@ function analyze_gradient_magnitudes(critical_points_df)
         "min" => minimum(grad_norms),
         "max" => maximum(grad_norms),
         "mean" => mean(grad_norms),
-        "std" => std(grad_norms)
+        "std" => std(grad_norms),
     )
 end
 
@@ -372,7 +372,7 @@ function classify_convergence(l2_norms::Vector{Float64})
     mean_log = mean(log_norms)
 
     numerator = sum((degrees .- mean_deg) .* (log_norms .- mean_log))
-    denominator = sum((degrees .- mean_deg).^2)
+    denominator = sum((degrees .- mean_deg) .^ 2)
 
     if denominator > 0
         slope = numerator / denominator
@@ -396,17 +396,18 @@ end
 
 Detect if convergence has stagnated (improvements < threshold).
 """
-function detect_stagnation(l2_norms::Vector{Float64}, threshold=0.01)
+function detect_stagnation(l2_norms::Vector{Float64}, threshold = 0.01)
     if length(l2_norms) < 3
         return false
     end
 
     # Compute relative improvements
-    improvements = [(l2_norms[i-1] - l2_norms[i]) / l2_norms[i-1] for i in 2:length(l2_norms)]
+    improvements =
+        [(l2_norms[i-1] - l2_norms[i]) / l2_norms[i-1] for i in 2:length(l2_norms)]
 
     # Check if recent improvements are below threshold
     num_recent = min(3, length(improvements))
-    recent = improvements[end-num_recent+1:end]
+    recent = improvements[(end-num_recent+1):end]
 
     return all(imp < threshold for imp in recent)
 end
@@ -417,14 +418,18 @@ end
 
 Estimate optimal polynomial degree where improvements drop below threshold.
 """
-function estimate_optimal_degree(l2_norms::Vector{Float64}, degrees::Vector{Int},
-                                 improvement_threshold=0.05)
+function estimate_optimal_degree(
+    l2_norms::Vector{Float64},
+    degrees::Vector{Int},
+    improvement_threshold = 0.05,
+)
     if length(l2_norms) < 2
         return nothing
     end
 
     # Compute relative improvements
-    improvements = [(l2_norms[i-1] - l2_norms[i]) / l2_norms[i-1] for i in 2:length(l2_norms)]
+    improvements =
+        [(l2_norms[i-1] - l2_norms[i]) / l2_norms[i-1] for i in 2:length(l2_norms)]
 
     # Find first degree where improvement drops below threshold
     for (i, imp) in enumerate(improvements)
@@ -502,12 +507,12 @@ Collect all enhanced metrics for a Globtim experiment.
 function collect_enhanced_metrics(
     polynomial,
     execution_time::Float64,
-    critical_points_df=nothing;
-    l2_norms_by_degree=nothing,
-    degrees=nothing,
-    config=nothing,
-    batch_id=nothing,
-    issue_id=nothing
+    critical_points_df = nothing;
+    l2_norms_by_degree = nothing,
+    degrees = nothing,
+    config = nothing,
+    batch_id = nothing,
+    issue_id = nothing,
 )
     # Generate experiment ID
     exp_id = generate_experiment_id(config)
@@ -521,7 +526,7 @@ function collect_enhanced_metrics(
         gethostname(),
         get_cluster_node(),
         now(),
-        exp_id
+        exp_id,
     )
 
     # Collect mathematical quality metrics
@@ -529,8 +534,9 @@ function collect_enhanced_metrics(
         compute_sparsity(polynomial.coeffs),
         analyze_coefficients(polynomial.coeffs),
         compute_basis_usage(polynomial),
-        critical_points_df !== nothing ? analyze_gradient_magnitudes(critical_points_df) : nothing,
-        nothing  # domain_coverage_score - future
+        critical_points_df !== nothing ?
+        analyze_gradient_magnitudes(critical_points_df) : nothing,
+        nothing,  # domain_coverage_score - future
     )
 
     # Collect convergence metrics (if multi-degree data available)
@@ -538,19 +544,14 @@ function collect_enhanced_metrics(
         convergence = ConvergenceMetrics(
             estimate_convergence_rate(l2_norms_by_degree),
             classify_convergence(l2_norms_by_degree),
-            degrees !== nothing ? estimate_optimal_degree(l2_norms_by_degree, degrees) : nothing,
+            degrees !== nothing ? estimate_optimal_degree(l2_norms_by_degree, degrees) :
+            nothing,
             compute_degree_improvements(l2_norms_by_degree),
-            detect_stagnation(l2_norms_by_degree)
+            detect_stagnation(l2_norms_by_degree),
         )
     else
         # Single degree - no convergence analysis possible
-        convergence = ConvergenceMetrics(
-            nothing,
-            nothing,
-            nothing,
-            nothing,
-            false
-        )
+        convergence = ConvergenceMetrics(nothing, nothing, nothing, nothing, false)
     end
 
     # Collect resource utilization
@@ -562,7 +563,7 @@ function collect_enhanced_metrics(
         execution_time,
         nothing,  # disk_read_mb - future
         nothing,  # disk_write_mb - future
-        nothing   # network_transfer_mb - future
+        nothing,   # network_transfer_mb - future
     )
 
     # Comparison metrics (not implemented yet)
@@ -576,7 +577,7 @@ function collect_enhanced_metrics(
         mathematical_quality,
         convergence,
         resources,
-        comparison
+        comparison,
     )
 end
 
@@ -590,50 +591,57 @@ end
 Convert EnhancedExperimentMetrics to a JSON-serializable dictionary.
 """
 function metrics_to_dict(metrics::EnhancedExperimentMetrics)
-    return Dict{String, Any}(
+    return Dict{String,Any}(
         "experiment_id" => metrics.experiment_id,
         "batch_id" => metrics.batch_id,
         "issue_id" => metrics.issue_id,
-        "reproducibility" => Dict{String, Any}(
+        "reproducibility" => Dict{String,Any}(
             "git_commit" => metrics.reproducibility.git_commit,
             "git_branch" => metrics.reproducibility.git_branch,
             "julia_version" => string(metrics.reproducibility.julia_version),
             "package_manifest_hash" => metrics.reproducibility.package_manifest_hash,
             "hostname" => metrics.reproducibility.hostname,
             "cluster_node" => metrics.reproducibility.cluster_node,
-            "execution_timestamp" => string(metrics.reproducibility.execution_timestamp),
-            "experiment_id" => metrics.reproducibility.experiment_id
+            "execution_timestamp" =>
+                string(metrics.reproducibility.execution_timestamp),
+            "experiment_id" => metrics.reproducibility.experiment_id,
         ),
-        "mathematical_quality" => Dict{String, Any}(
+        "mathematical_quality" => Dict{String,Any}(
             "polynomial_sparsity" => metrics.mathematical_quality.polynomial_sparsity,
             "coefficient_stats" => metrics.mathematical_quality.coefficient_stats,
             "basis_utilization" => metrics.mathematical_quality.basis_utilization,
-            "gradient_magnitude_stats" => metrics.mathematical_quality.gradient_magnitude_stats,
-            "domain_coverage_score" => metrics.mathematical_quality.domain_coverage_score
+            "gradient_magnitude_stats" =>
+                metrics.mathematical_quality.gradient_magnitude_stats,
+            "domain_coverage_score" =>
+                metrics.mathematical_quality.domain_coverage_score,
         ),
-        "convergence" => Dict{String, Any}(
+        "convergence" => Dict{String,Any}(
             "convergence_rate" => metrics.convergence.convergence_rate,
             "rate_type" => metrics.convergence.rate_type,
             "optimal_degree_estimate" => metrics.convergence.optimal_degree_estimate,
             "degree_improvements" => metrics.convergence.degree_improvements,
-            "stagnation_detected" => metrics.convergence.stagnation_detected
+            "stagnation_detected" => metrics.convergence.stagnation_detected,
         ),
-        "resources" => Dict{String, Any}(
+        "resources" => Dict{String,Any}(
             "cpu_utilization_percent" => metrics.resources.cpu_utilization_percent,
             "peak_memory_gb" => metrics.resources.peak_memory_gb,
             "mean_memory_gb" => metrics.resources.mean_memory_gb,
             "execution_time_seconds" => metrics.resources.execution_time_seconds,
             "disk_read_mb" => metrics.resources.disk_read_mb,
             "disk_write_mb" => metrics.resources.disk_write_mb,
-            "network_transfer_mb" => metrics.resources.network_transfer_mb
+            "network_transfer_mb" => metrics.resources.network_transfer_mb,
         ),
-        "comparison" => metrics.comparison !== nothing ? Dict{String, Any}(
-            "baseline_name" => metrics.comparison.baseline_name,
-            "performance_delta_percent" => metrics.comparison.performance_delta_percent,
-            "quality_improvement_percent" => metrics.comparison.quality_improvement_percent,
-            "experiment_rank_in_campaign" => metrics.comparison.experiment_rank_in_campaign,
-            "percentile_rank" => metrics.comparison.percentile_rank
-        ) : nothing
+        "comparison" =>
+            metrics.comparison !== nothing ?
+            Dict{String,Any}(
+                "baseline_name" => metrics.comparison.baseline_name,
+                "performance_delta_percent" => metrics.comparison.performance_delta_percent,
+                "quality_improvement_percent" =>
+                    metrics.comparison.quality_improvement_percent,
+                "experiment_rank_in_campaign" =>
+                    metrics.comparison.experiment_rank_in_campaign,
+                "percentile_rank" => metrics.comparison.percentile_rank,
+            ) : nothing,
     )
 end
 

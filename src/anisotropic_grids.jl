@@ -49,7 +49,7 @@ function generate_anisotropic_grid(grid_sizes::Vector{Int}; basis::Symbol = :che
 
     # Use array comprehension with direct SVector construction
     grid = [
-        SVector{n_dims, Float64}(ntuple(d -> nodes_per_dim[d][idx[d]], n_dims)) for
+        SVector{n_dims,Float64}(ntuple(d -> nodes_per_dim[d][idx[d]], n_dims)) for
         idx in Iterators.product((1:length(nodes) for nodes in nodes_per_dim)...)
     ]
 
@@ -151,7 +151,7 @@ function convert_to_svector_grid(matrix::Matrix{Float64})
     n = size(matrix, 2)
     n_points = size(matrix, 1)
 
-    return [SVector{n, Float64}(matrix[i, :]) for i in 1:n_points]
+    return [SVector{n,Float64}(matrix[i, :]) for i in 1:n_points]
 end
 
 """

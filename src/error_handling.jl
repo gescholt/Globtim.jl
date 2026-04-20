@@ -72,9 +72,9 @@ struct NumericalError <: GlobtimError
     operation::String
     details::String
     suggestions::Vector{String}
-    context::Dict{String, Any}
+    context::Dict{String,Any}
 
-    function NumericalError(operation, details, suggestions, context = Dict{String, Any}())
+    function NumericalError(operation, details, suggestions, context = Dict{String,Any}())
         new(operation, details, suggestions, context)
     end
 end
@@ -93,7 +93,7 @@ Error thrown when a computation stage fails.
 struct ComputationError <: GlobtimError
     stage::String
     error_type::String
-    context::Dict{String, Any}
+    context::Dict{String,Any}
     recovery_options::Vector{String}
 end
 
@@ -233,18 +233,22 @@ function validate_dimension(dim::Int; max_dim::Int = 10)
     if dim < 1
         throw(
             InputValidationError(
-                "dim", dim, "dim ≥ 1",
-                "Problem dimension must be at least 1"
-            )
+                "dim",
+                dim,
+                "dim ≥ 1",
+                "Problem dimension must be at least 1",
+            ),
         )
     end
 
     if dim > max_dim
         throw(
             InputValidationError(
-                "dim", dim, "dim ≤ $max_dim",
-                "For dimensions > $max_dim, consider domain decomposition or contact developers"
-            )
+                "dim",
+                dim,
+                "dim ≤ $max_dim",
+                "For dimensions > $max_dim, consider domain decomposition or contact developers",
+            ),
         )
     end
 end
@@ -261,22 +265,26 @@ Validate polynomial degree against sample count and computational limits.
 # Throws
 - `InputValidationError`: If degree is invalid
 """
-function validate_polynomial_degree(degree::Int, sample_count::Int; dim::Int=4)
+function validate_polynomial_degree(degree::Int, sample_count::Int; dim::Int = 4)
     if degree < 1
         throw(
             InputValidationError(
-                "degree", degree, "degree ≥ 1",
-                "Polynomial degree must be at least 1"
-            )
+                "degree",
+                degree,
+                "degree ≥ 1",
+                "Polynomial degree must be at least 1",
+            ),
         )
     end
 
     if degree > MAX_SAFE_DEGREE
         throw(
             InputValidationError(
-                "degree", degree, "degree ≤ $MAX_SAFE_DEGREE",
-                "High degrees (>$MAX_SAFE_DEGREE) may cause memory exhaustion. For degree $degree, consider domain decomposition or contact developers."
-            )
+                "degree",
+                degree,
+                "degree ≤ $MAX_SAFE_DEGREE",
+                "High degrees (>$MAX_SAFE_DEGREE) may cause memory exhaustion. For degree $degree, consider domain decomposition or contact developers.",
+            ),
         )
     end
 
@@ -288,9 +296,11 @@ function validate_polynomial_degree(degree::Int, sample_count::Int; dim::Int=4)
     if estimated_memory_mb > MAX_VANDERMONDE_MEMORY_MB
         throw(
             InputValidationError(
-                "degree", degree, "memory-safe degree",
-                "Degree $degree with $sample_count samples needs ~$(round(estimated_memory_mb))MB memory. Reduce degree to ≤6 or reduce samples."
-            )
+                "degree",
+                degree,
+                "memory-safe degree",
+                "Degree $degree with $sample_count samples needs ~$(round(estimated_memory_mb))MB memory. Reduce degree to ≤6 or reduce samples.",
+            ),
         )
     end
 
@@ -298,9 +308,11 @@ function validate_polynomial_degree(degree::Int, sample_count::Int; dim::Int=4)
     if sample_count < 3 * estimated_coeffs
         throw(
             InputValidationError(
-                "degree", degree, "sufficient samples for degree",
-                "Degree $degree needs ~$(3*estimated_coeffs) samples for stability, but only $sample_count provided. Reduce degree or increase samples."
-            )
+                "degree",
+                degree,
+                "sufficient samples for degree",
+                "Degree $degree needs ~$(3*estimated_coeffs) samples for stability, but only $sample_count provided. Reduce degree or increase samples.",
+            ),
         )
     end
 end
@@ -322,18 +334,22 @@ function validate_sample_count(GN::Int; min_samples::Int = 10, max_samples::Int 
     if GN < min_samples
         throw(
             InputValidationError(
-                "GN", GN, "GN ≥ $min_samples",
-                "Need at least $min_samples samples for reliable approximation"
-            )
+                "GN",
+                GN,
+                "GN ≥ $min_samples",
+                "Need at least $min_samples samples for reliable approximation",
+            ),
         )
     end
 
     if GN > max_samples
         throw(
             InputValidationError(
-                "GN", GN, "GN ≤ $max_samples",
-                "Very large sample counts (>$max_samples) may cause memory issues. Consider domain decomposition."
-            )
+                "GN",
+                GN,
+                "GN ≤ $max_samples",
+                "Very large sample counts (>$max_samples) may cause memory issues. Consider domain decomposition.",
+            ),
         )
     end
 end
@@ -354,18 +370,22 @@ function validate_center_vector(center::Vector{Float64}, dim::Int)
     if length(center) != dim
         throw(
             InputValidationError(
-                "center", center, "vector of length $dim",
-                "Center vector must have exactly $dim elements to match problem dimension"
-            )
+                "center",
+                center,
+                "vector of length $dim",
+                "Center vector must have exactly $dim elements to match problem dimension",
+            ),
         )
     end
 
     if any(!isfinite, center)
         throw(
             InputValidationError(
-                "center", center, "finite real values",
-                "All center coordinates must be finite (no NaN or Inf values)"
-            )
+                "center",
+                center,
+                "finite real values",
+                "All center coordinates must be finite (no NaN or Inf values)",
+            ),
         )
     end
 end
@@ -385,27 +405,33 @@ function validate_sample_range(sample_range::Float64)
     if !isfinite(sample_range)
         throw(
             InputValidationError(
-                "sample_range", sample_range, "finite positive value",
-                "Sample range must be a finite positive number"
-            )
+                "sample_range",
+                sample_range,
+                "finite positive value",
+                "Sample range must be a finite positive number",
+            ),
         )
     end
 
     if sample_range <= 0
         throw(
             InputValidationError(
-                "sample_range", sample_range, "sample_range > 0",
-                "Sample range must be positive"
-            )
+                "sample_range",
+                sample_range,
+                "sample_range > 0",
+                "Sample range must be positive",
+            ),
         )
     end
 
     if sample_range > MAX_SAMPLE_RANGE
         throw(
             InputValidationError(
-                "sample_range", sample_range, "reasonable range (≤ 1000)",
-                "Very large sample ranges may cause numerical issues. Consider rescaling your problem."
-            )
+                "sample_range",
+                sample_range,
+                "reasonable range (≤ 1000)",
+                "Very large sample ranges may cause numerical issues. Consider rescaling your problem.",
+            ),
         )
     end
 end
@@ -436,9 +462,11 @@ function validate_objective_function(f::Function, dim::Int, center::Vector{Float
         if !isa(result, Real)
             throw(
                 InputValidationError(
-                    "function", typeof(result), "real number",
-                    "Objective function must return a real number, got $(typeof(result))"
-                )
+                    "function",
+                    typeof(result),
+                    "real number",
+                    "Objective function must return a real number, got $(typeof(result))",
+                ),
             )
         end
 
@@ -446,9 +474,11 @@ function validate_objective_function(f::Function, dim::Int, center::Vector{Float
         if !isfinite(result)
             throw(
                 InputValidationError(
-                    "function", result, "finite real number",
-                    "Function returns $(result) at center point. Check function definition for singularities."
-                )
+                    "function",
+                    result,
+                    "finite real number",
+                    "Function returns $(result) at center point. Check function definition for singularities.",
+                ),
             )
         end
 
@@ -456,7 +486,7 @@ function validate_objective_function(f::Function, dim::Int, center::Vector{Float
         test_points = [
             center + 0.1 * randn(dim),
             center + 0.01 * randn(dim),
-            center - 0.1 * randn(dim)
+            center - 0.1 * randn(dim),
         ]
 
         for (i, point) in enumerate(test_points)
@@ -469,9 +499,11 @@ function validate_objective_function(f::Function, dim::Int, center::Vector{Float
             catch e
                 throw(
                     InputValidationError(
-                        "function", e, "evaluable at test points",
-                        "Function failed at test point $i: $e. Check function domain and implementation."
-                    )
+                        "function",
+                        e,
+                        "evaluable at test points",
+                        "Function failed at test point $i: $e. Check function domain and implementation.",
+                    ),
                 )
             end
         end
@@ -482,9 +514,11 @@ function validate_objective_function(f::Function, dim::Int, center::Vector{Float
         else
             throw(
                 InputValidationError(
-                    "function", e, "callable function",
-                    "Function evaluation failed: $e. Ensure function accepts Vector{Float64} input."
-                )
+                    "function",
+                    e,
+                    "callable function",
+                    "Function evaluation failed: $e. Ensure function accepts Vector{Float64} input.",
+                ),
             )
         end
     end
@@ -508,16 +542,19 @@ Check matrix conditioning and warn about potential numerical issues.
 # Throws
 - `NumericalError`: If matrix is severely ill-conditioned
 """
-function check_matrix_conditioning(matrix::Matrix{T}, operation_name::String;
-    max_condition::Float64 = 1e12) where {T}
+function check_matrix_conditioning(
+    matrix::Matrix{T},
+    operation_name::String;
+    max_condition::Float64 = 1e12,
+) where {T}
     if isempty(matrix)
         throw(
             NumericalError(
                 operation_name,
                 "Empty matrix encountered",
                 ["Check input data", "Verify problem setup"],
-                Dict("matrix_size" => size(matrix))
-            )
+                Dict("matrix_size" => size(matrix)),
+            ),
         )
     end
 
@@ -533,10 +570,10 @@ function check_matrix_conditioning(matrix::Matrix{T}, operation_name::String;
                         "Reduce polynomial degree",
                         "Increase number of samples",
                         "Check for duplicate sample points",
-                        "Try different basis (Chebyshev vs Legendre)"
+                        "Try different basis (Chebyshev vs Legendre)",
                     ],
-                    Dict("condition_number" => cond_num, "matrix_size" => size(matrix))
-                )
+                    Dict("condition_number" => cond_num, "matrix_size" => size(matrix)),
+                ),
             )
         end
 
@@ -549,10 +586,10 @@ function check_matrix_conditioning(matrix::Matrix{T}, operation_name::String;
                         "Reduce polynomial degree from current value",
                         "Increase sample count for better conditioning",
                         "Consider using regularization",
-                        "Try AdaptivePrecision for extended precision arithmetic"
+                        "Try AdaptivePrecision for extended precision arithmetic",
                     ],
-                    Dict("condition_number" => cond_num, "matrix_size" => size(matrix))
-                )
+                    Dict("condition_number" => cond_num, "matrix_size" => size(matrix)),
+                ),
             )
         elseif cond_num > 1e8
             @warn "Matrix is moderately ill-conditioned" operation = operation_name condition_number =
@@ -570,8 +607,8 @@ function check_matrix_conditioning(matrix::Matrix{T}, operation_name::String;
                     operation_name,
                     "Failed to compute matrix condition number: $e",
                     ["Check matrix for NaN/Inf values", "Verify matrix dimensions"],
-                    Dict("matrix_size" => size(matrix), "error" => string(e))
-                )
+                    Dict("matrix_size" => size(matrix), "error" => string(e)),
+                ),
             )
         end
     end
@@ -591,7 +628,7 @@ Validate polynomial coefficients for numerical issues.
 """
 function validate_polynomial_coefficients(
     coeffs::Vector{T},
-    operation_name::String
+    operation_name::String,
 ) where {T}
     if isempty(coeffs)
         throw(
@@ -599,8 +636,8 @@ function validate_polynomial_coefficients(
                 operation_name,
                 "Empty coefficient vector",
                 ["Check polynomial construction", "Verify input parameters"],
-                Dict("coefficient_count" => 0)
-            )
+                Dict("coefficient_count" => 0),
+            ),
         )
     end
 
@@ -617,14 +654,14 @@ function validate_polynomial_coefficients(
                     "Reduce polynomial degree",
                     "Increase sample count",
                     "Check objective function for singularities",
-                    "Try different precision type (AdaptivePrecision)"
+                    "Try different precision type (AdaptivePrecision)",
                 ],
                 Dict(
                     "total_coeffs" => length(coeffs),
                     "nan_count" => nan_count,
-                    "inf_count" => inf_count
-                )
-            )
+                    "inf_count" => inf_count,
+                ),
+            ),
         )
     end
 
@@ -638,13 +675,13 @@ function validate_polynomial_coefficients(
                 [
                     "Check objective function implementation",
                     "Verify sample range covers function variation",
-                    "Increase polynomial degree if function is complex"
+                    "Increase polynomial degree if function is complex",
                 ],
                 Dict(
                     "max_coefficient" => max_abs_coeff,
-                    "coefficient_count" => length(coeffs)
-                )
-            )
+                    "coefficient_count" => length(coeffs),
+                ),
+            ),
         )
     end
 
@@ -684,8 +721,8 @@ function check_memory_usage(operation_name::String; memory_limit_gb::Float64 = 8
                     "memory",
                     allocated_gb,
                     memory_limit_gb,
-                    "Reduce problem size (lower degree, fewer samples) or increase available memory"
-                )
+                    "Reduce problem size (lower degree, fewer samples) or increase available memory",
+                ),
             )
         elseif allocated_gb > 0.8 * memory_limit_gb
             @warn "High memory usage detected" operation = operation_name memory_gb =
@@ -731,7 +768,7 @@ function estimate_computation_complexity(dim::Int, degree::Int, sample_count::In
     # Estimate construction time (rough heuristic)
     estimated_construction_time_s = matrix_elements / 1e6  # Very rough estimate
 
-    complexity_info = Dict{String, Any}(
+    complexity_info = Dict{String,Any}(
         "estimated_terms" => estimated_terms,
         "matrix_elements" => matrix_elements,
         "matrix_memory_mb" => matrix_memory_mb,
@@ -740,56 +777,63 @@ function estimate_computation_complexity(dim::Int, degree::Int, sample_count::In
         "estimated_time_s" => estimated_construction_time_s,
         "warnings" => String[],
         "memory_feasible" => total_memory_mb < MAX_FEASIBLE_MEMORY_MB,
-        "time_feasible" => estimated_construction_time_s < MAX_FEASIBLE_CONSTRUCTION_TIME_S
+        "time_feasible" =>
+            estimated_construction_time_s < MAX_FEASIBLE_CONSTRUCTION_TIME_S,
     )
 
     # Add warnings for potentially expensive operations
     if estimated_terms > MAX_POLYNOMIAL_TERMS_WARNING
-        push!(complexity_info["warnings"],
-            "High polynomial complexity ($estimated_terms terms). Degree $degree in $(dim)D may be too high."
+        push!(
+            complexity_info["warnings"],
+            "High polynomial complexity ($estimated_terms terms). Degree $degree in $(dim)D may be too high.",
         )
     end
 
     if matrix_memory_mb > 500  # More conservative memory warning
-        push!(complexity_info["warnings"],
-            "Large Vandermonde matrix (~$(round(matrix_memory_mb))MB). Risk of memory exhaustion."
+        push!(
+            complexity_info["warnings"],
+            "Large Vandermonde matrix (~$(round(matrix_memory_mb))MB). Risk of memory exhaustion.",
         )
     end
 
     if total_memory_mb > 2000  # Total memory warning
-        push!(complexity_info["warnings"],
-            "Very high memory usage expected (~$(round(total_memory_mb))MB). Likely to cause system issues."
+        push!(
+            complexity_info["warnings"],
+            "Very high memory usage expected (~$(round(total_memory_mb))MB). Likely to cause system issues.",
         )
     end
 
     if system_complexity > 1e6  # Much more conservative
-        push!(complexity_info["warnings"],
-            "Expensive polynomial system solving expected. May take very long time.")
+        push!(
+            complexity_info["warnings"],
+            "Expensive polynomial system solving expected. May take very long time.",
+        )
     end
 
     if estimated_construction_time_s > 60  # Warn about long construction times
-        push!(complexity_info["warnings"],
-            "Long construction time expected (~$(round(estimated_construction_time_s))s). Consider reducing degree."
+        push!(
+            complexity_info["warnings"],
+            "Long construction time expected (~$(round(estimated_construction_time_s))s). Consider reducing degree.",
         )
     end
 
     # Add specific recommendations based on dimension and degree
     if dim >= 3 && degree >= 8
-        push!(complexity_info["warnings"],
-            "Degree $degree in $(dim)D is very expensive. Recommend degree ≤ 6 for dimensions ≥ 3."
+        push!(
+            complexity_info["warnings"],
+            "Degree $degree in $(dim)D is very expensive. Recommend degree ≤ 6 for dimensions ≥ 3.",
         )
     end
 
     if dim >= 4 && degree >= 6
-        push!(complexity_info["warnings"],
-            "Degree $degree in $(dim)D may exhaust memory. Recommend degree ≤ 4 for dimensions ≥ 4."
+        push!(
+            complexity_info["warnings"],
+            "Degree $degree in $(dim)D may exhaust memory. Recommend degree ≤ 4 for dimensions ≥ 4.",
         )
     end
 
     return complexity_info
 end
-
-
 
 # NOTE: suggest_parameter_adjustments and safe_execute_with_fallback were removed.
 # Automatic parameter adjustment and retry (fallback) mechanisms are forbidden.
@@ -817,13 +861,13 @@ mutable struct ComputationProgress
     progress::Float64
     estimated_time_remaining::Float64
     can_interrupt::Bool
-    cleanup_function::Union{Function, Nothing}
+    cleanup_function::Union{Function,Nothing}
     start_time::Float64
 
     function ComputationProgress(
         stage::String;
         can_interrupt::Bool = true,
-        cleanup_function = nothing
+        cleanup_function = nothing,
     )
         new(stage, 0.0, NaN, can_interrupt, cleanup_function, time())
     end
@@ -842,7 +886,7 @@ Update computation progress and estimate remaining time.
 function update_progress!(
     progress::ComputationProgress,
     new_progress::Float64,
-    stage::String = ""
+    stage::String = "",
 )
     progress.progress = clamp(new_progress, 0.0, 1.0)
 
@@ -876,12 +920,16 @@ Execute a function with progress monitoring and interruption handling.
 # Throws
 - `InterruptException`: If computation is interrupted by user
 """
-function with_progress_monitoring(f::Function, description::String;
-    interruptible::Bool = true, cleanup_function = nothing)
+function with_progress_monitoring(
+    f::Function,
+    description::String;
+    interruptible::Bool = true,
+    cleanup_function = nothing,
+)
     progress = ComputationProgress(
         description,
         can_interrupt = interruptible,
-        cleanup_function = cleanup_function
+        cleanup_function = cleanup_function,
     )
 
     try
@@ -932,8 +980,13 @@ Comprehensive validation of all TestInput parameters.
 # Throws
 - `InputValidationError`: If any parameter is invalid
 """
-function validate_test_input_parameters(f::Function, dim::Int, center::Vector{Float64},
-    sample_range::Float64, GN::Int)
+function validate_test_input_parameters(
+    f::Function,
+    dim::Int,
+    center::Vector{Float64},
+    sample_range::Float64,
+    GN::Int,
+)
     # Validate each parameter
     validate_dimension(dim)
     validate_center_vector(center, dim)
@@ -967,17 +1020,23 @@ Comprehensive validation of Constructor parameters.
 # Throws
 - `InputValidationError`: If any parameter is invalid
 """
-function validate_constructor_parameters(TR::TestInput, degree::Int;
-    basis::Symbol = :chebyshev, precision::PrecisionType = RationalPrecision)
+function validate_constructor_parameters(
+    TR::TestInput,
+    degree::Int;
+    basis::Symbol = :chebyshev,
+    precision::PrecisionType = RationalPrecision,
+)
     validate_polynomial_degree(degree, TR.GN)
 
     # Validate basis
     if !(basis in [:chebyshev, :legendre])
         throw(
             InputValidationError(
-                "basis", basis, ":chebyshev or :legendre",
-                "Only Chebyshev and Legendre bases are currently supported"
-            )
+                "basis",
+                basis,
+                ":chebyshev or :legendre",
+                "Only Chebyshev and Legendre bases are currently supported",
+            ),
         )
     end
 
@@ -1011,12 +1070,12 @@ Create standardized error context information.
 # Returns
 - `Dict{String,Any}`: Standardized context information
 """
-function create_error_context(operation::String, params::Dict{String, Any})
-    context = Dict{String, Any}(
+function create_error_context(operation::String, params::Dict{String,Any})
+    context = Dict{String,Any}(
         "operation" => operation,
         "timestamp" => Dates.now(),
         "julia_version" => string(VERSION),
-        "globtim_version" => string(pkgversion(Globtim))
+        "globtim_version" => string(pkgversion(Globtim)),
     )
 
     # Add relevant parameters
@@ -1034,7 +1093,7 @@ Log detailed error information for debugging purposes.
 - `error::GlobtimError`: The error that occurred
 - `context::Dict{String,Any}`: Context information
 """
-function log_error_details(error::GlobtimError, context::Dict{String, Any})
+function log_error_details(error::GlobtimError, context::Dict{String,Any})
     @error "Globtim Error Details" error_type = typeof(error) context = context
 
     if isa(error, NumericalError)
