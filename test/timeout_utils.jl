@@ -55,9 +55,8 @@ function with_timeout(f::Function, seconds::Real; label::String = "operation")
         if time() > deadline
             # Try to interrupt the task
             try
-                ; schedule(t, InterruptException(); error = true);
+                schedule(t, InterruptException(); error = true)
             catch
-                ;
             end
             # Give it a moment to clean up
             sleep(0.5)

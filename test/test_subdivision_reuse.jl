@@ -15,8 +15,8 @@ using Globtim:
 
         for x in ([0.3, -1.0, 0.7], [-0.5, 0.0, 0.5], [0.0, 0.0, 0.0])
             mapped = remap_parent_to_child(x, parent, child)
-            @test mapped[1] ≈ x[1] atol=1e-14
-            @test mapped[3] ≈ x[3] atol=1e-14
+            @test mapped[1] ≈ x[1] atol = 1e-14
+            @test mapped[3] ≈ x[3] atol = 1e-14
             # Dim 2 is rescaled by the cut: x_parent=0.0 → x_child=1.0 (right edge of left child).
         end
 
@@ -42,14 +42,14 @@ using Globtim:
 
             # Parent sample at the cut maps to x=+1 in left child and x=-1 in right child.
             cut_pt = [cut, 0.3]
-            @test remap_parent_to_child(cut_pt, parent, left)[1] ≈ 1.0 atol=1e-13
-            @test remap_parent_to_child(cut_pt, parent, right)[1] ≈ -1.0 atol=1e-13
+            @test remap_parent_to_child(cut_pt, parent, left)[1] ≈ 1.0 atol = 1e-13
+            @test remap_parent_to_child(cut_pt, parent, right)[1] ≈ -1.0 atol = 1e-13
             # Non-split dim is identity.
-            @test remap_parent_to_child(cut_pt, parent, left)[2] ≈ 0.3 atol=1e-13
-            @test remap_parent_to_child(cut_pt, parent, right)[2] ≈ 0.3 atol=1e-13
+            @test remap_parent_to_child(cut_pt, parent, left)[2] ≈ 0.3 atol = 1e-13
+            @test remap_parent_to_child(cut_pt, parent, right)[2] ≈ 0.3 atol = 1e-13
 
             # A point at the parent's left edge lives inside the left child only.
-            @test remap_parent_to_child([-1.0, 0.0], parent, left)[1] ≈ -1.0 atol=1e-13
+            @test remap_parent_to_child([-1.0, 0.0], parent, left)[1] ≈ -1.0 atol = 1e-13
         end
     end
 
@@ -112,8 +112,8 @@ using Globtim:
     @testset "combine_inherited_and_fresh — drops duplicates" begin
         inherited = [0.0 0.0; 0.5 0.5]
         fresh = [
-            0.5 0.5;  # duplicate of row 2 of inherited
-            -0.5 -0.5;
+            0.5 0.5  # duplicate of row 2 of inherited
+            -0.5 -0.5
             0.0 0.0
         ]  # duplicate of row 1 of inherited
         combined, new_idx = combine_inherited_and_fresh(inherited, fresh)

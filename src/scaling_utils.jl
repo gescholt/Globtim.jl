@@ -134,7 +134,7 @@ Returns `NaN` if the function norm is zero (constant zero function).
 function relative_l2_error(pol::ApproxPoly)
     dim = size(pol.grid, 2)
     # Grid has (GN+1)^dim points, so GN = round(N^(1/dim)) - 1
-    GN = round(Int, pol.N^(1/dim)) - 1
+    GN = round(Int, pol.N^(1 / dim)) - 1
     weights = compute_quadrature_weights(pol.basis, GN, dim)
     norm_F = sqrt(sum(abs2.(pol.z) .* weights))
     return norm_F > 0 ? pol.nrm / norm_F : NaN

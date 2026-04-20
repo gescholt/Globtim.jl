@@ -374,7 +374,7 @@ function run_standard_experiment(;
                     ),
                 )
             else
-                @error "Degree $degree failed" exception=(e, catch_backtrace())
+                @error "Degree $degree failed" exception = (e, catch_backtrace())
 
                 degree_result = DegreeResult(
                     degree,
@@ -510,9 +510,13 @@ function process_single_degree(
     end
 
     # Phase 2: Critical Point Solving + coordinate transformation
-    critical_points_array, solve_time =
-        solve_and_transform(pol, bounds; solver = solver, msolve_threads = msolve_threads,
-            msolve_timeout_seconds = msolve_timeout_seconds)
+    critical_points_array, solve_time = solve_and_transform(
+        pol,
+        bounds;
+        solver = solver,
+        msolve_threads = msolve_threads,
+        msolve_timeout_seconds = msolve_timeout_seconds,
+    )
     n_critical_points = length(critical_points_array)
     timing["critical_point_solving_time"] = solve_time
 

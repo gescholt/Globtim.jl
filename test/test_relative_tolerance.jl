@@ -4,7 +4,7 @@ using Globtim
 @testset "Relative L2 tolerance" begin
     @testset "nrm bug fix: pol.nrm is residual norm, not polynomial norm" begin
         # Construct a polynomial on a subdomain and verify pol.nrm = ||f-p||_L2
-        f(x) = sin(3*x[1]) * cos(3*x[2]) + 0.5
+        f(x) = sin(3 * x[1]) * cos(3 * x[2]) + 0.5
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
         tree = Globtim.SubdivisionTree(bounds; degree = 4)
         sd = tree.subdomains[1]
@@ -19,10 +19,10 @@ using Globtim
         residuals = sd.f_values .- poly_vals
         weight = prod(2.0 ./ (2 .* [4, 4] .+ 1))
         expected_nrm = sqrt(sum(abs2.(residuals)) * weight)
-        @test pol.nrm ≈ expected_nrm atol=1e-14
+        @test pol.nrm ≈ expected_nrm atol = 1e-14
 
         # And it should match l2_error
-        @test pol.nrm ≈ l2 atol=1e-14
+        @test pol.nrm ≈ l2 atol = 1e-14
     end
 
     @testset "relative_l2_error stored on Subdomain" begin
@@ -43,7 +43,7 @@ using Globtim
     @testset "relative_l2_error both paths produce small values for good approximation" begin
         # subdivision and scaling_utils use different quadrature weights
         # but both should indicate a good approximation
-        f(x) = sin(2*x[1]) + cos(3*x[2])
+        f(x) = sin(2 * x[1]) + cos(3 * x[2])
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
         tree = Globtim.SubdivisionTree(bounds; degree = 6)
         sd = tree.subdomains[1]
@@ -60,7 +60,7 @@ using Globtim
 
     @testset "convergence with relative tolerance mode" begin
         # Deuflhard-like smooth 2D function
-        f(x) = exp(-2*(x[1] - 0.5)^2 - 3*(x[2] + 0.3)^2)
+        f(x) = exp(-2 * (x[1] - 0.5)^2 - 3 * (x[2] + 0.3)^2)
         bounds = [(-1.2, 1.2), (-1.2, 1.2)]
 
         tree = Globtim.adaptive_refine(
@@ -86,7 +86,7 @@ using Globtim
     end
 
     @testset "absolute tolerance backward compatibility" begin
-        f(x) = sin(3*x[1]) * cos(3*x[2])
+        f(x) = sin(3 * x[1]) * cos(3 * x[2])
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
 
         tree = Globtim.adaptive_refine(
@@ -115,7 +115,7 @@ using Globtim
         sd = tree.subdomains[1]
 
         l2 = Globtim.estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
-        @test l2 ≈ 0.0 atol=1e-15
+        @test l2 ≈ 0.0 atol = 1e-15
         @test sd.relative_l2_error == 0.0  # Not NaN or Inf
     end
 
@@ -156,7 +156,7 @@ using Globtim
     end
 
     @testset "two_phase_refine with relative tolerance" begin
-        f(x) = sin(2*x[1]) * cos(x[2]) + 0.3*x[1]^2
+        f(x) = sin(2 * x[1]) * cos(x[2]) + 0.3 * x[1]^2
         bounds = [(-2.0, 2.0), (-2.0, 2.0)]
 
         tree = Globtim.two_phase_refine(

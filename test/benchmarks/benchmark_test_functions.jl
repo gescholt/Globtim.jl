@@ -48,7 +48,7 @@ function get_3d_test_functions()
         # Category 2: Dense Expansions (smooth functions)
         (
             name = "3D_runge",
-            func = x -> 1 / (1 + 25*(x[1]^2 + x[2]^2 + x[3]^2)),
+            func = x -> 1 / (1 + 25 * (x[1]^2 + x[2]^2 + x[3]^2)),
             expected_sparsity = 0.60,
             category = :dense_smooth,
             description = "3D Runge function - moderately dense",
@@ -62,7 +62,7 @@ function get_3d_test_functions()
         ),
         (
             name = "3D_oscillatory",
-            func = x -> sin(2π*x[1]) * cos(2π*x[2]) * sin(2π*x[3]),
+            func = x -> sin(2π * x[1]) * cos(2π * x[2]) * sin(2π * x[3]),
             expected_sparsity = 0.70,
             category = :dense_smooth,
             description = "Oscillatory product - dense Chebyshev expansion",
@@ -72,8 +72,8 @@ function get_3d_test_functions()
         (
             name = "3D_multiscale_peak",
             func = x ->
-                sin(2π*x[1]) * sin(2π*x[2]) * sin(2π*x[3]) +
-                5*exp(-50*(x[1]^2 + x[2]^2 + x[3]^2)),
+                sin(2π * x[1]) * sin(2π * x[2]) * sin(2π * x[3]) +
+                5 * exp(-50 * (x[1]^2 + x[2]^2 + x[3]^2)),
             expected_sparsity = 0.50,
             category = :multiscale,
             description = "Smooth background + localized peak",
@@ -84,7 +84,7 @@ function get_3d_test_functions()
                 x[1]^2 +
                 x[2]^2 +
                 x[3]^2 +
-                10*exp(-100*((x[1]-0.5)^2 + (x[2]-0.5)^2 + (x[3]-0.5)^2)),
+                10 * exp(-100 * ((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + (x[3] - 0.5)^2)),
             expected_sparsity = 0.40,
             category = :multiscale,
             description = "Quadratic + sharp peak - local refinement target",
@@ -94,7 +94,10 @@ function get_3d_test_functions()
         (
             name = "3D_rosenbrock",
             func = x ->
-                100*(x[2] - x[1]^2)^2 + (1 - x[1])^2 + 100*(x[3] - x[2]^2)^2 + (1 - x[2])^2,
+                100 * (x[2] - x[1]^2)^2 +
+                (1 - x[1])^2 +
+                100 * (x[3] - x[2]^2)^2 +
+                (1 - x[2])^2,
             expected_sparsity = 0.25,
             category = :challenging,
             description = "3D Rosenbrock - narrow valley, moderate sparsity",
@@ -105,8 +108,8 @@ function get_3d_test_functions()
                 a, b, c = 20, 0.2, 2π
                 d = 3
                 sum_sq = sum(xi^2 for xi in x)
-                sum_cos = sum(cos(c*xi) for xi in x)
-                -a * exp(-b * sqrt(sum_sq/d)) - exp(sum_cos/d) + a + exp(1)
+                sum_cos = sum(cos(c * xi) for xi in x)
+                -a * exp(-b * sqrt(sum_sq / d)) - exp(sum_cos / d) + a + exp(1)
             end,
             expected_sparsity = 0.75,
             category = :challenging,
@@ -147,21 +150,21 @@ function get_4d_test_functions()
         # Category 2: Dense Expansions
         (
             name = "4D_runge",
-            func = x -> 1 / (1 + 25*sum(x[i]^2 for i in 1:4)),
+            func = x -> 1 / (1 + 25 * sum(x[i]^2 for i in 1:4)),
             expected_sparsity = 0.50,
             category = :dense_smooth,
             description = "4D Runge function - will be dense",
         ),
         (
             name = "4D_exp_chain",
-            func = x -> exp(sum(x[i]*x[i+1] for i in 1:3)),
+            func = x -> exp(sum(x[i] * x[i+1] for i in 1:3)),
             expected_sparsity = 0.70,
             category = :dense_smooth,
             description = "Chained exponential interactions",
         ),
         (
             name = "4D_oscillatory_product",
-            func = x -> prod(sin(π*x[i]) for i in 1:4),
+            func = x -> prod(sin(π * x[i]) for i in 1:4),
             expected_sparsity = 0.75,
             category = :dense_smooth,
             description = "Product of sines - very dense",
@@ -171,7 +174,7 @@ function get_4d_test_functions()
         (
             name = "4D_multiscale_additive",
             func = x ->
-                sum(sin(2π*x[i]) for i in 1:4) + 5*exp(-50*sum(x[i]^2 for i in 1:4)),
+                sum(sin(2π * x[i]) for i in 1:4) + 5 * exp(-50 * sum(x[i]^2 for i in 1:4)),
             expected_sparsity = 0.45,
             category = :multiscale,
             description = "Additive oscillations + Gaussian peak",
@@ -179,7 +182,8 @@ function get_4d_test_functions()
         (
             name = "4D_quadratic_peak",
             func = x ->
-                sum(x[i]^2 for i in 1:4) + 10*exp(-100*sum((x[i]-0.3)^2 for i in 1:4)),
+                sum(x[i]^2 for i in 1:4) +
+                10 * exp(-100 * sum((x[i] - 0.3)^2 for i in 1:4)),
             expected_sparsity = 0.35,
             category = :multiscale,
             description = "Quadratic bowl + sharp feature",
@@ -191,7 +195,7 @@ function get_4d_test_functions()
             func = x -> begin
                 A = 10
                 n = 4
-                A*n + sum(xi^2 - A*cos(2π*xi) for xi in x)
+                A * n + sum(xi^2 - A * cos(2π * xi) for xi in x)
             end,
             expected_sparsity = 0.60,
             category = :challenging,
@@ -297,9 +301,9 @@ Print test function summary.
 function print_test_functions_summary(dim::Int)
     funcs = get_test_functions(dim)
 
-    println("=" ^ 70)
+    println("="^70)
     println("$(dim)D Test Functions Summary")
-    println("=" ^ 70)
+    println("="^70)
     println("Total functions: $(length(funcs))")
     println()
 

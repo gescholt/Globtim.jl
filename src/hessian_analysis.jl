@@ -35,10 +35,8 @@ function compute_hessians(f, points::Matrix{Float64})::Vector{Matrix{Float64}}
         catch e
             push!(failed_points, i)
             push!(failure_types, string(typeof(e)))
-            @debug "Point $i: Hessian computation failed with error: $e" exception=(
-                e,
-                catch_backtrace(),
-            )
+            @debug "Point $i: Hessian computation failed with error: $e" exception =
+                (e, catch_backtrace())
             # Fallback for points where Hessian computation fails
             hessians[i] = fill(NaN, n_dims, n_dims)
         end
@@ -47,9 +45,8 @@ function compute_hessians(f, points::Matrix{Float64})::Vector{Matrix{Float64}}
     # Report summary if any points failed
     if !isempty(failed_points)
         sample_points = first(failed_points, min(5, length(failed_points)))
-        @warn "Hessian computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(
-            failure_types,
-        )
+        @warn "Hessian computation failed for $(length(failed_points))/$n_points points" failed_points =
+            sample_points error_types = collect(failure_types)
     end
 
     return hessians

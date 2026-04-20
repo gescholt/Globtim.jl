@@ -43,7 +43,7 @@ end
 
     val = Globtim.parse_msolve_rational("170141183460469231731687303715884105727 / 2^127")
     @test isfinite(val)
-    @test val ≈ 170141183460469231731687303715884105727 / BigFloat(2)^127 atol=1e-10
+    @test val ≈ 170141183460469231731687303715884105727 / BigFloat(2)^127 atol = 1e-10
 
     @test Globtim.parse_msolve_rational("  3  /  2^2  ") == 0.75
 end
@@ -180,8 +180,8 @@ if HAS_MSOLVE
         println("-"^75)
 
         for (name, f, bnd) in benchmarks
-            center = [(bnd[1]+bnd[2])/2, (bnd[1]+bnd[2])/2]
-            sr = [(bnd[2]-bnd[1])/2, (bnd[2]-bnd[1])/2]
+            center = [(bnd[1] + bnd[2]) / 2, (bnd[1] + bnd[2]) / 2]
+            sr = [(bnd[2] - bnd[1]) / 2, (bnd[2] - bnd[1]) / 2]
             TR = TestInput(f, dim = 2, center = center, GN = 15, sample_range = sr)
 
             for deg in degrees
@@ -230,8 +230,8 @@ if HAS_MSOLVE
         println("-"^75)
 
         for (name, f, bnd) in benchmarks_3d
-            center = fill((bnd[1]+bnd[2])/2, 3)
-            sr = fill((bnd[2]-bnd[1])/2, 3)
+            center = fill((bnd[1] + bnd[2]) / 2, 3)
+            sr = fill((bnd[2] - bnd[1]) / 2, 3)
             TR = TestInput(f, dim = 3, center = center, GN = 8, sample_range = sr)
 
             for deg in degrees_3d
@@ -263,7 +263,7 @@ if HAS_MSOLVE
 
     @testset "MSOLVE-04: 4D timing sweep" begin
         # 4D at degree 4 only — higher degrees push msolve into minutes.
-        benchmarks_4d = [("Sphere", Sphere, (-5.12, 5.12)),]
+        benchmarks_4d = [("Sphere", Sphere, (-5.12, 5.12))]
 
         println("\n", "="^75)
         @printf(
@@ -279,8 +279,8 @@ if HAS_MSOLVE
         println("-"^75)
 
         for (name, f, bnd) in benchmarks_4d
-            center = fill((bnd[1]+bnd[2])/2, 4)
-            sr = fill((bnd[2]-bnd[1])/2, 4)
+            center = fill((bnd[1] + bnd[2]) / 2, 4)
+            sr = fill((bnd[2] - bnd[1]) / 2, 4)
             TR = TestInput(f, dim = 4, center = center, GN = 6, sample_range = sr)
 
             pol = Constructor(TR, 4, basis = :chebyshev, normalized = false)

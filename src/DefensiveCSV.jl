@@ -62,7 +62,7 @@ function defensive_csv_read(
     validate_columns::Bool = true,
     required_columns::Vector{String} = String[],
     detect_interface_issues::Bool = true,
-    max_file_size::Int = 1024*1024*1024,  # 1GB
+    max_file_size::Int = 1024 * 1024 * 1024,  # 1GB
     csv_options...,
 )
     start_time = time()

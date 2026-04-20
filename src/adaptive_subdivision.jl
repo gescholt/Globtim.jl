@@ -10,7 +10,7 @@
 using LinearAlgebra
 using Statistics
 using Base.Threads
-using Printf#==============================================================================##==============================================================================#
+using Printf #==============================================================================#
 
 #                           DATA STRUCTURES                                     #
 
@@ -270,7 +270,7 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symb
     length(sorted_leaves) > max_leaves &&
         println("... $(length(sorted_leaves) - max_leaves) more")
     nothing
-end#==============================================================================##==============================================================================#
+end #==============================================================================#
 
 #                       SUBDOMAIN OPERATIONS                                    #
 
@@ -332,7 +332,7 @@ end
 
 Convenience function to subdivide at the midpoint of dimension `dim`.
 """
-subdivide_midpoint(subdomain::Subdomain, dim::Int) = subdivide_domain(subdomain, dim, 0.0)#==============================================================================##==============================================================================#
+subdivide_midpoint(subdomain::Subdomain, dim::Int) = subdivide_domain(subdomain, dim, 0.0) #==============================================================================#
 
 #                     STATISTICAL DIMENSION SELECTION                           #
 
@@ -456,7 +456,7 @@ function evaluate_polynomial_at_samples(pol::ApproxPoly, samples::Matrix{Float64
 
     # Evaluate: V * coeffs
     return V * pol.coeffs
-end#==============================================================================##==============================================================================#
+end #==============================================================================#
 
 #                      DEGREE SPEC UTILITIES                                    #
 
@@ -489,7 +489,7 @@ function _extract_per_dim_degrees(degree, n_dim::Int)::Vector{Int}
     else
         error("Unsupported degree type: $(typeof(degree))")
     end
-end#==============================================================================##==============================================================================#
+end #==============================================================================#
 
 #                      ERROR ESTIMATION                                         #
 
@@ -709,7 +709,7 @@ function construct_polynomial_on_subdomain(
         false,
         cond(V),
     )
-end#==============================================================================##==============================================================================#
+end #==============================================================================#
 
 #                      OPTIMAL CUT SELECTION                                    #
 
@@ -805,7 +805,7 @@ end
 
 Always return midpoint cut (for comparison/testing).
 """
-find_optimal_cut_midpoint(subdomain::Subdomain, dim::Int) = 0.0#==============================================================================##==============================================================================#
+find_optimal_cut_midpoint(subdomain::Subdomain, dim::Int) = 0.0 #==============================================================================#
 
 #                      MAIN ADAPTIVE REFINEMENT                                 #
 
@@ -1221,7 +1221,7 @@ function adaptive_refine(
     )
 
     return tree
-end#==============================================================================##==============================================================================#
+end #==============================================================================#
 
 #                      TWO-PHASE REFINEMENT                                     #
 

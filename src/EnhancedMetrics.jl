@@ -176,7 +176,7 @@ function get_git_commit_hash()
     try
         return readchomp(`git rev-parse HEAD`)
     catch e
-        @debug "Could not get git commit hash" exception=(e, catch_backtrace())
+        @debug "Could not get git commit hash" exception = (e, catch_backtrace())
         return "unknown"
     end
 end
@@ -190,7 +190,7 @@ function get_git_branch()
     try
         return readchomp(`git rev-parse --abbrev-ref HEAD`)
     catch e
-        @debug "Could not get git branch" exception=(e, catch_backtrace())
+        @debug "Could not get git branch" exception = (e, catch_backtrace())
         return "unknown"
     end
 end

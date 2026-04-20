@@ -28,7 +28,11 @@ the whole job on wall-time anyway.
 
 For the msolve OS process use the process-level kill path in `_solve_msolve` instead.
 """
-function with_solver_timeout(f::Function, seconds::Union{Nothing,Real}; label::String = "solver")
+function with_solver_timeout(
+    f::Function,
+    seconds::Union{Nothing,Real};
+    label::String = "solver",
+)
     seconds === nothing && return f()
     limit = Float64(seconds)
     ch = Channel{Tuple{Symbol,Any}}(1)

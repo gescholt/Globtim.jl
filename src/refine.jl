@@ -154,10 +154,8 @@ function compute_gradients(f, points::Matrix{Float64})::Vector{Float64}
         catch e
             push!(failed_points, i)
             push!(failure_types, string(typeof(e)))
-            @debug "Point $i: Gradient computation failed with error: $e" exception=(
-                e,
-                catch_backtrace(),
-            )
+            @debug "Point $i: Gradient computation failed with error: $e" exception =
+                (e, catch_backtrace())
             # Fallback for points where gradient computation fails
             grad_norms[i] = NaN
         end
@@ -166,9 +164,8 @@ function compute_gradients(f, points::Matrix{Float64})::Vector{Float64}
     # Report summary if any points failed
     if !isempty(failed_points)
         sample_points = first(failed_points, min(5, length(failed_points)))
-        @warn "Gradient computation failed for $(length(failed_points))/$n_points points" failed_points=sample_points error_types=collect(
-            failure_types,
-        )
+        @warn "Gradient computation failed for $(length(failed_points))/$n_points points" failed_points =
+            sample_points error_types = collect(failure_types)
     end
 
     return grad_norms
@@ -447,7 +444,7 @@ function _refine_critical_points!(
             converged = optim_converged && within_bounds
 
             if verbose
-                green_check = "\e[32m✓\e[0m";
+                green_check = "\e[32m✓\e[0m"
                 red_cross = "\e[31m✗\e[0m"
                 println(
                     converged ? "Optimization has converged within bounds: $green_check" :
@@ -831,10 +828,8 @@ function enhanced_bfgs_refinement(
         grad = try
             ForwardDiff.gradient(objective_function, refined_point)
         catch e
-            @warn "Gradient computation failed after refinement" exception=(
-                e,
-                catch_backtrace(),
-            )
+            @warn "Gradient computation failed after refinement" exception =
+                (e, catch_backtrace())
             fill(NaN, length(refined_point))
         end
 

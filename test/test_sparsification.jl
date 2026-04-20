@@ -68,7 +68,7 @@ using LinearAlgebra
 
         # Test coefficient-based L2 norm with modified coefficients
         sparse_coeffs = copy(pol.coeffs)
-        sparse_coeffs[abs.(sparse_coeffs) .< 1e-6] .= 0
+        sparse_coeffs[abs.(sparse_coeffs).<1e-6] .= 0
         l2_coeffs = compute_l2_norm_coeffs(pol, sparse_coeffs)
         @test l2_coeffs >= 0.0
         @test isfinite(l2_coeffs)

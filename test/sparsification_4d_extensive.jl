@@ -183,7 +183,7 @@ l2_grid_fine = compute_l2_norm(mono6, domain6, n_points = 25)
 
 # Method 3: Modified coefficients
 sparse_coeffs = copy(pol6.coeffs)
-sparse_coeffs[abs.(sparse_coeffs) .< 1e-6] .= 0
+sparse_coeffs[abs.(sparse_coeffs).<1e-6] .= 0
 l2_coeffs = compute_l2_norm_coeffs(pol6, sparse_coeffs)
 
 println("\nL2-norm computation methods:")

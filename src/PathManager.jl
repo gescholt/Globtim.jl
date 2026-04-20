@@ -456,7 +456,8 @@ function create_experiment_dir(
         error("Experiment directory is not writable: '$path'")
     end
 
-    @info "Created experiment directory" path=path objective=objective_name experiment_id=experiment_id
+    @info "Created experiment directory" path = path objective = objective_name experiment_id =
+        experiment_id
 
     return abspath(path)
 end
@@ -864,7 +865,7 @@ function register_experiment(output_dir::String, metadata::Dict{String,Any})::St
         JSON.print(io, data, 2)
     end
 
-    @info "Experiment session registered" session_file=session_file
+    @info "Experiment session registered" session_file = session_file
 
     return session_file
 end
@@ -979,7 +980,7 @@ function finalize_experiment(output_dir::String, success::Bool, message::String 
         JSON.print(io, data, 2)
     end
 
-    @info "Experiment finalized" status=data["status"] output_dir=output_dir
+    @info "Experiment finalized" status = data["status"] output_dir = output_dir
 end
 
 # =============================================================================
@@ -998,7 +999,7 @@ function _is_writable(path::String)::Bool
         rm(test_file)
         return true
     catch e
-        @debug "Directory not writable" path exception=(e, catch_backtrace())
+        @debug "Directory not writable" path exception = (e, catch_backtrace())
         return false
     end
 end

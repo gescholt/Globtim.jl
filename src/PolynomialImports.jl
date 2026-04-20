@@ -76,10 +76,8 @@ function ensure_polyvar()
         return true
     catch e
         # @polyvar not available, try to import it
-        @debug "@polyvar not yet available, attempting import" exception=(
-            e,
-            catch_backtrace(),
-        )
+        @debug "@polyvar not yet available, attempting import" exception =
+            (e, catch_backtrace())
     end
 
     if !DYNAMIC_POLYNOMIALS_AVAILABLE

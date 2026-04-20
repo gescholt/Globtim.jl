@@ -65,8 +65,7 @@ function run_single_benchmark(
 
     # Phase 1: Baseline Construction
     if verbose
-        ;
-        println("Phase 1: Baseline construction...");
+        println("Phase 1: Baseline construction...")
     end
 
     TR = TestInput(f, dim = dim, center = zeros(dim), sample_range = 1.0)
@@ -86,8 +85,7 @@ function run_single_benchmark(
 
     # Phase 2: Simple Truncation
     if verbose
-        ;
-        println("\nPhase 2: Simple truncation...");
+        println("\nPhase 2: Simple truncation...")
     end
 
     t_truncation = @elapsed begin
@@ -112,8 +110,7 @@ function run_single_benchmark(
 
     # Phase 3: Re-optimization (Float64)
     if verbose
-        ;
-        println("\nPhase 3: Re-optimization (Float64)...");
+        println("\nPhase 3: Re-optimization (Float64)...")
     end
 
     t_reopt_f64 = @elapsed begin
@@ -140,8 +137,7 @@ function run_single_benchmark(
 
     # Phase 4: Re-optimization (BigFloat)
     if verbose
-        ;
-        println("\nPhase 4: Re-optimization (BigFloat)...");
+        println("\nPhase 4: Re-optimization (BigFloat)...")
     end
 
     t_reopt_bf = @elapsed begin
@@ -168,11 +164,10 @@ function run_single_benchmark(
 
     # Phase 5: Accuracy Evaluation
     if verbose
-        ;
-        println("\nPhase 5: Accuracy evaluation...");
+        println("\nPhase 5: Accuracy evaluation...")
     end
 
-    test_grid = generate_test_grid(dim, Int(round(n_test_points^(1/dim))))
+    test_grid = generate_test_grid(dim, Int(round(n_test_points^(1 / dim))))
 
     errors_trunc = [abs(f(pt) - result_trunc.polynomial(pt...)) for pt in test_grid]
     errors_f64 = [abs(f(pt) - result_f64.polynomial(pt...)) for pt in test_grid]
@@ -195,8 +190,7 @@ function run_single_benchmark(
 
     # Phase 6: Evaluation Speed
     if verbose
-        ;
-        println("\nPhase 6: Evaluation speed test...");
+        println("\nPhase 6: Evaluation speed test...")
     end
 
     eval_points = generate_random_test_points(dim, n_eval_points)
@@ -204,22 +198,18 @@ function run_single_benchmark(
     # Dense baseline
     mono_dense = to_exact_monomial_basis(pol_baseline)
     t_eval_dense = @elapsed for pt in eval_points
-        ;
-        mono_dense(pt...);
+        mono_dense(pt...)
     end
 
     # Sparse variants
     t_eval_trunc = @elapsed for pt in eval_points
-        ;
-        result_trunc.polynomial(pt...);
+        result_trunc.polynomial(pt...)
     end
     t_eval_f64 = @elapsed for pt in eval_points
-        ;
-        result_f64.polynomial(pt...);
+        result_f64.polynomial(pt...)
     end
     t_eval_bf = @elapsed for pt in eval_points
-        ;
-        result_bf.polynomial(pt...);
+        result_bf.polynomial(pt...)
     end
 
     speedup_trunc = t_eval_dense / t_eval_trunc
@@ -349,7 +339,8 @@ function run_full_benchmark(config::BenchmarkConfig = default_benchmark_config()
                         push!(results, DataFrame(result))
 
                     catch e
-                        @error "Test failed: $(test_func.name), dim=$dim, deg=$degree, thr=$threshold" exception=e
+                        @error "Test failed: $(test_func.name), dim=$dim, deg=$degree, thr=$threshold" exception =
+                            e
                     end
                 end
             end
@@ -437,7 +428,7 @@ function generate_comparison_report(results::DataFrame)
     println("\n## Breakdown by Function Category\n")
 
     for cat in unique(results.category)
-        cat_results = results[results.category .== cat, :]
+        cat_results = results[results.category.==cat, :]
         n_cat = nrow(cat_results)
 
         println("Category: $cat ($n_cat cases)")
@@ -455,7 +446,7 @@ function generate_comparison_report(results::DataFrame)
     println("\n## Breakdown by Dimension\n")
 
     for dim in sort(unique(results.dimension))
-        dim_results = results[results.dimension .== dim, :]
+        dim_results = results[results.dimension.==dim, :]
 
         println("Dimension: $(dim)D ($(nrow(dim_results)) cases)")
         println(
@@ -473,7 +464,7 @@ function generate_comparison_report(results::DataFrame)
     println("\n## Recommendations\n")
 
     # Find cases where re-optimization helps most
-    significant_improvement = results[results.l2_improvement_bf .> 0.05, :]
+    significant_improvement = results[results.l2_improvement_bf.>0.05, :]
 
     if nrow(significant_improvement) > 0
         println("✓ Re-optimization recommended for:")

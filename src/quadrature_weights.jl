@@ -36,11 +36,11 @@ function chebyshev_clenshaw_curtis_weights(GN::Int)
         for k in 0:div(GN, 2)
             if k == 0
                 # Special case for k=0
-                w += 1.0 / (1 - 4*k^2)
-            elseif 2*k <= GN
+                w += 1.0 / (1 - 4 * k^2)
+            elseif 2 * k <= GN
                 # General case
                 b_k = (k == div(GN, 2) && GN % 2 == 0) ? 1.0 : 2.0
-                w += b_k * cos(2*k*(2*j+1)*π/(2*GN+2)) / (1 - 4*k^2)
+                w += b_k * cos(2 * k * (2 * j + 1) * π / (2 * GN + 2)) / (1 - 4 * k^2)
             end
         end
         weights[j+1] = 2 * w / (GN + 1)

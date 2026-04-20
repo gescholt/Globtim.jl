@@ -636,11 +636,11 @@ function load_and_validate_experiment_data(
         filepath;
         required_columns = [:x1, :x2, :x3, :x4, :z, :experiment_id],
         expected_types = Dict(
-            :x1=>Float64,
-            :x2=>Float64,
-            :x3=>Float64,
-            :x4=>Float64,
-            :z=>Float64,
+            :x1 => Float64,
+            :x2 => Float64,
+            :x3 => Float64,
+            :x4 => Float64,
+            :z => Float64,
         ),
     )
 

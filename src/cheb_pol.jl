@@ -503,10 +503,10 @@ function analyze_coefficient_distribution(poly)
     # Statistics
     n_total = length(sorted_mags)
     max_coeff = maximum(sorted_mags)
-    min_coeff = minimum(sorted_mags[sorted_mags .> 0])
+    min_coeff = minimum(sorted_mags[sorted_mags.>0])
 
     # Find natural gaps in coefficient magnitudes (potential truncation points)
-    log_mags = log10.(sorted_mags[sorted_mags .> 0])
+    log_mags = log10.(sorted_mags[sorted_mags.>0])
     gaps = diff(log_mags)
     large_gaps = findall(gaps .< -2.0)  # Gaps of more than 2 orders of magnitude
 

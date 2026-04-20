@@ -107,9 +107,9 @@ function evaluate(poly::ApproxPoly, x::AbstractVector{T})::T where {T<:Real}
             end
 
             for d in 2:max_degree
-                P_next = ((2d-1) * xk * P_curr - (d-1) * P_prev) / d
+                P_next = ((2d - 1) * xk * P_curr - (d - 1) * P_prev) / d
                 if poly.normalized
-                    basis_evals[k, d+1] = P_next * sqrt((2d+1) / 2)
+                    basis_evals[k, d+1] = P_next * sqrt((2d + 1) / 2)
                 else
                     basis_evals[k, d+1] = P_next
                 end

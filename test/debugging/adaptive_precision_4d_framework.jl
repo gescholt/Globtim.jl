@@ -38,7 +38,7 @@ const BENCHMARKTOOLS_AVAILABLE = try
     using BenchmarkTools
     true
 catch e
-    @debug "BenchmarkTools not available" exception=(e, catch_backtrace())
+    @debug "BenchmarkTools not available" exception = (e, catch_backtrace())
     false
 end
 
@@ -339,7 +339,7 @@ function run_4d_precision_comparison(config = STANDARD_CONFIG)
                         coeff_mags_adaptive = [abs(Float64(c)) for c in coeffs_adaptive]
                         result[:coeff_range_adaptive] =
                             maximum(coeff_mags_adaptive) /
-                            minimum(coeff_mags_adaptive[coeff_mags_adaptive .> 1e-15])
+                            minimum(coeff_mags_adaptive[coeff_mags_adaptive.>1e-15])
                     end
 
                     push!(results, result)
@@ -608,9 +608,9 @@ function optimize_4d_accuracy(func_name = :shubert; max_degree = 12, max_samples
     println("="^50)
 
     # Parameter ranges to test
-    degrees = [4, 6, 8, 10, 12][1:(findfirst(x->x>max_degree, [4, 6, 8, 10, 12, 14])-1)]
+    degrees = [4, 6, 8, 10, 12][1:(findfirst(x -> x > max_degree, [4, 6, 8, 10, 12, 14])-1)]
     sample_sizes = [50, 100, 200, 300, 500][1:(findfirst(
-        x->x>max_samples,
+        x -> x > max_samples,
         [50, 100, 200, 300, 500, 1000],
     )-1)]
 

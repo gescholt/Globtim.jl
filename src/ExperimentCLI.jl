@@ -551,44 +551,34 @@ function parse_experiment_args(args::Vector = ARGS; defaults::NamedTuple = Named
     # Build kwargs dict: start with provided defaults, then override with parsed values
     kwargs = Dict{Symbol,Any}(pairs(defaults))
     if domain_size !== nothing
-        ;
-        kwargs[:domain_size] = domain_size;
+        kwargs[:domain_size] = domain_size
     end
     if GN !== nothing
-        ;
-        kwargs[:GN] = GN;
+        kwargs[:GN] = GN
     end
     if degree_range !== nothing
-        ;
-        kwargs[:degree_range] = degree_range;
+        kwargs[:degree_range] = degree_range
     end
     if max_time !== nothing
-        ;
-        kwargs[:max_time] = max_time;
+        kwargs[:max_time] = max_time
     end
     if basis !== nothing
-        ;
-        kwargs[:basis] = basis;
+        kwargs[:basis] = basis
     end
     if truncation_threshold !== nothing
-        ;
-        kwargs[:truncation_threshold] = truncation_threshold;
+        kwargs[:truncation_threshold] = truncation_threshold
     end
     if truncation_mode !== nothing
-        ;
-        kwargs[:truncation_mode] = truncation_mode;
+        kwargs[:truncation_mode] = truncation_mode
     end
     if enable_gradients !== nothing
-        ;
-        kwargs[:enable_gradient_computation] = enable_gradients;
+        kwargs[:enable_gradient_computation] = enable_gradients
     end
     if enable_hessians !== nothing
-        ;
-        kwargs[:enable_hessian_computation] = enable_hessians;
+        kwargs[:enable_hessian_computation] = enable_hessians
     end
     if enable_bfgs !== nothing
-        ;
-        kwargs[:enable_bfgs_refinement] = enable_bfgs;
+        kwargs[:enable_bfgs_refinement] = enable_bfgs
     end
 
     # Construct ExperimentParams (will use built-in defaults for missing values)
@@ -601,9 +591,9 @@ end
 Pretty-print experiment parameters.
 """
 function print_params(io::IO, params::ExperimentParams; title = "Experiment Parameters")
-    println(io, "=" ^ 60)
+    println(io, "="^60)
     println(io, title)
-    println(io, "=" ^ 60)
+    println(io, "="^60)
     println(io, "  Domain size:     ±$(params.domain_size)")
     println(io, "  Grid samples:    GN=$(params.GN) ($(params.GN^4) points in 4D)")
     println(
@@ -618,7 +608,7 @@ function print_params(io::IO, params::ExperimentParams; title = "Experiment Para
             "  Truncation:      threshold=$(params.truncation_threshold) ($(params.truncation_mode))",
         )
     end
-    println(io, "=" ^ 60)
+    println(io, "="^60)
 end
 
 # Convenience: print to stdout

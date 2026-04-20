@@ -53,7 +53,7 @@ function solve_tree_leaves(
             )
             append!(all_cps, cps)
         catch e
-            @warn "solve_tree_leaves: HC solve failed on leaf $leaf_id" exception=e
+            @warn "solve_tree_leaves: HC solve failed on leaf $leaf_id" exception = e
         end
     end
 
