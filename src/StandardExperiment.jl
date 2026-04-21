@@ -92,7 +92,7 @@ are excluded because they do not affect the raw critical points exported here.
 """
 function _experiment_config_hash(
     experiment_config,
-    bounds::Vector{Tuple{Float64, Float64}},
+    bounds::Vector{Tuple{Float64,Float64}},
     objective_name::String,
     solver::Symbol,
     msolve_threads::Int,
@@ -129,21 +129,25 @@ function _load_resumable_checkpoint(output_dir::String, config_hash::UInt)
         data = JLD2.load(checkpoint_path)
         stored_hash = get(data, "config_hash", nothing)
         if stored_hash === nothing
-            @warn "Checkpoint has no config_hash; ignoring (pre-resume-support file)" path=checkpoint_path
+            @warn "Checkpoint has no config_hash; ignoring (pre-resume-support file)" path =
+                checkpoint_path
             return []
         end
         if stored_hash != config_hash
-            @warn "Checkpoint config_hash mismatch; ignoring and starting fresh" path=checkpoint_path stored=stored_hash current=config_hash
+            @warn "Checkpoint config_hash mismatch; ignoring and starting fresh" path =
+                checkpoint_path stored = stored_hash current = config_hash
             return []
         end
         results = get(data, "degree_results", nothing)
         if !(results isa Vector)
-            @warn "Checkpoint missing degree_results or wrong type; ignoring" path=checkpoint_path
+            @warn "Checkpoint missing degree_results or wrong type; ignoring" path =
+                checkpoint_path
             return []
         end
         return results
     catch e
-        @warn "Failed to load checkpoint; starting fresh" path=checkpoint_path exception=(e, catch_backtrace())
+        @warn "Failed to load checkpoint; starting fresh" path = checkpoint_path exception =
+            (e, catch_backtrace())
         return []
     end
 end
@@ -154,13 +158,14 @@ end
 Persist in-progress results so a later invocation can resume. Stores both
 `degree_results` and the `config_hash` used to validate compatibility.
 """
-function _save_checkpoint(
-    output_dir::String,
-    degree_results::Vector,
-    config_hash::UInt,
-)
+function _save_checkpoint(output_dir::String, degree_results::Vector, config_hash::UInt)
     checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
-    jldsave(checkpoint_path; degree_results=degree_results, config_hash=config_hash, warn=false)
+    jldsave(
+        checkpoint_path;
+        degree_results = degree_results,
+        config_hash = config_hash,
+        warn = false,
+    )
     return nothing
 end
 
@@ -395,17 +400,24 @@ function run_standard_experiment(;
 
     # Resume: if a compatible checkpoint exists, reuse successful degrees.
     # Failed degrees are retried (user may have restarted to fix whatever broke).
-    config_hash = _experiment_config_hash(experiment_config, bounds, objective_name, solver, msolve_threads)
+    config_hash = _experiment_config_hash(
+        experiment_config,
+        bounds,
+        objective_name,
+        solver,
+        msolve_threads,
+    )
     resumed = _load_resumable_checkpoint(output_dir, config_hash)
     resumed_success = filter(r -> r.status == "success", resumed)
     completed_degrees = Set(r.degree for r in resumed_success)
     if !isempty(resumed_success)
-        @info "Resuming from checkpoint: $(length(resumed_success)) degree(s) already complete" degrees=sort(collect(completed_degrees))
+        @info "Resuming from checkpoint: $(length(resumed_success)) degree(s) already complete" degrees =
+            sort(collect(completed_degrees))
     end
 
     # Process each degree (skipping any already completed successfully on a prior run)
     degree_results = copy(resumed_success)
-    total_critical_points = sum(r.n_critical_points for r in resumed_success; init=0)
+    total_critical_points = sum(r.n_critical_points for r in resumed_success; init = 0)
 
     for degree in experiment_config.degree_range
         if degree in completed_degrees
