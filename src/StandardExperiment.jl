@@ -76,6 +76,95 @@ export run_standard_experiment, DegreeResult, solve_and_transform
 using ..PathManager
 
 """
+    _experiment_config_hash(experiment_config, bounds, objective_name, solver, msolve_threads) -> UInt
+
+Stable fingerprint of the inputs that determine per-degree results. Used to decide
+whether a `checkpoint.jld2` left behind by a previous run is compatible with the
+current invocation.
+
+Only fields that change which polynomial/CP would be produced are included:
+- `GN`, `basis`, `domain_size`, `truncation_threshold`, `truncation_mode`
+- `bounds`, `objective_name`, `solver`, `msolve_threads`
+
+`degree_range` is intentionally excluded so a user can widen the range on resume.
+Optimization tolerances (`optim_*`, `max_time`, `max_iterations`, feature toggles)
+are excluded because they do not affect the raw critical points exported here.
+"""
+function _experiment_config_hash(
+    experiment_config,
+    bounds::Vector{Tuple{Float64, Float64}},
+    objective_name::String,
+    solver::Symbol,
+    msolve_threads::Int,
+)
+    h = hash((
+        experiment_config.GN,
+        Symbol(experiment_config.basis),
+        experiment_config.domain_size,
+        experiment_config.truncation_threshold,
+        Symbol(experiment_config.truncation_mode),
+        bounds,
+        objective_name,
+        solver,
+        msolve_threads,
+    ))
+    return h
+end
+
+"""
+    _load_resumable_checkpoint(output_dir, config_hash) -> Vector{DegreeResult}
+
+Return the `degree_results` from a compatible `checkpoint.jld2` in `output_dir`,
+or an empty vector if no checkpoint exists / it is incompatible / it is corrupt.
+
+A checkpoint is considered compatible only when the stored `config_hash` matches
+the current one. Mismatches are logged and the checkpoint is ignored (not deleted)
+so the user can inspect it.
+"""
+function _load_resumable_checkpoint(output_dir::String, config_hash::UInt)
+    checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
+    isfile(checkpoint_path) || return []
+
+    try
+        data = JLD2.load(checkpoint_path)
+        stored_hash = get(data, "config_hash", nothing)
+        if stored_hash === nothing
+            @warn "Checkpoint has no config_hash; ignoring (pre-resume-support file)" path=checkpoint_path
+            return []
+        end
+        if stored_hash != config_hash
+            @warn "Checkpoint config_hash mismatch; ignoring and starting fresh" path=checkpoint_path stored=stored_hash current=config_hash
+            return []
+        end
+        results = get(data, "degree_results", nothing)
+        if !(results isa Vector)
+            @warn "Checkpoint missing degree_results or wrong type; ignoring" path=checkpoint_path
+            return []
+        end
+        return results
+    catch e
+        @warn "Failed to load checkpoint; starting fresh" path=checkpoint_path exception=(e, catch_backtrace())
+        return []
+    end
+end
+
+"""
+    _save_checkpoint(output_dir, degree_results, config_hash)
+
+Persist in-progress results so a later invocation can resume. Stores both
+`degree_results` and the `config_hash` used to validate compatibility.
+"""
+function _save_checkpoint(
+    output_dir::String,
+    degree_results::Vector,
+    config_hash::UInt,
+)
+    checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
+    jldsave(checkpoint_path; degree_results=degree_results, config_hash=config_hash, warn=false)
+    return nothing
+end
+
+"""
 Result structure for a single degree's computation.
 
 Simplified structure for Phase 2: Refinement moved to globtimpostprocessing.
@@ -304,11 +393,24 @@ function run_standard_experiment(;
         sample_range = sample_range,
     )
 
-    # Process each degree
-    degree_results = DegreeResult[]
-    total_critical_points = 0
+    # Resume: if a compatible checkpoint exists, reuse successful degrees.
+    # Failed degrees are retried (user may have restarted to fix whatever broke).
+    config_hash = _experiment_config_hash(experiment_config, bounds, objective_name, solver, msolve_threads)
+    resumed = _load_resumable_checkpoint(output_dir, config_hash)
+    resumed_success = filter(r -> r.status == "success", resumed)
+    completed_degrees = Set(r.degree for r in resumed_success)
+    if !isempty(resumed_success)
+        @info "Resuming from checkpoint: $(length(resumed_success)) degree(s) already complete" degrees=sort(collect(completed_degrees))
+    end
+
+    # Process each degree (skipping any already completed successfully on a prior run)
+    degree_results = copy(resumed_success)
+    total_critical_points = sum(r.n_critical_points for r in resumed_success; init=0)
 
     for degree in experiment_config.degree_range
+        if degree in completed_degrees
+            continue
+        end
         degree_start = time()
 
         try
@@ -334,13 +436,10 @@ function run_standard_experiment(;
 
             # Checkpoint: save accumulated results after each degree so partial
             # runs are recoverable if the job hits a wall-time limit.
-            checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
-            jldsave(checkpoint_path; degree_results = degree_results, warn = false)
+            _save_checkpoint(output_dir, degree_results, config_hash)
 
         catch e
             degree_time = time() - degree_start
-            checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
-
             if e isa SolverTimeoutError
                 @warn "Degree $degree timed out" limit = e.seconds elapsed = degree_time
 
@@ -376,6 +475,19 @@ function run_standard_experiment(;
             else
                 @error "Degree $degree failed" exception = (e, catch_backtrace())
 
+                # Capture rich error context for post-processing analysis
+                error_context = Dict{String,Any}(
+                    "error_message" => string(e),
+                    "error_type" => string(typeof(e)),
+                    "stacktrace" => string.(stacktrace(catch_backtrace())),
+                    "degree" => degree,
+                    "dimension" => length(bounds),
+                    "GN" => experiment_config.GN,
+                    "basis" => string(experiment_config.basis),
+                    "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
+                    "total_computation_time" => degree_time,
+                )
+
                 degree_result = DegreeResult(
                     degree,
                     "failed",
@@ -399,24 +511,18 @@ function run_standard_experiment(;
                     0.0,
                     degree_time,
                     output_dir,
-                    Dict{String,Any}(
-                        "error_message" => string(e),
-                        "error_type" => string(typeof(e)),
-                        "stacktrace" => string.(stacktrace(catch_backtrace())),
-                        "degree" => degree,
-                        "dimension" => length(bounds),
-                        "GN" => experiment_config.GN,
-                        "basis" => string(experiment_config.basis),
-                        "timestamp" => Dates.format(now(), "yyyy-mm-dd HH:MM:SS"),
-                        "total_computation_time" => degree_time,
-                    ),
+                    error_context,
                 )
             end
 
             push!(degree_results, degree_result)
-            jldsave(checkpoint_path; degree_results = degree_results, warn = false)
+            _save_checkpoint(output_dir, degree_results, config_hash)
         end
     end
+
+    # Keep the final ordering stable and matching experiment_config.degree_range
+    # so downstream consumers see results in the expected order.
+    sort!(degree_results, by = r -> r.degree)
 
     # Generate results summary
     total_time = sum(r.total_computation_time for r in degree_results)

@@ -117,6 +117,14 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_hc_solve_kwargs.jl") do
 end
 
 with_timeout(TIMEOUT_TESTFILE, label = "test_aqua.jl") do
+with_timeout(TIMEOUT_TESTFILE, label = "test_standard_experiment_resume.jl") do
+    include("test_standard_experiment_resume.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_trial_cut_reuse.jl") do
+    include("test_trial_cut_reuse.jl")
+end
+
     include("test_aqua.jl")
 end
 
@@ -152,4 +160,8 @@ end
 
 with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_inf_handling.jl") do
     include("test_subdivision_inf_handling.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_y0j_integration.jl") do
+    include("test_y0j_integration.jl")
 end

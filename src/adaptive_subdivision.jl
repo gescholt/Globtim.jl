@@ -496,7 +496,9 @@ end #===========================================================================
 """
     estimate_subdomain_error(f, subdomain::Subdomain, degree;
                              n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
-                             thread_evals::Bool=false)
+                             use_cache::Bool=true,
+                             thread_evals::Bool=false,
+                             inherit_from::Union{Nothing, Subdomain}=nothing)
 
 Estimate L2 approximation error on a subdomain.
 
@@ -508,10 +510,22 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
 - `degree`: Polynomial degree (or degree specification)
 - `n_samples_per_dim`: Grid points per dimension (0 = auto: 2×degree+1)
 - `basis`: Basis type (:chebyshev or :legendre)
+- `use_cache`: When `true`, return the cached L2 error if the subdomain already
+  has `polynomial`/`samples`/`f_values` populated at a compatible grid size (this
+  is how the trial-cut reuse from `find_optimal_cut_sparse` avoids redundant
+  polynomial construction on the split children). Set to `false` to force
+  re-evaluation.
 - `thread_evals`: When `true` and `Threads.nthreads() > 1`, evaluate grid
   points concurrently via `@spawn`-chunked tasks. Caller is responsible for
   passing a thread-safe `f` (e.g. an ODE objective that uses `remake` rather
   than in-place parameter mutation). `eval_progress` is ignored in this mode.
+- `inherit_from`: Optional parent `Subdomain`. When the parent has cached
+  `samples`/`f_values`, any parent sample that remaps inside this subdomain's
+  box is reused (its `f`-value is inherited), and `f` is evaluated only on
+  the fresh Chebyshev rows that don't coincide with an inherited point. The
+  least-squares solve uses the combined (non-tensor) sample set. This is the
+  y0j parent→child reuse integration point; see `subdivision_reuse.jl` for
+  the pure remap/dedupe helpers.
 
 # Returns
 - Estimated L2 error
@@ -519,15 +533,12 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
 # Side Effects
 Updates subdomain.l2_error, subdomain.polynomial, subdomain.samples, subdomain.f_values
 """
-function estimate_subdomain_error(
-    f,
-    subdomain::Subdomain,
-    degree;
-    n_samples_per_dim::Int = 0,
-    basis::Symbol = :chebyshev,
-    eval_progress::Union{Function,Nothing} = nothing,
-    thread_evals::Bool = false,
-)
+function estimate_subdomain_error(f, subdomain::Subdomain, degree;
+                                   n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
+                                   eval_progress::Union{Function,Nothing}=nothing,
+                                   use_cache::Bool=true,
+                                   thread_evals::Bool=false,
+                                   inherit_from::Union{Nothing, Subdomain}=nothing)
     n_dim = dimension(subdomain)
 
     # Determine per-dimension grid sizes (GN values; grid will have GN+1 points per dim)
@@ -539,54 +550,124 @@ function estimate_subdomain_error(
         per_dim_GN = 2 .* per_dim_degrees  # ~2× degree per dimension
     end
 
-    # Generate normalized grid in [-1, 1]^n
+    expected_n_samples = prod(per_dim_GN .+ 1)
+
+    # Reuse cached evaluation when the subdomain already has a polynomial built
+    # at a compatible grid size (e.g. a child populated by find_optimal_cut_sparse).
+    # We verify sample count rather than degree because only the grid determines
+    # the underlying evaluation cost we want to avoid.
+    if use_cache &&
+       subdomain.polynomial !== nothing &&
+       subdomain.samples !== nothing &&
+       subdomain.f_values !== nothing &&
+       size(subdomain.samples, 1) == expected_n_samples &&
+       isfinite(subdomain.l2_error)
+        return subdomain.l2_error
+    end
+
+    # Generate normalized Chebyshev grid in the child's [-1, 1]^n
     grid = if all(==(per_dim_GN[1]), per_dim_GN)
         generate_grid(n_dim, per_dim_GN[1], basis = basis)
     else
         generate_anisotropic_grid(per_dim_GN, basis = basis)
     end
+    fresh_grid = grid_to_matrix(grid)  # (n_fresh, n_dim) in child normalized coords
+    n_fresh = size(fresh_grid, 1)
 
-    # Convert to matrix format
-    # grid_to_matrix returns (n_samples × n_dim), but we need (n_dim × n_samples) for Vandermonde
-    # We'll keep samples as (n_samples × n_dim) for iteration, transpose for Vandermonde
-    grid_matrix = grid_to_matrix(grid)  # (n_samples, n_dim)
+    # y0j: inherit parent samples that remap inside this child's box.
+    # We split the work into `rows_to_eval` (indices into the combined sample
+    # matrix that need a fresh f-evaluation) and the remaining rows whose
+    # f-values are copied from the parent cache.
+    inherit_ok = inherit_from !== nothing &&
+                 inherit_from.samples !== nothing &&
+                 inherit_from.f_values !== nothing &&
+                 size(inherit_from.samples, 1) == length(inherit_from.f_values)
+    if inherit_ok
+        inside_idx = points_inside_child(inherit_from.samples, inherit_from, subdomain)
+    else
+        inside_idx = Int[]
+    end
 
-    # Evaluate function at physical coordinates
-    # Pre-allocate arrays to avoid per-iteration allocations (critical for 625+ evals in 4D)
+    if isempty(inside_idx)
+        # Standard path: no inheritable points → evaluate at every fresh row.
+        grid_matrix = fresh_grid
+        f_values = Vector{Float64}(undef, n_fresh)
+        rows_to_eval = 1:n_fresh
+        inherited_f_count = 0
+    else
+        inherited_samples = Matrix{Float64}(undef, length(inside_idx), n_dim)
+        @inbounds for (k, i) in enumerate(inside_idx)
+            inherited_samples[k, :] .=
+                remap_parent_to_child(view(inherit_from.samples, i, :), inherit_from, subdomain)
+        end
+        inherited_f = inherit_from.f_values[inside_idx]
+        # combined = [inherited; fresh[new_idx]] (new_idx ⊆ 1:n_fresh, no dups with inherited)
+        grid_matrix, new_idx = combine_inherited_and_fresh(inherited_samples, fresh_grid)
+        n_inh = size(inherited_samples, 1)
+        f_values = Vector{Float64}(undef, size(grid_matrix, 1))
+        @inbounds for k in 1:n_inh
+            f_values[k] = inherited_f[k]
+        end
+        rows_to_eval = (n_inh + 1):(n_inh + length(new_idx))
+        inherited_f_count = n_inh
+    end
     n_total = size(grid_matrix, 1)
-    n_dim = dimension(subdomain)
-    f_values = Vector{Float64}(undef, n_total)
 
+    # Map logical row index (into grid_matrix) → fresh grid index when we need
+    # the ORIGINAL normalized coordinates to compute physical f-input. For
+    # the inheritance path, fresh rows start at position n_inh+1 and refer to
+    # fresh_grid[new_idx[k]]; for the standard path, row i refers directly to
+    # grid_matrix[i, :] (which equals fresh_grid[i, :]).
+    if isempty(inside_idx)
+        eval_sample_source = grid_matrix
+        eval_sample_indices = 1:n_fresh  # positions within eval_sample_source
+    else
+        eval_sample_source = fresh_grid
+        eval_sample_indices = new_idx
+    end
+
+    # Evaluate function at physical coordinates. Pre-allocate x_physical buffer
+    # to avoid per-iteration allocations (critical for 625+ evals in 4D).
     if thread_evals && Threads.nthreads() > 1
-        # Threaded path: chunk the grid across tasks with a per-task x buffer.
-        # Per-task (not per-thread) avoids the Threads.threadid() pitfalls that
-        # break under task migration in Julia ≥ 1.7. eval_progress is skipped
-        # here because most callback sinks (stdout, TUI) are not thread-safe.
-        chunk_size = max(1, cld(n_total, 4 * Threads.nthreads()))
-        @sync for chunk_start in 1:chunk_size:n_total
-            chunk_end = min(chunk_start + chunk_size - 1, n_total)
+        # Threaded path: chunk the eval work across tasks with a per-task x
+        # buffer. Per-task (not per-thread) avoids the Threads.threadid()
+        # pitfalls that break under task migration in Julia ≥ 1.7.
+        # eval_progress is skipped because most callback sinks are not
+        # thread-safe.
+        n_eval = length(eval_sample_indices)
+        chunk_size = max(1, cld(n_eval, 4 * Threads.nthreads()))
+        @sync for chunk_start in 1:chunk_size:n_eval
+            chunk_end = min(chunk_start + chunk_size - 1, n_eval)
             Threads.@spawn begin
                 x_buf = Vector{Float64}(undef, n_dim)
-                for i in chunk_start:chunk_end
+                for k in chunk_start:chunk_end
+                    src_i = eval_sample_indices[k]
+                    dst_i = rows_to_eval[k]
                     @inbounds for d in 1:n_dim
-                        x_buf[d] =
-                            subdomain.center[d] +
-                            grid_matrix[i, d] * subdomain.half_widths[d]
+                        x_buf[d] = subdomain.center[d] +
+                                   eval_sample_source[src_i, d] * subdomain.half_widths[d]
                     end
-                    f_values[i] = f(x_buf)
+                    f_values[dst_i] = f(x_buf)
                 end
             end
         end
     else
-        x_physical = Vector{Float64}(undef, n_dim)  # Reusable buffer
-        for i in 1:n_total
-            eval_progress !== nothing && eval_progress(i, n_total)
+        x_physical = Vector{Float64}(undef, n_dim)
+        n_eval = length(eval_sample_indices)
+        for k in 1:n_eval
+            eval_progress !== nothing && eval_progress(k, n_eval)
+            src_i = eval_sample_indices[k]
+            dst_i = rows_to_eval[k]
             @inbounds for d in 1:n_dim
-                x_physical[d] =
-                    subdomain.center[d] + grid_matrix[i, d] * subdomain.half_widths[d]
+                x_physical[d] = subdomain.center[d] +
+                                eval_sample_source[src_i, d] * subdomain.half_widths[d]
             end
-            f_values[i] = f(x_physical)
+            f_values[dst_i] = f(x_physical)
         end
+    end
+
+    if inherited_f_count > 0
+        @debug "Reused $inherited_f_count/$n_total parent samples" subdomain_n_dim=n_dim
     end
 
     # Handle Inf values from failed evaluations (e.g., ODE integration failures)
@@ -734,6 +815,15 @@ Evaluates L2 error at a few candidate cut positions and fits a parabola to find 
 
 # Notes
 Uses existing samples where possible to minimize new function evaluations.
+
+# Returns
+- `opt_pos::Float64`: Optimal cut position (from parabola fit or best candidate)
+- `trial_left::Subdomain`, `trial_right::Subdomain`: Fully-populated trial children
+  (samples, f_values, polynomial, l2_error all cached) from the best-scoring
+  candidate. Callers can reuse these when the final cut is close to `trial_cut_pos`
+  to avoid two redundant polynomial constructions per split.
+- `trial_cut_pos::Float64`: The candidate position the returned trial children
+  were built at.
 """
 function find_optimal_cut_sparse(
     f,
@@ -752,9 +842,11 @@ function find_optimal_cut_sparse(
         candidates = range(-0.75, 0.75, length = n_candidates)
     end
 
-    # Evaluate combined error for each candidate
+    # Evaluate combined error for each candidate and keep the trial children so
+    # the winner's polynomial construction can be reused downstream.
     errors = Float64[]
-    for cut_pos in candidates
+    trial_pairs = Vector{Tuple{Subdomain, Subdomain}}(undef, length(candidates))
+    for (i, cut_pos) in enumerate(candidates)
         left, right = subdivide_domain(subdomain, dim, cut_pos)
 
         # Estimate error on both children
@@ -776,7 +868,12 @@ function find_optimal_cut_sparse(
         # Combined error (sum weighted by volume for fair comparison)
         combined = err_left * sqrt(volume(left)) + err_right * sqrt(volume(right))
         push!(errors, combined)
+        trial_pairs[i] = (left, right)
     end
+
+    best_idx = argmin(errors)
+    trial_cut_pos = candidates[best_idx]
+    trial_left, trial_right = trial_pairs[best_idx]
 
     # If only 3 candidates, fit parabola and find minimum
     if n_candidates == 3
@@ -790,14 +887,14 @@ function find_optimal_cut_sparse(
             opt_pos = clamp(-b / (2a), -0.75, 0.75)
         else
             # Parabola opens downward - use best candidate
-            opt_pos = candidates[argmin(errors)]
+            opt_pos = trial_cut_pos
         end
     else
         # Just use best candidate
-        opt_pos = candidates[argmin(errors)]
+        opt_pos = trial_cut_pos
     end
 
-    return opt_pos
+    return opt_pos, trial_left, trial_right, trial_cut_pos
 end
 
 """
@@ -827,6 +924,12 @@ end
     ProcessResult
 
 Result of processing a single subdomain.
+
+When `action == ActionSplit` and `optimize_cuts=true`, `trial_children` carries
+the fully-constructed child subdomains from the best candidate cut evaluated by
+`find_optimal_cut_sparse`. `update_tree!` reuses them (saving two polynomial
+constructions) when the parabola-optimum cut position is within `trial_reuse_tol`
+of the candidate position the trials were built at.
 """
 struct ProcessResult
     subdomain_id::Int
@@ -835,8 +938,14 @@ struct ProcessResult
     split_dim::Union{Int,Nothing}
     cut_position::Union{Float64,Nothing}
     l2_error::Float64
-    new_degree::Union{Int,Nothing}  # for ActionDegreeBump: the degree to try next
+    new_degree::Union{Int, Nothing}  # for ActionDegreeBump: the degree to try next
+    trial_children::Union{Nothing, Tuple{Subdomain, Subdomain}}
+    trial_cut_pos::Union{Nothing, Float64}
 end
+
+# Backward-compatible constructor for the 7-arg call sites (pre-eqk).
+ProcessResult(subdomain_id, action, should_split, split_dim, cut_position, l2_error, new_degree) =
+    ProcessResult(subdomain_id, action, should_split, split_dim, cut_position, l2_error, new_degree, nothing, nothing)
 
 """
     process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
@@ -869,22 +978,16 @@ the Vandermonde condition number staying below `cond_threshold`.
 # Returns
 - ProcessResult with decision
 """
-function process_subdomain(
-    f,
-    tree::SubdivisionTree,
-    subdomain_id::Int,
-    degree,
-    l2_tolerance::Float64;
-    optimize_cuts::Bool = true,
-    basis::Symbol = :chebyshev,
-    eval_progress::Union{Function,Nothing} = nothing,
-    enable_p_refinement::Bool = false,
-    max_degree::Int = 40,
-    degree_step::Int = 6,
-    cond_threshold::Float64 = 1e14,
-    tolerance_mode::Symbol = :relative,
-    thread_evals::Bool = false,
-)
+function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
+                           degree, l2_tolerance::Float64;
+                           optimize_cuts::Bool=true, basis::Symbol=:chebyshev,
+                           eval_progress::Union{Function,Nothing}=nothing,
+                           enable_p_refinement::Bool=false,
+                           max_degree::Int=40, degree_step::Int=6,
+                           cond_threshold::Float64=1e14,
+                           tolerance_mode::Symbol=:relative,
+                           thread_evals::Bool=false,
+                           reuse_parent_samples::Bool=true)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -897,15 +1000,23 @@ function process_subdomain(
         maximum(_extract_per_dim_degrees(degree, n_dim))
     subdomain.degree = effective_degree
 
+    # y0j: locate the parent's sample cache so inheritable rows can be reused.
+    # This fires on the first process_subdomain for a freshly-split child —
+    # after that, the subdomain has its own samples cached and the next call
+    # (e.g. from a degree bump retry) goes through the standard path.
+    inherit_from = nothing
+    if reuse_parent_samples && subdomain.samples === nothing && subdomain.parent_id !== nothing
+        parent = tree.subdomains[subdomain.parent_id]
+        if parent.samples !== nothing && parent.f_values !== nothing
+            inherit_from = parent
+        end
+    end
+
     # Estimate error on this subdomain
-    l2_error = estimate_subdomain_error(
-        f,
-        subdomain,
-        effective_degree,
-        basis = basis,
-        eval_progress = eval_progress,
-        thread_evals = thread_evals,
-    )
+    l2_error = estimate_subdomain_error(f, subdomain, effective_degree, basis=basis,
+                                         eval_progress=eval_progress,
+                                         thread_evals=thread_evals,
+                                         inherit_from=inherit_from)
 
     # Check convergence using the selected error metric
     effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
@@ -947,28 +1058,19 @@ function process_subdomain(
         split_dim = select_cut_dimension_by_width(subdomain)
     end
 
+    trial_children = nothing
+    trial_cut_pos = nothing
     if optimize_cuts
-        cut_pos = find_optimal_cut_sparse(
-            f,
-            subdomain,
-            split_dim,
-            effective_degree,
-            basis = basis,
-            thread_evals = thread_evals,
-        )
+        cut_pos, trial_left, trial_right, trial_cut_pos =
+            find_optimal_cut_sparse(f, subdomain, split_dim, effective_degree,
+                                    basis=basis, thread_evals=thread_evals)
+        trial_children = (trial_left, trial_right)
     else
         cut_pos = 0.0  # Midpoint
     end
 
-    return ProcessResult(
-        subdomain_id,
-        ActionSplit,
-        true,
-        split_dim,
-        cut_pos,
-        l2_error,
-        nothing,
-    )
+    return ProcessResult(subdomain_id, ActionSplit, true, split_dim, cut_pos, l2_error,
+                         nothing, trial_children, trial_cut_pos)
 end
 
 """
@@ -984,10 +1086,24 @@ Update tree based on processing result.
 # Notes
 This function is NOT thread-safe. Call sequentially after parallel processing.
 """
-function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::Subdomain)
+function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::Subdomain;
+                      trial_reuse_tol::Float64=0.1)
     if result.action == ActionSplit
-        # h-refinement: create children
-        left, right = subdivide_domain(subdomain, result.split_dim, result.cut_position)
+        # h-refinement: create children.
+        # If find_optimal_cut_sparse already evaluated a candidate cut near the
+        # chosen cut_position, reuse those trial children (with cached samples,
+        # f_values, polynomial, and l2_error) instead of repeating the work.
+        actual_cut_pos = result.cut_position
+        if result.trial_children !== nothing &&
+           result.trial_cut_pos !== nothing &&
+           abs(result.cut_position - result.trial_cut_pos) <= trial_reuse_tol
+            # Snap to the trial's cut position so tree geometry matches the
+            # children's actual half-widths.
+            actual_cut_pos = result.trial_cut_pos
+            left, right = result.trial_children
+        else
+            left, right = subdivide_domain(subdomain, result.split_dim, actual_cut_pos)
+        end
 
         # Set parent IDs
         parent_id = result.subdomain_id
@@ -1004,7 +1120,7 @@ function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::S
         parent = tree.subdomains[parent_id]
         parent.children = (left_id, right_id)
         parent.split_dim = result.split_dim
-        parent.split_pos = result.cut_position
+        parent.split_pos = actual_cut_pos
 
         # Update active leaves: remove parent, add children
         filter!(id -> id != parent_id, tree.active_leaves)
@@ -1075,27 +1191,25 @@ tree = adaptive_refine(f, bounds, 10; l2_tolerance=1e-4, tolerance_mode=:absolut
                        enable_p_refinement=true, max_degree=40, degree_step=6)
 ```
 """
-function adaptive_refine(
-    f,
-    bounds::Vector{Tuple{Float64,Float64}},
-    degree;
-    l2_tolerance::Float64 = NaN,
-    tolerance_mode::Symbol = :relative,
-    max_depth::Int = 10,
-    max_leaves::Int = 1000,
-    optimize_cuts::Bool = true,
-    parallel::Bool = true,
-    basis::Symbol = :chebyshev,
-    verbose::Bool = false,
-    iteration_callback::Union{Function,Nothing} = nothing,
-    eval_progress::Union{Function,Nothing} = nothing,
-    phase_callback::Union{Function,Nothing} = nothing,
-    enable_p_refinement::Bool = false,
-    max_degree::Int = 40,
-    degree_step::Int = 6,
-    cond_threshold::Float64 = 1e14,
-    thread_evals::Bool = false,
-)
+function adaptive_refine(f, bounds::Vector{Tuple{Float64, Float64}},
+                         degree;
+                         l2_tolerance::Float64=NaN,
+                         tolerance_mode::Symbol=:relative,
+                         max_depth::Int=10,
+                         max_leaves::Int=1000,
+                         optimize_cuts::Bool=true,
+                         parallel::Bool=true,
+                         basis::Symbol=:chebyshev,
+                         verbose::Bool=false,
+                         iteration_callback::Union{Function,Nothing}=nothing,
+                         eval_progress::Union{Function,Nothing}=nothing,
+                         phase_callback::Union{Function,Nothing}=nothing,
+                         enable_p_refinement::Bool=false,
+                         max_degree::Int=40,
+                         degree_step::Int=6,
+                         cond_threshold::Float64=1e14,
+                         thread_evals::Bool=false,
+                         reuse_parent_samples::Bool=true)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -1137,14 +1251,8 @@ function adaptive_refine(
         # Process all active leaves
         current_active = copy(tree.active_leaves)
 
-        hp_kwargs = (;
-            enable_p_refinement,
-            max_degree,
-            degree_step,
-            cond_threshold,
-            tolerance_mode,
-            thread_evals,
-        )
+        hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold,
+                       tolerance_mode, thread_evals, reuse_parent_samples)
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
             # CPU parallel processing
@@ -1259,27 +1367,25 @@ Phase 2 refines to meet the final tolerance.
 # Returns
 - SubdivisionTree with refined subdomains
 """
-function two_phase_refine(
-    f,
-    bounds::Vector{Tuple{Float64,Float64}},
-    degree;
-    coarse_tolerance::Float64 = NaN,
-    fine_tolerance::Float64 = NaN,
-    tolerance_mode::Symbol = :relative,
-    balance_threshold::Float64 = 3.0,
-    max_depth::Int = 10,
-    max_leaves::Int = 1000,
-    parallel::Bool = true,
-    basis::Symbol = :chebyshev,
-    verbose::Bool = false,
-    iteration_callback::Union{Function,Nothing} = nothing,
-    phase_callback::Union{Function,Nothing} = nothing,
-    enable_p_refinement::Bool = false,
-    max_degree::Int = 40,
-    degree_step::Int = 6,
-    cond_threshold::Float64 = 1e14,
-    thread_evals::Bool = false,
-)
+function two_phase_refine(f, bounds::Vector{Tuple{Float64, Float64}},
+                          degree;
+                          coarse_tolerance::Float64=NaN,
+                          fine_tolerance::Float64=NaN,
+                          tolerance_mode::Symbol=:relative,
+                          balance_threshold::Float64=3.0,
+                          max_depth::Int=10,
+                          max_leaves::Int=1000,
+                          parallel::Bool=true,
+                          basis::Symbol=:chebyshev,
+                          verbose::Bool=false,
+                          iteration_callback::Union{Function,Nothing}=nothing,
+                          phase_callback::Union{Function,Nothing}=nothing,
+                          enable_p_refinement::Bool=false,
+                          max_degree::Int=40,
+                          degree_step::Int=6,
+                          cond_threshold::Float64=1e14,
+                          thread_evals::Bool=false,
+                          reuse_parent_samples::Bool=true)
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
 
@@ -1304,14 +1410,8 @@ function two_phase_refine(
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
     tree = SubdivisionTree(bounds; degree = root_degree)
 
-    hp_kwargs = (;
-        enable_p_refinement,
-        max_degree,
-        degree_step,
-        cond_threshold,
-        tolerance_mode,
-        thread_evals,
-    )
+    hp_kwargs = (; enable_p_refinement, max_degree, degree_step, cond_threshold,
+                   tolerance_mode, thread_evals, reuse_parent_samples)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100
