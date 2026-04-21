@@ -448,6 +448,7 @@ end
 """
     estimate_subdomain_error(f, subdomain::Subdomain, degree;
                              n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
+                             use_cache::Bool=true,
                              thread_evals::Bool=false,
                              inherit_from::Union{Nothing, Subdomain}=nothing)
 
@@ -461,6 +462,11 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
 - `degree`: Polynomial degree (or degree specification)
 - `n_samples_per_dim`: Grid points per dimension (0 = auto: 2×degree+1)
 - `basis`: Basis type (:chebyshev or :legendre)
+- `use_cache`: When `true`, return the cached L2 error if the subdomain already
+  has `polynomial`/`samples`/`f_values` populated at a compatible grid size (this
+  is how the trial-cut reuse from `find_optimal_cut_sparse` avoids redundant
+  polynomial construction on the split children). Set to `false` to force
+  re-evaluation.
 - `thread_evals`: When `true` and `Threads.nthreads() > 1`, evaluate grid
   points concurrently via `@spawn`-chunked tasks. Caller is responsible for
   passing a thread-safe `f` (e.g. an ODE objective that uses `remake` rather
@@ -482,6 +488,7 @@ Updates subdomain.l2_error, subdomain.polynomial, subdomain.samples, subdomain.f
 function estimate_subdomain_error(f, subdomain::Subdomain, degree;
                                    n_samples_per_dim::Int=0, basis::Symbol=:chebyshev,
                                    eval_progress::Union{Function,Nothing}=nothing,
+                                   use_cache::Bool=true,
                                    thread_evals::Bool=false,
                                    inherit_from::Union{Nothing, Subdomain}=nothing)
     n_dim = dimension(subdomain)
@@ -493,6 +500,21 @@ function estimate_subdomain_error(f, subdomain::Subdomain, degree;
         per_dim_GN = fill(n_samples_per_dim - 1, n_dim)
     else
         per_dim_GN = 2 .* per_dim_degrees  # ~2× degree per dimension
+    end
+
+    expected_n_samples = prod(per_dim_GN .+ 1)
+
+    # Reuse cached evaluation when the subdomain already has a polynomial built
+    # at a compatible grid size (e.g. a child populated by find_optimal_cut_sparse).
+    # We verify sample count rather than degree because only the grid determines
+    # the underlying evaluation cost we want to avoid.
+    if use_cache &&
+       subdomain.polynomial !== nothing &&
+       subdomain.samples !== nothing &&
+       subdomain.f_values !== nothing &&
+       size(subdomain.samples, 1) == expected_n_samples &&
+       isfinite(subdomain.l2_error)
+        return subdomain.l2_error
     end
 
     # Generate normalized Chebyshev grid in the child's [-1, 1]^n
@@ -735,6 +757,15 @@ Evaluates L2 error at a few candidate cut positions and fits a parabola to find 
 
 # Notes
 Uses existing samples where possible to minimize new function evaluations.
+
+# Returns
+- `opt_pos::Float64`: Optimal cut position (from parabola fit or best candidate)
+- `trial_left::Subdomain`, `trial_right::Subdomain`: Fully-populated trial children
+  (samples, f_values, polynomial, l2_error all cached) from the best-scoring
+  candidate. Callers can reuse these when the final cut is close to `trial_cut_pos`
+  to avoid two redundant polynomial constructions per split.
+- `trial_cut_pos::Float64`: The candidate position the returned trial children
+  were built at.
 """
 function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
                                   n_candidates::Int=3, basis::Symbol=:chebyshev,
@@ -747,9 +778,11 @@ function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
         candidates = range(-0.75, 0.75, length=n_candidates)
     end
 
-    # Evaluate combined error for each candidate
+    # Evaluate combined error for each candidate and keep the trial children so
+    # the winner's polynomial construction can be reused downstream.
     errors = Float64[]
-    for cut_pos in candidates
+    trial_pairs = Vector{Tuple{Subdomain, Subdomain}}(undef, length(candidates))
+    for (i, cut_pos) in enumerate(candidates)
         left, right = subdivide_domain(subdomain, dim, cut_pos)
 
         # Estimate error on both children
@@ -761,7 +794,12 @@ function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
         # Combined error (sum weighted by volume for fair comparison)
         combined = err_left * sqrt(volume(left)) + err_right * sqrt(volume(right))
         push!(errors, combined)
+        trial_pairs[i] = (left, right)
     end
+
+    best_idx = argmin(errors)
+    trial_cut_pos = candidates[best_idx]
+    trial_left, trial_right = trial_pairs[best_idx]
 
     # If only 3 candidates, fit parabola and find minimum
     if n_candidates == 3
@@ -775,14 +813,14 @@ function find_optimal_cut_sparse(f, subdomain::Subdomain, dim::Int, degree;
             opt_pos = clamp(-b / (2a), -0.75, 0.75)
         else
             # Parabola opens downward - use best candidate
-            opt_pos = candidates[argmin(errors)]
+            opt_pos = trial_cut_pos
         end
     else
         # Just use best candidate
-        opt_pos = candidates[argmin(errors)]
+        opt_pos = trial_cut_pos
     end
 
-    return opt_pos
+    return opt_pos, trial_left, trial_right, trial_cut_pos
 end
 
 """
@@ -814,6 +852,12 @@ end
     ProcessResult
 
 Result of processing a single subdomain.
+
+When `action == ActionSplit` and `optimize_cuts=true`, `trial_children` carries
+the fully-constructed child subdomains from the best candidate cut evaluated by
+`find_optimal_cut_sparse`. `update_tree!` reuses them (saving two polynomial
+constructions) when the parabola-optimum cut position is within `trial_reuse_tol`
+of the candidate position the trials were built at.
 """
 struct ProcessResult
     subdomain_id::Int
@@ -823,7 +867,13 @@ struct ProcessResult
     cut_position::Union{Float64, Nothing}
     l2_error::Float64
     new_degree::Union{Int, Nothing}  # for ActionDegreeBump: the degree to try next
+    trial_children::Union{Nothing, Tuple{Subdomain, Subdomain}}
+    trial_cut_pos::Union{Nothing, Float64}
 end
+
+# Backward-compatible constructor for the 7-arg call sites (pre-eqk).
+ProcessResult(subdomain_id, action, should_split, split_dim, cut_position, l2_error, new_degree) =
+    ProcessResult(subdomain_id, action, should_split, split_dim, cut_position, l2_error, new_degree, nothing, nothing)
 
 """
     process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
@@ -916,14 +966,19 @@ function process_subdomain(f, tree::SubdivisionTree, subdomain_id::Int,
         split_dim = select_cut_dimension_by_width(subdomain)
     end
 
+    trial_children = nothing
+    trial_cut_pos = nothing
     if optimize_cuts
-        cut_pos = find_optimal_cut_sparse(f, subdomain, split_dim, effective_degree,
-                                           basis=basis, thread_evals=thread_evals)
+        cut_pos, trial_left, trial_right, trial_cut_pos =
+            find_optimal_cut_sparse(f, subdomain, split_dim, effective_degree,
+                                    basis=basis, thread_evals=thread_evals)
+        trial_children = (trial_left, trial_right)
     else
         cut_pos = 0.0  # Midpoint
     end
 
-    return ProcessResult(subdomain_id, ActionSplit, true, split_dim, cut_pos, l2_error, nothing)
+    return ProcessResult(subdomain_id, ActionSplit, true, split_dim, cut_pos, l2_error,
+                         nothing, trial_children, trial_cut_pos)
 end
 
 """
@@ -939,10 +994,24 @@ Update tree based on processing result.
 # Notes
 This function is NOT thread-safe. Call sequentially after parallel processing.
 """
-function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::Subdomain)
+function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::Subdomain;
+                      trial_reuse_tol::Float64=0.1)
     if result.action == ActionSplit
-        # h-refinement: create children
-        left, right = subdivide_domain(subdomain, result.split_dim, result.cut_position)
+        # h-refinement: create children.
+        # If find_optimal_cut_sparse already evaluated a candidate cut near the
+        # chosen cut_position, reuse those trial children (with cached samples,
+        # f_values, polynomial, and l2_error) instead of repeating the work.
+        actual_cut_pos = result.cut_position
+        if result.trial_children !== nothing &&
+           result.trial_cut_pos !== nothing &&
+           abs(result.cut_position - result.trial_cut_pos) <= trial_reuse_tol
+            # Snap to the trial's cut position so tree geometry matches the
+            # children's actual half-widths.
+            actual_cut_pos = result.trial_cut_pos
+            left, right = result.trial_children
+        else
+            left, right = subdivide_domain(subdomain, result.split_dim, actual_cut_pos)
+        end
 
         # Set parent IDs
         parent_id = result.subdomain_id
@@ -959,7 +1028,7 @@ function update_tree!(tree::SubdivisionTree, result::ProcessResult, subdomain::S
         parent = tree.subdomains[parent_id]
         parent.children = (left_id, right_id)
         parent.split_dim = result.split_dim
-        parent.split_pos = result.cut_position
+        parent.split_pos = actual_cut_pos
 
         # Update active leaves: remove parent, add children
         filter!(id -> id != parent_id, tree.active_leaves)
