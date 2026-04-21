@@ -132,3 +132,7 @@ end
 with_timeout(TIMEOUT_TESTFILE, label="test_subdivision_reuse.jl") do
     include("test_subdivision_reuse.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label="test_y0j_integration.jl") do
+    include("test_y0j_integration.jl")
+end
