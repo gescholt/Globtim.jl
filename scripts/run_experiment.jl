@@ -19,6 +19,10 @@ using Printf
 using Dynamic_objectives
 using Globtim
 using GlobtimPostProcessing
+# Activate Globtim's HomotopyContinuation extension (weakdep). Without this
+# `using`, any call with `solver=:hc` (the default) raises the _solve_hc stub
+# error from poly_solver.jl. Mirrors runtests.jl which does the same.
+using HomotopyContinuation
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
