@@ -334,6 +334,21 @@ TimerOutputs.@timeit _TO function MainGenerate(
         @info "  ✓ Linear system solved"
     end
 
+    # Guard: all-zero coefficients indicate LinearSolve failed silently. On some
+    # platforms (observed on cluster LAPACK at Deuflhard 2D deg 12, bead xosc)
+    # the LU factorization emits a `solver_failure` warning and returns a zero
+    # vector. Without this guard the zero polynomial cascades into HC.System
+    # with a cryptic 'reducing over an empty collection' ArgumentError.
+    if maximum(abs, sol.u) == 0
+        error(
+            "Constructor produced zero polynomial at degree=$(grid_provided ? degree_est : d) — " *
+            "LinearSolve returned a zero solution for the Vandermonde system " *
+            "(cond_vandermonde=$(cond_vandermonde), GN=$(actual_GN), basis=$(basis)). " *
+            "Likely a silent LinearSolve failure; try precision=RationalPrecision, " *
+            "reduce GN, or lower the degree.",
+        )
+    end
+
     # Compute L2 norm using proper quadrature weights
     # This ensures monotonic decrease with degree (by containment)
     TimerOutputs.@timeit _TO "norm_computation" nrm =
