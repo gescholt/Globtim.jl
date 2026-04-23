@@ -415,8 +415,12 @@ function run_standard_experiment(;
             sort(collect(completed_degrees))
     end
 
-    # Process each degree (skipping any already completed successfully on a prior run)
-    degree_results = copy(resumed_success)
+    # Process each degree (skipping any already completed successfully on a prior run).
+    # Use an explicitly typed Vector{DegreeResult} — `copy(resumed_success)` inherits
+    # `resumed_success`'s eltype, which is `Any` when there's no checkpoint (`filter`
+    # on an empty `Any[]` returns `Any[]`), and `create_experiment_summary` dispatches
+    # on `Vector{DegreeResult}` exactly.
+    degree_results = DegreeResult[r for r in resumed_success]
     total_critical_points = sum(r.n_critical_points for r in resumed_success; init = 0)
 
     for degree in experiment_config.degree_range
