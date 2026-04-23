@@ -165,3 +165,7 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_y0j_integration.jl") do
     include("test_y0j_integration.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_zero_polynomial_guard.jl") do
+    include("test_zero_polynomial_guard.jl")
+end
