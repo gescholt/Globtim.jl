@@ -247,6 +247,7 @@ function sparsify_polynomial(
         polynomial = pol_sparse,
         sparsity = sparsity,
         zeroed_indices = zeroed_indices,
+        n_zeroed = length(zeroed_indices),
         l2_ratio = l2_sparsified / l2_original,
         original_nnz = original_nnz,
         new_nnz = new_nnz,

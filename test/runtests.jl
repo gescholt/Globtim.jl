@@ -169,3 +169,11 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_zero_polynomial_guard.jl") do
     include("test_zero_polynomial_guard.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
+    include("test_tree_solve_observability.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_sparsification_cached.jl") do
+    include("test_sparsification_cached.jl")
+end

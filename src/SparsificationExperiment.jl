@@ -42,15 +42,28 @@ export SparsifiedVariant, SparsificationDegreeResult, run_sparsification_experim
 Result of solving one sparsified polynomial variant at a specific threshold.
 Contains the critical points in original domain coordinates (same format as
 `DegreeResult.critical_points` from the standard experiment pipeline).
+
+# Fields
+
+- `n_zeroed`: number of coefficients actually set to zero (not a percentage —
+  when this is 0 the polynomial is byte-identical to the full one and any
+  measured speedup is an HC hot-cache artifact, not a sparsification win).
+- `cached_hit`: true when we skipped the HC solve because the polynomial was
+  identical to a previously-solved variant or the full polynomial. In that
+  case `critical_points` and `solve_time` are copied from the reused solve;
+  downstream reporters should ignore `solve_time` for "speedup vs full"
+  computations on cached-hit variants (see bead oasi).
 """
 struct SparsifiedVariant
     threshold::Float64
     threshold_label::String
     critical_points::Vector{Vector{Float64}}  # in original domain coordinates
     n_nonzero_coeffs::Int
+    n_zeroed::Int
     l2_ratio::Float64
     solve_time::Float64
     sparsity_pct::Float64  # percentage of coefficients zeroed
+    cached_hit::Bool
 end
 
 """
@@ -178,22 +191,54 @@ function run_sparsification_experiment(;
             end
 
         # Sparsified variants
+        #
+        # Polynomial-equality short-circuit (bead oasi): when sparsify_polynomial
+        # zeros nothing (threshold below all coefficient magnitudes), the
+        # resulting polynomial is byte-identical to `pol`. Running HC on it
+        # would measure start-system cache reuse, not sparsification benefit —
+        # that phantom speedup contaminates the metric at exactly the
+        # threshold range we want to measure. Skip the solve and copy the
+        # full-solve CPs instead, marking cached_hit=true.
         variants = SparsifiedVariant[]
         for (tidx, threshold) in enumerate(thresholds)
             label = threshold_labels[tidx]
             println(io, "  Sparsifying at threshold $(label)...")
 
             sparse_result = Globtim.sparsify_polynomial(pol, threshold, mode = :relative)
+            sparsity_pct = 100.0 * (1.0 - sparse_result.sparsity)
+
+            if sparse_result.n_zeroed == 0
+                println(
+                    io,
+                    "    -> $(sparse_result.new_nnz)/$n_total_coeffs coeffs retained " *
+                    "(no coefficients zeroed at this threshold — reusing full-solve CPs, cached_hit=true)",
+                )
+                push!(
+                    variants,
+                    SparsifiedVariant(
+                        threshold,
+                        label,
+                        full_cps,
+                        sparse_result.new_nnz,
+                        sparse_result.n_zeroed,
+                        sparse_result.l2_ratio,
+                        0.0,               # solve_time: reused, not measured
+                        sparsity_pct,
+                        true,              # cached_hit
+                    ),
+                )
+                continue
+            end
+
             sparse_cps, sparse_solve_time =
                 Globtim.solve_and_transform(sparse_result.polynomial, bounds)
 
-            sparsity_pct = 100.0 * (1.0 - sparse_result.sparsity)
             speedup = full_solve_time / max(sparse_solve_time, 1e-10)
 
             println(
                 io,
                 "    -> $(sparse_result.new_nnz)/$n_total_coeffs coeffs retained " *
-                "($(@sprintf("%.1f%%", sparsity_pct)) zeroed), " *
+                "($(@sprintf("%.1f%%", sparsity_pct)) zeroed, $(sparse_result.n_zeroed) coefs), " *
                 "$(length(sparse_cps)) CPs, " *
                 "solve = $(@sprintf("%.2f", sparse_solve_time))s ($(@sprintf("%.1f×", speedup)) speedup)",
             )
@@ -205,9 +250,11 @@ function run_sparsification_experiment(;
                     label,
                     sparse_cps,
                     sparse_result.new_nnz,
+                    sparse_result.n_zeroed,
                     sparse_result.l2_ratio,
                     sparse_solve_time,
                     sparsity_pct,
+                    false,             # cached_hit
                 ),
             )
         end
