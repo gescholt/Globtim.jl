@@ -33,6 +33,8 @@ Represents a subdomain in the adaptive refinement tree.
 - `children::Union{Tuple{Int,Int}, Nothing}`: Child subdomain IDs (left, right) if split
 - `split_dim::Union{Int, Nothing}`: Dimension along which this subdomain was split
 - `split_pos::Union{Float64, Nothing}`: Cut position in [-1,1] normalized coordinates
+- `infeasible::Bool`: All sample evaluations returned Inf — region is unfit for polynomial
+  approximation and should be terminated as `ActionPruned` rather than split forever.
 """
 mutable struct Subdomain
     center::Vector{Float64}
@@ -49,6 +51,7 @@ mutable struct Subdomain
     children::Union{Tuple{Int,Int},Nothing}
     split_dim::Union{Int,Nothing}
     split_pos::Union{Float64,Nothing}
+    infeasible::Bool
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -73,7 +76,8 @@ function Subdomain(
         nothing,
         nothing,
         nothing,
-    )  # children, split_dim, split_pos
+        false,
+    )  # children, split_dim, split_pos, infeasible
 end
 
 # Constructor from bounds
@@ -131,18 +135,21 @@ Hierarchical structure for adaptive domain subdivision.
 - `subdomains::Vector{Subdomain}`: All subdomains (both leaves and internal nodes)
 - `active_leaves::Vector{Int}`: Indices of leaves that need refinement (error > tolerance)
 - `converged_leaves::Vector{Int}`: Indices of leaves that meet tolerance
+- `pruned_leaves::Vector{Int}`: Indices of leaves terminated as infeasible (all-Inf samples).
+  Excluded from `tree_solve_leaves` and L2-error totals; visible in `display_tree`.
 - `root_id::Int`: Index of root subdomain
 """
 mutable struct SubdivisionTree
     subdomains::Vector{Subdomain}
     active_leaves::Vector{Int}
     converged_leaves::Vector{Int}
+    pruned_leaves::Vector{Int}
     root_id::Int
 end
 
 # Constructor from initial domain
 function SubdivisionTree(initial_domain::Subdomain)
-    return SubdivisionTree([initial_domain], [1], Int[], 1)
+    return SubdivisionTree([initial_domain], [1], Int[], Int[], 1)
 end
 
 # Constructor from bounds (optional degree sets the root subdomain's degree)
@@ -154,9 +161,19 @@ end
 """
     n_leaves(tree::SubdivisionTree)
 
-Return total number of leaf subdomains.
+Return total number of leaf subdomains (active + converged + pruned).
 """
-n_leaves(tree::SubdivisionTree) = length(tree.active_leaves) + length(tree.converged_leaves)
+n_leaves(tree::SubdivisionTree) =
+    length(tree.active_leaves) +
+    length(tree.converged_leaves) +
+    length(tree.pruned_leaves)
+
+"""
+    n_pruned(tree::SubdivisionTree)
+
+Return number of leaves terminated as infeasible.
+"""
+n_pruned(tree::SubdivisionTree) = length(tree.pruned_leaves)
 
 """
     n_active(tree::SubdivisionTree)
@@ -177,7 +194,8 @@ end
 """
     total_error(tree::SubdivisionTree)
 
-Return sum of L2 errors across all leaves.
+Return sum of L2 errors across all non-pruned leaves. Pruned leaves are excluded
+because their `l2_error == Inf` would otherwise make the total meaningless.
 """
 function total_error(tree::SubdivisionTree)
     leaf_ids = vcat(tree.active_leaves, tree.converged_leaves)
@@ -216,10 +234,12 @@ display_tree(tree, max_leaves=10)
 ```
 """
 function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symbol = :error)
-    all_leaves = vcat(tree.converged_leaves, tree.active_leaves)
+    all_leaves = vcat(tree.converged_leaves, tree.active_leaves, tree.pruned_leaves)
     isempty(all_leaves) && return println("Empty tree")
 
     n_dim = length(tree.subdomains[1].center)
+    converged_set = Set(tree.converged_leaves)
+    pruned_set = Set(tree.pruned_leaves)
 
     # Sort leaves
     sorted_leaves = copy(all_leaves)
@@ -235,7 +255,7 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symb
     )
     println("Total L2 error: $(round(total_error(tree), sigdigits=4))")
     println(
-        "Converged: $(length(tree.converged_leaves)), Active: $(length(tree.active_leaves))",
+        "Converged: $(length(tree.converged_leaves)), Active: $(length(tree.active_leaves)), Pruned: $(length(tree.pruned_leaves))",
     )
     println()
 
@@ -255,7 +275,8 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symb
         sd = tree.subdomains[id]
         bounds = get_bounds(sd)
         bounds_str = join([Printf.@sprintf("[%.2f,%.2f]", b[1], b[2]) for b in bounds], "×")
-        status = id in tree.converged_leaves ? "conv" : "active"
+        status =
+            id in pruned_set ? "pruned" : (id in converged_set ? "conv" : "active")
         Printf.@printf(
             "%-4d  %-5d  %-3d  %-10.2e  %-8s  %s\n",
             id,
@@ -684,12 +705,15 @@ function estimate_subdomain_error(
     # Handle Inf values from failed evaluations (e.g., ODE integration failures)
     n_inf = count(isinf, f_values)
     if n_inf == n_total
-        # All evaluations failed — no data to fit
+        # All evaluations failed — no data to fit. Flag infeasible so
+        # process_subdomain terminates this leaf as ActionPruned instead of
+        # splitting it forever.
         subdomain.l2_error = Inf
         subdomain.relative_l2_error = Inf
         subdomain.polynomial = nothing
         subdomain.samples = grid_matrix
         subdomain.f_values = f_values
+        subdomain.infeasible = true
         return Inf
     elseif n_inf > 0
         # Partial failures: replace Inf with a large penalty value so the polynomial
@@ -924,11 +948,15 @@ Action to take on a subdomain after processing.
 - `ActionConverged`: L2 error meets tolerance, no further refinement needed.
 - `ActionDegreeBump`: Increase polynomial degree and re-fit (p-refinement).
 - `ActionSplit`: Subdivide the domain (h-refinement).
+- `ActionPruned`: All sample evaluations were Inf — terminate without further work
+  (Phase 1 of subdomain pruning; see `pkg/globtim/src/adaptive_subdivision.jl`
+  `estimate_subdomain_error` for the detection site).
 """
 @enum RefinementAction begin
     ActionConverged
     ActionDegreeBump
     ActionSplit
+    ActionPruned
 end
 
 """
@@ -1022,6 +1050,7 @@ function process_subdomain(
     tolerance_mode::Symbol = :relative,
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = true,
+    n_samples_per_dim::Int = 0,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1058,7 +1087,22 @@ function process_subdomain(
         eval_progress = eval_progress,
         thread_evals = thread_evals,
         inherit_from = inherit_from,
+        n_samples_per_dim = n_samples_per_dim,
     )
+
+    # Phase 1 prune: every sample returned Inf, no polynomial to fit. Terminate
+    # this leaf instead of splitting it indefinitely.
+    if subdomain.infeasible
+        return ProcessResult(
+            subdomain_id,
+            ActionPruned,
+            false,
+            nothing,
+            nothing,
+            l2_error,
+            nothing,
+        )
+    end
 
     # Check convergence using the selected error metric
     effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
@@ -1194,6 +1238,10 @@ function update_tree!(
         subdomain.f_values = nothing
         subdomain.l2_error = Inf  # will be recomputed at new degree
     # Leave in active_leaves — will be re-processed next iteration
+    elseif result.action == ActionPruned
+        # Phase 1 prune: terminal state for all-Inf subdomains.
+        filter!(id -> id != result.subdomain_id, tree.active_leaves)
+        push!(tree.pruned_leaves, result.subdomain_id)
     else  # ActionConverged
         # Mark as converged
         filter!(id -> id != result.subdomain_id, tree.active_leaves)
@@ -1272,6 +1320,7 @@ function adaptive_refine(
     cond_threshold::Float64 = 1e14,
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = true,
+    n_samples_per_dim::Int = 0,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1322,6 +1371,7 @@ function adaptive_refine(
             tolerance_mode,
             thread_evals,
             reuse_parent_samples,
+            n_samples_per_dim,
         )
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
@@ -1382,7 +1432,15 @@ function adaptive_refine(
                 basis = basis,
                 eval_progress = eval_progress,
                 thread_evals = thread_evals,
+                n_samples_per_dim = n_samples_per_dim,
             )
+        end
+        # Phase 1 prune fires here too — re-eval may discover infeasibility on
+        # leaves that were never processed during the main loop.
+        if sd.infeasible
+            filter!(id -> id != leaf_id, tree.active_leaves)
+            push!(tree.pruned_leaves, leaf_id)
+            continue
         end
         # Check if leaf now meets tolerance → mark as converged
         check_error = tolerance_mode == :relative ? sd.relative_l2_error : sd.l2_error
@@ -1395,7 +1453,8 @@ function adaptive_refine(
     verbose && println(
         "Final: $(n_leaves(tree)) leaves " *
         "($(length(tree.converged_leaves)) converged, " *
-        "$(length(tree.active_leaves)) active)",
+        "$(length(tree.active_leaves)) active, " *
+        "$(length(tree.pruned_leaves)) pruned)",
     )
 
     return tree
@@ -1636,7 +1695,7 @@ function two_phase_refine(
     end
 
     # Compute L2 errors for any unprocessed leaves (e.g., when max_depth reached)
-    for leaf_id in tree.active_leaves
+    for leaf_id in copy(tree.active_leaves)  # copy: we modify during iteration
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
             sd.degree = root_degree
@@ -1646,13 +1705,18 @@ function two_phase_refine(
                 degree,
                 basis = basis,
                 thread_evals = thread_evals,
+                n_samples_per_dim = n_samples_per_dim,
             )
+        end
+        if sd.infeasible
+            filter!(id -> id != leaf_id, tree.active_leaves)
+            push!(tree.pruned_leaves, leaf_id)
         end
     end
 
     verbose && println(
         "\nFinal: $(n_leaves(tree)) leaves " *
-        "($(length(tree.converged_leaves)) converged)",
+        "($(length(tree.converged_leaves)) converged, $(length(tree.pruned_leaves)) pruned)",
     )
 
     return tree

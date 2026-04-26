@@ -182,6 +182,7 @@ export Subdomain,
     get_bounds,
     n_leaves,
     n_active,
+    n_pruned,
     total_error,
     error_balance_ratio,
     dimension,
@@ -192,7 +193,8 @@ export Subdomain,
     RefinementAction,
     ActionConverged,
     ActionDegreeBump,
-    ActionSplit  # hp-refinement
+    ActionSplit,
+    ActionPruned  # hp-refinement
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
