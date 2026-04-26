@@ -90,8 +90,21 @@ Base.@kwdef struct ExperimentPipelineConfig
     analysis_top_k::Union{Nothing,Int} = nothing
     analysis_accept_tol::Union{Nothing,Float64} = nothing
     analysis_f_accept_tol::Union{Nothing,Float64} = nothing
+    analysis_newton_patience::Union{Nothing,Int} = nothing
+    analysis_newton_min_improvement::Union{Nothing,Float64} = nothing
+    analysis_f_accept_tol_multiplier::Union{Nothing,Float64} = nothing
     analysis_valley_walking::Bool = false
     analysis_deep_diagnostics::Bool = false
+
+    # [subdivision] — optional adaptive-subdivision defaults (svdr)
+    # Strategies use Globtim symbol names for stability; see KNOWN_SUBDIVISION_STRATEGIES.
+    subdivision_strategy::Union{Nothing,String} = nothing
+    subdivision_degree::Union{Nothing,Int} = nothing
+    subdivision_max_degree::Union{Nothing,Int} = nothing
+    subdivision_l2_tolerance::Union{Nothing,Float64} = nothing
+    subdivision_max_depth::Union{Nothing,Int} = nothing
+    subdivision_max_leaves::Union{Nothing,Int} = nothing
+    subdivision_basis::Union{Nothing,Symbol} = nothing
 
     # [output]
     output_dir::Union{Nothing,String} = nothing
@@ -134,6 +147,20 @@ const KNOWN_SOLVER_METHODS = Set([
 const KNOWN_REFINEMENT_METHODS = Set(["NelderMead", "BFGS"])
 
 const KNOWN_GRADIENT_METHODS = Set(["forwarddiff", "finitediff"])
+
+# Globtim canonical strategy symbols, kept aligned with experiments/sandbox/
+# adaptive_subdivision_experiment.jl::run_strategy_comparison.
+const KNOWN_SUBDIVISION_STRATEGIES = Set([
+    "baseline",
+    "B_iso",
+    "B_aniso",
+    "two_phase",
+    "uniform_grid",
+    "multi_start",
+    "adaptive_interleaved",
+])
+
+const KNOWN_SUBDIVISION_BASES = Set(["chebyshev", "legendre"])
 
 """
     validate_experiment_toml(d::Dict)
@@ -457,6 +484,71 @@ function validate_experiment_toml(d::Dict)
         (ana["f_accept_tol"] isa Number && ana["f_accept_tol"] > 0) ||
             push!(errors, "[analysis] f_accept_tol must be positive")
     end
+    if haskey(ana, "newton_patience")
+        np = ana["newton_patience"]
+        (np isa Integer && np > 0) ||
+            push!(errors, "[analysis] newton_patience must be a positive integer, got: $np")
+    end
+    if haskey(ana, "newton_min_improvement")
+        nmi = ana["newton_min_improvement"]
+        (nmi isa Number && 0 < nmi <= 1) ||
+            push!(errors, "[analysis] newton_min_improvement must be in (0, 1], got: $nmi")
+    end
+    if haskey(ana, "f_accept_tol_multiplier")
+        m = ana["f_accept_tol_multiplier"]
+        (m isa Number && m >= 1) ||
+            push!(errors, "[analysis] f_accept_tol_multiplier must be >= 1, got: $m")
+    end
+
+    # --- [subdivision] (optional — adaptive-subdivision defaults) ---
+    sub = get(d, "subdivision", Dict())
+    if haskey(sub, "strategy")
+        s = sub["strategy"]
+        s in KNOWN_SUBDIVISION_STRATEGIES || push!(
+            errors,
+            "[subdivision] unknown strategy '$s'. Known: $(join(sort(collect(KNOWN_SUBDIVISION_STRATEGIES)), ", "))",
+        )
+    end
+    if haskey(sub, "basis")
+        b = sub["basis"]
+        b in KNOWN_SUBDIVISION_BASES || push!(
+            errors,
+            "[subdivision] unknown basis '$b'. Known: $(join(sort(collect(KNOWN_SUBDIVISION_BASES)), ", "))",
+        )
+    end
+    if haskey(sub, "degree")
+        d_ = sub["degree"]
+        (d_ isa Integer && d_ >= 1) ||
+            push!(errors, "[subdivision] degree must be a positive integer, got: $d_")
+    end
+    if haskey(sub, "max_degree")
+        md = sub["max_degree"]
+        (md isa Integer && md >= 1) ||
+            push!(errors, "[subdivision] max_degree must be a positive integer, got: $md")
+        if haskey(sub, "degree") &&
+           sub["degree"] isa Integer &&
+           md isa Integer &&
+           md < sub["degree"]
+            push!(
+                errors,
+                "[subdivision] max_degree ($md) must be >= degree ($(sub["degree"]))",
+            )
+        end
+    end
+    if haskey(sub, "l2_tolerance")
+        (sub["l2_tolerance"] isa Number && sub["l2_tolerance"] > 0) ||
+            push!(errors, "[subdivision] l2_tolerance must be positive")
+    end
+    if haskey(sub, "max_depth")
+        mxd = sub["max_depth"]
+        (mxd isa Integer && mxd >= 1) ||
+            push!(errors, "[subdivision] max_depth must be a positive integer, got: $mxd")
+    end
+    if haskey(sub, "max_leaves")
+        mxl = sub["max_leaves"]
+        (mxl isa Integer && mxl >= 1) ||
+            push!(errors, "[subdivision] max_leaves must be a positive integer, got: $mxl")
+    end
 
     # --- [refinement] (optional) ---
     if haskey(ref, "method")
@@ -753,8 +845,27 @@ function load_experiment_config(path::String)
     analysis_accept_tol = haskey(ana, "accept_tol") ? Float64(ana["accept_tol"]) : nothing
     analysis_f_accept_tol =
         haskey(ana, "f_accept_tol") ? Float64(ana["f_accept_tol"]) : nothing
+    analysis_newton_patience =
+        haskey(ana, "newton_patience") ? Int(ana["newton_patience"]) : nothing
+    analysis_newton_min_improvement =
+        haskey(ana, "newton_min_improvement") ? Float64(ana["newton_min_improvement"]) :
+        nothing
+    analysis_f_accept_tol_multiplier =
+        haskey(ana, "f_accept_tol_multiplier") ? Float64(ana["f_accept_tol_multiplier"]) :
+        nothing
     analysis_valley_walking = Bool(get(ana, "valley_walking", false))
     analysis_deep_diagnostics = Bool(get(ana, "deep_diagnostics", false))
+
+    # Parse subdivision (optional)
+    sub = get(d, "subdivision", Dict())
+    subdivision_strategy = haskey(sub, "strategy") ? String(sub["strategy"]) : nothing
+    subdivision_degree = haskey(sub, "degree") ? Int(sub["degree"]) : nothing
+    subdivision_max_degree = haskey(sub, "max_degree") ? Int(sub["max_degree"]) : nothing
+    subdivision_l2_tolerance =
+        haskey(sub, "l2_tolerance") ? Float64(sub["l2_tolerance"]) : nothing
+    subdivision_max_depth = haskey(sub, "max_depth") ? Int(sub["max_depth"]) : nothing
+    subdivision_max_leaves = haskey(sub, "max_leaves") ? Int(sub["max_leaves"]) : nothing
+    subdivision_basis = haskey(sub, "basis") ? Symbol(sub["basis"]) : nothing
 
     return ExperimentPipelineConfig(
         # [experiment]
@@ -804,8 +915,19 @@ function load_experiment_config(path::String)
         analysis_top_k = analysis_top_k,
         analysis_accept_tol = analysis_accept_tol,
         analysis_f_accept_tol = analysis_f_accept_tol,
+        analysis_newton_patience = analysis_newton_patience,
+        analysis_newton_min_improvement = analysis_newton_min_improvement,
+        analysis_f_accept_tol_multiplier = analysis_f_accept_tol_multiplier,
         analysis_valley_walking = analysis_valley_walking,
         analysis_deep_diagnostics = analysis_deep_diagnostics,
+        # [subdivision]
+        subdivision_strategy = subdivision_strategy,
+        subdivision_degree = subdivision_degree,
+        subdivision_max_degree = subdivision_max_degree,
+        subdivision_l2_tolerance = subdivision_l2_tolerance,
+        subdivision_max_depth = subdivision_max_depth,
+        subdivision_max_leaves = subdivision_max_leaves,
+        subdivision_basis = subdivision_basis,
         # [output]
         output_dir = output_dir,
         # [visualization]
