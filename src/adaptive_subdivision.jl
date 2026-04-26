@@ -164,9 +164,7 @@ end
 Return total number of leaf subdomains (active + converged + pruned).
 """
 n_leaves(tree::SubdivisionTree) =
-    length(tree.active_leaves) +
-    length(tree.converged_leaves) +
-    length(tree.pruned_leaves)
+    length(tree.active_leaves) + length(tree.converged_leaves) + length(tree.pruned_leaves)
 
 """
     n_pruned(tree::SubdivisionTree)
@@ -275,8 +273,7 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symb
         sd = tree.subdomains[id]
         bounds = get_bounds(sd)
         bounds_str = join([Printf.@sprintf("[%.2f,%.2f]", b[1], b[2]) for b in bounds], "×")
-        status =
-            id in pruned_set ? "pruned" : (id in converged_set ? "conv" : "active")
+        status = id in pruned_set ? "pruned" : (id in converged_set ? "conv" : "active")
         Printf.@printf(
             "%-4d  %-5d  %-3d  %-10.2e  %-8s  %s\n",
             id,
