@@ -162,6 +162,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_inf_handling.jl") do
     include("test_subdivision_inf_handling.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_eval_count.jl") do
+    include("test_subdivision_eval_count.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_y0j_integration.jl") do
     include("test_y0j_integration.jl")
 end
