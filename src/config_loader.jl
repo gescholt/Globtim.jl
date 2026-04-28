@@ -31,6 +31,9 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 - `[solver]`: solver overrides (optional)
 - `[refinement]`: post-processing refinement (optional)
 - `[analysis]`: Newton CP refinement and classification (optional)
+- `[subdivision]`: adaptive-subdivision strategy defaults (optional, svdr)
+- `[grid_scoring]`: interestingness scoring thresholds + catalogue list (optional, 0thk)
+- `[screening]`: screen_and_probe parameters + model factory (optional, 20p7)
 - `[visualization]`: level set / landscape visualization parameters (optional)
 - `[output]`: output_dir (optional)
 """
@@ -106,6 +109,36 @@ Base.@kwdef struct ExperimentPipelineConfig
     subdivision_max_leaves::Union{Nothing,Int} = nothing
     subdivision_basis::Union{Nothing,Symbol} = nothing
 
+    # [grid_scoring] — optional grid-based interestingness scoring defaults (0thk)
+    # Used by experiments/sandbox/run_grid_scoring.jl when the script is given a
+    # TOML config; otherwise the script falls back to its hardcoded list + thresholds.
+    grid_scoring_points_per_dim::Union{Nothing,Int} = nothing
+    grid_scoring_numpoints::Union{Nothing,Int} = nothing
+    grid_scoring_interestingness_threshold::Union{Nothing,Float64} = nothing
+    grid_scoring_negative_control_threshold::Union{Nothing,Float64} = nothing
+    grid_scoring_min_local_minima::Union{Nothing,Int} = nothing
+    grid_scoring_catalogue_files::Union{Nothing,Vector{String}} = nothing
+
+    # [screening] — optional screen_and_probe parameters (20p7)
+    # Drives the `pkg/Dynamic_objectives/scripts/run_screening.jl` entry point;
+    # `model_factory` must resolve through Dynamic_objectives.MODEL_REGISTRY.
+    screening_model_factory::Union{Nothing,String} = nothing
+    screening_ic::Union{Nothing,Vector{Float64}} = nothing
+    screening_bounds::Union{Nothing,Vector{Tuple{Float64,Float64}}} = nothing
+    screening_time_interval::Union{Nothing,Vector{Float64}} = nothing
+    screening_catalogue_path::Union{Nothing,String} = nothing
+    screening_name_prefix::Union{Nothing,String} = nothing
+    screening_description::Union{Nothing,String} = nothing
+    screening_n_candidates::Union{Nothing,Int} = nothing
+    screening_n_probes::Union{Nothing,Int} = nothing
+    screening_top_n::Union{Nothing,Int} = nothing
+    screening_numpoints_screen::Union{Nothing,Int} = nothing
+    screening_numpoints_probe::Union{Nothing,Int} = nothing
+    screening_min_finite_fraction::Union{Nothing,Float64} = nothing
+    screening_max_noise_ratio::Union{Nothing,Float64} = nothing
+    screening_ranking_strategy::Union{Nothing,String} = nothing
+    screening_solver::Union{Nothing,String} = nothing
+
     # [output]
     output_dir::Union{Nothing,String} = nothing
 
@@ -161,6 +194,24 @@ const KNOWN_SUBDIVISION_STRATEGIES = Set([
 ])
 
 const KNOWN_SUBDIVISION_BASES = Set(["chebyshev", "legendre"])
+
+# Screening rankings (20p7). Only `dynamic_range` exists today; field is
+# forward-looking so future strategies (variance, basin_count, etc.) can land
+# without changing the TOML schema.
+const KNOWN_SCREENING_RANKING_STRATEGIES = Set(["dynamic_range"])
+
+# Screening ODE solvers — string keys mapped to OrdinaryDiffEq solver objects
+# in the Dynamic_objectives screening driver. New entries must be added in
+# both this set AND the driver's `_resolve_solver` switch.
+const KNOWN_SCREENING_SOLVERS = Set([
+    "Tsit5",
+    "AutoTsit5_Rosenbrock23",
+    "Vern7",
+    "Vern9",
+    "Rosenbrock23",
+    "Rodas5",
+    "TRBDF2",
+])
 
 """
     validate_experiment_toml(d::Dict)
@@ -646,6 +697,135 @@ function validate_experiment_toml(d::Dict)
         )
     end
 
+    # --- [grid_scoring] (optional — interestingness scoring defaults) ---
+    gs = get(d, "grid_scoring", Dict())
+    if haskey(gs, "points_per_dim")
+        ppd = gs["points_per_dim"]
+        (ppd isa Integer && ppd >= 2) || push!(
+            errors,
+            "[grid_scoring] points_per_dim must be an integer >= 2, got: $ppd",
+        )
+    end
+    if haskey(gs, "numpoints")
+        np = gs["numpoints"]
+        (np isa Integer && np >= 2) ||
+            push!(errors, "[grid_scoring] numpoints must be an integer >= 2, got: $np")
+    end
+    if haskey(gs, "interestingness_threshold")
+        t = gs["interestingness_threshold"]
+        (t isa Number && 0 <= t <= 1) || push!(
+            errors,
+            "[grid_scoring] interestingness_threshold must be in [0, 1], got: $t",
+        )
+    end
+    if haskey(gs, "negative_control_threshold")
+        t = gs["negative_control_threshold"]
+        (t isa Number && 0 <= t <= 1) || push!(
+            errors,
+            "[grid_scoring] negative_control_threshold must be in [0, 1], got: $t",
+        )
+        if haskey(gs, "interestingness_threshold") &&
+           gs["interestingness_threshold"] isa Number &&
+           t isa Number &&
+           t >= gs["interestingness_threshold"]
+            push!(
+                errors,
+                "[grid_scoring] negative_control_threshold ($t) must be < interestingness_threshold ($(gs["interestingness_threshold"]))",
+            )
+        end
+    end
+    if haskey(gs, "min_local_minima")
+        m = gs["min_local_minima"]
+        (m isa Integer && m >= 0) ||
+            push!(errors, "[grid_scoring] min_local_minima must be an integer >= 0, got: $m")
+    end
+    if haskey(gs, "catalogue_files")
+        cf = gs["catalogue_files"]
+        (cf isa AbstractVector && all(x -> x isa AbstractString, cf)) || push!(
+            errors,
+            "[grid_scoring] catalogue_files must be an array of strings, got: $cf",
+        )
+    end
+
+    # --- [screening] (optional — screen_and_probe parameters) ---
+    scr = get(d, "screening", Dict())
+    if haskey(scr, "model_factory")
+        mf = scr["model_factory"]
+        mf isa AbstractString ||
+            push!(errors, "[screening] model_factory must be a string, got: $mf")
+    end
+    if haskey(scr, "ic")
+        ic = scr["ic"]
+        (ic isa AbstractVector && all(x -> x isa Number, ic)) ||
+            push!(errors, "[screening] ic must be an array of numbers, got: $ic")
+    end
+    if haskey(scr, "bounds")
+        b = scr["bounds"]
+        bounds_ok =
+            b isa AbstractVector &&
+            all(p -> p isa AbstractVector && length(p) == 2 && all(x -> x isa Number, p), b)
+        bounds_ok || push!(
+            errors,
+            "[screening] bounds must be an array of [lo, hi] pairs, got: $b",
+        )
+    end
+    if haskey(scr, "time_interval")
+        ti = scr["time_interval"]
+        (ti isa AbstractVector && length(ti) == 2 && all(x -> x isa Number, ti)) ||
+            push!(errors, "[screening] time_interval must be [t0, t1], got: $ti")
+    end
+    if haskey(scr, "n_candidates")
+        n = scr["n_candidates"]
+        (n isa Integer && n >= 1) ||
+            push!(errors, "[screening] n_candidates must be a positive integer, got: $n")
+    end
+    if haskey(scr, "n_probes")
+        n = scr["n_probes"]
+        (n isa Integer && n >= 1) ||
+            push!(errors, "[screening] n_probes must be a positive integer, got: $n")
+    end
+    if haskey(scr, "top_n")
+        n = scr["top_n"]
+        (n isa Integer && n >= 1) ||
+            push!(errors, "[screening] top_n must be a positive integer, got: $n")
+    end
+    if haskey(scr, "numpoints_screen")
+        n = scr["numpoints_screen"]
+        (n isa Integer && n >= 2) ||
+            push!(errors, "[screening] numpoints_screen must be an integer >= 2, got: $n")
+    end
+    if haskey(scr, "numpoints_probe")
+        n = scr["numpoints_probe"]
+        (n isa Integer && n >= 2) ||
+            push!(errors, "[screening] numpoints_probe must be an integer >= 2, got: $n")
+    end
+    if haskey(scr, "min_finite_fraction")
+        f = scr["min_finite_fraction"]
+        (f isa Number && 0 <= f <= 1) || push!(
+            errors,
+            "[screening] min_finite_fraction must be in [0, 1], got: $f",
+        )
+    end
+    if haskey(scr, "max_noise_ratio")
+        r = scr["max_noise_ratio"]
+        (r isa Number && r >= 0) ||
+            push!(errors, "[screening] max_noise_ratio must be >= 0, got: $r")
+    end
+    if haskey(scr, "ranking_strategy")
+        s = scr["ranking_strategy"]
+        s in KNOWN_SCREENING_RANKING_STRATEGIES || push!(
+            errors,
+            "[screening] unknown ranking_strategy '$s'. Known: $(join(sort(collect(KNOWN_SCREENING_RANKING_STRATEGIES)), ", "))",
+        )
+    end
+    if haskey(scr, "solver")
+        s = scr["solver"]
+        s in KNOWN_SCREENING_SOLVERS || push!(
+            errors,
+            "[screening] unknown solver '$s'. Known: $(join(sort(collect(KNOWN_SCREENING_SOLVERS)), ", "))",
+        )
+    end
+
     # --- Raise all errors ---
     if !isempty(errors)
         error("TOML validation failed:\n  " * join(errors, "\n  "))
@@ -867,6 +1047,63 @@ function load_experiment_config(path::String)
     subdivision_max_leaves = haskey(sub, "max_leaves") ? Int(sub["max_leaves"]) : nothing
     subdivision_basis = haskey(sub, "basis") ? Symbol(sub["basis"]) : nothing
 
+    # Parse grid_scoring (optional, 0thk)
+    gs = get(d, "grid_scoring", Dict())
+    grid_scoring_points_per_dim =
+        haskey(gs, "points_per_dim") ? Int(gs["points_per_dim"]) : nothing
+    grid_scoring_numpoints = haskey(gs, "numpoints") ? Int(gs["numpoints"]) : nothing
+    grid_scoring_interestingness_threshold =
+        haskey(gs, "interestingness_threshold") ?
+        Float64(gs["interestingness_threshold"]) : nothing
+    grid_scoring_negative_control_threshold =
+        haskey(gs, "negative_control_threshold") ?
+        Float64(gs["negative_control_threshold"]) : nothing
+    grid_scoring_min_local_minima =
+        haskey(gs, "min_local_minima") ? Int(gs["min_local_minima"]) : nothing
+    grid_scoring_catalogue_files = if haskey(gs, "catalogue_files")
+        [String(x) for x in gs["catalogue_files"]]
+    else
+        nothing
+    end
+
+    # Parse screening (optional, 20p7)
+    scr = get(d, "screening", Dict())
+    screening_model_factory =
+        haskey(scr, "model_factory") ? String(scr["model_factory"]) : nothing
+    screening_ic = haskey(scr, "ic") ? Float64.(scr["ic"]) : nothing
+    screening_bounds = if haskey(scr, "bounds")
+        [Tuple{Float64,Float64}((Float64(p[1]), Float64(p[2]))) for p in scr["bounds"]]
+    else
+        nothing
+    end
+    screening_time_interval =
+        haskey(scr, "time_interval") ? Float64.(scr["time_interval"]) : nothing
+    screening_catalogue_path = if haskey(scr, "catalogue_path")
+        _resolve_config_path(String(scr["catalogue_path"]), config_dir)
+    else
+        nothing
+    end
+    screening_name_prefix =
+        haskey(scr, "name_prefix") ? String(scr["name_prefix"]) : nothing
+    screening_description =
+        haskey(scr, "description") ? String(scr["description"]) : nothing
+    screening_n_candidates =
+        haskey(scr, "n_candidates") ? Int(scr["n_candidates"]) : nothing
+    screening_n_probes = haskey(scr, "n_probes") ? Int(scr["n_probes"]) : nothing
+    screening_top_n = haskey(scr, "top_n") ? Int(scr["top_n"]) : nothing
+    screening_numpoints_screen =
+        haskey(scr, "numpoints_screen") ? Int(scr["numpoints_screen"]) : nothing
+    screening_numpoints_probe =
+        haskey(scr, "numpoints_probe") ? Int(scr["numpoints_probe"]) : nothing
+    screening_min_finite_fraction =
+        haskey(scr, "min_finite_fraction") ? Float64(scr["min_finite_fraction"]) :
+        nothing
+    screening_max_noise_ratio =
+        haskey(scr, "max_noise_ratio") ? Float64(scr["max_noise_ratio"]) : nothing
+    screening_ranking_strategy =
+        haskey(scr, "ranking_strategy") ? String(scr["ranking_strategy"]) : nothing
+    screening_solver = haskey(scr, "solver") ? String(scr["solver"]) : nothing
+
     return ExperimentPipelineConfig(
         # [experiment]
         name = String(exp["name"]),
@@ -928,6 +1165,30 @@ function load_experiment_config(path::String)
         subdivision_max_depth = subdivision_max_depth,
         subdivision_max_leaves = subdivision_max_leaves,
         subdivision_basis = subdivision_basis,
+        # [grid_scoring]
+        grid_scoring_points_per_dim = grid_scoring_points_per_dim,
+        grid_scoring_numpoints = grid_scoring_numpoints,
+        grid_scoring_interestingness_threshold = grid_scoring_interestingness_threshold,
+        grid_scoring_negative_control_threshold = grid_scoring_negative_control_threshold,
+        grid_scoring_min_local_minima = grid_scoring_min_local_minima,
+        grid_scoring_catalogue_files = grid_scoring_catalogue_files,
+        # [screening]
+        screening_model_factory = screening_model_factory,
+        screening_ic = screening_ic,
+        screening_bounds = screening_bounds,
+        screening_time_interval = screening_time_interval,
+        screening_catalogue_path = screening_catalogue_path,
+        screening_name_prefix = screening_name_prefix,
+        screening_description = screening_description,
+        screening_n_candidates = screening_n_candidates,
+        screening_n_probes = screening_n_probes,
+        screening_top_n = screening_top_n,
+        screening_numpoints_screen = screening_numpoints_screen,
+        screening_numpoints_probe = screening_numpoints_probe,
+        screening_min_finite_fraction = screening_min_finite_fraction,
+        screening_max_noise_ratio = screening_max_noise_ratio,
+        screening_ranking_strategy = screening_ranking_strategy,
+        screening_solver = screening_solver,
         # [output]
         output_dir = output_dir,
         # [visualization]

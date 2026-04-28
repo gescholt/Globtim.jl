@@ -181,3 +181,7 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_sparsification_cached.jl") do
     include("test_sparsification_cached.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_toml_grid_scoring_screening.jl") do
+    include("test_toml_grid_scoring_screening.jl")
+end
