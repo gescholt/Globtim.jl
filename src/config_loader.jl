@@ -736,8 +736,10 @@ function validate_experiment_toml(d::Dict)
     end
     if haskey(gs, "min_local_minima")
         m = gs["min_local_minima"]
-        (m isa Integer && m >= 0) ||
-            push!(errors, "[grid_scoring] min_local_minima must be an integer >= 0, got: $m")
+        (m isa Integer && m >= 0) || push!(
+            errors,
+            "[grid_scoring] min_local_minima must be an integer >= 0, got: $m",
+        )
     end
     if haskey(gs, "catalogue_files")
         cf = gs["catalogue_files"]
@@ -764,10 +766,8 @@ function validate_experiment_toml(d::Dict)
         bounds_ok =
             b isa AbstractVector &&
             all(p -> p isa AbstractVector && length(p) == 2 && all(x -> x isa Number, p), b)
-        bounds_ok || push!(
-            errors,
-            "[screening] bounds must be an array of [lo, hi] pairs, got: $b",
-        )
+        bounds_ok ||
+            push!(errors, "[screening] bounds must be an array of [lo, hi] pairs, got: $b")
     end
     if haskey(scr, "time_interval")
         ti = scr["time_interval"]
@@ -801,10 +801,8 @@ function validate_experiment_toml(d::Dict)
     end
     if haskey(scr, "min_finite_fraction")
         f = scr["min_finite_fraction"]
-        (f isa Number && 0 <= f <= 1) || push!(
-            errors,
-            "[screening] min_finite_fraction must be in [0, 1], got: $f",
-        )
+        (f isa Number && 0 <= f <= 1) ||
+            push!(errors, "[screening] min_finite_fraction must be in [0, 1], got: $f")
     end
     if haskey(scr, "max_noise_ratio")
         r = scr["max_noise_ratio"]
@@ -1053,8 +1051,8 @@ function load_experiment_config(path::String)
         haskey(gs, "points_per_dim") ? Int(gs["points_per_dim"]) : nothing
     grid_scoring_numpoints = haskey(gs, "numpoints") ? Int(gs["numpoints"]) : nothing
     grid_scoring_interestingness_threshold =
-        haskey(gs, "interestingness_threshold") ?
-        Float64(gs["interestingness_threshold"]) : nothing
+        haskey(gs, "interestingness_threshold") ? Float64(gs["interestingness_threshold"]) :
+        nothing
     grid_scoring_negative_control_threshold =
         haskey(gs, "negative_control_threshold") ?
         Float64(gs["negative_control_threshold"]) : nothing
@@ -1096,8 +1094,7 @@ function load_experiment_config(path::String)
     screening_numpoints_probe =
         haskey(scr, "numpoints_probe") ? Int(scr["numpoints_probe"]) : nothing
     screening_min_finite_fraction =
-        haskey(scr, "min_finite_fraction") ? Float64(scr["min_finite_fraction"]) :
-        nothing
+        haskey(scr, "min_finite_fraction") ? Float64(scr["min_finite_fraction"]) : nothing
     screening_max_noise_ratio =
         haskey(scr, "max_noise_ratio") ? Float64(scr["max_noise_ratio"]) : nothing
     screening_ranking_strategy =
