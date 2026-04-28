@@ -787,8 +787,7 @@ function estimate_subdomain_error(
     subdomain.samples = grid_matrix
     subdomain.f_values = f_values
 
-    @debug "estimate_subdomain_error" l2_error rel_l2 norm_f degree =
-        per_dim_degrees n_total
+    @debug "estimate_subdomain_error" l2_error rel_l2 norm_f degree = per_dim_degrees n_total
 
     return l2_error
 end
@@ -1639,8 +1638,7 @@ function two_phase_refine(
         if !isempty(tree.active_leaves)
             ratio = error_balance_ratio(tree)
             if verbose
-                max_abs_p1, max_rel_p1 =
-                    leaf_error_summary(tree, tree.active_leaves)
+                max_abs_p1, max_rel_p1 = leaf_error_summary(tree, tree.active_leaves)
                 Printf.@printf(
                     "Phase 1 iteration %d: ratio=%.3g, max ‖f-p‖_L2=%.3e, max rel=%.3e\n",
                     phase1_iter,
