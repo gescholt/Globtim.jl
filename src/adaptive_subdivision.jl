@@ -181,6 +181,27 @@ Return number of subdomains still needing refinement.
 n_active(tree::SubdivisionTree) = length(tree.active_leaves)
 
 """
+    leaf_error_summary(tree, leaf_ids) -> (max_abs, max_rel)
+
+Return the maximum absolute and relative L2 errors across the given leaf
+subdomain ids. Returns `(NaN, NaN)` for an empty collection. Inf values are
+preserved (they signal an infeasible leaf or unset error). Used by the
+verbose paths in `adaptive_refine` / `two_phase_refine` to surface both
+metrics regardless of which `tolerance_mode` drove the convergence check.
+"""
+function leaf_error_summary(tree::SubdivisionTree, leaf_ids)
+    isempty(leaf_ids) && return (NaN, NaN)
+    max_abs = -Inf
+    max_rel = -Inf
+    for id in leaf_ids
+        sd = tree.subdomains[id]
+        max_abs = max(max_abs, sd.l2_error)
+        max_rel = max(max_rel, sd.relative_l2_error)
+    end
+    return (max_abs, max_rel)
+end
+
+"""
     get_max_depth(tree::SubdivisionTree)
 
 Return maximum depth of any subdomain in tree.
@@ -765,6 +786,9 @@ function estimate_subdomain_error(
     subdomain.polynomial = pol
     subdomain.samples = grid_matrix
     subdomain.f_values = f_values
+
+    @debug "estimate_subdomain_error" l2_error rel_l2 norm_f degree =
+        per_dim_degrees n_total
 
     return l2_error
 end
@@ -1352,10 +1376,17 @@ function adaptive_refine(
             break
         end
 
-        verbose && println(
-            "Iteration $iteration: $(n_active(tree)) active leaves, " *
-            "$(n_leaves(tree)) total leaves",
-        )
+        if verbose
+            max_abs_pre, max_rel_pre = leaf_error_summary(tree, tree.active_leaves)
+            Printf.@printf(
+                "Iteration %d: %d active leaves, %d total leaves (max ‖f-p‖_L2=%.3e, max rel=%.3e)\n",
+                iteration,
+                n_active(tree),
+                n_leaves(tree),
+                max_abs_pre,
+                max_rel_pre,
+            )
+        end
 
         # Process all active leaves
         current_active = copy(tree.active_leaves)
@@ -1447,12 +1478,21 @@ function adaptive_refine(
         end
     end
 
-    verbose && println(
-        "Final: $(n_leaves(tree)) leaves " *
-        "($(length(tree.converged_leaves)) converged, " *
-        "$(length(tree.active_leaves)) active, " *
-        "$(length(tree.pruned_leaves)) pruned)",
-    )
+    if verbose
+        all_leaves = vcat(tree.active_leaves, tree.converged_leaves, tree.pruned_leaves)
+        max_abs_final, max_rel_final = leaf_error_summary(tree, all_leaves)
+        Printf.@printf(
+            "Final: %d leaves (%d converged, %d active, %d pruned) | max ‖f-p‖_L2=%.3e, max rel=%.3e | tolerance_mode=%s, l2_tolerance=%.3e\n",
+            n_leaves(tree),
+            length(tree.converged_leaves),
+            length(tree.active_leaves),
+            length(tree.pruned_leaves),
+            max_abs_final,
+            max_rel_final,
+            tolerance_mode,
+            l2_tolerance,
+        )
+    end
 
     return tree
 end #==============================================================================#
@@ -1598,7 +1638,17 @@ function two_phase_refine(
         # Check balance criterion
         if !isempty(tree.active_leaves)
             ratio = error_balance_ratio(tree)
-            verbose && println("Phase 1 iteration $phase1_iter: ratio = $ratio")
+            if verbose
+                max_abs_p1, max_rel_p1 =
+                    leaf_error_summary(tree, tree.active_leaves)
+                Printf.@printf(
+                    "Phase 1 iteration %d: ratio=%.3g, max ‖f-p‖_L2=%.3e, max rel=%.3e\n",
+                    phase1_iter,
+                    ratio,
+                    max_abs_p1,
+                    max_rel_p1,
+                )
+            end
 
             if ratio <= balance_threshold
                 verbose && println("Balanced! Ratio $ratio <= threshold $balance_threshold")
@@ -1680,11 +1730,17 @@ function two_phase_refine(
             iteration_callback(tree, phase2_iter)
         end
 
-        verbose && println(
-            "Phase 2 iteration $phase2_iter: " *
-            "$(length(tree.active_leaves)) active, " *
-            "$(length(tree.converged_leaves)) converged",
-        )
+        if verbose
+            max_abs_p2, max_rel_p2 = leaf_error_summary(tree, tree.active_leaves)
+            Printf.@printf(
+                "Phase 2 iteration %d: %d active, %d converged | max ‖f-p‖_L2=%.3e, max rel=%.3e\n",
+                phase2_iter,
+                length(tree.active_leaves),
+                length(tree.converged_leaves),
+                max_abs_p2,
+                max_rel_p2,
+            )
+        end
 
         if get_max_depth(tree) >= max_depth || n_leaves(tree) >= max_leaves
             break
@@ -1711,10 +1767,21 @@ function two_phase_refine(
         end
     end
 
-    verbose && println(
-        "\nFinal: $(n_leaves(tree)) leaves " *
-        "($(length(tree.converged_leaves)) converged, $(length(tree.pruned_leaves)) pruned)",
-    )
+    if verbose
+        all_leaves = vcat(tree.active_leaves, tree.converged_leaves, tree.pruned_leaves)
+        max_abs_final, max_rel_final = leaf_error_summary(tree, all_leaves)
+        Printf.@printf(
+            "\nFinal: %d leaves (%d converged, %d active, %d pruned) | max ‖f-p‖_L2=%.3e, max rel=%.3e | tolerance_mode=%s, fine_tolerance=%.3e\n",
+            n_leaves(tree),
+            length(tree.converged_leaves),
+            length(tree.active_leaves),
+            length(tree.pruned_leaves),
+            max_abs_final,
+            max_rel_final,
+            tolerance_mode,
+            fine_tolerance,
+        )
+    end
 
     return tree
 end
