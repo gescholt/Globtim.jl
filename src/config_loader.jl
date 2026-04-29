@@ -80,6 +80,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     refinement_max_time::Union{Nothing,Float64} = nothing
     refinement_gradient_method::Union{Nothing,String} = nothing
     refinement_gradient_tolerance::Union{Nothing,Float64} = nothing
+    refinement_step_tolerance::Union{Nothing,Float64} = nothing
 
     # [analysis] — optional CP refinement and classification
     analysis_enabled::Bool = false
@@ -622,6 +623,10 @@ function validate_experiment_toml(d::Dict)
         (ref["gradient_tolerance"] isa Number && ref["gradient_tolerance"] > 0) ||
             push!(errors, "[refinement] gradient_tolerance must be positive")
     end
+    if haskey(ref, "step_tolerance")
+        (ref["step_tolerance"] isa Number && ref["step_tolerance"] > 0) ||
+            push!(errors, "[refinement] step_tolerance must be positive")
+    end
 
     # --- [visualization] (optional) ---
     viz = get(d, "visualization", Dict())
@@ -960,6 +965,8 @@ function load_experiment_config(path::String)
         haskey(ref, "gradient_method") ? String(ref["gradient_method"]) : nothing
     refinement_gradient_tolerance =
         haskey(ref, "gradient_tolerance") ? Float64(ref["gradient_tolerance"]) : nothing
+    refinement_step_tolerance =
+        haskey(ref, "step_tolerance") ? Float64(ref["step_tolerance"]) : nothing
 
     # Parse analysis
     ana = get(d, "analysis", Dict())
@@ -1137,6 +1144,7 @@ function load_experiment_config(path::String)
         refinement_max_time = refinement_max_time,
         refinement_gradient_method = refinement_gradient_method,
         refinement_gradient_tolerance = refinement_gradient_tolerance,
+        refinement_step_tolerance = refinement_step_tolerance,
         # [analysis]
         analysis_enabled = analysis_enabled,
         analysis_refinement_goal = analysis_refinement_goal,
