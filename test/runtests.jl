@@ -162,6 +162,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_inf_handling.jl") do
     include("test_subdivision_inf_handling.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_mode_spectrum.jl") do
+    include("test_mode_spectrum.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_eval_count.jl") do
     include("test_subdivision_eval_count.jl")
 end

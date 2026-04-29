@@ -35,6 +35,13 @@ Represents a subdomain in the adaptive refinement tree.
 - `split_pos::Union{Float64, Nothing}`: Cut position in [-1,1] normalized coordinates
 - `infeasible::Bool`: All sample evaluations returned Inf — region is unfit for polynomial
   approximation and should be terminated as `ActionPruned` rather than split forever.
+- `mode_spectrum::Vector{Float64}`: Per-Chebyshev-mode residual coefficients η_α
+  for modes with `degree < |α|_∞ ≤ extended_degree` (bead dksx.0). Empty until
+  `compute_subdomain_mode_spectrum!` is called.
+- `dominant_mode::Vector{Int}`: argmax_α η_α (multi-index of the residual's
+  largest mode); zeros until computed.
+- `spectral_concentration::Float64`: fraction of squared η-mass in modes with
+  `|α|_∞ ∈ {degree+1, degree+2}`. NaN until computed.
 """
 mutable struct Subdomain
     center::Vector{Float64}
@@ -52,6 +59,11 @@ mutable struct Subdomain
     split_dim::Union{Int,Nothing}
     split_pos::Union{Float64,Nothing}
     infeasible::Bool
+    # dksx.0: per-mode residual decomposition (filled lazily by
+    # compute_subdomain_mode_spectrum! when the spectral predicate is needed).
+    mode_spectrum::Vector{Float64}
+    dominant_mode::Vector{Int}
+    spectral_concentration::Float64
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -77,7 +89,10 @@ function Subdomain(
         nothing,
         nothing,
         false,
-    )  # children, split_dim, split_pos, infeasible
+        Float64[],          # mode_spectrum (uncomputed)
+        Int[],              # dominant_mode (uncomputed)
+        NaN,                # spectral_concentration (uncomputed)
+    )
 end
 
 # Constructor from bounds

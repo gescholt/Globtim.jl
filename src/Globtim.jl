@@ -194,7 +194,9 @@ export Subdomain,
     ActionConverged,
     ActionDegreeBump,
     ActionSplit,
-    ActionPruned  # hp-refinement
+    ActionPruned,  # hp-refinement
+    compute_mode_spectrum,
+    compute_subdomain_mode_spectrum!  # dksx.0 per-mode residual decomposition
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -267,6 +269,7 @@ include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
 include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y0j)
+include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
