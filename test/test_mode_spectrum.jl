@@ -95,6 +95,19 @@ using Globtim: Subdomain, estimate_subdomain_error, compute_mode_spectrum,
         @test result.extended_degree > 4
     end
 
+    @testset "d_safe handles n_dim'th-root FP roundoff (regression)" begin
+        # 3D fit at d=4 with default GN=8 produces 9³=729 samples. d_safe should
+        # be 8 because (8+1)³ = 729 ≤ 729. The naive `floor(729^(1/3)) - 1`
+        # returned 7 due to Float64 cube-root roundoff; the integer-walk fix
+        # returns 8. Without this, ackley_3d's dominant residual mode at
+        # |α|_∞=8 is invisible to the spectrum.
+        f(x) = x[1]^2 + x[2]^2 + x[3]^2
+        sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)])
+        estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
+        result = compute_mode_spectrum(sd.polynomial)
+        @test result.extended_degree == 8
+    end
+
     @testset "L2-residual energy reconciles with relative_l2_error" begin
         # The squared η-mass should approximately equal relative_l2_error² for
         # a fit where the residual is fully captured by modes ≤ extended_degree.

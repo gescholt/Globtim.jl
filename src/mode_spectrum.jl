@@ -76,7 +76,13 @@ function compute_mode_spectrum(poly::ApproxPoly; extended_degree::Int = 0)
     requested = extended_degree > 0 ? extended_degree : 2 * base_degree
     # Largest d such that the standard isotropic support (d+1)^n_dim does not
     # exceed the sample count — clamp so the LS solve stays well-posed.
-    d_safe = max(0, floor(Int, n_samples^(1 / n_dim)) - 1)
+    # Integer search avoids float-roundoff on n_dim'th roots: e.g. 729^(1/3)
+    # in Float64 lands just below 9.0, so `floor(...) - 1` would give 7 here
+    # when 8 is the true answer. Walk d up while (d+2)^n_dim ≤ n_samples.
+    d_safe = 0
+    while (d_safe + 2)^n_dim <= n_samples
+        d_safe += 1
+    end
     ext_d = min(requested, d_safe)
     if ext_d <= base_degree
         return _empty_mode_spectrum(n_dim, base_degree, base_degree)
