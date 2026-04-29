@@ -171,10 +171,7 @@ NamedTuple so callers that want the raw `modes` matrix can keep it.
 If `subdomain.polynomial` is `nothing` (uncomputed leaf or infeasible region),
 this no-ops and returns the empty-spectrum NamedTuple.
 """
-function compute_subdomain_mode_spectrum!(
-    subdomain::Subdomain;
-    extended_degree::Int = 0,
-)
+function compute_subdomain_mode_spectrum!(subdomain::Subdomain; extended_degree::Int = 0)
     if subdomain.polynomial === nothing
         n_dim = length(subdomain.center)
         result = _empty_mode_spectrum(n_dim, 0, 0)
