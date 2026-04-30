@@ -79,8 +79,11 @@ If the sample grid is too small to support any extension beyond `base_degree`,
 returns an empty spectrum (all zero summary statistics) — the caller should
 treat this as "no signal available; fall back to default predicate."
 """
-function compute_mode_spectrum(poly::ApproxPoly; extended_degree::Int = 0,
-        rel_l2_squared::Real = NaN)
+function compute_mode_spectrum(
+    poly::ApproxPoly;
+    extended_degree::Int = 0,
+    rel_l2_squared::Real = NaN,
+)
     if poly.support === nothing
         return _empty_mode_spectrum(0, 0, 0)
     end
@@ -238,10 +241,13 @@ function compute_subdomain_mode_spectrum!(subdomain::Subdomain; extended_degree:
         subdomain.spectral_concentration = NaN
         return result
     end
-    rel_l2_squared = isfinite(subdomain.relative_l2_error) ?
-        subdomain.relative_l2_error^2 : NaN
-    result = compute_mode_spectrum(subdomain.polynomial;
-        extended_degree = extended_degree, rel_l2_squared = rel_l2_squared)
+    rel_l2_squared =
+        isfinite(subdomain.relative_l2_error) ? subdomain.relative_l2_error^2 : NaN
+    result = compute_mode_spectrum(
+        subdomain.polynomial;
+        extended_degree = extended_degree,
+        rel_l2_squared = rel_l2_squared,
+    )
     subdomain.mode_spectrum = result.spectrum
     subdomain.dominant_mode = collect(result.dominant_mode)
     subdomain.spectral_concentration = result.spectral_concentration
