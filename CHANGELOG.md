@@ -2,6 +2,36 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
+## [1.1.0] - 2026-04-30
+
+### Added
+
+- **Subdivision: mode-spectrum predicate.** New `src/mode_spectrum.jl` with `compute_mode_spectrum`, `compute_subdomain_mode_spectrum!`, `shell_decay`, and `window_coverage`. Per-Chebyshev-mode residual decomposition replaces the ad-hoc residual heuristic for the bump-vs-split decision.
+- **Refinement-method validation.** Newton-step-norm criterion (`||H⁻¹∇f|| < tol`) for gradient validation; refinement-method shootout harness comparing NelderMead / LBFGS / Newton-CP / Newton-minimize.
+- **TOML configuration architecture.** New `[grid_scoring]` and `[screening]` sections plus drivers; `[subdivision]` and `[analysis]` defaults read from TOML.
+- **Adaptive-refinement observability.** Verbose paths in `adaptive_refine` and `two_phase_refine` now surface both absolute and relative L2 errors.
+- **Subdivision robustness.** New `ActionPruned` terminal state for all-Inf subdomains; explicit Inf handling; hp-adaptive subdivision; switch to relative L2 tolerance.
+- **Constructor guard.** Fail-fast on zero-coefficient polynomial output; eltype narrowing for `degree_results` so `create_experiment_summary` dispatches correctly.
+- **Sample reuse across passes.** Checkpoint resume; trial-cut reuse; parent → child sample reuse in adaptive refinement; threaded grid evaluation via `thread_evals` kwarg.
+- **Solver backend.** `solver = :hc` / `solver = :msolve` kwarg dispatch with N-D parser; certified range search via `search_bounds`; `recommended_solver` heuristic; msolve timeouts.
+- **3D model screening pipeline.**
+
+### Changed
+
+- `HomotopyContinuation` is now a weak dependency (loaded via `GlobtimHomotopyContinuationExt` extension). Test environment imports it explicitly.
+- JuliaFormatter v1 sweep across `src/` and `test/`.
+- Julia compat pinned to `1.12`.
+
+### Removed
+
+- CUDA / GPU code paths (never tested; contained forbidden silent fallbacks).
+
+### Fixed
+
+- `Constructor` now raises on zero-coefficient output instead of producing a degenerate polynomial.
+- `Hessian` classification dispatch handles ODE objectives correctly.
+- `StandardExperiment` forwards `solver` and `msolve_threads` to `create_experiment_summary`.
+
 ## [1.0.0] - 2025-12-18
 
 ### Major Release: Globtim Integration
