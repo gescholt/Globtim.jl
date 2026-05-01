@@ -1,0 +1,26 @@
+[experiment]
+name = "deuflhard_2d"
+description = "Deuflhard 2D benchmark — multi-CP polynomial test function"
+
+[model]
+analytical_function = "Deuflhard"
+dimension = 2
+
+[domain]
+bounds = [[-1.2, 1.2], [-1.2, 1.2]]
+
+[polynomial]
+GN = 10
+degree_range = [4, 2, 12]
+basis = "chebyshev"
+
+[analysis]
+enabled = true
+gradient_method = "forwarddiff"
+newton_tol = 1e-8
+newton_max_iterations = 200
+hessian_tol = 1e-6
+dedup_fraction = 0.02
+
+[output]
+dir = "globtim_results/deuflhard_2d"

@@ -1,0 +1,33 @@
+[experiment]
+name = "ackley_3d"
+description = "Ackley 3D benchmark — multi-CP discovery"
+
+[model]
+analytical_function = "Ackley"
+dimension = 3
+
+[domain]
+bounds = [[-5.0, 5.0], [-5.0, 5.0], [-5.0, 5.0]]
+
+[polynomial]
+GN = 12
+degree_range = [4, 2, 10]
+basis = "chebyshev"
+
+[refinement]
+enabled = true
+method = "NelderMead"
+max_time = 10.0
+gradient_method = "forwarddiff"
+gradient_tolerance = 1e-4
+
+[analysis]
+enabled = true
+gradient_method = "forwarddiff"
+newton_tol = 1e-8
+newton_max_iterations = 200
+hessian_tol = 1e-6
+dedup_fraction = 0.02
+
+[output]
+dir = "globtim_results/benchmark_3d/ackley"

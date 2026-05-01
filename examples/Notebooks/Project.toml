@@ -1,0 +1,11 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
+Globtim = "00da9514-6261-47e9-8848-33640cb1e528"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+julia = "1.12"
