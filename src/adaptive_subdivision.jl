@@ -123,7 +123,7 @@ function get_bounds(subdomain::Subdomain)
         (
             subdomain.center[d] - subdomain.half_widths[d],
             subdomain.center[d] + subdomain.half_widths[d],
-        ) for d = 1:length(subdomain.center)
+        ) for d in 1:length(subdomain.center)
     ]
 end
 
@@ -428,7 +428,7 @@ function select_cut_dimension(subdomain::Subdomain)
     # High variance = function varies unpredictably in that direction = good cut candidate
     dim_scores = zeros(n_dim)
 
-    for d = 1:n_dim
+    for d in 1:n_dim
         # Get unique coordinates in dimension d
         d_unique = sort(unique(subdomain.samples[:, d]))
 
@@ -458,7 +458,7 @@ function select_cut_dimension(subdomain::Subdomain)
             # Group points by their coordinates in other dimensions
             # Use rounded keys to handle floating point comparison
             groups = Dict{Vector{Float64},Vector{Int}}()
-            for i = 1:size(samples, 1)
+            for i in 1:size(samples, 1)
                 key = round.(samples[i, other_dims], digits = 10)
                 if !haskey(groups, key)
                     groups[key] = Int[]
@@ -668,7 +668,7 @@ function estimate_subdomain_error(
         grid_matrix, new_idx = combine_inherited_and_fresh(inherited_samples, fresh_grid)
         n_inh = size(inherited_samples, 1)
         f_values = Vector{Float64}(undef, size(grid_matrix, 1))
-        @inbounds for k = 1:n_inh
+        @inbounds for k in 1:n_inh
             f_values[k] = inherited_f[k]
         end
         rows_to_eval = (n_inh+1):(n_inh+length(new_idx))
@@ -699,14 +699,14 @@ function estimate_subdomain_error(
         # thread-safe.
         n_eval = length(eval_sample_indices)
         chunk_size = max(1, cld(n_eval, 4 * Threads.nthreads()))
-        @sync for chunk_start = 1:chunk_size:n_eval
+        @sync for chunk_start in 1:chunk_size:n_eval
             chunk_end = min(chunk_start + chunk_size - 1, n_eval)
             Threads.@spawn begin
                 x_buf = Vector{Float64}(undef, n_dim)
-                for k = chunk_start:chunk_end
+                for k in chunk_start:chunk_end
                     src_i = eval_sample_indices[k]
                     dst_i = rows_to_eval[k]
-                    @inbounds for d = 1:n_dim
+                    @inbounds for d in 1:n_dim
                         x_buf[d] =
                             subdomain.center[d] +
                             eval_sample_source[src_i, d] * subdomain.half_widths[d]
@@ -718,11 +718,11 @@ function estimate_subdomain_error(
     else
         x_physical = Vector{Float64}(undef, n_dim)
         n_eval = length(eval_sample_indices)
-        for k = 1:n_eval
+        for k in 1:n_eval
             eval_progress !== nothing && eval_progress(k, n_eval)
             src_i = eval_sample_indices[k]
             dst_i = rows_to_eval[k]
-            @inbounds for d = 1:n_dim
+            @inbounds for d in 1:n_dim
                 x_physical[d] =
                     subdomain.center[d] +
                     eval_sample_source[src_i, d] * subdomain.half_widths[d]
@@ -754,7 +754,7 @@ function estimate_subdomain_error(
         # subdivision to split them, eventually isolating the failing region.
         finite_vals = filter(isfinite, f_values)
         penalty = 10.0 * maximum(abs, finite_vals)
-        for i = 1:n_total
+        for i in 1:n_total
             if isinf(f_values[i])
                 f_values[i] = penalty
             end
@@ -948,7 +948,7 @@ function find_optimal_cut_sparse(
     # If only 3 candidates, fit parabola and find minimum
     if n_candidates == 3
         # Fit parabola: error = a*x^2 + b*x + c
-        A = hcat([[candidates[i]^2, candidates[i], 1.0] for i = 1:3]...)'  # 3×3 matrix
+        A = hcat([[candidates[i]^2, candidates[i], 1.0] for i in 1:3]...)'  # 3×3 matrix
         abc = A \ errors
         a, b = abc[1], abc[2]  # c = abc[3] unused
 
