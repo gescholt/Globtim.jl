@@ -15,7 +15,10 @@ using Globtim
 @testset "Sparsification cached-hit short-circuit" begin
     TR = Globtim.TestInput(
         x -> (x[1] - 0.3)^2 + (x[2] - 0.1)^2;
-        dim = 2, center = [0.0, 0.0], GN = 12, sample_range = [1.0, 1.0],
+        dim = 2,
+        center = [0.0, 0.0],
+        GN = 12,
+        sample_range = [1.0, 1.0],
     )
     pol = Globtim.Constructor(TR, 4; basis = :chebyshev, normalized = false)
 

@@ -199,7 +199,8 @@ function reconstruct_objective(results_dir::String)
             if !isfile(cat_path)
                 local_path = _remap_cluster_path(cat_path)
                 if local_path !== nothing && isfile(local_path)
-                    @info "Remapped cluster catalogue path" cluster=cat_path local_path=local_path
+                    @info "Remapped cluster catalogue path" cluster = cat_path local_path =
+                        local_path
                     cat_path = local_path
                 else
                     error(
@@ -319,7 +320,8 @@ function reconstruct_objective(results_dir::String)
             # Locally, the same file is at <repo_root>/globtim_results/foo.jsonl
             local_path = _remap_cluster_path(catalogue_path)
             if local_path !== nothing && isfile(local_path)
-                @info "Remapped cluster catalogue path" cluster=catalogue_path local_path=local_path
+                @info "Remapped cluster catalogue path" cluster = catalogue_path local_path =
+                    local_path
                 catalogue_path = local_path
             else
                 error(
@@ -403,7 +405,7 @@ end
 
 function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture::Bool)
     println("Post-processing: $results_dir")
-    println("=" ^ 72)
+    println("="^72)
 
     # 1. Load saved results
     println("\nLoading saved results...")
@@ -609,7 +611,7 @@ function run_postprocessing(results_dir::String; do_refinement::Bool, do_capture
         end
     end
 
-    println("\n" * "=" ^ 72)
+    println("\n" * "="^72)
     println("Post-processing complete for: $results_dir")
     println()
 end
@@ -629,7 +631,7 @@ function evaluations for the Hessian, vs n_points × O(iterations) for NelderMea
 """
 function run_hessian_only(results_dir::String)
     println("Hessian-only classification: $results_dir")
-    println("=" ^ 72)
+    println("="^72)
 
     # 1. Reconstruct objective
     println("\nReconstructing objective function...")
@@ -645,7 +647,7 @@ function run_hessian_only(results_dir::String)
         filter(
             f ->
                 startswith(basename(f), "critical_points_refined_deg_") &&
-                endswith(f, ".csv"),
+                    endswith(f, ".csv"),
             readdir(results_dir, join = true),
         ),
     )
@@ -741,7 +743,7 @@ function run_hessian_only(results_dir::String)
     end
 
     println("\n  Updated $n_updated degree(s) with Hessian classification")
-    println("=" ^ 72)
+    println("="^72)
 end
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -753,7 +755,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     for (i, results_dir) in enumerate(args.results_dirs)
         if n_dirs > 1
             println("\n[$i/$n_dirs] $(basename(results_dir))")
-            println("─" ^ 72)
+            println("─"^72)
         end
 
         if args.do_hessian_only
@@ -768,8 +770,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
 
     if n_dirs > 1
-        println("\n" * "=" ^ 72)
+        println("\n" * "="^72)
         println("Batch complete: $n_dirs experiment(s) processed")
-        println("=" ^ 72)
+        println("="^72)
     end
 end

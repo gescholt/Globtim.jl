@@ -140,7 +140,7 @@ end
 function run_experiments(config_paths::Vector{String})
     n = length(config_paths)
     println("Running $n experiment(s)\n")
-    println("=" ^ 72)
+    println("="^72)
 
     # Store results in order (not just by name) so summary table matches input order
     results_ordered = Vector{Dict{Symbol,Any}}()
@@ -149,7 +149,7 @@ function run_experiments(config_paths::Vector{String})
     for (i, path) in enumerate(config_paths)
         rel = relpath(path)
         println("\n[$i/$n] $rel")
-        println("-" ^ 72)
+        println("-"^72)
 
         t0 = time()
         result = run_experiment_from_config(path)
@@ -178,9 +178,9 @@ function run_experiments(config_paths::Vector{String})
 
     # ── Summary table ─────────────────────────────────────────────────────
     if n > 1
-        println("\n" * "=" ^ 72)
+        println("\n" * "="^72)
         println("SUMMARY")
-        println("=" ^ 72)
+        println("="^72)
         @printf(
             "  %-20s  %5s  %6s  %8s  %s\n",
             "Experiment",
@@ -189,7 +189,7 @@ function run_experiments(config_paths::Vector{String})
             "Time",
             "Output"
         )
-        println("  " * "-" ^ 65)
+        println("  " * "-"^65)
 
         for (i, result) in enumerate(results_ordered)
             config = result[:config]

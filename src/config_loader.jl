@@ -284,18 +284,15 @@ function validate_experiment_toml(d::Dict)
         end
     end
 
-    # Validate p_true (only valid in catalogue mode)
+    # Validate p_true. Valid in both modes:
+    # - catalogue mode: overrides the catalogue's recorded p_true
+    # - analytical mode: provides a recovery target for analytical functions
+    #   whose global minimum is known (e.g., shootouts using Deuflhard,
+    #   Ackley, Griewank where p_true is documented in the function spec)
     if haskey(mod, "p_true")
-        if has_analytical
-            push!(
-                errors,
-                "[model] p_true is only valid in catalogue mode, not with analytical_function",
-            )
-        else
-            pt = mod["p_true"]
-            if !(pt isa AbstractVector && all(x -> x isa Number, pt))
-                push!(errors, "[model] p_true must be a numeric array, got: $pt")
-            end
+        pt = mod["p_true"]
+        if !(pt isa AbstractVector && all(x -> x isa Number, pt))
+            push!(errors, "[model] p_true must be a numeric array, got: $pt")
         end
     end
 

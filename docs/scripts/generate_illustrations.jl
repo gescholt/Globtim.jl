@@ -77,7 +77,7 @@ function generate_grid_comparison()
 
     outpath = joinpath(OUTPUT_DIR, "grid_comparison.pdf")
     save(outpath, fig)
-    @info "Saved grid comparison" path=outpath
+    @info "Saved grid comparison" path = outpath
     return fig
 end
 
@@ -122,7 +122,7 @@ function generate_multiscale_heatmap()
 
     outpath = joinpath(OUTPUT_DIR, "multiscale_function.pdf")
     save(outpath, fig)
-    @info "Saved multiscale heatmap" path=outpath
+    @info "Saved multiscale heatmap" path = outpath
     return fig
 end
 
@@ -199,7 +199,7 @@ function generate_critical_point_example()
 
     outpath = joinpath(OUTPUT_DIR, "critical_points_example.pdf")
     save(outpath, fig)
-    @info "Saved critical points example" path=outpath
+    @info "Saved critical points example" path = outpath
     return fig
 end
 
@@ -242,7 +242,7 @@ function generate_hero_step1()
 
     outpath = joinpath(OUTPUT_DIR, "hero_step1_sample.pdf")
     save(outpath, fig)
-    @info "Saved hero step 1" path=outpath
+    @info "Saved hero step 1" path = outpath
     return fig
 end
 
@@ -283,7 +283,7 @@ function generate_hero_step2()
 
     outpath = joinpath(OUTPUT_DIR, "hero_step2_polynomial.pdf")
     save(outpath, fig)
-    @info "Saved hero step 2" path=outpath
+    @info "Saved hero step 2" path = outpath
     return fig
 end
 
@@ -336,7 +336,7 @@ function generate_hero_step3()
 
     outpath = joinpath(OUTPUT_DIR, "hero_step3_minima.pdf")
     save(outpath, fig)
-    @info "Saved hero step 3" path=outpath n_critical_points=nrow(df)
+    @info "Saved hero step 3" path = outpath n_critical_points = nrow(df)
     return fig
 end
 
@@ -402,7 +402,7 @@ function generate_deuflhard()
 
     outpath = joinpath(OUTPUT_DIR, "deuflhard.pdf")
     save(outpath, fig)
-    @info "Saved Deuflhard illustration" path=outpath n_critical_points=nrow(df)
+    @info "Saved Deuflhard illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
 
@@ -468,7 +468,7 @@ function generate_holder_table()
 
     outpath = joinpath(OUTPUT_DIR, "holder_table.pdf")
     save(outpath, fig)
-    @info "Saved Holder Table illustration" path=outpath n_critical_points=nrow(df)
+    @info "Saved Holder Table illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
 
@@ -534,7 +534,7 @@ function generate_beale()
 
     outpath = joinpath(OUTPUT_DIR, "beale.pdf")
     save(outpath, fig)
-    @info "Saved Beale illustration" path=outpath n_critical_points=nrow(df)
+    @info "Saved Beale illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
 
@@ -604,7 +604,7 @@ function generate_branin()
 
     outpath = joinpath(OUTPUT_DIR, "branin.pdf")
     save(outpath, fig)
-    @info "Saved Branin illustration" path=outpath n_critical_points=nrow(df)
+    @info "Saved Branin illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
 

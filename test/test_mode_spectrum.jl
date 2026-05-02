@@ -1,6 +1,9 @@
 using Test
 using Globtim
-using Globtim: Subdomain, estimate_subdomain_error, compute_mode_spectrum,
+using Globtim:
+    Subdomain,
+    estimate_subdomain_error,
+    compute_mode_spectrum,
     compute_subdomain_mode_spectrum!
 
 # Tests for compute_mode_spectrum (bead dksx.0): per-Chebyshev-mode residual

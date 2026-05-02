@@ -17,8 +17,10 @@ using Globtim
 # e)`, so any Exception whose `showerror` prints the phrase works — we don't
 # need to simulate the whole un-load path, which Julia disallows anyway.
 struct _TestHCMissingErr <: Exception end
-Base.showerror(io::IO, ::_TestHCMissingErr) = print(io,
-    "solver=:hc requires HomotopyContinuation.jl. Add `using HomotopyContinuation` ...")
+Base.showerror(io::IO, ::_TestHCMissingErr) = print(
+    io,
+    "solver=:hc requires HomotopyContinuation.jl. Add `using HomotopyContinuation` ...",
+)
 
 @testset "solve_tree_leaves observability" begin
     @testset "NamedTuple return shape" begin
@@ -40,8 +42,14 @@ Base.showerror(io::IO, ::_TestHCMissingErr) = print(io,
         # runtests.jl loads HomotopyContinuation, so the HC extension is active.
         f(x) = (x[1] - 0.3)^2 + (x[2] - 0.1)^2
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
-        tree = Globtim.adaptive_refine(f, bounds, 4;
-            max_depth = 1, max_leaves = 4, parallel = false)
+        tree = Globtim.adaptive_refine(
+            f,
+            bounds,
+            4;
+            max_depth = 1,
+            max_leaves = 4,
+            parallel = false,
+        )
         r = Globtim.solve_tree_leaves(tree; solver = :hc)
         @test !isempty(r.leaf_status)
         @test all(v == :ran for v in values(r.leaf_status))

@@ -11,12 +11,12 @@ end
 
 @testset "y0j integration: estimate_subdomain_error inherit_from" begin
     # A smooth objective so the fit is stable at modest degree.
-    f_quad = x -> sum(x.^2) + x[1] * x[2]
+    f_quad = x -> sum(x .^ 2) + x[1] * x[2]
 
     @testset "no inherit_from → same call count as before" begin
-        parent = Globtim.Subdomain([0.0, 0.0], [1.0, 1.0]; degree=4)
+        parent = Globtim.Subdomain([0.0, 0.0], [1.0, 1.0]; degree = 4)
         counter = EvalCounter(0, f_quad)
-        l2 = Globtim.estimate_subdomain_error(counter, parent, 4, basis=:chebyshev)
+        l2 = Globtim.estimate_subdomain_error(counter, parent, 4, basis = :chebyshev)
         @test counter.n > 0
         @test isfinite(l2)
         # Baseline: 2*degree+1 = 9 per dim, 81 samples in 2D.
@@ -26,13 +26,18 @@ end
     @testset "inherit_from with no overlap: falls back to full eval" begin
         # Two non-overlapping boxes: parent covers x ∈ [-1,0]; child covers [5,6].
         # No parent point remaps into the child → no savings, same n_fresh evals.
-        parent = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree=4)
-        Globtim.estimate_subdomain_error(f_quad, parent, 4, basis=:chebyshev)
+        parent = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree = 4)
+        Globtim.estimate_subdomain_error(f_quad, parent, 4, basis = :chebyshev)
 
-        far_child = Globtim.Subdomain([5.5, 0.0], [0.5, 1.0]; degree=4)
+        far_child = Globtim.Subdomain([5.5, 0.0], [0.5, 1.0]; degree = 4)
         counter = EvalCounter(0, f_quad)
-        Globtim.estimate_subdomain_error(counter, far_child, 4,
-                                         basis=:chebyshev, inherit_from=parent)
+        Globtim.estimate_subdomain_error(
+            counter,
+            far_child,
+            4,
+            basis = :chebyshev,
+            inherit_from = parent,
+        )
         @test counter.n == 81
     end
 
@@ -40,18 +45,27 @@ end
         # Parent at higher GN so many of its samples remap into the child after
         # a bisection. Use n_samples_per_dim to force a dense parent grid, then
         # bisect in dim 1 at the midpoint and let the child inherit.
-        parent = Globtim.Subdomain([0.0, 0.0], [1.0, 1.0]; degree=4)
-        Globtim.estimate_subdomain_error(f_quad, parent, 4,
-                                         basis=:chebyshev, n_samples_per_dim=15)
+        parent = Globtim.Subdomain([0.0, 0.0], [1.0, 1.0]; degree = 4)
+        Globtim.estimate_subdomain_error(
+            f_quad,
+            parent,
+            4,
+            basis = :chebyshev,
+            n_samples_per_dim = 15,
+        )
         parent_samples = size(parent.samples, 1)
         @test parent_samples == 225  # 15×15
 
         # Left child = [-1, 0] × [-1, 1] in parent coords.
-        left = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree=4)
+        left = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree = 4)
         counter = EvalCounter(0, f_quad)
-        l2 = Globtim.estimate_subdomain_error(counter, left, 4,
-                                              basis=:chebyshev,
-                                              inherit_from=parent)
+        l2 = Globtim.estimate_subdomain_error(
+            counter,
+            left,
+            4,
+            basis = :chebyshev,
+            inherit_from = parent,
+        )
         # The child runs its own 9×9 = 81 fresh Chebyshev grid and additionally
         # picks up parent samples that remap inside its box. First-kind
         # Chebyshev nodes at different N generally do not coincide under an
@@ -69,16 +83,21 @@ end
         # Compare against a from-scratch fit — L2 error order of magnitude
         # should match, since the fit is least-squares and the combined sample
         # set is a superset of the fresh grid's coordinate coverage.
-        parent = Globtim.Subdomain([0.0, 0.0], [1.0, 1.0]; degree=4)
-        Globtim.estimate_subdomain_error(f_quad, parent, 4, basis=:chebyshev)
+        parent = Globtim.Subdomain([0.0, 0.0], [1.0, 1.0]; degree = 4)
+        Globtim.estimate_subdomain_error(f_quad, parent, 4, basis = :chebyshev)
 
-        left_fresh = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree=4)
-        l2_fresh = Globtim.estimate_subdomain_error(f_quad, left_fresh, 4, basis=:chebyshev)
+        left_fresh = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree = 4)
+        l2_fresh =
+            Globtim.estimate_subdomain_error(f_quad, left_fresh, 4, basis = :chebyshev)
 
-        left_inherit = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree=4)
-        l2_inherit = Globtim.estimate_subdomain_error(f_quad, left_inherit, 4,
-                                                     basis=:chebyshev,
-                                                     inherit_from=parent)
+        left_inherit = Globtim.Subdomain([-0.5, 0.0], [0.5, 1.0]; degree = 4)
+        l2_inherit = Globtim.estimate_subdomain_error(
+            f_quad,
+            left_inherit,
+            4,
+            basis = :chebyshev,
+            inherit_from = parent,
+        )
 
         # Both should be finite and small for this quadratic-ish objective.
         @test isfinite(l2_fresh)
@@ -91,9 +110,9 @@ end
 end
 
 @testset "y0j integration: process_subdomain wires parent into inherit_from" begin
-    f = x -> sum(x.^2)
+    f = x -> sum(x .^ 2)
 
-    tree = Globtim.SubdivisionTree([(-1.0, 1.0), (-1.0, 1.0)]; degree=4)
+    tree = Globtim.SubdivisionTree([(-1.0, 1.0), (-1.0, 1.0)]; degree = 4)
     root_id = 1
 
     # Process the root: populates parent.samples/f_values.
@@ -132,7 +151,13 @@ end
     push!(tree.active_leaves, fresh_id)
 
     counter_off = EvalCounter(0, f)
-    Globtim.process_subdomain(counter_off, tree, fresh_id, 4, 1e-12;
-                              reuse_parent_samples=false)
+    Globtim.process_subdomain(
+        counter_off,
+        tree,
+        fresh_id,
+        4,
+        1e-12;
+        reuse_parent_samples = false,
+    )
     @test counter_off.n == 81
 end
