@@ -125,8 +125,8 @@ Globtim is part of a three-package ecosystem:
 | Package | Purpose | Install |
 |---------|---------|---------|
 | **Globtim** | Polynomial approximation and critical point finding | `Pkg.add("Globtim")` |
-| **[GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing)** | Refinement, validation, parameter recovery | `Pkg.add(url="https://github.com/gescholt/globtimpostprocessing")` |
-| **[GlobtimPlots](https://github.com/gescholt/globtimplots)** | Visualization (CairoMakie/GLMakie) | `Pkg.add(url="https://github.com/gescholt/globtimplots")` |
+| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery | `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")` |
+| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) | `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")` |
 
 ```
 Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)

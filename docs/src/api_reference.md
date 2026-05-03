@@ -220,5 +220,5 @@ julia> ?analyze_critical_points
 
 ## See Also
 
-- [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing) - Refinement, gradient validation, parameter recovery, campaign analysis
-- [GlobtimPlots](https://github.com/gescholt/globtimplots) - Visualization functions for experiments and campaigns
+- [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl) - Refinement, gradient validation, parameter recovery, campaign analysis
+- [GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) - Visualization functions for experiments and campaigns

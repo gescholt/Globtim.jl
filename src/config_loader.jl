@@ -121,8 +121,8 @@ Base.@kwdef struct ExperimentPipelineConfig
     grid_scoring_catalogue_files::Union{Nothing,Vector{String}} = nothing
 
     # [screening] — optional screen_and_probe parameters (20p7)
-    # Drives the `pkg/Dynamic_objectives/scripts/run_screening.jl` entry point;
-    # `model_factory` must resolve through Dynamic_objectives.MODEL_REGISTRY.
+    # Drives the `pkg/DynamicObjectives/scripts/run_screening.jl` entry point;
+    # `model_factory` must resolve through DynamicObjectives.MODEL_REGISTRY.
     screening_model_factory::Union{Nothing,String} = nothing
     screening_ic::Union{Nothing,Vector{Float64}} = nothing
     screening_bounds::Union{Nothing,Vector{Tuple{Float64,Float64}}} = nothing
@@ -202,7 +202,7 @@ const KNOWN_SUBDIVISION_BASES = Set(["chebyshev", "legendre"])
 const KNOWN_SCREENING_RANKING_STRATEGIES = Set(["dynamic_range"])
 
 # Screening ODE solvers — string keys mapped to OrdinaryDiffEq solver objects
-# in the Dynamic_objectives screening driver. New entries must be added in
+# in the DynamicObjectives screening driver. New entries must be added in
 # both this set AND the driver's `_resolve_solver` switch.
 const KNOWN_SCREENING_SOLVERS = Set([
     "Tsit5",

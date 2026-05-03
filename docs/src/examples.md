@@ -81,7 +81,7 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectangu
 
 ## Visualization
 
-For plotting critical points and convergence analysis, use the [GlobtimPlots](https://github.com/gescholt/globtimplots) package:
+For plotting critical points and convergence analysis, use the [GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) package:
 
 ```julia
 using GlobtimPlots
@@ -91,7 +91,7 @@ fig = plot_convergence(results)
 
 See the [GlobtimPlots documentation](globtimplots.md) for available plot types.
 
-For post-experiment analysis (refinement, parameter recovery, campaign comparison), use [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing).
+For post-experiment analysis (refinement, parameter recovery, campaign comparison), use [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl).
 
 ---
 

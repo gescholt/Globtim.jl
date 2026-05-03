@@ -83,17 +83,17 @@ result_refined = refine_experiment_results(
 
 4. **04e313c** - Aqua Issues Resolution
    - Removed undefined exports
-   - Added missing compat entries for Dynamic_objectives and Logging
+   - Added missing compat entries for DynamicObjectives and Logging
 
 5. **99e46c0** - Critical Bug Fixes
-   - **Circular Dependency**: Removed Dynamic_objectives from dependencies
+   - **Circular Dependency**: Removed DynamicObjectives from dependencies
    - **UnionAll Handling**: Fixed function signature detection for generic functions
    - **DataFrame Constructor**: Fixed MethodError in CSV export
 
 #### Impact
 
 **✅ Benefits**:
-- Eliminates circular dependencies (Globtim ↔ Dynamic_objectives)
+- Eliminates circular dependencies (Globtim ↔ DynamicObjectives)
 - Simplifies Globtim (-606 lines of code)
 - Clear separation of computation and post-processing
 - Enables independent development of refinement strategies
@@ -110,7 +110,7 @@ result_refined = refine_experiment_results(
 - `src/StandardExperiment.jl` - Major refactor
 - `src/Globtim.jl` - Added exports
 - `src/PolynomialImports.jl` - Added export
-- `Project.toml` - Removed Dynamic_objectives, added compat entries
+- `Project.toml` - Removed DynamicObjectives, added compat entries
 - `test/runtests.jl` - Enabled Aqua tests
 - `test/test_aqua.jl` - **CREATED**
 

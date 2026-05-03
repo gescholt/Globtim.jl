@@ -7,7 +7,7 @@ using Globtim
 # The threaded path is only exercised when Threads.nthreads() > 1. In that
 # case we assert that it produces bit-for-bit identical results to the
 # sequential path when f is pure-Julia. Thread-safety of ODE-based objectives
-# is validated separately in Dynamic_objectives (see bead iyj).
+# is validated separately in DynamicObjectives (see bead iyj).
 
 @testset "thread_evals kwarg" begin
     # Pure-Julia objective — thread-safe by construction, no shared state.

@@ -12,7 +12,7 @@ The analysis proceeds in two steps:
 
 ForwardDiff.jl computes gradients and Hessians via forward-mode automatic differentiation, accurate to machine precision (no finite-difference truncation error).
 
-> **Note:** For comprehensive campaign analysis, statistical reporting, and result aggregation across multiple experiments, see [GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing). The `analyze_critical_points` function documented here provides basic refinement and classification for individual experiments.
+> **Note:** For comprehensive campaign analysis, statistical reporting, and result aggregation across multiple experiments, see [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl). The `analyze_critical_points` function documented here provides basic refinement and classification for individual experiments.
 
 ## Hessian-Based Classification
 

@@ -303,38 +303,38 @@ Load it explicitly in your experiment script.
 """
 function register_ode_models!()
     # Check if external model package is available
-    if !isdefined(Main, :Dynamic_objectives)
+    if !isdefined(Main, :DynamicObjectives)
         return
     end
 
     # Import functions from the loaded module
     define_generalized_lotka_volterra_4D =
-        Main.Dynamic_objectives.define_generalized_lotka_volterra_4D
+        Main.DynamicObjectives.define_generalized_lotka_volterra_4D
     define_constrained_lotka_volterra_4D =
-        Main.Dynamic_objectives.define_constrained_lotka_volterra_4D
-    define_daisy_ex3_model_4D = Main.Dynamic_objectives.define_daisy_ex3_model_4D
+        Main.DynamicObjectives.define_constrained_lotka_volterra_4D
+    define_daisy_ex3_model_4D = Main.DynamicObjectives.define_daisy_ex3_model_4D
     define_daisy_ex3_model_4D_no_input =
-        Main.Dynamic_objectives.define_daisy_ex3_model_4D_no_input
+        Main.DynamicObjectives.define_daisy_ex3_model_4D_no_input
     define_fitzhugh_nagumo_3D_model =
-        Main.Dynamic_objectives.define_fitzhugh_nagumo_3D_model
-    define_lotka_volterra_3D_model = Main.Dynamic_objectives.define_lotka_volterra_3D_model
+        Main.DynamicObjectives.define_fitzhugh_nagumo_3D_model
+    define_lotka_volterra_3D_model = Main.DynamicObjectives.define_lotka_volterra_3D_model
     define_lotka_volterra_3D_model_locally_identifiable =
-        Main.Dynamic_objectives.define_lotka_volterra_3D_model_locally_identifiable
+        Main.DynamicObjectives.define_lotka_volterra_3D_model_locally_identifiable
     define_lotka_volterra_3D_model_v2 =
-        Main.Dynamic_objectives.define_lotka_volterra_3D_model_v2
-    define_lotka_volterra_2D_model = Main.Dynamic_objectives.define_lotka_volterra_2D_model
+        Main.DynamicObjectives.define_lotka_volterra_3D_model_v2
+    define_lotka_volterra_2D_model = Main.DynamicObjectives.define_lotka_volterra_2D_model
     define_lotka_volterra_2D_model_v2 =
-        Main.Dynamic_objectives.define_lotka_volterra_2D_model_v2
+        Main.DynamicObjectives.define_lotka_volterra_2D_model_v2
     define_lotka_volterra_2D_model_v3 =
-        Main.Dynamic_objectives.define_lotka_volterra_2D_model_v3
+        Main.DynamicObjectives.define_lotka_volterra_2D_model_v3
     define_lotka_volterra_2D_model_v3_two_outputs =
-        Main.Dynamic_objectives.define_lotka_volterra_2D_model_v3_two_outputs
+        Main.DynamicObjectives.define_lotka_volterra_2D_model_v3_two_outputs
     define_simple_2D_model_locally_identifiable =
-        Main.Dynamic_objectives.define_simple_2D_model_locally_identifiable
+        Main.DynamicObjectives.define_simple_2D_model_locally_identifiable
     define_simple_2D_model_locally_identifiable_square =
-        Main.Dynamic_objectives.define_simple_2D_model_locally_identifiable_square
+        Main.DynamicObjectives.define_simple_2D_model_locally_identifiable_square
     define_simple_1D_model_locally_identifiable =
-        Main.Dynamic_objectives.define_simple_1D_model_locally_identifiable
+        Main.DynamicObjectives.define_simple_1D_model_locally_identifiable
 
     # Lotka-Volterra 4D - Generalized
     register_model!(

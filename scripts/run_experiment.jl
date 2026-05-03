@@ -16,7 +16,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 using Printf
-using Dynamic_objectives
+using DynamicObjectives
 using Globtim
 using GlobtimPostProcessing
 # Activate Globtim's HomotopyContinuation extension (weakdep). Without this

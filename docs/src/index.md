@@ -58,8 +58,8 @@ Globtim is part of a three-package ecosystem for global optimization:
 | Package | Description | Repository |
 |:--------|:------------|:-----------|
 | **Globtim** | Core polynomial approximation and critical point finding | [GitHub](https://github.com/gescholt/Globtim.jl) |
-| **[GlobtimPostProcessing](https://github.com/gescholt/globtimpostprocessing)** | Refinement, validation, parameter recovery, campaign analysis | [GitHub](https://github.com/gescholt/globtimpostprocessing) |
-| **[GlobtimPlots](https://github.com/gescholt/globtimplots)** | Visualization (CairoMakie/GLMakie) for experiments and campaigns | [GitHub](https://github.com/gescholt/globtimplots) |
+| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery, campaign analysis | [GitHub](https://github.com/gescholt/GlobtimPostProcessing.jl) |
+| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) for experiments and campaigns | [GitHub](https://github.com/gescholt/GlobtimPlots.jl) |
 
 ```
 Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)

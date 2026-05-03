@@ -25,7 +25,7 @@ using JLD2
 using CSV
 using DataFrames
 using JSON
-using Dynamic_objectives
+using DynamicObjectives
 using Globtim
 using GlobtimPostProcessing
 
@@ -122,7 +122,7 @@ const CLUSTER_MARKERS = ["globopt_merged/", "globopt/globopt_merged/"]
 
 Remap a catalogue path to the local repo root. Handles:
 1. Absolute cluster paths (`/mnt/beegfs/.../globopt_merged/globtim_results/foo.jsonl`)
-2. Mis-resolved relative paths (`/repo/globtim_results/paper/exp/../../Dynamic_objectives/...`)
+2. Mis-resolved relative paths (`/repo/globtim_results/paper/exp/../../DynamicObjectives/...`)
    where the config loader resolved `../../` against the wrong base directory.
 
 Strategy: extract a recognizable tail (after `globopt_merged/` or known package dirs)
@@ -137,14 +137,14 @@ function _remap_cluster_path(path::String)
         # Try direct resolution
         candidate = joinpath(REPO_ROOT, relative)
         isfile(candidate) && return candidate
-        # Try under pkg/ (e.g., Dynamic_objectives/ → pkg/Dynamic_objectives/)
+        # Try under pkg/ (e.g., DynamicObjectives/ → pkg/DynamicObjectives/)
         candidate = joinpath(REPO_ROOT, "pkg", relative)
         isfile(candidate) && return candidate
     end
 
     # Strategy 2: Look for known package directory names in the path
-    # Handles mis-resolved paths like .../globtim_results/paper/exp/../../Dynamic_objectives/paper/catalogue/foo.jsonl
-    for pkg_dir in ["Dynamic_objectives/", "globtim/", "globtimpostprocessing/"]
+    # Handles mis-resolved paths like .../globtim_results/paper/exp/../../DynamicObjectives/paper/catalogue/foo.jsonl
+    for pkg_dir in ["DynamicObjectives/", "globtim/", "globtimpostprocessing/"]
         idx = findlast(pkg_dir, path)
         idx === nothing && continue
         # Extract from the package dir onward
@@ -157,7 +157,7 @@ function _remap_cluster_path(path::String)
 
     # Strategy 3: basename fallback — search known catalogue locations
     fname = basename(path)
-    for dir in ["globtim_results", "pkg/Dynamic_objectives/paper/catalogue"]
+    for dir in ["globtim_results", "pkg/DynamicObjectives/paper/catalogue"]
         candidate = joinpath(REPO_ROOT, dir, fname)
         isfile(candidate) && return candidate
     end
@@ -224,7 +224,7 @@ function reconstruct_objective(results_dir::String)
             # requires at least 1e-8 to avoid finite-difference noise.
             solver =
                 config.solver_method !== nothing ?
-                Dynamic_objectives._resolve_solver(config.solver_method) : Vern9()
+                DynamicObjectives._resolve_solver(config.solver_method) : Vern9()
             config_abstol = config.solver_abstol !== nothing ? config.solver_abstol : 1e-10
             config_reltol = config.solver_reltol !== nothing ? config.solver_reltol : 1e-10
             abstol = min(config_abstol, 1e-8)
@@ -272,9 +272,9 @@ function reconstruct_objective(results_dir::String)
             if config.bounds !== nothing
                 bounds = config.bounds
             elseif config.radius !== nothing
-                bounds = Dynamic_objectives.build_bounds(entry.p_true, config.radius)
+                bounds = DynamicObjectives.build_bounds(entry.p_true, config.radius)
             elseif config.radii !== nothing
-                bounds = Dynamic_objectives.build_bounds(entry.p_true, config.radii)
+                bounds = DynamicObjectives.build_bounds(entry.p_true, config.radii)
             else
                 bounds = entry.bounds
             end
