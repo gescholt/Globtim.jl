@@ -315,8 +315,7 @@ function register_ode_models!()
     define_daisy_ex3_model_4D = Main.DynamicObjectives.define_daisy_ex3_model_4D
     define_daisy_ex3_model_4D_no_input =
         Main.DynamicObjectives.define_daisy_ex3_model_4D_no_input
-    define_fitzhugh_nagumo_3D_model =
-        Main.DynamicObjectives.define_fitzhugh_nagumo_3D_model
+    define_fitzhugh_nagumo_3D_model = Main.DynamicObjectives.define_fitzhugh_nagumo_3D_model
     define_lotka_volterra_3D_model = Main.DynamicObjectives.define_lotka_volterra_3D_model
     define_lotka_volterra_3D_model_locally_identifiable =
         Main.DynamicObjectives.define_lotka_volterra_3D_model_locally_identifiable
