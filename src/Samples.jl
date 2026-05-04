@@ -212,7 +212,7 @@ grid = generate_grid(2, 2, T=BigFloat)  # Creates a 3×3 array of SVector{2,BigF
 - Type parameter T allows for arbitrary precision arithmetic
 """
 
-TimerOutputs.@timeit _TO function generate_grid(
+function generate_grid(
     n::Int,
     GN::Int;
     basis::Symbol = :chebyshev,
