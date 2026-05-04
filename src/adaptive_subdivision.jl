@@ -1051,7 +1051,10 @@ Process a single subdomain: estimate error, decide action (converge / bump degre
 When `enable_p_refinement=true`, a leaf that doesn't meet L2 tolerance will first try
 increasing its polynomial degree (p-refinement) before falling back to subdivision
 (h-refinement). Degree is increased by `degree_step` up to `max_degree`, gated by
-the Vandermonde condition number staying below `cond_threshold`.
+the Vandermonde condition number staying below `cond_threshold`. The `predicate`
+keyword chooses between bump and split for each non-converged leaf and may also
+return `:done` to short-circuit to `ActionConverged` (see `default_bump` for the
+full return-value contract).
 
 # Arguments
 - `f`: Function to approximate
@@ -1156,11 +1159,28 @@ function process_subdomain(
 
     # Check if p-refinement is possible
     if enable_p_refinement
+        decision = predicate(subdomain)
+        if decision === :done
+            # Predicate explicitly accepts the current fit. Stops refinement on
+            # this leaf even when relative_l2_error > l2_tolerance — used by
+            # low-start growth strategies whose convergence rule lives in the
+            # predicate (e.g. affine-fit-good or certified lower bound clears
+            # focus band) rather than in the global l2_tolerance gate.
+            return ProcessResult(
+                subdomain_id,
+                ActionConverged,
+                false,
+                nothing,
+                nothing,
+                l2_error,
+                nothing,
+            )
+        end
         next_degree = effective_degree + degree_step
         cond_ok =
             subdomain.polynomial !== nothing &&
             subdomain.polynomial.cond_vandermonde < cond_threshold
-        if next_degree <= max_degree && cond_ok && predicate(subdomain) == :bump
+        if next_degree <= max_degree && cond_ok && decision === :bump
             return ProcessResult(
                 subdomain_id,
                 ActionDegreeBump,

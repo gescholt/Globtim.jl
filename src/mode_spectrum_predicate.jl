@@ -14,6 +14,20 @@
 Always returns `:bump`. This is the legacy `adaptive_refine` behavior — when
 `enable_p_refinement = true`, every non-converged leaf bumps until the degree
 cap or conditioning gate stops it. Used as the baseline in A/B comparisons.
+
+# Predicate return-value contract
+
+A predicate is a `Subdomain -> Symbol` function consulted by `process_subdomain`
+in the `enable_p_refinement` branch. Three return values are recognized:
+
+- `:bump`  — try p-refinement (gated by `max_degree` and conditioning).
+- `:split` — go directly to h-refinement (skip the bump branch).
+- `:done`  — accept the current fit and mark the leaf converged, even if
+  `relative_l2_error > l2_tolerance`. Lets a custom predicate own the
+  convergence decision (e.g. affine-fit-good, or certified lower bound clears
+  a focus-band threshold).
+
+Any other return value falls through to `:split`.
 """
 default_bump(::Subdomain) = :bump
 
