@@ -170,6 +170,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_predicate.jl") do
     include("test_predicate.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_per_cut_predicate.jl") do
+    include("test_per_cut_predicate.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_eval_count.jl") do
     include("test_subdivision_eval_count.jl")
 end

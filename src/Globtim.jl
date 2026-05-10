@@ -198,7 +198,9 @@ export Subdomain,
     compute_mode_spectrum,
     compute_subdomain_mode_spectrum!,  # dksx.0 per-mode residual decomposition
     pick_strategy,
-    default_bump  # ehaj.1 mode-spectrum bump-vs-split predicate
+    default_bump,  # ehaj.1 mode-spectrum bump-vs-split predicate
+    pick_strategy_per_axis,
+    decide_action  # 4vtd.3 per-cut-direction predicate
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -273,6 +275,7 @@ include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven
 include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y0j)
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
 include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum (ehaj.1)
+include("per_cut_predicate.jl") #Per-cut-direction predicate (4vtd.3)
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
