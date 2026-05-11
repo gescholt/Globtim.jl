@@ -136,8 +136,7 @@ function _per_axis_verdict(
     # carry ≥ 0.1% of the axis mass before trusting the ratio.
     decay_signal_meaningful = (m_dp2 + m_dp4) >= 1e-3 * axis_total
     decay =
-        (decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ?
-        0.5 * log(m_dp2 / m_dp4) : NaN
+        (decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ? 0.5 * log(m_dp2 / m_dp4) : NaN
 
     decay_says_bump = !isnan(decay) && decay > θ_decay
     conc_says_bump = concentration >= θ_concentration
