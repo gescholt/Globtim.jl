@@ -30,7 +30,7 @@
 #   julia --project=profiles/cluster pkg/globtim/scripts/run_per_axis_counterfactual_cluster.jl \
 #       experiments/cluster/per_axis_audit/lv4d_cf_budget16.toml
 
-using Dynamic_objectives
+using DynamicObjectives
 using Globtim
 using Globtim:
     Subdomain,
@@ -75,8 +75,8 @@ function build_objective_and_bounds(config)
         p_true = config.p_true !== nothing ? config.p_true : entry.p_true
         model, _, _, outputs = entry.model_fn()
         solver = config.solver_method !== nothing ?
-            Dynamic_objectives._resolve_solver(config.solver_method) :
-            Dynamic_objectives.Tsit5()
+            DynamicObjectives._resolve_solver(config.solver_method) :
+            DynamicObjectives.Tsit5()
         abstol = config.solver_abstol !== nothing ? config.solver_abstol : 1e-4
         reltol = config.solver_reltol !== nothing ? config.solver_reltol : 1e-4
         if config.sample_times !== nothing

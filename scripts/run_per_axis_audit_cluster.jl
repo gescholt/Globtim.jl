@@ -20,7 +20,7 @@
 #   - audit_summary.json     machine-readable mirror
 #   - experiment_config.toml copy of the input TOML for reproducibility
 
-using Dynamic_objectives
+using DynamicObjectives
 using Globtim
 using Globtim:
     Subdomain,
@@ -62,7 +62,7 @@ end
 # ── Catalogue / analytical → (objective, bounds) ─────────────────────────────
 #
 # Mirrors DynamicObjectivesGlobtimExt.run_experiment_from_config lines 80-202.
-# Inlined here so the audit driver depends only on Dynamic_objectives +
+# Inlined here so the audit driver depends only on DynamicObjectives +
 # Globtim, not on the experiment-extension's HC pipeline.
 
 function build_objective_and_bounds(config)
@@ -82,8 +82,8 @@ function build_objective_and_bounds(config)
         model, _, _, outputs = entry.model_fn()
 
         solver = config.solver_method !== nothing ?
-            Dynamic_objectives._resolve_solver(config.solver_method) :
-            Dynamic_objectives.Tsit5()
+            DynamicObjectives._resolve_solver(config.solver_method) :
+            DynamicObjectives.Tsit5()
         abstol = config.solver_abstol !== nothing ? config.solver_abstol : 1e-4
         reltol = config.solver_reltol !== nothing ? config.solver_reltol : 1e-4
 
