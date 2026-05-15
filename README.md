@@ -62,7 +62,7 @@ println("Found $(nrow(df_min)) local minima")
 Experiments can be driven entirely by TOML configuration files, which specify the function, domain, polynomial degree, solver, and refinement settings:
 
 ```bash
-julia --project=. globtim/scripts/run_experiment.jl experiments/configs/ackley_3d.toml
+julia --project=. scripts/run_experiment.jl examples/configs/ackley_3d.toml
 ```
 
 Example config for a static benchmark:

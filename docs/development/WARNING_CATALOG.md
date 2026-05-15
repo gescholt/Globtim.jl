@@ -75,11 +75,10 @@ To systematically collect all warnings:
 
 ```bash
 # Run full test suite and collect warnings
-cd globtim
 julia --project=. -e 'using Pkg; Pkg.test()' 2>&1 | grep -E "^┌ Warning|WARNING:" | sort | uniq > /tmp/warnings.txt
 
-# Run typical experiment
-julia --project=. experiments/some_experiment.jl 2>&1 | grep -E "^┌ Warning|WARNING:" > /tmp/experiment_warnings.txt
+# Run a sample script and collect warnings
+julia --project=. scripts/run_experiment.jl examples/configs/ackley_3d.toml 2>&1 | grep -E "^┌ Warning|WARNING:" > /tmp/experiment_warnings.txt
 
 # Search for @warn in codebase
 grep -rn "@warn" src/ | grep -v "\.md"
