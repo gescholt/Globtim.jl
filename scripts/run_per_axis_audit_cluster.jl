@@ -270,6 +270,7 @@ end
 # ── Main ────────────────────────────────────────────────────────────────────
 
 function main()
+    println("[heartbeat] driver started: $(Dates.now())"); flush(stdout)
     path = parse_args(ARGS)
     config = Globtim.load_experiment_config(path)
     audit_cfg = load_audit_section(path)
@@ -289,6 +290,7 @@ function main()
     println("  dim=$dim  bounds=$bounds")
     println("  base_degree=$base_degree  degree_step=$degree_step  max_degree=$max_degree")
     println("  max_leaves=$(audit_cfg.max_leaves)  l2_tol=$(audit_cfg.l2_tolerance)")
+    flush(stdout)
 
     output_dir = config.output_dir !== nothing ? config.output_dir : mktempdir()
     mkpath(output_dir)
@@ -298,6 +300,7 @@ function main()
     records = NamedTuple[]
     audit_pred = make_perstep_audit_predicate(records)
 
+    println("[heartbeat] adaptive_refine start: $(Dates.now())"); flush(stdout)
     t0 = time()
     tree = adaptive_refine(
         objective,
@@ -313,6 +316,7 @@ function main()
         predicate    = audit_pred,
     )
     wall = time() - t0
+    @printf("[heartbeat] adaptive_refine done in %.1fs\n", wall); flush(stdout)
 
     records = backfill_split_dims!(records, tree)
     tally = tally_predcalls(records)
@@ -360,6 +364,7 @@ function main()
     @printf("Done in %.1f s — n_leaves=%d  n_predcall=%d  cut_dim_disagree=%d\n",
             wall, n_leaves, length(records), tally.n_pc_cut_dim_disagree)
     println("Wrote $predcall_path")
+    flush(stdout)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
