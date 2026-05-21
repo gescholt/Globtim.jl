@@ -129,27 +129,46 @@ function build_objective_and_bounds(config)
 end
 
 # ── Audit predicate wrapper ─────────────────────────────────────────────────
+#
+# Streams each predicate-call record to `partial_io` as it fires (atomic flush
+# after every record) so a timeout-killed job still leaves recoverable audit
+# data on disk. Final `predcall.jsonl` is written separately at end-of-run
+# with the `global_split_dim` backfill applied.
 
-function make_perstep_audit_predicate(records::Vector{NamedTuple})
+function make_perstep_audit_predicate(
+    records::Vector{NamedTuple},
+    partial_io::Union{IO, Nothing},
+    static_decoration::NamedTuple,
+)
+    # adaptive_refine calls `predicate(subdomain)` from concurrent
+    # Threads.@spawn tasks (see process_subdomain). The lock guards both the
+    # records push! (Julia Vector push is not thread-safe) and the partial-IO
+    # write (interleaved JSON would corrupt downstream parsers).
+    lock = ReentrantLock()
     return function (sd::Subdomain)
         g = pick_strategy(sd)
         per_axis = pick_strategy_per_axis(sd)
         action, cut_dim = decide_action(per_axis)
-        push!(
-            records,
-            (
-                bounds            = copy(get_bounds(sd)),
-                depth             = sd.depth,
-                degree            = sd.degree,
-                rel_l2            = sd.relative_l2_error,
-                global_verdict    = g,
-                per_axis_verdicts = collect(per_axis),
-                per_axis_action   = action,
-                per_axis_cut_dim  = cut_dim,
-                consulted_at      = :predicate_call,
-                global_split_dim  = nothing,
-            ),
+        rec = (
+            bounds            = copy(get_bounds(sd)),
+            depth             = sd.depth,
+            degree            = sd.degree,
+            rel_l2            = sd.relative_l2_error,
+            global_verdict    = g,
+            per_axis_verdicts = collect(per_axis),
+            per_axis_action   = action,
+            per_axis_cut_dim  = cut_dim,
+            consulted_at      = :predicate_call,
+            global_split_dim  = nothing,
         )
+        Base.@lock lock begin
+            push!(records, rec)
+            if partial_io !== nothing
+                JSON3.write(partial_io, merge(rec, static_decoration))
+                println(partial_io)
+                flush(partial_io)
+            end
+        end
         return g  # byte-identical to baseline pick_strategy run
     end
 end
@@ -298,23 +317,45 @@ function main()
        force = true, follow_symlinks = true)
 
     records = NamedTuple[]
-    audit_pred = make_perstep_audit_predicate(records)
+
+    # Streaming partial-output file: every predicate call lands on disk
+    # immediately so a SIGTERM/walltime kill still leaves recoverable data.
+    # The `global_split_dim` field is `nothing` here because backfill needs
+    # the final tree; post-processors should treat the partial file as
+    # "everything except cut-dim disagreement counts."
+    partial_path = joinpath(output_dir, "predcall.partial.jsonl")
+    partial_io = open(partial_path, "w")
+    static_decoration = (
+        experiment = String(config.name),
+        entry_name = obj_name,
+        catalogue_path = config.catalogue_path,
+        base_degree = base_degree,
+        max_degree  = max_degree,
+        max_leaves  = audit_cfg.max_leaves,
+        l2_tolerance = audit_cfg.l2_tolerance,
+    )
+
+    audit_pred = make_perstep_audit_predicate(records, partial_io, static_decoration)
 
     println("[heartbeat] adaptive_refine start: $(Dates.now())"); flush(stdout)
     t0 = time()
-    tree = adaptive_refine(
-        objective,
-        bounds,
-        base_degree;
-        enable_p_refinement = true,
-        max_degree   = max_degree,
-        degree_step  = degree_step,
-        max_leaves   = audit_cfg.max_leaves,
-        max_depth    = audit_cfg.max_depth,
-        l2_tolerance = audit_cfg.l2_tolerance,
-        tolerance_mode = :relative,
-        predicate    = audit_pred,
-    )
+    tree = try
+        adaptive_refine(
+            objective,
+            bounds,
+            base_degree;
+            enable_p_refinement = true,
+            max_degree   = max_degree,
+            degree_step  = degree_step,
+            max_leaves   = audit_cfg.max_leaves,
+            max_depth    = audit_cfg.max_depth,
+            l2_tolerance = audit_cfg.l2_tolerance,
+            tolerance_mode = :relative,
+            predicate    = audit_pred,
+        )
+    finally
+        close(partial_io)
+    end
     wall = time() - t0
     @printf("[heartbeat] adaptive_refine done in %.1fs\n", wall); flush(stdout)
 
