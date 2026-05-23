@@ -87,8 +87,9 @@ function pick_strategy_per_axis_lsfit(
     shell_mass_floor::Real = 1e-32,
 )
     if subdomain.polynomial === nothing
-        return [LSFitAxisResult(:bump, NaN, NaN, 0, 0.0)
-                for _ in 1:length(subdomain.center)]
+        return [
+            LSFitAxisResult(:bump, NaN, NaN, 0, 0.0) for _ in 1:length(subdomain.center)
+        ]
     end
 
     rel_l2_squared =
@@ -167,16 +168,12 @@ function _per_axis_lsfit_verdict(
     concentration = conc_mass / axis_total
     if concentration >= θ_concentration
         # Bump regardless of ρ. Still compute ρ for logging.
-        slope, rho, n_used = _ls_slope_log(
-            axis_shell_mass, base_degree, shell_mass_floor,
-        )
+        slope, rho, n_used = _ls_slope_log(axis_shell_mass, base_degree, shell_mass_floor)
         return LSFitAxisResult(:bump, rho, slope, n_used, axis_total)
     end
 
     # General case: LS-slope on log shell mass.
-    slope, rho, n_used = _ls_slope_log(
-        axis_shell_mass, base_degree, shell_mass_floor,
-    )
+    slope, rho, n_used = _ls_slope_log(axis_shell_mass, base_degree, shell_mass_floor)
     if n_used < 2 || isnan(rho)
         # Fall back to legacy bump-default when we cannot estimate.
         return LSFitAxisResult(:bump, rho, slope, n_used, axis_total)
@@ -189,11 +186,7 @@ end
 # OLS fit of `log(m_s) = slope · s + intercept` over shells with m_s > floor.
 # Returns (slope, rho, n_used) where rho = exp(-slope/2).
 # n_used < 2 ⇒ rho = NaN.
-function _ls_slope_log(
-    shell_mass::Dict{Int,Float64},
-    base_degree::Int,
-    floor::Real,
-)
+function _ls_slope_log(shell_mass::Dict{Int,Float64}, base_degree::Int, floor::Real)
     shells = sort!(collect(keys(shell_mass)))
     xs = Float64[]
     ys = Float64[]
