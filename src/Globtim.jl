@@ -277,6 +277,7 @@ include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
 include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum (ehaj.1)
 include("per_cut_predicate.jl") #Per-cut-direction predicate (4vtd.3)
+include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
