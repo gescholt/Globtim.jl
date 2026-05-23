@@ -597,8 +597,71 @@ function estimate_subdomain_error(
     use_cache::Bool = true,
     thread_evals::Bool = false,
     inherit_from::Union{Nothing,Subdomain} = nothing,
+    sampling::Symbol = :tensor,
+    christoffel_oversampling::Float64 = 2.0,
+    rng_seed::Union{Nothing,Integer} = nothing,
 )
     n_dim = dimension(subdomain)
+
+    # ── Christoffel-sampled branch (E1 Phase 2, opt-in) ────────────────────
+    # Bypasses tensor-grid + inheritance + unweighted-LS path entirely.
+    # Cache reuse mirrors the tensor path: a previously-fitted christoffel
+    # leaf at the same K is reused. RNG is per-leaf-deterministic when
+    # `rng_seed` is supplied (the audit driver derives one from cell id).
+    if sampling === :christoffel
+        if use_cache &&
+           subdomain.polynomial !== nothing &&
+           subdomain.samples !== nothing &&
+           subdomain.f_values !== nothing &&
+           isfinite(subdomain.l2_error)
+            return subdomain.l2_error
+        end
+        per_dim_degrees_chr = _extract_per_dim_degrees(degree, n_dim)
+        deg_for_chr = maximum(per_dim_degrees_chr)
+        rng = rng_seed === nothing ? Random.default_rng() :
+              Random.MersenneTwister(rng_seed)
+        chr_result = christoffel_subdomain_fit(
+            f, subdomain, deg_for_chr;
+            oversampling_c = christoffel_oversampling,
+            basis = basis,
+            rng = rng,
+            thread_evals = thread_evals,
+        )
+        if chr_result.infeasible
+            subdomain.l2_error = Inf
+            subdomain.relative_l2_error = Inf
+            subdomain.polynomial = nothing
+            subdomain.samples = chr_result.samples
+            subdomain.f_values = chr_result.f_values
+            subdomain.infeasible = true
+            return Inf
+        end
+        # Build the ApproxPoly with the christoffel coefficients in the same
+        # tensor-Chebyshev basis the audit predicate / HC expects.
+        d_spec = degree isa Tuple ? degree : (:one_d_for_all, degree)
+        pol = ApproxPoly{Float64}(
+            chr_result.coeffs,
+            chr_result.Lambda.data,
+            d_spec,
+            chr_result.l2_error,
+            chr_result.K_used,
+            subdomain.half_widths,
+            subdomain.center,
+            collect(chr_result.samples'),  # n_dim × K
+            chr_result.f_values,
+            basis,
+            Float64Precision,
+            true,
+            false,
+            chr_result.kappa,
+        )
+        subdomain.l2_error = chr_result.l2_error
+        subdomain.relative_l2_error = chr_result.relative_l2_error
+        subdomain.polynomial = pol
+        subdomain.samples = chr_result.samples
+        subdomain.f_values = chr_result.f_values
+        return chr_result.l2_error
+    end
 
     # Determine per-dimension grid sizes (GN values; grid will have GN+1 points per dim)
     per_dim_degrees = _extract_per_dim_degrees(degree, n_dim)
@@ -1090,6 +1153,9 @@ function process_subdomain(
     reuse_parent_samples::Bool = true,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
+    sampling::Symbol = :tensor,
+    christoffel_oversampling::Float64 = 2.0,
+    rng_base_seed::Union{Nothing,Integer} = nothing,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1117,7 +1183,10 @@ function process_subdomain(
         end
     end
 
-    # Estimate error on this subdomain
+    # Estimate error on this subdomain. Per-leaf RNG seed is derived from
+    # the subdomain id so each leaf's christoffel sample set is reproducible
+    # across re-runs (R5 in the E1 plan).
+    leaf_seed = rng_base_seed === nothing ? nothing : (rng_base_seed + subdomain_id)
     l2_error = estimate_subdomain_error(
         f,
         subdomain,
@@ -1127,6 +1196,9 @@ function process_subdomain(
         thread_evals = thread_evals,
         inherit_from = inherit_from,
         n_samples_per_dim = n_samples_per_dim,
+        sampling = sampling,
+        christoffel_oversampling = christoffel_oversampling,
+        rng_seed = leaf_seed,
     )
 
     # Phase 1 prune: every sample returned Inf, no polynomial to fit. Terminate
@@ -1378,6 +1450,9 @@ function adaptive_refine(
     reuse_parent_samples::Bool = true,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
+    sampling::Symbol = :tensor,
+    christoffel_oversampling::Float64 = 2.0,
+    rng_base_seed::Union{Nothing,Integer} = nothing,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1437,6 +1512,9 @@ function adaptive_refine(
             reuse_parent_samples,
             n_samples_per_dim,
             predicate,
+            sampling,
+            christoffel_oversampling,
+            rng_base_seed,
         )
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1

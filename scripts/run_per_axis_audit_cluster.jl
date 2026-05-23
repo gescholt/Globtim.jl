@@ -59,6 +59,28 @@ function load_audit_section(path::String)
     )
 end
 
+# ── E1 sampling kwargs (opt-in Christoffel weighted LS) ────────────────────
+#
+# Reads `[polynomial]` keys `sampling` and `christoffel_oversampling` (both
+# optional). Default `sampling = "tensor"` reproduces the historical audit
+# path bit-for-bit. `sampling = "christoffel"` activates the Cohen-Migliorati
+# 2017 weighted-LS path on each leaf (see christoffel_sampling.jl).
+function load_sampling_section(path::String)
+    raw = TOML.parsefile(path)
+    poly = get(raw, "polynomial", Dict())
+    sampling_str = String(get(poly, "sampling", "tensor"))
+    sampling = Symbol(sampling_str)
+    sampling in (:tensor, :christoffel) ||
+        error("[polynomial] sampling must be \"tensor\" or \"christoffel\", got \"$sampling_str\"")
+    christoffel_oversampling = Float64(get(poly, "christoffel_oversampling", 2.0))
+    rng_base_seed = haskey(poly, "rng_base_seed") ? Int(poly["rng_base_seed"]) : 20260523
+    return (
+        sampling = sampling,
+        christoffel_oversampling = christoffel_oversampling,
+        rng_base_seed = rng_base_seed,
+    )
+end
+
 # ── Catalogue / analytical → (objective, bounds) ─────────────────────────────
 #
 # Mirrors DynamicObjectivesGlobtimExt.run_experiment_from_config lines 80-202.
@@ -293,9 +315,13 @@ function main()
     path = parse_args(ARGS)
     config = Globtim.load_experiment_config(path)
     audit_cfg = load_audit_section(path)
+    sampling_cfg = load_sampling_section(path)
 
     println("Loaded config: $(config.name)")
     println("  source: $path")
+    println("  sampling: $(sampling_cfg.sampling)" *
+            (sampling_cfg.sampling === :christoffel ?
+             "  (c=$(sampling_cfg.christoffel_oversampling), rng_base_seed=$(sampling_cfg.rng_base_seed))" : ""))
 
     objective, bounds, obj_name = build_objective_and_bounds(config)
     dim = length(bounds)
@@ -352,6 +378,9 @@ function main()
             l2_tolerance = audit_cfg.l2_tolerance,
             tolerance_mode = :relative,
             predicate    = audit_pred,
+            sampling     = sampling_cfg.sampling,
+            christoffel_oversampling = sampling_cfg.christoffel_oversampling,
+            rng_base_seed = sampling_cfg.rng_base_seed,
         )
     finally
         close(partial_io)
