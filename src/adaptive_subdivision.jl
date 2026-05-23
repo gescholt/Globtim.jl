@@ -618,10 +618,11 @@ function estimate_subdomain_error(
         end
         per_dim_degrees_chr = _extract_per_dim_degrees(degree, n_dim)
         deg_for_chr = maximum(per_dim_degrees_chr)
-        rng = rng_seed === nothing ? Random.default_rng() :
-              Random.MersenneTwister(rng_seed)
+        rng = rng_seed === nothing ? Random.default_rng() : Random.MersenneTwister(rng_seed)
         chr_result = christoffel_subdomain_fit(
-            f, subdomain, deg_for_chr;
+            f,
+            subdomain,
+            deg_for_chr;
             oversampling_c = christoffel_oversampling,
             basis = basis,
             rng = rng,

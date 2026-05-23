@@ -269,7 +269,8 @@ function christoffel_subdomain_fit(
                 x_buf = Vector{Float64}(undef, n_dim)
                 for k in chunk_start:chunk_end
                     @inbounds for d in 1:n_dim
-                        x_buf[d] = subdomain.center[d] + S_norm[k, d] * subdomain.half_widths[d]
+                        x_buf[d] =
+                            subdomain.center[d] + S_norm[k, d] * subdomain.half_widths[d]
                     end
                     f_values[k] = f(x_buf)
                 end
@@ -279,7 +280,8 @@ function christoffel_subdomain_fit(
         x_physical = Vector{Float64}(undef, n_dim)
         for k in 1:K
             @inbounds for d in 1:n_dim
-                x_physical[d] = subdomain.center[d] + S_norm[k, d] * subdomain.half_widths[d]
+                x_physical[d] =
+                    subdomain.center[d] + S_norm[k, d] * subdomain.half_widths[d]
             end
             f_values[k] = f(x_physical)
         end
@@ -305,9 +307,17 @@ function christoffel_subdomain_fit(
     if infeasible
         wall_s = time() - t0
         return (
-            samples = S_norm, f_values = f_values, coeffs = Float64[],
-            Lambda = Lambda, l2_error = Inf, relative_l2_error = Inf,
-            kappa = Inf, K_used = K, m = m, wall_s = wall_s, infeasible = true,
+            samples = S_norm,
+            f_values = f_values,
+            coeffs = Float64[],
+            Lambda = Lambda,
+            l2_error = Inf,
+            relative_l2_error = Inf,
+            kappa = Inf,
+            K_used = K,
+            m = m,
+            wall_s = wall_s,
+            infeasible = true,
         )
     end
 
@@ -328,7 +338,8 @@ function christoffel_subdomain_fit(
     norm_f = sqrt(sum(abs2, f_values) / K)
     rel_l2 = norm_f > 0 ? l2_error / norm_f : (l2_error == 0.0 ? 0.0 : Inf)
     if isnan(l2_error)
-        l2_error = Inf; rel_l2 = Inf
+        l2_error = Inf
+        rel_l2 = Inf
     end
 
     wall_s = time() - t0
