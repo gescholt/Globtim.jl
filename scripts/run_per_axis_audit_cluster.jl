@@ -29,6 +29,8 @@ using Globtim:
     pick_strategy,
     pick_strategy_per_axis,
     decide_action,
+    pick_strategy_per_axis_lsfit,
+    decide_action_lsfit,
     get_bounds
 using HomotopyContinuation  # weakdep activation; mirrors run_experiment.jl
 import JSON3
@@ -59,12 +61,24 @@ function load_audit_section(path::String)
     )
 end
 
-# ── E1 sampling kwargs (opt-in Christoffel weighted LS) ────────────────────
+# ── E1 sampling + E2 predicate kwargs (opt-in features) ────────────────────
 #
-# Reads `[polynomial]` keys `sampling` and `christoffel_oversampling` (both
-# optional). Default `sampling = "tensor"` reproduces the historical audit
-# path bit-for-bit. `sampling = "christoffel"` activates the Cohen-Migliorati
-# 2017 weighted-LS path on each leaf (see christoffel_sampling.jl).
+# Reads `[polynomial]` keys:
+#
+#   E1 (Christoffel sampling):
+#     - `sampling = "tensor" | "christoffel"`           (default "tensor")
+#     - `christoffel_oversampling = 2.0`                 (default)
+#     - `rng_base_seed = 20260523`                       (default)
+#
+#   E2 (LS-slope ρ_k predicate):
+#     - `predicate = "default" | "ls_slope"`             (default "default")
+#         "default"  → audit closure returns `pick_strategy(sd)` (unchanged)
+#         "ls_slope" → audit closure returns `decide_action_lsfit(...)`,
+#                      AND logs ρ_per_axis + slope_per_axis per leaf
+#     - `ls_slope_rho_threshold = 2.71828...`            (default exp(1.0))
+#     - `ls_slope_shell_mass_floor = 1e-14`              (default)
+#
+# Both defaults reproduce the historical audit path bit-for-bit.
 function load_sampling_section(path::String)
     raw = TOML.parsefile(path)
     poly = get(raw, "polynomial", Dict())
@@ -74,10 +88,23 @@ function load_sampling_section(path::String)
         error("[polynomial] sampling must be \"tensor\" or \"christoffel\", got \"$sampling_str\"")
     christoffel_oversampling = Float64(get(poly, "christoffel_oversampling", 2.0))
     rng_base_seed = haskey(poly, "rng_base_seed") ? Int(poly["rng_base_seed"]) : 20260523
+
+    # E2 — predicate selector
+    predicate_str = String(get(poly, "predicate", "default"))
+    predicate_kind = Symbol(predicate_str)
+    predicate_kind in (:default, :ls_slope) || error(
+        "[polynomial] predicate must be \"default\" or \"ls_slope\", got \"$predicate_str\"",
+    )
+    ls_slope_rho_threshold = Float64(get(poly, "ls_slope_rho_threshold", exp(1.0)))
+    ls_slope_shell_mass_floor = Float64(get(poly, "ls_slope_shell_mass_floor", 1e-14))
+
     return (
         sampling = sampling,
         christoffel_oversampling = christoffel_oversampling,
         rng_base_seed = rng_base_seed,
+        predicate = predicate_kind,
+        ls_slope_rho_threshold = ls_slope_rho_threshold,
+        ls_slope_shell_mass_floor = ls_slope_shell_mass_floor,
     )
 end
 
@@ -192,6 +219,76 @@ function make_perstep_audit_predicate(
             end
         end
         return g  # byte-identical to baseline pick_strategy run
+    end
+end
+
+# ── E2 — LS-slope predicate variant (opt-in) ───────────────────────────────
+#
+# Same logging shape as `make_perstep_audit_predicate` PLUS new fields:
+#   - ls_verdicts::Vector{Symbol}         per-axis :bump / :split from LS-slope
+#   - rho_per_axis::Vector{Float64}       Bernstein-ρ estimate per axis (NaN
+#                                          when LS fit can't proceed)
+#   - slope_per_axis::Vector{Float64}     raw OLS slope per axis (NaN ditto)
+#   - ls_action::Symbol                   leaf-level action from decide_action_lsfit
+#   - ls_cut_dim::Union{Int,Nothing}      cut dim chosen by lsfit
+#
+# **Different from `make_perstep_audit_predicate`**: the returned action is
+# `ls_action` (the lsfit decision), NOT `pick_strategy(sd)`. This means the
+# audit driver's subdivision decisions are driven by the LS-slope estimator
+# in `predicate = "ls_slope"` mode. The default-mode closure above is
+# unchanged.
+function make_perstep_audit_predicate_lsfit(
+    records::Vector{NamedTuple},
+    partial_io::Union{IO, Nothing},
+    static_decoration::NamedTuple;
+    ρ_threshold::Float64,
+    shell_mass_floor::Float64,
+)
+    lock = ReentrantLock()
+    return function (sd::Subdomain)
+        # Run BOTH predicates so the legacy tally counters still work and the
+        # JSONL is forward-compatible. `g` and the 2-pt per-axis verdicts go in
+        # for cross-comparison; the lsfit-derived action drives subdivision.
+        g = pick_strategy(sd)
+        per_axis = pick_strategy_per_axis(sd)
+        action_2pt, cut_dim_2pt = decide_action(per_axis)
+        ls_results = pick_strategy_per_axis_lsfit(
+            sd;
+            ρ_threshold = ρ_threshold,
+            shell_mass_floor = shell_mass_floor,
+        )
+        ls_verdicts = [r.verdict for r in ls_results]
+        rho_per_axis = [r.rho for r in ls_results]
+        slope_per_axis = [r.slope for r in ls_results]
+        ls_action, ls_cut_dim = decide_action_lsfit(ls_results)
+        rec = (
+            bounds            = copy(get_bounds(sd)),
+            depth             = sd.depth,
+            degree            = sd.degree,
+            rel_l2            = sd.relative_l2_error,
+            global_verdict    = g,
+            per_axis_verdicts = collect(per_axis),
+            per_axis_action   = action_2pt,
+            per_axis_cut_dim  = cut_dim_2pt,
+            ls_verdicts       = ls_verdicts,
+            rho_per_axis      = rho_per_axis,
+            slope_per_axis    = slope_per_axis,
+            ls_action         = ls_action,
+            ls_cut_dim        = ls_cut_dim,
+            consulted_at      = :predicate_call,
+            global_split_dim  = nothing,
+        )
+        Base.@lock lock begin
+            push!(records, rec)
+            if partial_io !== nothing
+                JSON3.write(partial_io, merge(rec, static_decoration))
+                println(partial_io)
+                flush(partial_io)
+            end
+        end
+        # LS-slope is the active predicate in this mode — return ls_action.
+        # adaptive_refine wants :bump / :split / :done.
+        return ls_action
     end
 end
 
@@ -361,7 +458,16 @@ function main()
         l2_tolerance = audit_cfg.l2_tolerance,
     )
 
-    audit_pred = make_perstep_audit_predicate(records, partial_io, static_decoration)
+    audit_pred = if sampling_cfg.predicate === :ls_slope
+        println("  predicate: ls_slope  (ρ_threshold=$(sampling_cfg.ls_slope_rho_threshold), shell_mass_floor=$(sampling_cfg.ls_slope_shell_mass_floor))")
+        make_perstep_audit_predicate_lsfit(
+            records, partial_io, static_decoration;
+            ρ_threshold = sampling_cfg.ls_slope_rho_threshold,
+            shell_mass_floor = sampling_cfg.ls_slope_shell_mass_floor,
+        )
+    else
+        make_perstep_audit_predicate(records, partial_io, static_decoration)
+    end
 
     println("[heartbeat] adaptive_refine start: $(Dates.now())"); flush(stdout)
     t0 = time()
