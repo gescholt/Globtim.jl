@@ -487,6 +487,13 @@ function main()
             sampling     = sampling_cfg.sampling,
             christoffel_oversampling = sampling_cfg.christoffel_oversampling,
             rng_base_seed = sampling_cfg.rng_base_seed,
+            # T1.0 speed-up (bench_thread_evals.jl, 2026-05-21): inner-only
+            # threading gives 3.13× over default outer-leaf parallelism on
+            # the lv4d_deg2_leaves32 reference cell. Hybrid (parallel=true,
+            # thread_evals=true) tied to within 1% but risks oversubscription
+            # on multi-thread tasks; prefer the simpler inner-only config.
+            parallel     = false,
+            thread_evals = true,
         )
     finally
         close(partial_io)
