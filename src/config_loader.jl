@@ -179,7 +179,7 @@ const KNOWN_SOLVER_METHODS = Set([
     "KenCarp4",
 ])
 
-const KNOWN_REFINEMENT_METHODS = Set(["NelderMead", "BFGS"])
+const KNOWN_REFINEMENT_METHODS = Set(["NelderMead", "BFGS", "LBFGS"])
 
 const KNOWN_GRADIENT_METHODS = Set(["forwarddiff", "finitediff"])
 
