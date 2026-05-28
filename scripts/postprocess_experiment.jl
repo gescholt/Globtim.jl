@@ -252,6 +252,32 @@ function reconstruct_objective(results_dir::String)
             end
 
             model, _, _, outputs = entry.model_fn()
+
+            # Honour the [model].distance_function_override TOML key — opt-in
+            # swap of the entry's distance_function (e.g., L2_squared in place
+            # of L2_norm) without touching the catalogue file. Resolves via
+            # DynamicObjectives.DISTANCE_REGISTRY.
+            distance_fn = if config.distance_function_override !== nothing
+                resolved = get(
+                    DynamicObjectives.DISTANCE_REGISTRY,
+                    config.distance_function_override,
+                    nothing,
+                )
+                resolved === nothing && error(
+                    "distance_function_override = \"$(config.distance_function_override)\" " *
+                    "not in DISTANCE_REGISTRY (have: " *
+                    join(sort(collect(keys(DynamicObjectives.DISTANCE_REGISTRY))), ", ") *
+                    ")",
+                )
+                println(
+                    "  distance_function_override: \"$(config.distance_function_override)\" " *
+                    "(catalogue entry was using its default)",
+                )
+                resolved
+            else
+                entry.distance_function
+            end
+
             objective = make_error_distance(
                 model,
                 outputs,
@@ -259,7 +285,7 @@ function reconstruct_objective(results_dir::String)
                 entry.p_true,
                 time_interval,
                 numpoints,
-                entry.distance_function,
+                distance_fn,
                 entry.aggregate_distances;
                 return_inf_on_error = true,
                 eval_timeout = entry.eval_timeout,

@@ -50,6 +50,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     time_interval::Union{Nothing,Vector{Float64}} = nothing  # override catalogue default
     sample_times::Union{Nothing,Vector{Float64}} = nothing   # explicit time sample points (overrides time_interval + numpoints)
     p_true::Union{Nothing,Vector{Float64}} = nothing         # override catalogue p_true
+    distance_function_override::Union{Nothing,String} = nothing  # opt-in: swap the entry's distance_function at load time (e.g., "L2_squared" instead of catalogue's "L2_norm"); resolves via DISTANCE_REGISTRY
 
     # [domain] — exactly one mode: radius XOR radii XOR bounds
     radius::Union{Nothing,Float64} = nothing
@@ -944,6 +945,9 @@ function load_experiment_config(path::String)
     time_interval = haskey(mod, "time_interval") ? Float64.(mod["time_interval"]) : nothing
     sample_times = haskey(mod, "sample_times") ? Float64.(mod["sample_times"]) : nothing
     p_true = haskey(mod, "p_true") ? Float64.(mod["p_true"]) : nothing
+    distance_function_override =
+        haskey(mod, "distance_function_override") ?
+        String(mod["distance_function_override"]) : nothing
 
     # Parse p_center from [domain]
     p_center = haskey(dom, "p_center") ? Float64.(dom["p_center"]) : nothing
@@ -1117,6 +1121,7 @@ function load_experiment_config(path::String)
         time_interval = time_interval,
         sample_times = sample_times,
         p_true = p_true,
+        distance_function_override = distance_function_override,
         # [domain]
         radius = radius,
         radii = radii,
