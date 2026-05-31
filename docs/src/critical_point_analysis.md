@@ -36,6 +36,8 @@ Critical points are classified based on Hessian eigenvalues:
 - **`:degenerate`** - At least one eigenvalue ≈ 0
 - **`:error`** - Hessian computation failed
 
+![Hessian classification decision tree](assets/hessian_classification_tree.svg)
+
 ### Eigenvalue Analysis
 
 For each critical point, the following metrics are computed:

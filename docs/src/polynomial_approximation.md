@@ -39,6 +39,19 @@ pol = Constructor(TR, degree, basis=:legendre)
 
 **Grid points:** Zeros of Legendre polynomials
 
+### Why orthogonal nodes?
+
+![Chebyshev vs Legendre vs uniform — node distribution and Runge convergence](assets/basis_comparison.png)
+
+The left panel shows the three sampling layouts on `[−1, 1]` at `n = 21`: Chebyshev clusters at the endpoints, Legendre is endpoint-light but interior-rich, uniform is evenly spaced. The right panel sweeps polynomial degree on the Runge function `f(x) = 1 / (1 + 25 x²)`:
+
+- **Uniform-node interpolation** diverges — the Runge phenomenon. L2 error grows from 0.4 at `d = 4` to 65 at `d = 24`.
+- **Chebyshev** and **Legendre** both deliver exponential convergence and are nearly indistinguishable on this objective.
+
+This is why the `Constructor` accepts only `:chebyshev` and `:legendre`. The choice between them is mostly stylistic; the choice against uniform sampling is fundamental.
+
+Regenerate with: `julia --project=profiles/viz pkg/globtim/examples/basis_comparison.jl`
+
 ## L2-Norm Computation
 
 The L2-norm measures approximation quality and is used throughout Globtim for error tracking.

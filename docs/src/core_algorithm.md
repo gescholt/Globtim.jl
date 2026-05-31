@@ -2,21 +2,9 @@
 
 Globtim's approach to global optimization consists of three main phases:
 
-<!-- Illustration commented out - not legible at current size
-```mermaid
-flowchart LR
-    subgraph Phase1["Phase 1: Polynomial Approximation"]
-        A[Sample function<br>on grid] --> B[Fit polynomial<br>in orthogonal basis]
-    end
-    subgraph Phase2["Phase 2: Critical Point Finding"]
-        C[Convert to<br>monomial basis] --> D[Solve ∇p = 0]
-    end
-    subgraph Phase3["Phase 3: Refinement"]
-        E[BFGS<br>refinement] --> F[Hessian<br>classification]
-    end
-    Phase1 --> Phase2 --> Phase3
-```
--->
+![Globtim — algorithm overview](assets/algorithm_overview.svg)
+
+Subdivision strategies (`:B_iso`, `:B_aniso`, `:adaptive_interleaved`, …) wrap Phase 1 — they iterate over leaves of an adaptive partition, then aggregate Phase 2/3 results across all leaves. See [Subdivision Strategies](https://github.com/gescholt/globopt_merged/blob/main/docs/SUBDIVISION_STRATEGIES.md) for the partition-level extensions.
 
 ## 1. Polynomial Approximation
 

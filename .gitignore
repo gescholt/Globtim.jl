@@ -41,6 +41,7 @@ Examples/**/*.pdf
 
 # Exception: Documentation illustration assets
 !docs/src/assets/*.png
+!docs/src/assets/*.svg
 !docs/src/assets/plots/*.png
 
 # Data outputs

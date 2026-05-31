@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 360" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#444"/>
+    </marker>
+    <style>
+      .phase-bg-1 { fill: #eef4fa; stroke: #4682b4; stroke-width: 1.6; }
+      .phase-bg-2 { fill: #f1ede8; stroke: #b8860b; stroke-width: 1.6; }
+      .phase-bg-3 { fill: #ecf3ec; stroke: #2e7d32; stroke-width: 1.6; }
+      .step       { fill: #ffffff; stroke: #444; stroke-width: 1.2; }
+      .title      { font-size: 20px; font-weight: 600; fill: #1a1a1a; }
+      .phase      { font-size: 14px; font-weight: 600; fill: #1a1a1a; }
+      .step-title { font-size: 13px; font-weight: 600; fill: #1a1a1a; }
+      .step-sub   { font-size: 11px; fill: #555; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; }
+      .edge       { fill: none; stroke: #444; stroke-width: 1.4; }
+      .data       { font-size: 10px; fill: #444; font-style: italic; }
+    </style>
+  </defs>
+
+  <text x="540" y="28" class="title" text-anchor="middle">Globtim — algorithm overview</text>
+
+  <!-- ============================================== -->
+  <!-- Phase 1: Polynomial approximation              -->
+  <!-- ============================================== -->
+  <rect class="phase-bg-1" x="20" y="56" width="320" height="200" rx="10"/>
+  <text x="180" y="82" class="phase" text-anchor="middle">Phase 1 — Polynomial approximation</text>
+
+  <rect class="step" x="40" y="100" width="130" height="68" rx="6"/>
+  <text x="105" y="124" class="step-title" text-anchor="middle">Sample f on grid</text>
+  <text x="105" y="144" class="step-sub" text-anchor="middle">Chebyshev /</text>
+  <text x="105" y="158" class="step-sub" text-anchor="middle">Legendre nodes</text>
+
+  <line x1="170" y1="134" x2="190" y2="134" class="edge" marker-end="url(#arrow)"/>
+
+  <rect class="step" x="190" y="100" width="130" height="68" rx="6"/>
+  <text x="255" y="124" class="step-title" text-anchor="middle">Fit p(x)</text>
+  <text x="255" y="144" class="step-sub" text-anchor="middle">in orthogonal</text>
+  <text x="255" y="158" class="step-sub" text-anchor="middle">basis (discrete LS)</text>
+
+  <text x="180" y="200" class="step-sub" text-anchor="middle">Constructor(TR, d, basis=...)</text>
+  <text x="180" y="222" class="data" text-anchor="middle">output: pol.coeffs,  pol.nrm = ‖f − p‖₂</text>
+
+  <!-- ============================================== -->
+  <!-- Phase 2: Critical point finding                -->
+  <!-- ============================================== -->
+  <rect class="phase-bg-2" x="380" y="56" width="320" height="200" rx="10"/>
+  <text x="540" y="82" class="phase" text-anchor="middle">Phase 2 — Critical point finding</text>
+
+  <rect class="step" x="400" y="100" width="130" height="68" rx="6"/>
+  <text x="465" y="124" class="step-title" text-anchor="middle">Convert basis</text>
+  <text x="465" y="144" class="step-sub" text-anchor="middle">orthogonal →</text>
+  <text x="465" y="158" class="step-sub" text-anchor="middle">monomial</text>
+
+  <line x1="530" y1="134" x2="550" y2="134" class="edge" marker-end="url(#arrow)"/>
+
+  <rect class="step" x="550" y="100" width="130" height="68" rx="6"/>
+  <text x="615" y="124" class="step-title" text-anchor="middle">Solve ∇p = 0</text>
+  <text x="615" y="144" class="step-sub" text-anchor="middle">HomotopyCont.</text>
+  <text x="615" y="158" class="step-sub" text-anchor="middle">(Bezout / polyhedral)</text>
+
+  <text x="540" y="200" class="step-sub" text-anchor="middle">solve_polynomial_system(...)</text>
+  <text x="540" y="222" class="data" text-anchor="middle">output: real polynomial roots (candidate CPs)</text>
+
+  <!-- ============================================== -->
+  <!-- Phase 3: Refinement                            -->
+  <!-- ============================================== -->
+  <rect class="phase-bg-3" x="740" y="56" width="320" height="200" rx="10"/>
+  <text x="900" y="82" class="phase" text-anchor="middle">Phase 3 — Refinement</text>
+
+  <rect class="step" x="760" y="100" width="130" height="68" rx="6"/>
+  <text x="825" y="124" class="step-title" text-anchor="middle">BFGS on f(x)</text>
+  <text x="825" y="144" class="step-sub" text-anchor="middle">each candidate</text>
+  <text x="825" y="158" class="step-sub" text-anchor="middle">as warm start</text>
+
+  <line x1="890" y1="134" x2="910" y2="134" class="edge" marker-end="url(#arrow)"/>
+
+  <rect class="step" x="910" y="100" width="130" height="68" rx="6"/>
+  <text x="975" y="124" class="step-title" text-anchor="middle">Hessian classify</text>
+  <text x="975" y="144" class="step-sub" text-anchor="middle">eigenvalue rule</text>
+  <text x="975" y="158" class="step-sub" text-anchor="middle">min / max / saddle</text>
+
+  <text x="900" y="200" class="step-sub" text-anchor="middle">analyze_critical_points(f, df, TR)</text>
+  <text x="900" y="222" class="data" text-anchor="middle">output: refined CPs + Morse classification</text>
+
+  <!-- ============================================== -->
+  <!-- Inter-phase arrows                              -->
+  <!-- ============================================== -->
+  <line x1="340" y1="156" x2="380" y2="156" class="edge" marker-end="url(#arrow)"/>
+  <line x1="700" y1="156" x2="740" y2="156" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Data flow labels above inter-phase arrows -->
+  <text x="360" y="148" class="data" text-anchor="middle">p(x), pol</text>
+  <text x="720" y="148" class="data" text-anchor="middle">CP candidates</text>
+
+  <!-- Bottom note -->
+  <text x="540" y="290" class="step-sub" text-anchor="middle" fill="#1a1a1a">
+    Subdivision strategies (B_iso, B_aniso, adaptive_interleaved, …) wrap Phase 1 — they iterate
+  </text>
+  <text x="540" y="308" class="step-sub" text-anchor="middle" fill="#1a1a1a">
+    over leaves of an adaptive partition, then aggregate Phase 2/3 results across all leaves.
+  </text>
+  <text x="540" y="332" class="data" text-anchor="middle">
+    See docs/SUBDIVISION_STRATEGIES.md for partition-level extensions.
+  </text>
+</svg>
