@@ -178,3 +178,77 @@ end
     )
     @test tree isa Globtim.SubdivisionTree
 end
+
+@testset "two_phase_refine logger kwarg — core-side leaf emission" begin
+    mktempdir() do dir
+        path = joinpath(dir, "tp.jsonl")
+        logger = M.MetricsLogger(path)
+
+        bounds = [(-1.2, 1.2), (-1.2, 1.2)]
+        extra_calls = Ref(0)
+        leaf_extra = (sd, idx) -> begin
+            extra_calls[] += 1
+            return Dict{Symbol,Any}(:fake_metric => 7 + idx)
+        end
+
+        tree = two_phase_refine(
+            Deuflhard, bounds, 4;
+            coarse_tolerance = 0.10, fine_tolerance = 0.05,
+            max_depth = 2, max_leaves = 8,
+            parallel = false, basis = :chebyshev,
+            logger = logger, leaf_extra_fn = leaf_extra,
+        )
+
+        rows = read_rows(path)
+        phases = [r for r in rows if occursin("\"kind\":\"phase\"", r)]
+        phase_names = [_extract(p, "phase") for p in phases]
+
+        # All four phase markers fire, in order.
+        @test "two_phase_refine_start"   in phase_names
+        @test "two_phase_phase1_done"    in phase_names
+        @test "two_phase_phase2_start"   in phase_names
+        @test "two_phase_refine_done"    in phase_names
+
+        # start carries coarse + fine tolerances
+        start = phases[findfirst(==("two_phase_refine_start"), phase_names)]
+        @test _extract(start, "coarse_tolerance") == 0.10
+        @test _extract(start, "fine_tolerance")   == 0.05
+        @test _extract(start, "balance_threshold") isa Float64
+
+        # phase1_done carries phase1_iter + leaf counts
+        p1done = phases[findfirst(==("two_phase_phase1_done"), phase_names)]
+        @test _extract(p1done, "phase1_iter") isa Int
+        @test _extract(p1done, "n_leaves") >= 1
+
+        # phase2_start carries the partition counts
+        p2start = phases[findfirst(==("two_phase_phase2_start"), phase_names)]
+        @test _extract(p2start, "n_needs_reeval") isa Int
+        @test _extract(p2start, "n_already_fine") isa Int
+
+        # done carries wall_s + max_depth_reached
+        done = phases[findfirst(==("two_phase_refine_done"), phase_names)]
+        @test _extract(done, "wall_s") > 0.0
+        @test _extract(done, "n_leaves") >= 1
+        @test _extract(done, "max_depth_reached") >= 0
+
+        # Every leaf row carries stage=tree-build + the user-supplied fake_metric.
+        leaves = [r for r in rows if occursin("\"kind\":\"leaf\"", r)]
+        @test !isempty(leaves)
+        for leaf in leaves
+            @test _extract(leaf, "stage") == "tree-build"
+            @test _extract(leaf, "fake_metric") isa Int
+        end
+        @test extra_calls[] == length(leaves)
+    end
+end
+
+@testset "two_phase_refine without logger — no behavior change" begin
+    bounds = [(-1.2, 1.2), (-1.2, 1.2)]
+    tree = two_phase_refine(
+        Deuflhard, bounds, 4;
+        coarse_tolerance = 0.10, fine_tolerance = 0.05,
+        max_depth = 1, max_leaves = 4,
+        parallel = false, basis = :chebyshev,
+    )
+    @test tree isa Globtim.SubdivisionTree
+end
