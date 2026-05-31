@@ -281,6 +281,7 @@ include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
 include("EnhancedMetrics.jl") #Enhanced statistics collection
+include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
@@ -293,6 +294,9 @@ export compute_hessians, classify_critical_points, compute_eigenvalue_stats
 
 # Enhanced metrics collection - export module
 export EnhancedMetrics
+
+# Streaming JSONL metrics writer - export module
+export Metrics
 # Internal Hessian analysis helpers - not exported
 # export store_all_eigenvalues,
 #     extract_critical_eigenvalues,
