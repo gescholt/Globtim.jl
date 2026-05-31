@@ -1378,6 +1378,8 @@ function adaptive_refine(
     reuse_parent_samples::Bool = true,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
+    logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
+    leaf_extra_fn::Union{Function,Nothing} = nothing,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1391,6 +1393,24 @@ function adaptive_refine(
     n_dim = length(bounds)
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
     tree = SubdivisionTree(bounds; degree = root_degree)
+
+    if logger !== nothing
+        Metrics.log_phase!(logger, "adaptive_refine_start"; extra = Dict(
+            :n_dim               => n_dim,
+            :base_degree         => root_degree,
+            :l2_tolerance        => l2_tolerance,
+            :tolerance_mode      => string(tolerance_mode),
+            :max_depth           => max_depth,
+            :max_leaves          => max_leaves,
+            :enable_p_refinement => enable_p_refinement,
+            :max_degree          => max_degree,
+            :degree_step         => degree_step,
+            :predicate_name      => string(nameof(predicate)),
+            :parallel            => parallel,
+            :basis               => string(basis),
+        ))
+    end
+    t_build_start = time()
 
     # Notify phase callback that we're starting (single-phase refinement)
     if phase_callback !== nothing
@@ -1531,8 +1551,60 @@ function adaptive_refine(
         )
     end
 
+    if logger !== nothing
+        _emit_tree_leaves!(logger, tree, leaf_extra_fn)
+        Metrics.log_phase!(logger, "adaptive_refine_done"; extra = Dict(
+            :wall_s            => time() - t_build_start,
+            :n_leaves          => n_leaves(tree),
+            :n_active          => length(tree.active_leaves),
+            :n_converged       => length(tree.converged_leaves),
+            :n_pruned          => length(tree.pruned_leaves),
+            :max_depth_reached => get_max_depth(tree),
+        ))
+    end
+
     return tree
 end #==============================================================================#
+
+# Emit one leaf row per processed leaf to the supplied Metrics logger.
+# Skipped for leaves that were pruned-pre-fit (`polynomial === nothing`) since
+# they have no rel_l2 to report. `leaf_extra_fn(sd, leaf_id)` may return a Dict
+# whose entries are folded into the row's `extra` field — this is the
+# escape hatch for caller-side per-leaf data (HC-side stats, predicate-call
+# counters, etc.) that the library itself doesn't track.
+function _emit_tree_leaves!(logger::Metrics.MetricsLogger, tree::SubdivisionTree,
+                            leaf_extra_fn::Union{Function,Nothing})
+    active_set    = Set(tree.active_leaves)
+    converged_set = Set(tree.converged_leaves)
+    pruned_set    = Set(tree.pruned_leaves)
+    for (idx, sd) in enumerate(tree.subdomains)
+        sd.polynomial === nothing && continue
+        status = idx in active_set    ? "active"    :
+                 idx in converged_set ? "converged" :
+                 idx in pruned_set    ? "pruned"    : "internal"
+        extra = Dict{Symbol,Any}(
+            :stage     => "tree-build",
+            :status    => status,
+            :split_dim => sd.split_dim === nothing ? nothing : Int(sd.split_dim),
+            :parent_id => sd.parent_id === nothing ? nothing : Int(sd.parent_id),
+            :l2_error  => sd.l2_error,
+        )
+        if leaf_extra_fn !== nothing
+            user_extra = leaf_extra_fn(sd, idx)
+            for (k, v) in user_extra
+                extra[Symbol(k)] = v
+            end
+        end
+        Metrics.log_leaf!(logger, idx;
+            depth     = sd.depth,
+            bounds    = get_bounds(sd),
+            degree    = sd.degree,
+            rel_l2    = sd.relative_l2_error,
+            n_raw_cps = 0,
+            extra     = extra,
+        )
+    end
+end
 
 #                      TWO-PHASE REFINEMENT                                     #
 

@@ -271,6 +271,7 @@ include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsificat
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
+include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
 include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y0j)
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
@@ -281,7 +282,6 @@ include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
 include("EnhancedMetrics.jl") #Enhanced statistics collection
-include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer
 
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range

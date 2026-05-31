@@ -201,3 +201,7 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_toml_grid_scoring_screening.jl") do
     include("test_toml_grid_scoring_screening.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_metrics_logger.jl") do
+    include("test_metrics_logger.jl")
+end
