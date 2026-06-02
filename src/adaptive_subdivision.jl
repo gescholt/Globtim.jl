@@ -1471,20 +1471,24 @@ function adaptive_refine(
     tree = SubdivisionTree(bounds; degree = root_degree)
 
     if logger !== nothing
-        Metrics.log_phase!(logger, "adaptive_refine_start"; extra = Dict(
-            :n_dim               => n_dim,
-            :base_degree         => root_degree,
-            :l2_tolerance        => l2_tolerance,
-            :tolerance_mode      => string(tolerance_mode),
-            :max_depth           => max_depth,
-            :max_leaves          => max_leaves,
-            :enable_p_refinement => enable_p_refinement,
-            :max_degree          => max_degree,
-            :degree_step         => degree_step,
-            :predicate_name      => string(nameof(predicate)),
-            :parallel            => parallel,
-            :basis               => string(basis),
-        ))
+        Metrics.log_phase!(
+            logger,
+            "adaptive_refine_start";
+            extra = Dict(
+                :n_dim => n_dim,
+                :base_degree => root_degree,
+                :l2_tolerance => l2_tolerance,
+                :tolerance_mode => string(tolerance_mode),
+                :max_depth => max_depth,
+                :max_leaves => max_leaves,
+                :enable_p_refinement => enable_p_refinement,
+                :max_degree => max_degree,
+                :degree_step => degree_step,
+                :predicate_name => string(nameof(predicate)),
+                :parallel => parallel,
+                :basis => string(basis),
+            ),
+        )
     end
     t_build_start = time()
 
@@ -1632,14 +1636,18 @@ function adaptive_refine(
 
     if logger !== nothing
         _emit_tree_leaves!(logger, tree, leaf_extra_fn)
-        Metrics.log_phase!(logger, "adaptive_refine_done"; extra = Dict(
-            :wall_s            => time() - t_build_start,
-            :n_leaves          => n_leaves(tree),
-            :n_active          => length(tree.active_leaves),
-            :n_converged       => length(tree.converged_leaves),
-            :n_pruned          => length(tree.pruned_leaves),
-            :max_depth_reached => get_max_depth(tree),
-        ))
+        Metrics.log_phase!(
+            logger,
+            "adaptive_refine_done";
+            extra = Dict(
+                :wall_s => time() - t_build_start,
+                :n_leaves => n_leaves(tree),
+                :n_active => length(tree.active_leaves),
+                :n_converged => length(tree.converged_leaves),
+                :n_pruned => length(tree.pruned_leaves),
+                :max_depth_reached => get_max_depth(tree),
+            ),
+        )
     end
 
     return tree
@@ -1651,22 +1659,25 @@ end #===========================================================================
 # whose entries are folded into the row's `extra` field — this is the
 # escape hatch for caller-side per-leaf data (HC-side stats, predicate-call
 # counters, etc.) that the library itself doesn't track.
-function _emit_tree_leaves!(logger::Metrics.MetricsLogger, tree::SubdivisionTree,
-                            leaf_extra_fn::Union{Function,Nothing})
-    active_set    = Set(tree.active_leaves)
+function _emit_tree_leaves!(
+    logger::Metrics.MetricsLogger,
+    tree::SubdivisionTree,
+    leaf_extra_fn::Union{Function,Nothing},
+)
+    active_set = Set(tree.active_leaves)
     converged_set = Set(tree.converged_leaves)
-    pruned_set    = Set(tree.pruned_leaves)
+    pruned_set = Set(tree.pruned_leaves)
     for (idx, sd) in enumerate(tree.subdomains)
         sd.polynomial === nothing && continue
-        status = idx in active_set    ? "active"    :
-                 idx in converged_set ? "converged" :
-                 idx in pruned_set    ? "pruned"    : "internal"
+        status =
+            idx in active_set ? "active" :
+            idx in converged_set ? "converged" : idx in pruned_set ? "pruned" : "internal"
         extra = Dict{Symbol,Any}(
-            :stage     => "tree-build",
-            :status    => status,
+            :stage => "tree-build",
+            :status => status,
             :split_dim => sd.split_dim === nothing ? nothing : Int(sd.split_dim),
             :parent_id => sd.parent_id === nothing ? nothing : Int(sd.parent_id),
-            :l2_error  => sd.l2_error,
+            :l2_error => sd.l2_error,
         )
         if leaf_extra_fn !== nothing
             user_extra = leaf_extra_fn(sd, idx)
@@ -1674,13 +1685,15 @@ function _emit_tree_leaves!(logger::Metrics.MetricsLogger, tree::SubdivisionTree
                 extra[Symbol(k)] = v
             end
         end
-        Metrics.log_leaf!(logger, idx;
-            depth     = sd.depth,
-            bounds    = get_bounds(sd),
-            degree    = sd.degree,
-            rel_l2    = sd.relative_l2_error,
+        Metrics.log_leaf!(
+            logger,
+            idx;
+            depth = sd.depth,
+            bounds = get_bounds(sd),
+            degree = sd.degree,
+            rel_l2 = sd.relative_l2_error,
             n_raw_cps = 0,
-            extra     = extra,
+            extra = extra,
         )
     end
 end
@@ -1769,22 +1782,26 @@ function two_phase_refine(
     if logger !== nothing
         n_dim_log = length(bounds)
         root_degree_log = maximum(_extract_per_dim_degrees(degree, n_dim_log))
-        Metrics.log_phase!(logger, "two_phase_refine_start"; extra = Dict(
-            :n_dim               => n_dim_log,
-            :base_degree         => root_degree_log,
-            :coarse_tolerance    => coarse_tolerance,
-            :fine_tolerance      => fine_tolerance,
-            :balance_threshold   => balance_threshold,
-            :tolerance_mode      => string(tolerance_mode),
-            :max_depth           => max_depth,
-            :max_leaves          => max_leaves,
-            :enable_p_refinement => enable_p_refinement,
-            :max_degree          => max_degree,
-            :degree_step         => degree_step,
-            :predicate_name      => string(nameof(predicate)),
-            :parallel            => parallel,
-            :basis               => string(basis),
-        ))
+        Metrics.log_phase!(
+            logger,
+            "two_phase_refine_start";
+            extra = Dict(
+                :n_dim => n_dim_log,
+                :base_degree => root_degree_log,
+                :coarse_tolerance => coarse_tolerance,
+                :fine_tolerance => fine_tolerance,
+                :balance_threshold => balance_threshold,
+                :tolerance_mode => string(tolerance_mode),
+                :max_depth => max_depth,
+                :max_leaves => max_leaves,
+                :enable_p_refinement => enable_p_refinement,
+                :max_degree => max_degree,
+                :degree_step => degree_step,
+                :predicate_name => string(nameof(predicate)),
+                :parallel => parallel,
+                :basis => string(basis),
+            ),
+        )
     end
 
     verbose && println("=== Phase 1: Coarse balancing ===")
@@ -1886,15 +1903,19 @@ function two_phase_refine(
     verbose && println("Phase 1 complete: $(n_leaves(tree)) leaves")
     if logger !== nothing
         ratio_p1 = isempty(tree.active_leaves) ? NaN : error_balance_ratio(tree)
-        Metrics.log_phase!(logger, "two_phase_phase1_done"; extra = Dict(
-            :phase1_iter       => phase1_iter,
-            :n_leaves          => n_leaves(tree),
-            :n_active          => length(tree.active_leaves),
-            :n_converged       => length(tree.converged_leaves),
-            :n_pruned          => length(tree.pruned_leaves),
-            :max_depth_reached => get_max_depth(tree),
-            :balance_ratio     => ratio_p1,
-        ))
+        Metrics.log_phase!(
+            logger,
+            "two_phase_phase1_done";
+            extra = Dict(
+                :phase1_iter => phase1_iter,
+                :n_leaves => n_leaves(tree),
+                :n_active => length(tree.active_leaves),
+                :n_converged => length(tree.converged_leaves),
+                :n_pruned => length(tree.pruned_leaves),
+                :max_depth_reached => get_max_depth(tree),
+                :balance_ratio => ratio_p1,
+            ),
+        )
     end
     verbose && println("\n=== Phase 2: Accuracy refinement ===")
 
@@ -1916,10 +1937,14 @@ function two_phase_refine(
     tree.converged_leaves = already_fine
 
     if logger !== nothing
-        Metrics.log_phase!(logger, "two_phase_phase2_start"; extra = Dict(
-            :n_needs_reeval => length(needs_reeval),
-            :n_already_fine => length(already_fine),
-        ))
+        Metrics.log_phase!(
+            logger,
+            "two_phase_phase2_start";
+            extra = Dict(
+                :n_needs_reeval => length(needs_reeval),
+                :n_already_fine => length(already_fine),
+            ),
+        )
     end
 
     verbose &&
@@ -2025,14 +2050,18 @@ function two_phase_refine(
 
     if logger !== nothing
         _emit_tree_leaves!(logger, tree, leaf_extra_fn)
-        Metrics.log_phase!(logger, "two_phase_refine_done"; extra = Dict(
-            :wall_s            => time() - t_build_start,
-            :n_leaves          => n_leaves(tree),
-            :n_active          => length(tree.active_leaves),
-            :n_converged       => length(tree.converged_leaves),
-            :n_pruned          => length(tree.pruned_leaves),
-            :max_depth_reached => get_max_depth(tree),
-        ))
+        Metrics.log_phase!(
+            logger,
+            "two_phase_refine_done";
+            extra = Dict(
+                :wall_s => time() - t_build_start,
+                :n_leaves => n_leaves(tree),
+                :n_active => length(tree.active_leaves),
+                :n_converged => length(tree.converged_leaves),
+                :n_pruned => length(tree.pruned_leaves),
+                :max_depth_reached => get_max_depth(tree),
+            ),
+        )
     end
 
     return tree

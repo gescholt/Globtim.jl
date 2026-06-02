@@ -62,20 +62,25 @@ end
 Open `path` for writing (truncates any existing file), emit a `meta` row, and
 return a logger handle. `run_id` defaults to a timestamp-based slug.
 """
-function MetricsLogger(path::AbstractString;
-                       run_id::AbstractString = "run-" * Dates.format(now(), "yyyymmdd-HHMMSS"))
+function MetricsLogger(
+    path::AbstractString;
+    run_id::AbstractString = "run-" * Dates.format(now(), "yyyymmdd-HHMMSS"),
+)
     mkpath(dirname(abspath(path)))
     open(path, "w") do io
     end
     logger = MetricsLogger(String(path), String(run_id), 0)
-    _write_row!(logger, Dict{Symbol,Any}(
-        :kind => "meta",
-        :run_id => logger.run_id,
-        :started_at => Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
-        :julia_version => string(VERSION),
-        :hostname => gethostname(),
-        :n_threads => Threads.nthreads(),
-    ))
+    _write_row!(
+        logger,
+        Dict{Symbol,Any}(
+            :kind => "meta",
+            :run_id => logger.run_id,
+            :started_at => Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
+            :julia_version => string(VERSION),
+            :hostname => gethostname(),
+            :n_threads => Threads.nthreads(),
+        ),
+    )
     return logger
 end
 
@@ -84,8 +89,11 @@ end
 
 Append a phase-summary row.
 """
-function log_phase!(logger::MetricsLogger, phase::AbstractString;
-                    extra::AbstractDict = Dict{Symbol,Any}())
+function log_phase!(
+    logger::MetricsLogger,
+    phase::AbstractString;
+    extra::AbstractDict = Dict{Symbol,Any}(),
+)
     row = Dict{Symbol,Any}(
         :kind => "phase",
         :run_id => logger.run_id,
@@ -107,17 +115,20 @@ leaf (e.g. Lambert-solve failures for porkchop, ODE-solve failures for
 rational-ODE workloads); `n_grid_evals` is the total grid-node count. Both
 are nullable for drivers that don't compute them.
 """
-function log_leaf!(logger::MetricsLogger, leaf_id::Integer;
-                   depth::Integer,
-                   bounds,
-                   degree::Integer,
-                   rel_l2::Real,
-                   n_raw_cps::Integer,
-                   hc_solve_seconds::Union{Real,Nothing} = nothing,
-                   n_eval_failures::Union{Integer,Nothing} = nothing,
-                   n_grid_evals::Union{Integer,Nothing} = nothing,
-                   n_inbox_cps::Union{Integer,Nothing} = nothing,
-                   extra::AbstractDict = Dict{Symbol,Any}())
+function log_leaf!(
+    logger::MetricsLogger,
+    leaf_id::Integer;
+    depth::Integer,
+    bounds,
+    degree::Integer,
+    rel_l2::Real,
+    n_raw_cps::Integer,
+    hc_solve_seconds::Union{Real,Nothing} = nothing,
+    n_eval_failures::Union{Integer,Nothing} = nothing,
+    n_grid_evals::Union{Integer,Nothing} = nothing,
+    n_inbox_cps::Union{Integer,Nothing} = nothing,
+    extra::AbstractDict = Dict{Symbol,Any}(),
+)
     row = Dict{Symbol,Any}(
         :kind => "leaf",
         :run_id => logger.run_id,
@@ -129,9 +140,9 @@ function log_leaf!(logger::MetricsLogger, leaf_id::Integer;
         :n_raw_cps => Int(n_raw_cps),
     )
     hc_solve_seconds !== nothing && (row[:hc_solve_seconds] = Float64(hc_solve_seconds))
-    n_eval_failures  !== nothing && (row[:n_eval_failures]  = Int(n_eval_failures))
-    n_grid_evals     !== nothing && (row[:n_grid_evals]     = Int(n_grid_evals))
-    n_inbox_cps      !== nothing && (row[:n_inbox_cps]      = Int(n_inbox_cps))
+    n_eval_failures !== nothing && (row[:n_eval_failures] = Int(n_eval_failures))
+    n_grid_evals !== nothing && (row[:n_grid_evals] = Int(n_grid_evals))
+    n_inbox_cps !== nothing && (row[:n_inbox_cps] = Int(n_inbox_cps))
     _merge_extra!(row, extra)
     _write_row!(logger, row)
 end
@@ -147,16 +158,19 @@ Field names `dep_day` / `tof_day` are porkchop-flavoured but the writer is
 agnostic — pass any 2D coordinate pair. For higher-dimensional CPs, supply
 the additional coordinates via `extra`.
 """
-function log_cp!(logger::MetricsLogger, cp_kind::AbstractString;
-                 leaf_id::Union{Integer,Nothing} = nothing,
-                 dep_day::Real,
-                 tof_day::Real,
-                 dv::Real,
-                 type_label::Union{AbstractString,Nothing} = nothing,
-                 is_boundary::Union{Bool,Nothing} = nothing,
-                 dedup_group::Union{Integer,Nothing} = nothing,
-                 dedup_canonical::Union{Bool,Nothing} = nothing,
-                 extra::AbstractDict = Dict{Symbol,Any}())
+function log_cp!(
+    logger::MetricsLogger,
+    cp_kind::AbstractString;
+    leaf_id::Union{Integer,Nothing} = nothing,
+    dep_day::Real,
+    tof_day::Real,
+    dv::Real,
+    type_label::Union{AbstractString,Nothing} = nothing,
+    is_boundary::Union{Bool,Nothing} = nothing,
+    dedup_group::Union{Integer,Nothing} = nothing,
+    dedup_canonical::Union{Bool,Nothing} = nothing,
+    extra::AbstractDict = Dict{Symbol,Any}(),
+)
     row = Dict{Symbol,Any}(
         :kind => "cp",
         :cp_kind => String(cp_kind),
@@ -165,10 +179,10 @@ function log_cp!(logger::MetricsLogger, cp_kind::AbstractString;
         :tof_day => Float64(tof_day),
         :dv => Float64(dv),
     )
-    leaf_id         !== nothing && (row[:leaf_id]         = Int(leaf_id))
-    type_label      !== nothing && (row[:type_label]      = String(type_label))
-    is_boundary     !== nothing && (row[:is_boundary]     = Bool(is_boundary))
-    dedup_group     !== nothing && (row[:dedup_group]     = Int(dedup_group))
+    leaf_id !== nothing && (row[:leaf_id] = Int(leaf_id))
+    type_label !== nothing && (row[:type_label] = String(type_label))
+    is_boundary !== nothing && (row[:is_boundary] = Bool(is_boundary))
+    dedup_group !== nothing && (row[:dedup_group] = Int(dedup_group))
     dedup_canonical !== nothing && (row[:dedup_canonical] = Bool(dedup_canonical))
     _merge_extra!(row, extra)
     _write_row!(logger, row)
@@ -278,7 +292,8 @@ function _to_json(x)
 end
 
 function _json_str(s::AbstractString)
-    escaped = replace(s,
+    escaped = replace(
+        s,
         "\\" => "\\\\",
         "\"" => "\\\"",
         "\n" => "\\n",
