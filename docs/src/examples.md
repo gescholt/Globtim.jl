@@ -4,7 +4,7 @@ This page demonstrates Globtim features with inline examples and visual results.
 
 ## Runnable demo scripts
 
-Self-contained scripts ship in [`pkg/globtim/examples/`](https://github.com/gescholt/globopt_merged/tree/main/pkg/globtim/examples). Run any of them from a project that has Globtim installed (e.g. `julia --project=profiles/dev pkg/globtim/examples/custom_function_demo.jl`):
+Self-contained scripts ship in the [`examples/`](https://github.com/gescholt/Globtim.jl/tree/main/examples) directory. Run any of them from a project that has Globtim installed (e.g. `julia examples/custom_function_demo.jl`):
 
 | Script | What it shows |
 |---|---|
@@ -66,7 +66,7 @@ my_function(x) = (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1*sin(10*x[1]*x[2])
 ## Statistical Analysis with Tables
 
 The enhanced statistics and table rendering/export live in the
-[GlobtimPostProcessing](https://github.com/gescholt/globopt_merged/tree/main/pkg/globtimpostprocessing)
+[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)
 package, which consumes the `df_enhanced` DataFrame produced by
 `analyze_critical_points`:
 
@@ -118,7 +118,7 @@ See the [GlobtimPlots documentation](globtimplots.md) for the full set of plot t
 (Morse spectra, subdivision partitions, convergence sweeps).
 
 For post-experiment analysis (refinement, parameter recovery, campaign comparison),
-use [GlobtimPostProcessing](https://github.com/gescholt/globopt_merged/tree/main/pkg/globtimpostprocessing).
+use [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl).
 
 ---
 

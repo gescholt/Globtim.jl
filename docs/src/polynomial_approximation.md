@@ -50,7 +50,7 @@ The left panel shows the three sampling layouts on `[−1, 1]` at `n = 21`: Cheb
 
 This is why the `Constructor` accepts only `:chebyshev` and `:legendre`. The choice between them is mostly stylistic; the choice against uniform sampling is fundamental.
 
-Regenerate with: `julia --project=profiles/viz pkg/globtim/examples/basis_comparison.jl`
+Regenerate with: `julia examples/basis_comparison.jl`
 
 ## L2-Norm Computation
 

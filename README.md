@@ -126,15 +126,14 @@ Two solvers are available for computing critical points:
 
 Globtim is part of a three-package ecosystem:
 
-All three packages live in the [globopt_merged](https://github.com/gescholt/globopt_merged)
-monorepo. Instantiate the `dev` profile (`julia --project=profiles/dev -e 'using Pkg; Pkg.instantiate(workspace=true)'`)
-and all three are available at once.
+Globtim is registered; the companion packages are installed from their public
+repositories (`Pkg.add(url=...)`):
 
-| Package | Purpose | Location |
-|---------|---------|----------|
-| **Globtim** | Polynomial approximation and critical point finding | `pkg/globtim/` |
-| **[GlobtimPostProcessing](../globtimpostprocessing/)** | Refinement, validation, parameter recovery | `pkg/globtimpostprocessing/` |
-| **[GlobtimPlots](../globtimplots/)** | Visualization (CairoMakie/GLMakie) | `pkg/globtimplots/` |
+| Package | Purpose | Install |
+|---------|---------|---------|
+| **Globtim** | Polynomial approximation and critical point finding | `Pkg.add("Globtim")` |
+| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery | `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")` |
+| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) | `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")` |
 
 ```
 Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)
