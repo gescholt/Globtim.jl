@@ -45,6 +45,10 @@ solutions = solve_polynomial_system(x, pol)  # Convenience method
 solutions = solve_polynomial_system(x, dim, degree, coeffs)  # Explicit parameters
 ```
 
+Accepts `solver=:hc` (default) or `:msolve`, plus `start_system` (polyhedral homotopy),
+`sparsify_threshold`, and `search_bounds` (box restriction; certified for msolve). See
+[Solvers → Advanced Options](solvers.md#Advanced-Options) for details.
+
 #### `process_crit_pts`
 Process and filter critical point solutions.
 
@@ -63,14 +67,10 @@ Comprehensive critical point analysis with BFGS refinement.
 df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true, verbose=true, tol_dist=0.025)
 ```
 
-#### `analyze_critical_points_with_tables`
-Enhanced analysis with statistical tables.
-
-```julia
-df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(f, df, TR, show_tables=true)
-```
-
-→ `Examples/hierarchical_experiment_example.jl`
+> Enhanced statistical tables (rendering and CSV/Markdown/LaTeX export) are provided by
+> the [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)
+> package, which consumes the `df_enhanced` DataFrame returned above — see its
+> `export_analysis_tables`.
 
 ---
 
@@ -167,11 +167,12 @@ truncated, stats = truncate_polynomial_adaptive(mono_poly, analysis.suggested_th
 
 ## Export Functions
 
-| Function | Output Format |
-|----------|---------------|
-| `write_tables_to_csv(tables, path)` | CSV |
-| `write_tables_to_latex(tables, path)` | LaTeX |
-| `write_tables_to_markdown(tables, path)` | Markdown |
+Statistical-table rendering and export live in
+[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl):
+`export_analysis_tables(tables, name, output_dir; formats=[:csv, :markdown, :latex])`.
+
+Globtim itself exports critical-point data via the standard DataFrame columns of
+`df_enhanced` / `df_min` (write with `CSV.write` as needed).
 
 ---
 

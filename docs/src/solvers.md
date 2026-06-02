@@ -13,9 +13,12 @@ Numerical algebraic geometry solver (Breiding & Timme, 2018).
 ```julia
 solutions = solve_polynomial_system(
     x, n_dims, degree, coeffs,
-    solver="HC"  # Default
+    solver=:hc  # Default — requires `using HomotopyContinuation` to load the extension
 )
 ```
+
+The `:hc` solver lives in a package extension that activates only when
+`HomotopyContinuation` is loaded; add `using HomotopyContinuation` before solving.
 
 ### msolve
 
@@ -26,12 +29,14 @@ Symbolic solver based on Gröbner basis computations (Berthomieu, Eder & Safey E
 ```julia
 solutions = solve_polynomial_system(
     x, n_dims, degree, coeffs,
-    solver="msolve",
-    msolve_path="/path/to/msolve"
+    solver=:msolve,
+    msolve_threads=4,                 # parallel Gröbner threads
+    msolve_timeout_seconds=600.0,     # optional wall-clock cap
 )
 ```
 
-**Note:** Requires external installation (see below).
+**Note:** Requires the external `msolve` binary on `PATH` (see below). msolve is
+practical only in low dimensions (≤2–3); use `:hc` for `n ≥ 4`.
 
 ## Installing Msolve
 
@@ -83,13 +88,13 @@ pol = Constructor(TR, 8)
 # HomotopyContinuation (numerical)
 @time solutions_hc = solve_polynomial_system(
     x, 2, 8, pol.coeffs,
-    solver="HC"
+    solver=:hc
 )
 
 # msolve (symbolic/exact)
 @time solutions_ms = solve_polynomial_system(
     x, 2, 8, pol.coeffs,
-    solver="msolve"
+    solver=:msolve
 )
 
 # Compare results
@@ -99,38 +104,66 @@ println("Msolve found $(length(solutions_ms)) solutions")
 
 ## Advanced Options
 
-### HomotopyContinuation Parameters
+The following keyword arguments are accepted by `solve_polynomial_system` (and are
+threaded through `solve_and_transform` and the subdivision solver `solve_tree_leaves`).
 
-Control solver behavior:
+### Polyhedral homotopy (`start_system`)
+
+For sparse systems, polyhedral homotopy tracks far fewer paths than the total-degree
+(Bézout) start system. `start_system=:auto` (the default) picks **polyhedral for
+`n ≥ 3`** and the **total-degree** start system for `n < 3`:
+
 ```julia
 solutions = solve_polynomial_system(
-    x, n_dims, degree, coeffs,
-    solver="HC",
-    hc_options=Dict(
-        :compile => false,      # Disable compilation for small problems
-        :threading => true,     # Enable parallel tracking
-        :tracker_options => TrackerOptions(
-            automatic_differentiation=2,  # AD order
-            refinement_accuracy=1e-12    # Target accuracy
-        )
-    )
+    x, n_dims, degree, coeffs;
+    solver=:hc,
+    start_system=:auto,   # :auto | :polyhedral | :total_degree
 )
 ```
 
-### Msolve Parameters
+### Coefficient sparsification before solving (`sparsify_threshold`)
 
-Fine-tune exact solving:
+Zeroing out small surrogate coefficients before constructing the polynomial yields a
+genuinely sparser Newton polytope, so polyhedral homotopy tracks fewer paths.
+`sparsify_threshold` is **relative to the largest coefficient** (`0.0` = off):
+
 ```julia
 solutions = solve_polynomial_system(
-    x, n_dims, degree, coeffs,
-    solver="msolve",
-    msolve_options=Dict(
-        :precision => 128,      # Bit precision for intermediate computations
-        :threads => 4,          # Number of threads
-        :output_format => "qq"  # Rational output format
-    )
+    x, n_dims, degree, coeffs;
+    solver=:hc,
+    sparsify_threshold=1e-6,   # drop |cₖ| < 1e-6 · max|c|
 )
 ```
+
+### Restricting the solve to a box (`search_bounds`)
+
+`search_bounds` filters solutions to a coordinate box given as a vector of
+`(lo, hi)` tuples — useful for solving only inside the domain of interest or a
+subdivision leaf:
+
+```julia
+solutions = solve_polynomial_system(
+    x, n_dims, degree, coeffs;
+    search_bounds=[(-2.0, 2.0), (-1.0, 1.0)],
+)
+```
+
+The two solvers enforce this differently:
+
+- **`:msolve`** uses its **certified isolating intervals** — a solution is kept only
+  when its interval is provably inside the box (certified domain filtering).
+- **`:hc`** has no interval data, so it applies a **midpoint filter** (keeps a solution
+  if its numeric coordinates fall in the box).
+
+### Tuning each solver
+
+| Keyword | Solver | Purpose |
+|---------|--------|---------|
+| `start_system` | `:hc` | Start system for path tracking (`:auto`/`:polyhedral`/`:total_degree`) |
+| `sparsify_threshold` | both | Relative coefficient cutoff applied before solving |
+| `search_bounds` | both | Restrict solutions to a coordinate box (certified for msolve) |
+| `msolve_threads` | `:msolve` | Number of Gröbner-basis threads |
+| `msolve_timeout_seconds` | `:msolve` | Optional wall-clock cap on the symbolic solve |
 
 ## Handling Solver Results
 

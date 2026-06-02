@@ -19,7 +19,8 @@ Makie.inline!(true)
 using Globtim
 using DynamicPolynomials
 using DataFrames
-using GlobtimPlots: adapt_polynomial_data, adapt_problem_input
+using HomotopyContinuation   # loads the :hc solver extension
+using GlobtimPlots           # brings the module + adapt_polynomial_data / adapt_problem_input into scope
 
 # Define the problem: Six-Hump Camel on [-2.5, 2.5]²
 TR = TestInput(camel, dim=2, center=[0.0, 0.0], sample_range=2.5)

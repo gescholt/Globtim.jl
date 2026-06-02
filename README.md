@@ -57,6 +57,10 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 println("Found $(nrow(df_min)) local minima")
 ```
 
+> **New here?** The [Ecosystem Walkthrough](docs/src/ecosystem_walkthrough.md) carries
+> one objective end-to-end across all three packages — globtim finds the critical
+> points, GlobtimPostProcessing refines them, GlobtimPlots draws them.
+
 ## Running Experiments with TOML Configs
 
 Experiments can be driven entirely by TOML configuration files, which specify the function, domain, polynomial degree, solver, and refinement settings:
@@ -122,11 +126,15 @@ Two solvers are available for computing critical points:
 
 Globtim is part of a three-package ecosystem:
 
-| Package | Purpose | Install |
-|---------|---------|---------|
-| **Globtim** | Polynomial approximation and critical point finding | `Pkg.add("Globtim")` |
-| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery | `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")` |
-| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) | `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")` |
+All three packages live in the [globopt_merged](https://github.com/gescholt/globopt_merged)
+monorepo. Instantiate the `dev` profile (`julia --project=profiles/dev -e 'using Pkg; Pkg.instantiate(workspace=true)'`)
+and all three are available at once.
+
+| Package | Purpose | Location |
+|---------|---------|----------|
+| **Globtim** | Polynomial approximation and critical point finding | `pkg/globtim/` |
+| **[GlobtimPostProcessing](../globtimpostprocessing/)** | Refinement, validation, parameter recovery | `pkg/globtimpostprocessing/` |
+| **[GlobtimPlots](../globtimplots/)** | Visualization (CairoMakie/GLMakie) | `pkg/globtimplots/` |
 
 ```
 Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)

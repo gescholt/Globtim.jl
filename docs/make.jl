@@ -39,6 +39,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
+        "Ecosystem Walkthrough" => "ecosystem_walkthrough.md",
         "Examples" => "examples.md",
         "Core Algorithm" => "core_algorithm.md",
         "Polynomial Approximation" => "polynomial_approximation.md",

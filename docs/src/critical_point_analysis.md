@@ -104,15 +104,15 @@ df_min.gradient_norm_at_min          # Gradient verification
 
 ## Statistical Tables
 
-Generate comprehensive reports with:
+`analyze_critical_points` returns the enhanced DataFrame `df_enhanced`. Rendering it
+into comprehensive statistical tables — and exporting them to CSV / Markdown / LaTeX —
+is handled by the [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)
+package, which consumes that DataFrame:
 
 ```julia
-df_enhanced, df_min, tables, stats = analyze_critical_points_with_tables(
-    f, df, TR,
-    enable_hessian=true,
-    show_tables=true,
-    table_types=[:minimum, :saddle, :maximum]
-)
+using GlobtimPostProcessing
+export_analysis_tables(tables, "critical_point_analysis", output_dir;
+    formats=[:csv, :markdown, :latex])
 ```
 
 ### Table Contents
@@ -123,15 +123,6 @@ Each table includes:
 - Condition numbers
 - Convergence metrics
 - Distance measurements
-
-### Export Options
-
-```julia
-# Export to different formats
-write_tables_to_csv(tables, "results.csv")
-write_tables_to_latex(tables, "results.tex")
-write_tables_to_markdown(tables, "results.md")
-```
 
 ## Advanced Options
 

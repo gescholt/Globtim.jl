@@ -19,6 +19,8 @@ Globtim solves this by replacing your function with a polynomial approximation. 
 
 The result: a systematic search for local minima across the entire domain, not just the nearest one.
 
+The method comes with a **global-capture guarantee**: for Morse functions on a compact domain, the returned points provably contain and separate *every* local minimizer at the target precision (with high probability), under an explicit degree/sample/noise trade-off. This is established in the foundational paper — see [Citation](#Citation).
+
 ## Algorithm Overview
 
 ```
@@ -69,4 +71,24 @@ Install companion packages:
 ```julia
 pkg> add GlobtimPostProcessing
 pkg> add GlobtimPlots
+```
+
+## Citation
+
+Globtim implements the algorithm introduced in:
+
+> Mohab Safey El Din, Georgy Scholten, and Emmanuel Trélat.
+> **Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain.**
+> 2025. HAL preprint [hal-05160251](https://hal.science/hal-05160251).
+
+If you use Globtim in your research, please cite this paper:
+
+```bibtex
+@unpublished{safeyeldin2025morse,
+  title  = {Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain},
+  author = {Safey El Din, Mohab and Scholten, Georgy and Tr{\'e}lat, Emmanuel},
+  year   = {2025},
+  note   = {HAL preprint hal-05160251},
+  url    = {https://hal.science/hal-05160251}
+}
 ```

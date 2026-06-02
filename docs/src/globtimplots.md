@@ -45,7 +45,8 @@ CairoMakie.activate!()
 
 ```julia
 using Globtim, DynamicPolynomials, GlobtimPlots
-CairoMakie.activate!()
+using CairoMakie          # load the backend before plotting
+using HomotopyContinuation # enables the :hc solver
 
 # 1. Run experiment
 f = Deuflhard
@@ -57,9 +58,11 @@ solutions = solve_polynomial_system(x, pol)
 df = process_crit_pts(solutions, f, TR)
 df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true)
 
-# 2. Visualize
-fig = plot_critical_points(df_min)
-save("critical_points.pdf", fig)
+# 2. Visualize — adapt the Globtim objects, then plot the level set with CPs overlaid
+apol = adapt_polynomial_data(pol)
+ainp = adapt_problem_input(TR)
+fig = cairo_plot_polyapprox_levelset(apol, ainp, df_enhanced, df_min)
+CairoMakie.save("critical_points.pdf", fig)
 ```
 
 ## Hessian Analysis Plots
@@ -322,7 +325,7 @@ set_theme!()
 
 | Function | Purpose |
 |----------|---------|
-| `plot_critical_points` | Critical point scatter plot |
+| `cairo_plot_polyapprox_levelset` | Level set with critical points overlaid (static) |
 | `plot_hessian_norms` | Hessian norm distribution |
 | `plot_condition_numbers` | Condition number plot |
 | `plot_critical_eigenvalues` | Eigenvalue spectrum |
