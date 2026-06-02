@@ -250,6 +250,7 @@ include("ApproxConstruct.jl") #construct Vandermonde like matrix.
 include("lambda_vandermonde_anisotropic.jl") # Enhanced anisotropic grid support
 include("lambda_vandermonde_tensorized.jl") # Optimized tensor-product grid support
 include("lambda_vandermonde_tier1_optimizations.jl") # Tier 1 performance optimizations
+include("christoffel_sampling.jl") # E1: Christoffel-preconditioned weighted LS (opt-in)
 include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
