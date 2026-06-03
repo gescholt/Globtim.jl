@@ -103,6 +103,10 @@ println("Coefficient type: $(eltype(pol.coeffs))")  # BigFloat
 | RationalPrecision | 5-10× | 3-5× | Slow |
 | BigFloatPrecision | 3-8× | 2-4× | Moderate |
 
+The multipliers above are **indicative orders of magnitude** relative to the
+`Float64Precision` baseline, not benchmarked constants; the actual factors depend on
+dimension, degree, and the objective.
+
 ### Accuracy Comparison
 
 ```julia
@@ -118,7 +122,8 @@ for prec in precisions
 end
 ```
 
-Expected output:
+Representative output (illustrative — exact values vary with machine and Julia
+version; only the *order of magnitude* per precision type is meaningful):
 ```
 Float64Precision: L2-norm = 1.2e-15
 AdaptivePrecision: L2-norm = 2.3e-16

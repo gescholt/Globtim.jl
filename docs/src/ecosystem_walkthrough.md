@@ -12,8 +12,8 @@ Globtim is split into three packages with a strict one-way dataflow:
 ```
    globtim                 globtimpostprocessing            globtimplots
  (find candidates)   →   (refine & validate them)    →    (visualize)
- polynomial approx +      Newton/Optim refinement to        Makie level sets,
- critical-point solve     ~1e-12, gradient checks,          Morse spectra,
+ polynomial approx +      Optim refinement (g-tol 1e-8,     Makie level sets,
+ critical-point solve     ~1e-12 high-prec), grad checks,    Morse spectra,
                           parameter recovery                convergence plots
 ```
 
@@ -86,8 +86,9 @@ result — but the coordinates are only as accurate as the degree-10 polynomial 
 ## Step 3 — globtimpostprocessing refines & validates
 
 `GlobtimPostProcessing` takes the raw critical points (accurate to the polynomial
-fit) and refines them with a local optimizer to near machine precision, and checks
-that each is genuinely a critical point of the *true* objective (small gradient):
+fit) and refines them with a local optimizer — to gradient norm `1e-8` by default,
+down to `~1e-12` in high-precision mode — and checks that each is genuinely a critical
+point of the *true* objective (small gradient):
 
 ```julia
 using GlobtimPostProcessing
@@ -97,8 +98,8 @@ points = [[row.x1, row.x2] for row in eachrow(df_min)]
 report = validate_critical_points(points, my_objective; tolerance=1e-6)
 println("Valid critical points: $(report.n_valid)/$(length(points))")
 
-# For a saved experiment directory, the full refinement pipeline drives the raw
-# ~1e-3 candidates down to ~1e-12 and writes refined CSV/JSON:
+# For a saved experiment directory, the full refinement pipeline sharpens the raw
+# ~1e-3 candidates (to ~1e-12 in high-precision mode) and writes refined CSV/JSON:
 #   result = refine_experiment_results(output_dir, my_objective, RefinementConfig())
 ```
 

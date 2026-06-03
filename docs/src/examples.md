@@ -15,6 +15,7 @@ Self-contained scripts ship in the [`examples/`](https://github.com/gescholt/Glo
 | `scalar_function_demo.jl` | 1D scalar functions |
 | `sparsification_demo.jl` | Polynomial coefficient sparsification |
 | `anisotropic_grid_demo.jl` | Anisotropic Chebyshev / Legendre grids |
+| `basis_comparison.jl` | Chebyshev vs Legendre nodes / convergence on the 1D Runge function |
 
 For an end-to-end tour across all three packages (find → refine → plot), see the
 [Ecosystem Walkthrough](ecosystem_walkthrough.md).

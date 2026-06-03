@@ -13,6 +13,7 @@ Self-contained `.jl` scripts. Run with `julia --project=. <name>.jl` from a proj
 | `scalar_function_demo.jl` | 1D scalar functions |
 | `sparsification_demo.jl` | Polynomial coefficient sparsification |
 | `anisotropic_grid_demo.jl` | Anisotropic Chebyshev/Legendre grids |
+| `basis_comparison.jl` | Chebyshev vs Legendre nodes / convergence on the 1D Runge function |
 
 ## Notebooks
 

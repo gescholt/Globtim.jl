@@ -154,8 +154,8 @@ Key tolerances affecting results:
 
 ### Computational Complexity
 
-- Polynomial construction: O(n^d) where n = sample points per dimension, d = dimension
-- System solving: Depends on number of critical points (exponential in dimension)
+- Polynomial construction: O(g^n) where g = sample points per dimension, n = dimension (the grid is a tensor product of GN+1 nodes per axis)
+- System solving: depends on the number of critical points, bounded by Bézout at ≤ (d−1)^n for a degree-d approximation in n variables — exponential in dimension in the worst case
 - Refinement: O(k × m) where k = critical points, m = BFGS iterations
 
 ### Memory Usage
