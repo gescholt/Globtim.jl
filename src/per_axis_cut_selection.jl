@@ -84,13 +84,8 @@ function pick_cut_dim_spectrum(
 
     scores = fill(0.0, n_dim)
     for d in 1:n_dim
-        axis_total, decay = _per_axis_total_and_decay(
-            spec.modes,
-            eta_sq,
-            n_modes,
-            d,
-            base_degree,
-        )
+        axis_total, decay =
+            _per_axis_total_and_decay(spec.modes, eta_sq, n_modes, d, base_degree)
         if axis_total < axis_mass_floor
             scores[d] = 0.0
         elseif isnan(decay)
@@ -138,11 +133,9 @@ function _per_axis_total_and_decay(
 
     m_dp2 = get(axis_shell_mass, base_degree + 2, 0.0)
     m_dp4 = get(axis_shell_mass, base_degree + 4, 0.0)
-    decay_signal_meaningful =
-        axis_total > 0 && (m_dp2 + m_dp4) >= 1e-3 * axis_total
+    decay_signal_meaningful = axis_total > 0 && (m_dp2 + m_dp4) >= 1e-3 * axis_total
     decay =
-        (decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ?
-        0.5 * log(m_dp2 / m_dp4) : NaN
+        (decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ? 0.5 * log(m_dp2 / m_dp4) : NaN
 
     return axis_total, decay
 end
