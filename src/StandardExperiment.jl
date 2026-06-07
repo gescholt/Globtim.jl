@@ -380,6 +380,8 @@ function run_standard_experiment(;
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    stagnation_stop::Bool = false,
+    stagnation_threshold::Float64 = 0.01,
 )
     mkpath(output_dir)
 
@@ -453,6 +455,29 @@ function run_standard_experiment(;
             # Checkpoint: save accumulated results after each degree so partial
             # runs are recoverable if the job hits a wall-time limit.
             _save_checkpoint(output_dir, degree_results, config_hash)
+
+            # Optional early stop (opt-in; default off ⇒ full-range sweep unchanged):
+            # halt once the relative-L2 approximation error has stopped improving.
+            # Reuses EnhancedMetrics.detect_stagnation (last ≤3 relative improvements
+            # all below threshold). Solving still happens per degree as before — this
+            # only trims wasted higher-degree degrees once the fit has plateaued.
+            if stagnation_stop
+                l2_hist = [
+                    r.relative_l2_error for r in sort(
+                        filter(s -> s.status == "success", degree_results),
+                        by = s -> s.degree,
+                    )
+                ]
+                if length(l2_hist) >= 3 &&
+                   EnhancedMetrics.detect_stagnation(l2_hist, stagnation_threshold)
+                    @info "Stopping degree sweep: relative-L2 stagnated" degree last_rel_l2 =
+                        l2_hist[end] threshold = stagnation_threshold
+                    metadata["stopped_stagnation"] = true
+                    metadata["stopped_after_degree"] = degree
+                    metadata["stagnation_threshold"] = stagnation_threshold
+                    break
+                end
+            end
 
         catch e
             degree_time = time() - degree_start

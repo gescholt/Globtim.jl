@@ -175,6 +175,26 @@ function _solve_hc(args...; kwargs...)
 end
 
 """
+    _solve_hc_parametric(support, n, cell_coeffs) -> (; anchor_n, per_cell)
+
+Batched parametric "solve-one-sweep-many" critical-point solve for a group of cells
+sharing the same monomial `support` (m × n exponent matrix). Builds the gradient system
+ONCE with the m monomial coefficients as HC parameters, solves a generic-complex anchor,
+then tracks that solution set to each cell's coefficient vector `cell_coeffs[j]` (length m).
+
+Returns `anchor_n` (anchor solution count, should equal the Bezout bound (deg-1)^n) and
+`per_cell`: a vector of `(real_solutions_in_[-1,1]^n, (n_paths, n_success, n_real))` per cell.
+
+Implemented in GlobtimHomotopyContinuationExt — requires `using HomotopyContinuation`.
+"""
+function _solve_hc_parametric(args...; kwargs...)
+    error(
+        "parametric warm-start (strategy=:parametric) requires HomotopyContinuation.jl. " *
+        "Add `using HomotopyContinuation` before calling, or use strategy=:coldstart.",
+    )
+end
+
+"""
     _solve_msolve(x, n, d, coeffs; kwargs...) -> Vector{Vector{Float64}}
 
 Solve the gradient system using the msolve binary (Gröbner basis + real root isolation).
@@ -439,6 +459,57 @@ function convert_to_float_poly(p)
         Float64(coeff) * monomial(term)
     end
     return sum(float_terms)
+end
+
+"""
+    group_key(pol::ApproxPoly)
+
+Support-equivalence key for parametric warm-start grouping. Two cells share a monomial
+support — and can therefore warm-start from one anchor — iff their keys are equal.
+Includes `normalized` and `power_of_two_denom` because they change the orthopoly→monomial
+transform (and thus the realized support), not just `(n, degree, basis)`.
+"""
+group_key(pol::ApproxPoly) = (
+    size(pol.support, 2),       # n (dimension)
+    pol.degree,                 # degree spec — fixes SupportGen, hence the monomial support
+    pol.basis,
+    pol.normalized,
+    pol.power_of_two_denom,
+)
+
+"""
+    cell_monomial_coeffs(pol::ApproxPoly) -> Vector{Float64}
+
+A cell's coefficients in the MONOMIAL basis, densified against `pol.support`'s row order
+(the `SupportGen(n, degree)` ordering). Reuses `main_nd` to apply the exact orthopoly→
+monomial transform, then reads the coefficient of each support monomial off the result.
+
+Densification is mandatory: `main_nd`/`convert_to_float_poly` drop exact-zero terms, so
+two cells in the same group can otherwise yield misaligned-length coefficient vectors.
+Returning a full length-`m` vector (zeros for absent monomials) keeps every cell's
+parameter vector aligned to the shared support for warm-start.
+"""
+function cell_monomial_coeffs(pol::ApproxPoly)
+    n = size(pol.support, 2)
+    m = size(pol.support, 1)
+    @polyvar x[1:n]
+    xv = collect(x)
+    p = main_nd(
+        xv,
+        n,
+        pol.degree,
+        pol.coeffs;
+        basis = pol.basis,
+        precision = pol.precision,
+        normalized = pol.normalized,
+        power_of_two_denom = pol.power_of_two_denom,
+    )
+    coeffs = zeros(Float64, m)
+    for k in 1:m
+        mono = prod(xv[i]^Int(pol.support[k, i]) for i in 1:n)
+        coeffs[k] = Float64(coefficient(p, mono))
+    end
+    return coeffs
 end
 
 """

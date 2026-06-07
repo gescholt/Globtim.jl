@@ -1436,6 +1436,8 @@ function adaptive_refine(
     tolerance_mode::Symbol = :relative,
     max_depth::Int = 10,
     max_leaves::Int = 1000,
+    stagnation_stop::Bool = false,
+    stagnation_threshold::Float64 = 0.01,
     optimize_cuts::Bool = true,
     parallel::Bool = true,
     basis::Symbol = :chebyshev,
@@ -1498,6 +1500,7 @@ function adaptive_refine(
     end
 
     iteration = 0
+    total_error_history = Float64[]  # tree total L2 per iteration, for optional stagnation stop
     while !isempty(tree.active_leaves)
         iteration += 1
 
@@ -1509,6 +1512,21 @@ function adaptive_refine(
 
         if n_leaves(tree) >= max_leaves
             verbose && println("Reached max leaves: $max_leaves")
+            break
+        end
+
+        # Optional early stop (opt-in; default off ⇒ behavior unchanged): halt
+        # subdivision once the tree's TOTAL L2 error stops dropping across iterations.
+        # Tree-level (not per-leaf): a split leaf's own error sequence terminates when
+        # it spawns children, so the meaningful plateau signal is the aggregate. Reuses
+        # EnhancedMetrics.detect_stagnation. Threshold is independent of the degree-sweep
+        # gate (different scale: per-split-iteration vs per-degree improvements).
+        if stagnation_stop &&
+           length(total_error_history) >= 3 &&
+           EnhancedMetrics.detect_stagnation(total_error_history, stagnation_threshold)
+            verbose && println(
+                "Stopping subdivision: total L2 error stagnated at iteration $iteration",
+            )
             break
         end
 
@@ -1579,6 +1597,10 @@ function adaptive_refine(
         for (leaf_id, result) in zip(current_active, results)
             update_tree!(tree, result, tree.subdomains[leaf_id])
         end
+
+        # Record the post-iteration tree total L2 for the optional stagnation stop
+        # (checked at the top of the next iteration).
+        stagnation_stop && push!(total_error_history, total_error(tree))
 
         # Call iteration callback if provided
         if iteration_callback !== nothing

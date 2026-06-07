@@ -209,3 +209,11 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_metrics_logger.jl") do
     include("test_metrics_logger.jl")
 end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_stabilization_gate.jl") do
+    include("test_stabilization_gate.jl")
+end
+
+with_timeout(TIMEOUT_SOLVE, label = "test_warmstart_solve.jl") do
+    include("test_warmstart_solve.jl")
+end

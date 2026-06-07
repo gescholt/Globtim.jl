@@ -457,6 +457,8 @@ TimerOutputs.@timeit _TO function Constructor(
     power_of_two_denom::Bool = false,
     grid::Union{Nothing,Matrix{Float64}} = nothing,
     thread_evals::Bool = false,
+    stagnation_stop::Bool = false,
+    stagnation_threshold::Float64 = 0.01,
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
@@ -509,6 +511,7 @@ TimerOutputs.@timeit _TO function Constructor(
     end
 
     p = nothing
+    nrm_history = Float64[]  # L2-norm per degree, for optional stagnation stop
     while true
         p = MainGenerate(
             T.objective,
@@ -527,6 +530,7 @@ TimerOutputs.@timeit _TO function Constructor(
             power_of_two_denom = power_of_two_denom,
             thread_evals = thread_evals,
         )
+        push!(nrm_history, p.nrm)
         if !isnothing(T.tolerance) && p.nrm < T.tolerance
             if verbose >= 1
                 println("attained the desired L2-norm: ", p.nrm)
@@ -537,6 +541,19 @@ TimerOutputs.@timeit _TO function Constructor(
             # No tolerance specified, use the given degree without auto-increase
             break
         else
+            # Optional early stop (opt-in; default off ⇒ behavior unchanged): halt the
+            # auto-degree increase once the L2-norm has stopped improving, even if the
+            # tolerance was never reached. Reuses EnhancedMetrics.detect_stagnation.
+            if stagnation_stop &&
+               length(nrm_history) >= 3 &&
+               EnhancedMetrics.detect_stagnation(nrm_history, stagnation_threshold)
+                if verbose >= 1
+                    println(
+                        "Stopping degree sweep: L2-norm stagnated at degree $degree (nrm=$(p.nrm))",
+                    )
+                end
+                break
+            end
             degree += 1
             if verbose >= 2
                 println("Increase degree to: $degree")

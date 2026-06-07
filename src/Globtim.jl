@@ -502,6 +502,11 @@ export SparsifiedVariant, SparsificationDegreeResult, run_sparsification_experim
 include("tree_solve.jl")
 export solve_tree_leaves
 
+# batched_solve - stabilized-leaf collection + batched warm-start solve (Parts B/C)
+include("batched_solve.jl")
+export collect_stabilized_leaves, StabilizedLeaf
+export solve_tree_leaves_warmstart, solve_tree_and_recover
+
 # ExperimentCLI - experiment configuration (re-export for downstream packages)
 include("ExperimentCLI.jl")
 using .ExperimentCLI
