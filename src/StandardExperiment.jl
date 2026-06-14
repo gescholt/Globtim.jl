@@ -369,6 +369,30 @@ result = run_standard_experiment(
 )
 ```
 """
+# GRADRES-GATE (bead jw9g.1): runtime convergence test on the *recovered minimizer*
+# rather than the L2 approximation error. The displacement bound ‖H⁻¹∇w(p_true)‖ — and
+# hence the recovered global minimizer — saturates at low degree while the L2 error keeps
+# falling many orders of magnitude (finding F9; T3 sweep korok 721071). Unlike
+# `recovery_error`, this reads only `best_estimate`, so it needs no true parameters and is
+# valid in a genuine estimation run. Returns true once the recovered minimizer has moved
+# less than `tol` (relative) for the two most recent successful degrees — i.e. it has
+# plateaued. Requires ≥3 minimizers (two consecutive sub-tol steps), mirroring the L2
+# stagnation gate's robustness.
+function _recovered_minimizer_plateaued(degree_results, tol::Float64)
+    ms = [
+        r.best_estimate for r in sort(
+            filter(
+                s -> s.status == "success" && s.best_estimate !== nothing,
+                degree_results,
+            ),
+            by = s -> s.degree,
+        )
+    ]
+    length(ms) >= 3 || return false
+    rel(a, b) = norm(a - b) / (norm(b) + 1e-15)
+    return rel(ms[end], ms[end-1]) < tol && rel(ms[end-1], ms[end-2]) < tol
+end
+
 function run_standard_experiment(;
     objective_function,
     objective_name::String,
@@ -382,6 +406,8 @@ function run_standard_experiment(;
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     stagnation_stop::Bool = false,
     stagnation_threshold::Float64 = 0.01,
+    gradient_residual_gate::Bool = false,
+    gradient_residual_tol::Float64 = 1e-3,
 )
     mkpath(output_dir)
 
@@ -477,6 +503,22 @@ function run_standard_experiment(;
                     metadata["stagnation_threshold"] = stagnation_threshold
                     break
                 end
+            end
+
+            # GRADRES-GATE (opt-in; default off ⇒ behavior unchanged): halt once the
+            # recovered global minimizer has stopped moving across degrees, even though
+            # the L2 approximation error is still falling. Reads only the recovered
+            # minimizer (no true_params), per finding F9 — recovery saturates early while
+            # L2 over-refines 5–8 orders of magnitude. Solving still happens per degree;
+            # this only trims the wasted higher-degree solves once recovery has plateaued.
+            if gradient_residual_gate &&
+               _recovered_minimizer_plateaued(degree_results, gradient_residual_tol)
+                @info "Stopping degree sweep: recovered minimizer plateaued (GRADRES-GATE)" degree tol =
+                    gradient_residual_tol
+                metadata["stopped_gradient_residual_gate"] = true
+                metadata["stopped_after_degree"] = degree
+                metadata["gradient_residual_tol"] = gradient_residual_tol
+                break
             end
 
         catch e

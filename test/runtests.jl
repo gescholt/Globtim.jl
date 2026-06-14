@@ -120,6 +120,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_standard_experiment_resume.jl") do
     include("test_standard_experiment_resume.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_gradres_gate.jl") do
+    include("test_gradres_gate.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_trial_cut_reuse.jl") do
     include("test_trial_cut_reuse.jl")
 end
