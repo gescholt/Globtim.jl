@@ -35,6 +35,11 @@ Represents a subdomain in the adaptive refinement tree.
 - `split_pos::Union{Float64, Nothing}`: Cut position in [-1,1] normalized coordinates
 - `infeasible::Bool`: All sample evaluations returned Inf — region is unfit for polynomial
   approximation and should be terminated as `ActionPruned` rather than split forever.
+- `masked::Bool`: Sampled values are a finite penalty/flat-barrier plateau (detected by a
+  caller-supplied `barrier_detector`; bead yhta). Like `infeasible` it terminates the leaf as
+  `ActionPruned` — but the data is finite, not Inf. Masked leaves are excluded from
+  `total_error` and from `solve_tree_leaves` (the polynomial fits a discontinuity, so its
+  critical points are spurious). Default `false`; only set when barrier masking is enabled.
 - `mode_spectrum::Vector{Float64}`: Per-Chebyshev-mode residual coefficients η_α
   for modes with `degree < |α|_∞ ≤ extended_degree` (bead dksx.0). Empty until
   `compute_subdomain_mode_spectrum!` is called.
@@ -59,6 +64,7 @@ mutable struct Subdomain
     split_dim::Union{Int,Nothing}
     split_pos::Union{Float64,Nothing}
     infeasible::Bool
+    masked::Bool  # yhta: finite penalty/flat-barrier plateau — terminal, excluded from solve & error
     # dksx.0: per-mode residual decomposition (filled lazily by
     # compute_subdomain_mode_spectrum! when the spectral predicate is needed).
     mode_spectrum::Vector{Float64}
@@ -88,7 +94,8 @@ function Subdomain(
         nothing,
         nothing,
         nothing,
-        false,
+        false,              # infeasible
+        false,              # masked (yhta)
         Float64[],          # mode_spectrum (uncomputed)
         Int[],              # dominant_mode (uncomputed)
         NaN,                # spectral_concentration (uncomputed)
@@ -187,6 +194,16 @@ n_leaves(tree::SubdivisionTree) =
 Return number of leaves terminated as infeasible.
 """
 n_pruned(tree::SubdivisionTree) = length(tree.pruned_leaves)
+
+"""
+    n_masked(tree::SubdivisionTree)
+
+Return number of leaves terminated as penalty/flat-barrier plateaus (bead yhta).
+Masked leaves live in `pruned_leaves` (so `n_pruned` counts them too) but carry
+`subdomain.masked == true`; this returns the barrier-only subset.
+"""
+n_masked(tree::SubdivisionTree) =
+    count(id -> tree.subdomains[id].masked, tree.pruned_leaves)
 
 """
     n_active(tree::SubdivisionTree)
@@ -309,7 +326,9 @@ function display_tree(tree::SubdivisionTree; max_leaves::Int = 20, sort_by::Symb
         sd = tree.subdomains[id]
         bounds = get_bounds(sd)
         bounds_str = join([Printf.@sprintf("[%.2f,%.2f]", b[1], b[2]) for b in bounds], "×")
-        status = id in pruned_set ? "pruned" : (id in converged_set ? "conv" : "active")
+        status =
+            id in pruned_set ? (sd.masked ? "masked" : "pruned") :
+            (id in converged_set ? "conv" : "active")
         Printf.@printf(
             "%-4d  %-5d  %-3d  %-10.2e  %-8s  %s\n",
             id,
@@ -1154,6 +1173,7 @@ function process_subdomain(
     reuse_parent_samples::Bool = true,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
+    barrier_detector::Union{Nothing,Function} = nothing,
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_base_seed::Union{Nothing,Integer} = nothing,
@@ -1205,6 +1225,29 @@ function process_subdomain(
     # Phase 1 prune: every sample returned Inf, no polynomial to fit. Terminate
     # this leaf instead of splitting it indefinitely.
     if subdomain.infeasible
+        return ProcessResult(
+            subdomain_id,
+            ActionPruned,
+            false,
+            nothing,
+            nothing,
+            l2_error,
+            nothing,
+        )
+    end
+
+    # yhta: penalty/flat-barrier masking. A leaf whose sampled values are a
+    # finite penalty plateau (constant sentinel or near-constant) cannot be
+    # improved by splitting or p-refining a discontinuity — the L2 estimator
+    # just keeps chasing the step. Mask it as a terminal pruned leaf so the
+    # budget flows to the curved feasible region. Excluded from total_error and
+    # from solve_tree_leaves (its fit is a step → critical points are spurious).
+    # Opt-in: barrier_detector === nothing (the default) leaves behavior unchanged.
+    if barrier_detector !== nothing &&
+       subdomain.f_values !== nothing &&
+       barrier_detector(subdomain.f_values)
+        subdomain.masked = true
+        @debug "Masked penalty-barrier leaf" subdomain_id l2_error
         return ProcessResult(
             subdomain_id,
             ActionPruned,
@@ -1453,6 +1496,7 @@ function adaptive_refine(
     reuse_parent_samples::Bool = true,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
+    barrier_detector::Union{Nothing,Function} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
     sampling::Symbol = :tensor,
@@ -1555,6 +1599,7 @@ function adaptive_refine(
             reuse_parent_samples,
             n_samples_per_dim,
             predicate,
+            barrier_detector,
             sampling,
             christoffel_oversampling,
             rng_base_seed,
@@ -1632,6 +1677,17 @@ function adaptive_refine(
             push!(tree.pruned_leaves, leaf_id)
             continue
         end
+        # yhta: barrier masking also applies to leaves that survived to finalize
+        # (stopped by the depth/leaf cap while still active) so they aren't
+        # solved for spurious critical points or counted in total_error.
+        if barrier_detector !== nothing &&
+           sd.f_values !== nothing &&
+           barrier_detector(sd.f_values)
+            sd.masked = true
+            filter!(id -> id != leaf_id, tree.active_leaves)
+            push!(tree.pruned_leaves, leaf_id)
+            continue
+        end
         # Check if leaf now meets tolerance → mark as converged
         check_error = tolerance_mode == :relative ? sd.relative_l2_error : sd.l2_error
         if check_error <= l2_tolerance
@@ -1644,11 +1700,12 @@ function adaptive_refine(
         all_leaves = vcat(tree.active_leaves, tree.converged_leaves, tree.pruned_leaves)
         max_abs_final, max_rel_final = leaf_error_summary(tree, all_leaves)
         Printf.@printf(
-            "Final: %d leaves (%d converged, %d active, %d pruned) | max ‖f-p‖_L2=%.3e, max rel=%.3e | tolerance_mode=%s, l2_tolerance=%.3e\n",
+            "Final: %d leaves (%d converged, %d active, %d pruned [%d barrier-masked]) | max ‖f-p‖_L2=%.3e, max rel=%.3e | tolerance_mode=%s, l2_tolerance=%.3e\n",
             n_leaves(tree),
             length(tree.converged_leaves),
             length(tree.active_leaves),
             length(tree.pruned_leaves),
+            n_masked(tree),
             max_abs_final,
             max_rel_final,
             tolerance_mode,
@@ -1667,6 +1724,7 @@ function adaptive_refine(
                 :n_active => length(tree.active_leaves),
                 :n_converged => length(tree.converged_leaves),
                 :n_pruned => length(tree.pruned_leaves),
+                :n_masked => n_masked(tree),
                 :max_depth_reached => get_max_depth(tree),
             ),
         )
@@ -1693,7 +1751,8 @@ function _emit_tree_leaves!(
         sd.polynomial === nothing && continue
         status =
             idx in active_set ? "active" :
-            idx in converged_set ? "converged" : idx in pruned_set ? "pruned" : "internal"
+            idx in converged_set ? "converged" :
+            idx in pruned_set ? (sd.masked ? "masked" : "pruned") : "internal"
         extra = Dict{Symbol,Any}(
             :stage => "tree-build",
             :status => status,
@@ -1786,6 +1845,7 @@ function two_phase_refine(
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = true,
     predicate::Function = default_bump,
+    barrier_detector::Union{Nothing,Function} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
 )
@@ -1848,6 +1908,7 @@ function two_phase_refine(
         thread_evals,
         reuse_parent_samples,
         predicate,
+        barrier_detector,
     )
 
     phase1_iter = 0
@@ -2051,6 +2112,15 @@ function two_phase_refine(
         if sd.infeasible
             filter!(id -> id != leaf_id, tree.active_leaves)
             push!(tree.pruned_leaves, leaf_id)
+            continue
+        end
+        # yhta: barrier masking for leaves still active at the cap (parity with adaptive_refine).
+        if barrier_detector !== nothing &&
+           sd.f_values !== nothing &&
+           barrier_detector(sd.f_values)
+            sd.masked = true
+            filter!(id -> id != leaf_id, tree.active_leaves)
+            push!(tree.pruned_leaves, leaf_id)
         end
     end
 
@@ -2058,11 +2128,12 @@ function two_phase_refine(
         all_leaves = vcat(tree.active_leaves, tree.converged_leaves, tree.pruned_leaves)
         max_abs_final, max_rel_final = leaf_error_summary(tree, all_leaves)
         Printf.@printf(
-            "\nFinal: %d leaves (%d converged, %d active, %d pruned) | max ‖f-p‖_L2=%.3e, max rel=%.3e | tolerance_mode=%s, fine_tolerance=%.3e\n",
+            "\nFinal: %d leaves (%d converged, %d active, %d pruned [%d barrier-masked]) | max ‖f-p‖_L2=%.3e, max rel=%.3e | tolerance_mode=%s, fine_tolerance=%.3e\n",
             n_leaves(tree),
             length(tree.converged_leaves),
             length(tree.active_leaves),
             length(tree.pruned_leaves),
+            n_masked(tree),
             max_abs_final,
             max_rel_final,
             tolerance_mode,
@@ -2081,6 +2152,7 @@ function two_phase_refine(
                 :n_active => length(tree.active_leaves),
                 :n_converged => length(tree.converged_leaves),
                 :n_pruned => length(tree.pruned_leaves),
+                :n_masked => n_masked(tree),
                 :max_depth_reached => get_max_depth(tree),
             ),
         )

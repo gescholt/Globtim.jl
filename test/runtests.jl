@@ -166,6 +166,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_inf_handling.jl") do
     include("test_subdivision_inf_handling.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_barrier_mask.jl") do
+    include("test_barrier_mask.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_mode_spectrum.jl") do
     include("test_mode_spectrum.jl")
 end

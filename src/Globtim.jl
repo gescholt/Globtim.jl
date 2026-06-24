@@ -183,6 +183,7 @@ export Subdomain,
     n_leaves,
     n_active,
     n_pruned,
+    n_masked,  # yhta: barrier-masked leaf count
     total_error,
     error_balance_ratio,
     dimension,
@@ -201,7 +202,9 @@ export Subdomain,
     default_bump,  # ehaj.1 mode-spectrum bump-vs-split predicate
     pick_strategy_per_axis,
     decide_action,  # 4vtd.3 per-cut-direction predicate
-    pick_cut_dim_spectrum  # 4vtd.5 per-axis spectrum-based cut-dim selector
+    pick_cut_dim_spectrum,  # 4vtd.5 per-axis spectrum-based cut-dim selector
+    penalty_barrier_detector,
+    flat_barrier_detector  # yhta: penalty/flat-barrier leaf-masking detectors
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -278,6 +281,7 @@ include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven
 include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y0j)
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
 include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum (ehaj.1)
+include("barrier_mask.jl") #Penalty/flat-barrier leaf masking for subdivision (yhta)
 include("per_cut_predicate.jl") #Per-cut-direction predicate (4vtd.3)
 include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector (4vtd.5)
 include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)
