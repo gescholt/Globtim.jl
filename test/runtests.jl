@@ -170,6 +170,14 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_barrier_mask.jl") do
     include("test_barrier_mask.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_anisotropic_degree.jl") do
+    include("test_anisotropic_degree.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_degeneracy_detector.jl") do
+    include("test_degeneracy_detector.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_mode_spectrum.jl") do
     include("test_mode_spectrum.jl")
 end

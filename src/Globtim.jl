@@ -184,6 +184,7 @@ export Subdomain,
     n_active,
     n_pruned,
     n_masked,  # yhta: barrier-masked leaf count
+    leaf_degree_spec,  # jl9z.7: anisotropic per-dim degree accessor
     total_error,
     error_balance_ratio,
     dimension,
@@ -203,8 +204,13 @@ export Subdomain,
     pick_strategy_per_axis,
     decide_action,  # 4vtd.3 per-cut-direction predicate
     pick_cut_dim_spectrum,  # 4vtd.5 per-axis spectrum-based cut-dim selector
+    pick_strategy_per_axis_lsfit,
+    LSFitAxisResult,
+    choose_per_dim_degree_lsfit,  # jl9z.7 ρ_k-driven anisotropic per-dim degree
     penalty_barrier_detector,
-    flat_barrier_detector  # yhta: penalty/flat-barrier leaf-masking detectors
+    flat_barrier_detector,  # yhta: penalty/flat-barrier leaf-masking detectors
+    DegeneracyDiagnostics,
+    detect_degeneracy!  # Stage 0: per-leaf degeneracy detector
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -277,6 +283,7 @@ include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
+include("degeneracy_types.jl") #DegeneracyDiagnostics type (parsed before adaptive_subdivision so the Subdomain.degeneracy field can reference it; Stage 0)
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
 include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y0j)
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
@@ -285,6 +292,7 @@ include("barrier_mask.jl") #Penalty/flat-barrier leaf masking for subdivision (y
 include("per_cut_predicate.jl") #Per-cut-direction predicate (4vtd.3)
 include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector (4vtd.5)
 include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)
+include("degeneracy_detector.jl") # Stage 0: per-leaf degeneracy classifier (active subspace / fold / Hessian)
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)

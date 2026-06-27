@@ -47,6 +47,16 @@ Represents a subdomain in the adaptive refinement tree.
   largest mode); zeros until computed.
 - `spectral_concentration::Float64`: fraction of squared η-mass in modes with
   `|α|_∞ ∈ {degree+1, degree+2}`. NaN until computed.
+- `per_dim_degree::Union{Nothing, Vector{Int}}`: anisotropic per-axis polynomial degree
+  (bead jl9z.7). `nothing` ⇒ isotropic at `degree`. When set, `degree` carries the scalar
+  `maximum(per_dim_degree)` summary (for display/metrics/the `degree > 0` sentinel) while the
+  vector carries the real spec consumed by `estimate_subdomain_error` / the fit. Children
+  inherit the parent's vector (copied, not aliased) on subdivision.
+- `degeneracy::Union{Nothing, DegeneracyDiagnostics}`: per-leaf degeneracy verdict
+  (Stage 0 detector). `nothing` until `detect_degeneracy!` is called (opt-in via the
+  `degeneracy_opts` kwarg of `adaptive_refine`/`two_phase_refine`). Classifies the leaf as
+  `:sloppy_valley` / `:positive_dim_argmin` / `:fold_caustic` / `:multi_sheet` /
+  `:isolated_morse`; gates the resolvers.
 """
 mutable struct Subdomain
     center::Vector{Float64}
@@ -70,6 +80,10 @@ mutable struct Subdomain
     mode_spectrum::Vector{Float64}
     dominant_mode::Vector{Int}
     spectral_concentration::Float64
+    # jl9z.7: anisotropic per-axis degree; nothing ⇒ isotropic at `degree`.
+    per_dim_degree::Union{Nothing,Vector{Int}}
+    # Stage 0: per-leaf degeneracy verdict; nothing until detect_degeneracy! runs.
+    degeneracy::Union{Nothing,DegeneracyDiagnostics}
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -79,6 +93,8 @@ function Subdomain(
     depth::Int = 0,
     degree::Int = 0,
     parent_id::Union{Int,Nothing} = nothing,
+    per_dim_degree::Union{Nothing,Vector{Int}} = nothing,
+    degeneracy::Union{Nothing,DegeneracyDiagnostics} = nothing,
 )
     return Subdomain(
         center,
@@ -99,6 +115,8 @@ function Subdomain(
         Float64[],          # mode_spectrum (uncomputed)
         Int[],              # dominant_mode (uncomputed)
         NaN,                # spectral_concentration (uncomputed)
+        per_dim_degree,     # jl9z.7: anisotropic per-axis degree (nothing ⇒ isotropic)
+        degeneracy,         # Stage 0: degeneracy verdict (nothing until detected)
     )
 end
 
@@ -108,6 +126,8 @@ function Subdomain(
     depth::Int = 0,
     degree::Int = 0,
     parent_id::Union{Int,Nothing} = nothing,
+    per_dim_degree::Union{Nothing,Vector{Int}} = nothing,
+    degeneracy::Union{Nothing,DegeneracyDiagnostics} = nothing,
 )
     center = [(b[1] + b[2]) / 2 for b in bounds]
     half_widths = [(b[2] - b[1]) / 2 for b in bounds]
@@ -117,6 +137,8 @@ function Subdomain(
         depth = depth,
         degree = degree,
         parent_id = parent_id,
+        per_dim_degree = per_dim_degree,
+        degeneracy = degeneracy,
     )
 end
 
@@ -132,6 +154,20 @@ function get_bounds(subdomain::Subdomain)
             subdomain.center[d] + subdomain.half_widths[d],
         ) for d in 1:length(subdomain.center)
     ]
+end
+
+"""
+    leaf_degree_spec(subdomain::Subdomain)
+
+Return the degree specification to fit this leaf at: a per-dimension tuple
+`(:one_d_per_dim, [d₁,…,dₙ])` when the leaf carries an anisotropic `per_dim_degree`
+(bead jl9z.7), otherwise the scalar `degree`. This is the single accessor every
+fit/estimate call site uses instead of reading `subdomain.degree` directly, so
+anisotropy survives splits instead of being collapsed to `maximum(...)`.
+"""
+function leaf_degree_spec(subdomain::Subdomain)
+    return subdomain.per_dim_degree === nothing ? subdomain.degree :
+           (:one_d_per_dim, subdomain.per_dim_degree)
 end
 
 """
@@ -174,9 +210,14 @@ function SubdivisionTree(initial_domain::Subdomain)
     return SubdivisionTree([initial_domain], [1], Int[], Int[], 1)
 end
 
-# Constructor from bounds (optional degree sets the root subdomain's degree)
-function SubdivisionTree(bounds::Vector{Tuple{Float64,Float64}}; degree::Int = 0)
-    root = Subdomain(bounds; degree = degree)
+# Constructor from bounds (optional degree sets the root subdomain's degree;
+# per_dim_degree seeds an anisotropic root, bead jl9z.7)
+function SubdivisionTree(
+    bounds::Vector{Tuple{Float64,Float64}};
+    degree::Int = 0,
+    per_dim_degree::Union{Nothing,Vector{Int}} = nothing,
+)
+    root = Subdomain(bounds; degree = degree, per_dim_degree = per_dim_degree)
     return SubdivisionTree(root)
 end
 
@@ -382,12 +423,19 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
     right_center[dim] = (cut_point + upper_bound) / 2
     right_half_widths[dim] = (upper_bound - cut_point) / 2
 
+    # jl9z.7: children inherit the parent's anisotropic per-dim degree (copied,
+    # not aliased, so a later in-place bump on one child can't mutate its sibling
+    # or the parent). nothing ⇒ children stay isotropic at `degree`.
+    inherited_per_dim =
+        subdomain.per_dim_degree === nothing ? nothing : copy(subdomain.per_dim_degree)
+
     child_left = Subdomain(
         left_center,
         left_half_widths,
         depth = subdomain.depth + 1,
         degree = subdomain.degree,
         parent_id = nothing,
+        per_dim_degree = inherited_per_dim,
     )  # parent_id set by update_tree!
     child_right = Subdomain(
         right_center,
@@ -395,6 +443,8 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
         depth = subdomain.depth + 1,
         degree = subdomain.degree,
         parent_id = nothing,
+        per_dim_degree =
+            inherited_per_dim === nothing ? nothing : copy(inherited_per_dim),
     )
 
     return (child_left, child_right)
@@ -562,7 +612,19 @@ function _extract_per_dim_degrees(degree, n_dim::Int)::Vector{Int}
     else
         error("Unsupported degree type: $(typeof(degree))")
     end
-end #==============================================================================#
+end
+
+"""
+    _root_per_dim_degree(degree) -> Union{Nothing, Vector{Int}}
+
+jl9z.7: a caller-supplied `(:one_d_per_dim, [d₁,…,dₙ])` spec seeds the root leaf's
+anisotropic `per_dim_degree` so the per-axis budget survives every split. Scalar
+and `(:one_d_for_all, d)` specs stay isotropic (returns `nothing`), preserving the
+total-degree basis and byte-identical default behavior.
+"""
+_root_per_dim_degree(degree) =
+    (degree isa Tuple && degree[1] === :one_d_per_dim) ? collect(Int.(degree[2])) :
+    nothing #==============================================================================#
 
 #                      ERROR ESTIMATION                                         #
 
@@ -1095,9 +1157,10 @@ struct ProcessResult
     split_dim::Union{Int,Nothing}
     cut_position::Union{Float64,Nothing}
     l2_error::Float64
-    new_degree::Union{Int,Nothing}  # for ActionDegreeBump: the degree to try next
+    new_degree::Union{Int,Nothing}  # for ActionDegreeBump: the scalar degree summary to try next
     trial_children::Union{Nothing,Tuple{Subdomain,Subdomain}}
     trial_cut_pos::Union{Nothing,Float64}
+    new_per_dim_degree::Union{Nothing,Vector{Int}}  # jl9z.7: anisotropic bump payload
 end
 
 # Backward-compatible constructor for the 7-arg call sites (pre-eqk).
@@ -1118,6 +1181,32 @@ ProcessResult(
     l2_error,
     new_degree,
     nothing,
+    nothing,
+    nothing,
+)
+
+# Backward-compatible constructor for the 9-arg call sites (eqk: trial children,
+# pre-jl9z.7 anisotropic bump).
+ProcessResult(
+    subdomain_id,
+    action,
+    should_split,
+    split_dim,
+    cut_position,
+    l2_error,
+    new_degree,
+    trial_children,
+    trial_cut_pos,
+) = ProcessResult(
+    subdomain_id,
+    action,
+    should_split,
+    split_dim,
+    cut_position,
+    l2_error,
+    new_degree,
+    trial_children,
+    trial_cut_pos,
     nothing,
 )
 
@@ -1174,6 +1263,7 @@ function process_subdomain(
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
+    degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_base_seed::Union{Nothing,Integer} = nothing,
@@ -1183,11 +1273,19 @@ function process_subdomain(
 
     subdomain = tree.subdomains[subdomain_id]
 
-    # Use per-leaf degree if previously set (from a degree bump), otherwise use the passed degree
+    # Resolve the degree SPEC to fit this leaf at (jl9z.7). Precedence:
+    #   1. an inherited/assigned anisotropic per-dim vector (survives splits), else
+    #   2. a previously-bumped scalar degree on the leaf, else
+    #   3. the caller's `degree` argument (which may itself be a per-dim tuple).
+    # `effective_degree` stays the scalar maximum summary (display/metrics, the
+    # `degree > 0` sentinel, and the isotropic p-refinement arithmetic); the spec
+    # is what actually drives the fit so anisotropy is no longer collapsed away.
     n_dim = length(subdomain.center)
-    effective_degree =
-        subdomain.degree > 0 ? subdomain.degree :
-        maximum(_extract_per_dim_degrees(degree, n_dim))
+    effective_spec =
+        subdomain.per_dim_degree !== nothing ?
+        (:one_d_per_dim, subdomain.per_dim_degree) :
+        (subdomain.degree > 0 ? subdomain.degree : degree)
+    effective_degree = maximum(_extract_per_dim_degrees(effective_spec, n_dim))
     subdomain.degree = effective_degree
 
     # y0j: locate the parent's sample cache so inheritable rows can be reused.
@@ -1211,7 +1309,7 @@ function process_subdomain(
     l2_error = estimate_subdomain_error(
         f,
         subdomain,
-        effective_degree,
+        effective_spec,
         basis = basis,
         eval_progress = eval_progress,
         thread_evals = thread_evals,
@@ -1259,6 +1357,15 @@ function process_subdomain(
         )
     end
 
+    # Stage 0: per-leaf degeneracy annotation (opt-in). Runs on every fitted,
+    # feasible, non-masked leaf BEFORE the converge/bump/split decision so the
+    # verdict is recorded regardless of which action this leaf takes. Non-terminal:
+    # it only annotates sd.degeneracy; the resolvers read it. Default-off
+    # (degeneracy_opts === nothing) ⇒ behavior unchanged.
+    if degeneracy_opts !== nothing && subdomain.polynomial !== nothing
+        detect_degeneracy!(subdomain; f = f, degeneracy_opts...)
+    end
+
     # Check convergence using the selected error metric
     effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
     if effective_error <= l2_tolerance
@@ -1293,6 +1400,12 @@ function process_subdomain(
             )
         end
         next_degree = effective_degree + degree_step
+        # jl9z.7: an anisotropic leaf bumps every axis by degree_step so the
+        # per-dim shape is preserved; the scalar `next_degree` (= max axis) still
+        # gates against max_degree. Isotropic leaves carry nothing → unchanged.
+        next_per_dim =
+            subdomain.per_dim_degree === nothing ? nothing :
+            (subdomain.per_dim_degree .+ degree_step)
         cond_ok =
             subdomain.polynomial !== nothing &&
             subdomain.polynomial.cond_vandermonde < cond_threshold
@@ -1305,6 +1418,9 @@ function process_subdomain(
                 nothing,
                 l2_error,
                 next_degree,
+                nothing,
+                nothing,
+                next_per_dim,
             )
         end
     end
@@ -1323,7 +1439,7 @@ function process_subdomain(
             f,
             subdomain,
             split_dim,
-            effective_degree,
+            effective_spec,
             basis = basis,
             thread_evals = thread_evals,
         )
@@ -1405,6 +1521,9 @@ function update_tree!(
     elseif result.action == ActionDegreeBump
         # p-refinement: increase degree, stay active for re-processing
         subdomain.degree = result.new_degree
+        # jl9z.7: install the bumped anisotropic vector (if any) so the re-fit
+        # uses the per-dim spec; nothing leaves the leaf isotropic.
+        subdomain.per_dim_degree = result.new_per_dim_degree
         subdomain.polynomial = nothing
         subdomain.samples = nothing
         subdomain.f_values = nothing
@@ -1497,6 +1616,7 @@ function adaptive_refine(
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
+    degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
     sampling::Symbol = :tensor,
@@ -1514,7 +1634,11 @@ function adaptive_refine(
     # Initialize tree with root degree
     n_dim = length(bounds)
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
-    tree = SubdivisionTree(bounds; degree = root_degree)
+    tree = SubdivisionTree(
+        bounds;
+        degree = root_degree,
+        per_dim_degree = _root_per_dim_degree(degree),  # jl9z.7: seed anisotropic root
+    )
 
     if logger !== nothing
         Metrics.log_phase!(
@@ -1600,6 +1724,7 @@ function adaptive_refine(
             n_samples_per_dim,
             predicate,
             barrier_detector,
+            degeneracy_opts,
             sampling,
             christoffel_oversampling,
             rng_base_seed,
@@ -1658,12 +1783,17 @@ function adaptive_refine(
     for leaf_id in copy(tree.active_leaves)  # copy: we modify during iteration
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
-            # Record the degree used (same logic as process_subdomain)
-            sd.degree = root_degree
+            # Record the degree used (same logic as process_subdomain). jl9z.7:
+            # honor an inherited anisotropic per-dim spec; otherwise fall back to
+            # the caller's `degree` (byte-identical to the old root_degree path).
+            leaf_spec =
+                sd.per_dim_degree !== nothing ?
+                (:one_d_per_dim, sd.per_dim_degree) : degree
+            sd.degree = maximum(_extract_per_dim_degrees(leaf_spec, length(sd.center)))
             estimate_subdomain_error(
                 f,
                 sd,
-                degree,
+                leaf_spec,
                 basis = basis,
                 eval_progress = eval_progress,
                 thread_evals = thread_evals,
@@ -1846,6 +1976,7 @@ function two_phase_refine(
     reuse_parent_samples::Bool = true,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
+    degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
 )
@@ -1897,7 +2028,11 @@ function two_phase_refine(
     # Phase 1: Coarse balancing pass
     n_dim = length(bounds)
     root_degree = maximum(_extract_per_dim_degrees(degree, n_dim))
-    tree = SubdivisionTree(bounds; degree = root_degree)
+    tree = SubdivisionTree(
+        bounds;
+        degree = root_degree,
+        per_dim_degree = _root_per_dim_degree(degree),  # jl9z.7: seed anisotropic root
+    )
 
     hp_kwargs = (;
         enable_p_refinement,
@@ -1909,6 +2044,7 @@ function two_phase_refine(
         reuse_parent_samples,
         predicate,
         barrier_detector,
+        degeneracy_opts,
     )
 
     phase1_iter = 0
@@ -2099,11 +2235,16 @@ function two_phase_refine(
     for leaf_id in copy(tree.active_leaves)  # copy: we modify during iteration
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
-            sd.degree = root_degree
+            # jl9z.7: honor an inherited anisotropic per-dim spec (parity with
+            # adaptive_refine's finalize); else fall back to the caller's `degree`.
+            leaf_spec =
+                sd.per_dim_degree !== nothing ?
+                (:one_d_per_dim, sd.per_dim_degree) : degree
+            sd.degree = maximum(_extract_per_dim_degrees(leaf_spec, length(sd.center)))
             estimate_subdomain_error(
                 f,
                 sd,
-                degree,
+                leaf_spec,
                 basis = basis,
                 thread_evals = thread_evals,
                 n_samples_per_dim = n_samples_per_dim,

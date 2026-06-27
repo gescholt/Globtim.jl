@@ -233,3 +233,57 @@ function decide_action_lsfit(results::AbstractVector{LSFitAxisResult})
         return (:split, split_idx)
     end
 end
+
+"""
+    choose_per_dim_degree_lsfit(subdomain::Subdomain;
+        c::Real = 4.0,
+        floor_degree::Int = 2,
+        max_degree::Int = 12,
+        extended_degree::Int = 0,
+        kwargs...) -> Vector{Int}
+
+jl9z.7 — data-driven anisotropic per-axis degree from the per-axis Bernstein
+radius ρ_k (the E2 LS-slope estimator, bead jaw4). For each axis the analytic
+geometric-decay model says the coefficient mass on axis `k` decays like ρ_k^{-d},
+so the degree needed to hit a fixed accuracy is
+
+    d_k = ⌈ c / log(ρ_k) ⌉,   clamped to [floor_degree, max_degree].
+
+A *flat / sloppy* axis has large ρ_k (fast decay) → small `d_k`; a steep axis has
+ρ_k near 1 → large `d_k`. The **floor is the load-bearing lesson** from the CR3BP
+relocated L4 5-D box: a sloppy axis is NOT degree 0/1. `lx_z` carries only 0.3% of
+the gradient energy yet still needs `d ≥ 2` to *place* the deep optimum at
+lx_z≈0.18 — `[6,6,1,1,1]` degrades (3.34e-2) while `[6,6,2,2,2]` does not
+(1.60e-2). So `floor_degree` defaults to 2, never 0/1.
+
+Axes with no usable signal (`ρ_k` is `NaN`, ≤ 1, or non-finite) fall back to
+`max_degree` — the conservative choice (we have no evidence the axis is flat, so
+don't starve it). Requires `subdomain.polynomial !== nothing`; the leaf must have
+been fit (and `extended_degree` should exceed its base degree so offender shells
+exist to fit the slope). `c` calibrates the accuracy target; `c=4` ⇒ a ρ=e axis
+gets degree 4. Extra kwargs pass through to `pick_strategy_per_axis_lsfit`.
+"""
+function choose_per_dim_degree_lsfit(
+    subdomain::Subdomain;
+    c::Real = 4.0,
+    floor_degree::Int = 2,
+    max_degree::Int = 12,
+    extended_degree::Int = 0,
+    kwargs...,
+)
+    floor_degree >= 0 || error("floor_degree must be ≥ 0, got $floor_degree")
+    floor_degree <= max_degree ||
+        error("floor_degree=$floor_degree exceeds max_degree=$max_degree")
+    results = pick_strategy_per_axis_lsfit(
+        subdomain;
+        extended_degree = extended_degree,
+        kwargs...,
+    )
+    return [
+        begin
+            ρ = r.rho
+            d = (!isfinite(ρ) || ρ <= 1.0) ? max_degree : ceil(Int, c / log(ρ))
+            clamp(d, floor_degree, max_degree)
+        end for r in results
+    ]
+end
