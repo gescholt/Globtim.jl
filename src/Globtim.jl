@@ -204,6 +204,7 @@ export Subdomain,
     pick_strategy_per_axis,
     decide_action,  # 4vtd.3 per-cut-direction predicate
     pick_cut_dim_spectrum,  # 4vtd.5 per-axis spectrum-based cut-dim selector
+    pick_cut_direction_spectrum,  # Stage 3: best-direction (oblique fold-aligned) cut selector
     pick_strategy_per_axis_lsfit,
     LSFitAxisResult,
     choose_per_dim_degree_lsfit,  # jl9z.7 ρ_k-driven anisotropic per-dim degree

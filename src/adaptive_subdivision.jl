@@ -464,22 +464,27 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
     @assert 1 <= dim <= dimension(subdomain) "Invalid dimension: $dim"
     @assert -1.0 <= cut_position <= 1.0 "Cut position must be in [-1, 1], got $cut_position"
 
-    # Compute actual cut point in original coordinates
-    cut_point = subdomain.center[dim] + cut_position * subdomain.half_widths[dim]
+    # Cut along normalized axis `dim` at ẑ_dim = cut_position, in the box's OWN
+    # (possibly rotated) frame: left child has ẑ_dim ∈ [-1, cut_position], right has
+    # ẑ_dim ∈ [cut_position, 1]. Child centers are the ẑ-midpoints mapped to physical
+    # via box_to_physical! (so the shift is along Q[:,dim] when transform is set);
+    # half-widths scale the ẑ axis. For transform === nothing this reduces
+    # byte-identically to the old center/half_width axis-aligned arithmetic.
+    n = dimension(subdomain)
+    ẑc_left = zeros(n)
+    ẑc_left[dim] = (cut_position - 1.0) / 2
+    ẑc_right = zeros(n)
+    ẑc_right[dim] = (cut_position + 1.0) / 2
 
-    # Left child: [lower_bound, cut_point]
-    left_center = copy(subdomain.center)
+    left_center = Vector{Float64}(undef, n)
+    box_to_physical!(left_center, ẑc_left, subdomain)
+    right_center = Vector{Float64}(undef, n)
+    box_to_physical!(right_center, ẑc_right, subdomain)
+
     left_half_widths = copy(subdomain.half_widths)
-    lower_bound = subdomain.center[dim] - subdomain.half_widths[dim]
-    left_center[dim] = (lower_bound + cut_point) / 2
-    left_half_widths[dim] = (cut_point - lower_bound) / 2
-
-    # Right child: [cut_point, upper_bound]
-    right_center = copy(subdomain.center)
+    left_half_widths[dim] = subdomain.half_widths[dim] * (cut_position + 1.0) / 2
     right_half_widths = copy(subdomain.half_widths)
-    upper_bound = subdomain.center[dim] + subdomain.half_widths[dim]
-    right_center[dim] = (cut_point + upper_bound) / 2
-    right_half_widths[dim] = (upper_bound - cut_point) / 2
+    right_half_widths[dim] = subdomain.half_widths[dim] * (1.0 - cut_position) / 2
 
     # jl9z.7: children inherit the parent's anisotropic per-dim degree (copied,
     # not aliased, so a later in-place bump on one child can't mutate its sibling

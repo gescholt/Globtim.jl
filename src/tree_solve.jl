@@ -61,6 +61,7 @@ function solve_tree_leaves(
                 solver = solver,
                 msolve_threads = msolve_threads,
                 search_bounds = search_bounds,
+                transform = sd.transform,  # Stage 2b: lift CPs back through the leaf's frame
             )
             append!(all_cps, cps)
             leaf_status[leaf_id] = :ran

@@ -139,3 +139,65 @@ function _per_axis_total_and_decay(
 
     return axis_total, decay
 end
+
+"""
+    _frame_from_normal(normal::AbstractVector{Float64}) -> Matrix{Float64}
+
+Build an orthonormal `n×n` frame whose FIRST column is `normal/‖normal‖` (the
+remaining columns complete the basis via QR). Used by Stage 3 to rotate a leaf so a
+fold's normal becomes box-axis 1 — then a plain axis-1 cut slices perpendicular to
+the fold. Raises on a zero vector (no silent fallback).
+"""
+function _frame_from_normal(normal::AbstractVector{Float64})
+    nrm = norm(normal)
+    nrm > 0 || error("_frame_from_normal: zero normal vector")
+    v = collect(Float64, normal) ./ nrm
+    n = length(v)
+    Q = Matrix(qr(hcat(v, Matrix{Float64}(I, n, n))).Q)   # first column ≈ ±v
+    dot(view(Q, :, 1), v) < 0 && (Q[:, 1] .*= -1.0)        # fix sign so Q[:,1] = v
+    return Q
+end
+
+"""
+    pick_cut_direction_spectrum(subdomain::Subdomain;
+                                coh_threshold::Real = 0.7,
+                                extended_degree::Int = 0,
+                                axis_mass_floor::Real = 1e-12)
+        -> (dim::Int, Q_new::Union{Nothing, Matrix{Float64}})
+
+Stage 3 generalization of [`pick_cut_dim_spectrum`](@ref) from best-AXIS to
+best-DIRECTION. When the leaf carries a degeneracy verdict of `:fold_caustic` with
+`fold_coherence ≥ coh_threshold` (a single coherent sheet) and is still axis-aligned
+(`transform === nothing`), it returns `(1, Q)` where `Q`'s first column is the fold
+normal — the caller re-rotates the leaf to `Q` and cuts axis 1, slicing perpendicular
+to the fold. Otherwise it returns `(pick_cut_dim_spectrum(...), nothing)` — the
+existing axis-aligned behavior, byte-identical.
+
+The fold normal comes from the leaf's `degeneracy` diagnostics (filled by
+`detect_degeneracy!`), so this costs no extra objective evaluations. A coherent fold
+that is already axis-aligned, or a leaf with no fold verdict, takes the axis fallback.
+"""
+function pick_cut_direction_spectrum(
+    subdomain::Subdomain;
+    coh_threshold::Real = 0.7,
+    extended_degree::Int = 0,
+    axis_mass_floor::Real = 1e-12,
+)
+    deg = subdomain.degeneracy
+    if subdomain.transform === nothing &&
+       deg !== nothing &&
+       deg.verdict === :fold_caustic &&
+       isfinite(deg.fold_coherence) &&
+       deg.fold_coherence >= coh_threshold &&
+       norm(deg.fold_normal) > 0
+        return (1, _frame_from_normal(deg.fold_normal))
+    end
+    return (
+        pick_cut_dim_spectrum(
+            subdomain;
+            extended_degree = extended_degree,
+            axis_mass_floor = axis_mass_floor,
+        ),
+        nothing,
+    )
+end

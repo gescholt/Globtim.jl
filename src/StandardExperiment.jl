@@ -250,10 +250,19 @@ function solve_and_transform(
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
+    transform::Union{Nothing,Matrix{Float64}} = nothing,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
+
+    # Stage 2b: a rotated leaf (transform = Q) maps normalized ẑ → physical via
+    # z = center + Q·(ẑ .* sample_range). The HC system is solved in ẑ and CPs are
+    # lifted back through Q below. search_bounds assume an axis-aligned physical box,
+    # which is not axis-aligned in the rotated ẑ frame — raise rather than filter wrongly.
+    if transform !== nothing && search_bounds !== nothing
+        error("solve_and_transform: search_bounds with a non-identity transform is not supported (the physical search box is not axis-aligned in the rotated frame)")
+    end
 
     # Convert search_bounds from original domain to normalized [-1,1]^n
     normalized_search_bounds = if search_bounds !== nothing
@@ -279,10 +288,20 @@ function solve_and_transform(
         )
     end
 
-    # Transform from normalized [-1,1]^n to original domain coordinates
-    critical_points = [
-        sample_range .* [pt[i] for i in 1:dimension] .+ center for pt in raw_critical_points
-    ]
+    # Transform from normalized [-1,1]^n to original domain coordinates. Axis-aligned
+    # (transform === nothing) is the original byte-identical map; a rotated leaf lifts
+    # back through Q: z = center + Q·(ẑ .* sample_range) (Stage 2b).
+    critical_points = if transform === nothing
+        [
+            sample_range .* [pt[i] for i in 1:dimension] .+ center for
+            pt in raw_critical_points
+        ]
+    else
+        [
+            center .+ transform * (sample_range .* [pt[i] for i in 1:dimension]) for
+            pt in raw_critical_points
+        ]
+    end
 
     return critical_points, solve_time
 end
