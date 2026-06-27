@@ -57,6 +57,12 @@ Represents a subdomain in the adaptive refinement tree.
   `degeneracy_opts` kwarg of `adaptive_refine`/`two_phase_refine`). Classifies the leaf as
   `:sloppy_valley` / `:positive_dim_argmin` / `:fold_caustic` / `:multi_sheet` /
   `:isolated_morse`; gates the resolvers.
+- `transform::Union{Nothing, Matrix{Float64}}`: orthonormal rotation `Q` of the box's
+  coordinate frame (Stage 2 active-subspace projection). `nothing` ⇒ axis-aligned (the
+  default; every formula reduces byte-identically to `center .+ ẑ .* half_widths`). When
+  set, the box maps normalized `ẑ∈[-1,1]ⁿ` to physical `z = center + Q·(ẑ .* half_widths)`,
+  so the polynomial is fit in the rotated frame where the active subspace aligns with axes.
+  Children inherit the parent's `Q` (shared frame).
 """
 mutable struct Subdomain
     center::Vector{Float64}
@@ -84,6 +90,8 @@ mutable struct Subdomain
     per_dim_degree::Union{Nothing,Vector{Int}}
     # Stage 0: per-leaf degeneracy verdict; nothing until detect_degeneracy! runs.
     degeneracy::Union{Nothing,DegeneracyDiagnostics}
+    # Stage 2: orthonormal frame rotation Q; nothing ⇒ axis-aligned (default).
+    transform::Union{Nothing,Matrix{Float64}}
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -95,7 +103,9 @@ function Subdomain(
     parent_id::Union{Int,Nothing} = nothing,
     per_dim_degree::Union{Nothing,Vector{Int}} = nothing,
     degeneracy::Union{Nothing,DegeneracyDiagnostics} = nothing,
+    transform::Union{Nothing,Matrix{Float64}} = nothing,
 )
+    transform === nothing || _validate_transform(transform, length(center))
     return Subdomain(
         center,
         half_widths,
@@ -117,6 +127,7 @@ function Subdomain(
         NaN,                # spectral_concentration (uncomputed)
         per_dim_degree,     # jl9z.7: anisotropic per-axis degree (nothing ⇒ isotropic)
         degeneracy,         # Stage 0: degeneracy verdict (nothing until detected)
+        transform,          # Stage 2: frame rotation Q (nothing ⇒ axis-aligned)
     )
 end
 
@@ -128,6 +139,7 @@ function Subdomain(
     parent_id::Union{Int,Nothing} = nothing,
     per_dim_degree::Union{Nothing,Vector{Int}} = nothing,
     degeneracy::Union{Nothing,DegeneracyDiagnostics} = nothing,
+    transform::Union{Nothing,Matrix{Float64}} = nothing,
 )
     center = [(b[1] + b[2]) / 2 for b in bounds]
     half_widths = [(b[2] - b[1]) / 2 for b in bounds]
@@ -139,6 +151,7 @@ function Subdomain(
         parent_id = parent_id,
         per_dim_degree = per_dim_degree,
         degeneracy = degeneracy,
+        transform = transform,
     )
 end
 
@@ -168,6 +181,51 @@ anisotropy survives splits instead of being collapsed to `maximum(...)`.
 function leaf_degree_spec(subdomain::Subdomain)
     return subdomain.per_dim_degree === nothing ? subdomain.degree :
            (:one_d_per_dim, subdomain.per_dim_degree)
+end
+
+"""
+    _validate_transform(Q::Matrix{Float64}, n::Int)
+
+Stage 2: assert `Q` is a valid `n×n` orthonormal frame rotation. Raises (no silent
+fallback) on a wrong-size or non-orthonormal matrix — a bad rotation must surface,
+not silently degrade to a wrong-coordinate fit.
+"""
+function _validate_transform(Q::Matrix{Float64}, n::Int)
+    size(Q) == (n, n) ||
+        error("transform must be $n×$n, got $(size(Q))")
+    opnorm(Q' * Q - I) <= 1e-8 ||
+        error("transform must be orthonormal (‖QᵀQ − I‖ = $(opnorm(Q' * Q - I)))")
+    return nothing
+end
+
+"""
+    box_to_physical!(x, ẑ, sd::Subdomain) -> x
+
+Map a normalized point `ẑ ∈ [-1,1]ⁿ` to physical coordinates in-place. Axis-aligned
+(`sd.transform === nothing`) reduces byte-identically to `center .+ ẑ .* half_widths`;
+otherwise applies the frame rotation `z = center + Q·(ẑ .* half_widths)` (Stage 2).
+"""
+@inline function box_to_physical!(
+    x::AbstractVector{Float64},
+    ẑ::AbstractVector{Float64},
+    sd::Subdomain,
+)
+    if sd.transform === nothing
+        @inbounds for d in eachindex(x)
+            x[d] = sd.center[d] + ẑ[d] * sd.half_widths[d]
+        end
+    else
+        Q = sd.transform
+        n = length(x)
+        @inbounds for r in 1:n
+            acc = 0.0
+            for c in 1:n
+                acc += Q[r, c] * (ẑ[c] * sd.half_widths[c])
+            end
+            x[r] = sd.center[r] + acc
+        end
+    end
+    return x
 end
 
 """
@@ -429,6 +487,10 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
     inherited_per_dim =
         subdomain.per_dim_degree === nothing ? nothing : copy(subdomain.per_dim_degree)
 
+    # Stage 2: children inherit the parent's frame rotation Q (shared, read-only).
+    # A shared frame keeps the per-dimension sample-reuse remap (subdivision_reuse.jl)
+    # correct: it operates purely in the common ẑ coordinates, and Q enters only at
+    # the f-evaluation seam (box_to_physical!).
     child_left = Subdomain(
         left_center,
         left_half_widths,
@@ -436,6 +498,7 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
         degree = subdomain.degree,
         parent_id = nothing,
         per_dim_degree = inherited_per_dim,
+        transform = subdomain.transform,
     )  # parent_id set by update_tree!
     child_right = Subdomain(
         right_center,
@@ -445,6 +508,7 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
         parent_id = nothing,
         per_dim_degree =
             inherited_per_dim === nothing ? nothing : copy(inherited_per_dim),
+        transform = subdomain.transform,
     )
 
     return (child_left, child_right)
@@ -690,6 +754,10 @@ function estimate_subdomain_error(
     # leaf at the same K is reused. RNG is per-leaf-deterministic when
     # `rng_seed` is supplied (the audit driver derives one from cell id).
     if sampling === :christoffel
+        # Stage 2: the christoffel sampler has its own box→physical mapping that is
+        # not yet rotation-aware. Raise rather than silently fit in the wrong frame.
+        subdomain.transform === nothing ||
+            error("christoffel sampling + a non-identity subdomain.transform is not supported yet (Stage 2 rotation handles the tensor path only)")
         if use_cache &&
            subdomain.polynomial !== nothing &&
            subdomain.samples !== nothing &&
@@ -851,11 +919,11 @@ function estimate_subdomain_error(
                 for k in chunk_start:chunk_end
                     src_i = eval_sample_indices[k]
                     dst_i = rows_to_eval[k]
-                    @inbounds for d in 1:n_dim
-                        x_buf[d] =
-                            subdomain.center[d] +
-                            eval_sample_source[src_i, d] * subdomain.half_widths[d]
-                    end
+                    box_to_physical!(
+                        x_buf,
+                        view(eval_sample_source, src_i, :),
+                        subdomain,
+                    )
                     f_values[dst_i] = f(x_buf)
                 end
             end
@@ -867,11 +935,7 @@ function estimate_subdomain_error(
             eval_progress !== nothing && eval_progress(k, n_eval)
             src_i = eval_sample_indices[k]
             dst_i = rows_to_eval[k]
-            @inbounds for d in 1:n_dim
-                x_physical[d] =
-                    subdomain.center[d] +
-                    eval_sample_source[src_i, d] * subdomain.half_widths[d]
-            end
+            box_to_physical!(x_physical, view(eval_sample_source, src_i, :), subdomain)
             f_values[dst_i] = f(x_physical)
         end
     end

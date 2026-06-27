@@ -210,7 +210,13 @@ export Subdomain,
     penalty_barrier_detector,
     flat_barrier_detector,  # yhta: penalty/flat-barrier leaf-masking detectors
     DegeneracyDiagnostics,
-    detect_degeneracy!  # Stage 0: per-leaf degeneracy detector
+    detect_degeneracy!,  # Stage 0: per-leaf degeneracy detector
+    box_to_physical!,
+    gradient_covariance,
+    active_subspace,
+    anisotropic_degree_from_spectrum,
+    rotate_to_active_frame!,
+    fold_normal_coherence  # Stage 2: active-subspace rotation resolver
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -293,6 +299,7 @@ include("per_cut_predicate.jl") #Per-cut-direction predicate (4vtd.3)
 include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector (4vtd.5)
 include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)
 include("degeneracy_detector.jl") # Stage 0: per-leaf degeneracy classifier (active subspace / fold / Hessian)
+include("active_subspace.jl") # Stage 2: active-subspace rotation resolver (gradient covariance / rotate_to_active_frame!)
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
