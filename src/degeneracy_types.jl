@@ -31,8 +31,15 @@ Per-leaf verdict + the raw signals it was derived from (bead: degeneracy detecto
 - `active_eigenvalues::Vector{Float64}`: energy-normalized eigenvalues (descending)
   of the active-subspace matrix `C = mean(g̃ g̃ᵀ)` over box-normalized gradients
   `g̃ = ∇ₓp .* half_widths`. Sum to 1.
-- `active_dim_95::Int`: number of leading directions holding ≥95% of gradient energy.
-- `effective_dim::Int`: same at the (configurable, default 99%) cumulative threshold.
+- `active_dim_95::Int`: number of leading directions holding ≥95% of gradient energy
+  (a fixed cumulative-energy cutoff, kept for audit alongside the adaptive estimate).
+- `effective_dim::Int`: the THRESHOLD-FREE adaptive effective dimension — `round` of the
+  participation ratio `(Σλ)²/Σλ²` of the active spectrum (see
+  `spectral_effective_dimension`). This is what the verdict's sloppy/active-dimension
+  test uses, so it no longer flips on an arbitrary 0.90-vs-0.95 energy threshold. The
+  continuous participation/entropy/gap estimators and an `:dim_ambiguous` flag (set when
+  the spectrum is a gapless sloppy ramp) live in `signals`; the legacy cum-99 cutoff is
+  `signals[:active_dim_99]`.
 - `active_directions::Matrix{Float64}`: eigenvectors of `C` (columns, descending),
   in the box-normalized frame. The leading columns span the active subspace.
 - `fold_coherence::Float64`: leading-eigenvalue fraction of `Σ ĝ ĝᵀ` over the
@@ -46,7 +53,10 @@ Per-leaf verdict + the raw signals it was derived from (bead: degeneracy detecto
 - `cluster_intrinsic_dim::Int`: PCA rank of the supplied critical-point cluster
   (a "necklace" along a curve → 1, a surface → 2); `-1` when <2 CPs were provided.
 - `signals::Dict{Symbol,Float64}`: raw scores for audit (`:spike_ratio`,
-  `:median_grad`, `:p99_grad`, `:rel_l2`, `:n_points`, …).
+  `:median_grad`, `:p99_grad`, `:rel_l2`, `:n_points`, the effective-dimension
+  estimators `:eff_dim_pr`/`:eff_dim_entropy`/`:eff_dim_gap`/`:gap_dominance`, the
+  `:dim_ambiguous` flag, the legacy `:active_dim_99`, and the non-finite gradient
+  drop counts `:grad_used`/`:grad_dropped` (0 for the default polynomial source), …).
 """
 struct DegeneracyDiagnostics
     verdict::Symbol

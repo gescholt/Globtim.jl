@@ -41,6 +41,7 @@ end
         diag = detect_degeneracy!(sd)
         @test diag.verdict == :isolated_morse
         @test diag.active_dim_95 == 2          # both directions carry energy
+        @test diag.effective_dim == 2          # adaptive (participation) rank == 2
         @test sd.degeneracy === diag           # stored on the leaf
     end
 
@@ -51,6 +52,12 @@ end
         @test diag.active_dim_95 == 1
         # active-subspace energy is almost all in one direction (D3)
         @test diag.active_eigenvalues[1] > 0.99
+        # the adaptive effective dimension agrees and the estimators are surfaced
+        @test diag.effective_dim == 1
+        @test diag.signals[:eff_dim_pr] < 1.5
+        @test haskey(diag.signals, :eff_dim_entropy)
+        @test haskey(diag.signals, :gap_dominance)
+        @test diag.signals[:dim_ambiguous] in (0.0, 1.0)
     end
 
     @testset "verdict: fold_caustic (poor fit + coherent non-axis sheet)" begin
@@ -76,6 +83,28 @@ end
         @test diag.verdict == :positive_dim_argmin
         @test diag.hessian_n_zero == 1         # one flat (tangential) direction
         @test diag.cluster_intrinsic_dim >= 1
+    end
+
+    @testset "non-finite gradient rows are dropped (hardening)" begin
+        # A gradient matrix with two clean rows and two non-finite rows: the active
+        # subspace must average over the finite rows ONLY (eigen must not choke), and
+        # report the drop counts.
+        G = [1.0 0.0; 0.0 1.0; Inf 0.0; NaN NaN]
+        frac, _, _, _, used, dropped = Globtim._active_subspace(G, 0.95, 0.99)
+        @test used == 2
+        @test dropped == 2
+        @test all(isfinite, frac)
+        @test isapprox(sum(frac), 1.0; atol = 1e-10)
+
+        # fold coherence skips the non-finite rows and returns the FINITE norms only
+        # (a NaN norm would otherwise sort to the top under rev=true and poison M).
+        coh, _, normg = Globtim._fold_coherence(G, 1.0)
+        @test length(normg) == 2
+        @test all(isfinite, normg)
+        @test isfinite(coh)
+
+        # all rows non-finite ⇒ raises (no usable signal, no silent fallback)
+        @test_throws ErrorException Globtim._active_subspace([Inf 0.0; NaN 1.0], 0.95, 0.99)
     end
 
     @testset "opt-in safety: default off ⇒ no annotation, no extra f calls" begin

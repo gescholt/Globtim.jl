@@ -215,6 +215,7 @@ export Subdomain,
     box_to_physical!,
     gradient_covariance,
     active_subspace,
+    spectral_effective_dimension,
     anisotropic_degree_from_spectrum,
     rotate_to_active_frame!,
     fold_normal_coherence,  # Stage 2: active-subspace rotation resolver

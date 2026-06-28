@@ -68,7 +68,10 @@ end
 
 # Opt-in objective-gradient source: forward differences on `f` at the cached
 # samples, stepping toward the box interior so perturbations stay in-box. Needs
-# `(n_dim+1)` extra `f` calls per sample — only for the fold-suspect case.
+# `(n_dim+1)` extra `f` calls per sample — only for the fold-suspect case. Rows where
+# `f` is non-finite (infeasible parameters / failed ODE solve) are produced as-is and
+# dropped downstream by _finite_gradient_covariance / _fold_coherence (so a single
+# Inf/NaN cell never poisons the active-subspace covariance).
 function _objective_box_gradients(f, sd::Subdomain, h::Float64)
     samples = sd.samples
     n_pts, n_dim = size(samples)
@@ -91,10 +94,12 @@ function _objective_box_gradients(f, sd::Subdomain, h::Float64)
 end
 
 # Active-subspace spectrum of C = mean(g̃ g̃ᵀ): energy-normalized eigenvalues
-# (descending), eigenvectors, and the #dirs holding cum95 / cum_eff of the energy.
+# (descending), eigenvectors, the #dirs holding cum95 / cum_eff of the energy, and
+# the (used, dropped) row counts. The covariance is formed by _finite_gradient_covariance,
+# which drops non-finite gradient rows (objective Inf/NaN) so eigen does not choke.
 function _active_subspace(G::AbstractMatrix{Float64}, cum95::Float64, cum_eff::Float64)
     n_dim = size(G, 2)
-    C = (G' * G) ./ max(size(G, 1), 1)
+    C, used, dropped = _finite_gradient_covariance(G)
     ev = eigen(Symmetric(Matrix(C)))
     order = sortperm(ev.values; rev = true)
     λ = max.(ev.values[order], 0.0)
@@ -104,23 +109,32 @@ function _active_subspace(G::AbstractMatrix{Float64}, cum95::Float64, cum_eff::F
     cum = cumsum(frac)
     a95 = something(findfirst(>=(cum95), cum), n_dim)
     aeff = something(findfirst(>=(cum_eff), cum), n_dim)
-    return frac, Matrix(V), a95, aeff
+    return frac, Matrix(V), a95, aeff, used, dropped
 end
 
 # Fold-normal coherence among the top-‖g̃‖ points: leading-eigenvalue fraction of
-# Σ ĝ ĝᵀ (∈ [1/n, 1]; 1 = single flat sheet) and the dominant fold normal.
-# Also returns the per-point ‖g̃‖ for the spike statistics.
+# Σ ĝ ĝᵀ (∈ [1/n, 1]; 1 = single flat sheet) and the dominant fold normal. Rows with
+# a non-finite gradient (objective Inf/NaN) are skipped entirely — otherwise a NaN
+# norm would sort to the top under rev=true and poison M. The returned ‖g̃‖ vector
+# holds the FINITE norms only, so the caller's spike statistics stay clean.
 function _fold_coherence(G::AbstractMatrix{Float64}, topq::Float64)
     n_pts, n_dim = size(G)
-    normg = [norm(@view G[i, :]) for i in 1:n_pts]
+    idx = Int[]
+    normg = Float64[]
+    @inbounds for i in 1:n_pts
+        all(isfinite, @view G[i, :]) || continue
+        push!(idx, i)
+        push!(normg, norm(@view G[i, :]))
+    end
+    isempty(normg) && return (NaN, zeros(n_dim), normg)
     order = sortperm(normg; rev = true)
-    ntop = max(1, round(Int, topq * n_pts))
-    top = order[1:min(ntop, n_pts)]
+    ntop = max(1, round(Int, topq * length(normg)))
+    top = order[1:min(ntop, length(normg))]
     M = zeros(n_dim, n_dim)
     cnt = 0
-    @inbounds for i in top
-        normg[i] <= 0 && continue
-        u = (@view G[i, :]) ./ normg[i]
+    @inbounds for j in top
+        normg[j] <= 0 && continue
+        u = (@view G[idx[j], :]) ./ normg[j]
         M .+= u * u'
         cnt += 1
     end
@@ -193,9 +207,12 @@ function _cluster_intrinsic_dim(
 end
 
 # The 5-way verdict (+ :undetermined). See degeneracy_types.jl for the taxonomy.
+# The sloppy/active-dimension test is driven by `r_eff`, the threshold-free adaptive
+# effective dimension (spectral_effective_dimension.n_round), NOT the fixed-cutoff
+# a95 — so the verdict no longer flips on an arbitrary 0.90-vs-0.95 energy threshold.
 function _degeneracy_verdict(
     n_dim::Int,
-    a95::Int,
+    r_eff::Int,
     coh::Float64,
     spike::Float64,
     rel_l2::Float64,
@@ -221,8 +238,9 @@ function _degeneracy_verdict(
         return coherent ? :fold_caustic : :multi_sheet
     end
     # 4. smooth + active subspace collapses ⇒ sloppy valley (isolated argmin,
-    #    near-flat directions). This is the CR3BP case.
-    if a95 <= k_sloppy
+    #    near-flat directions). This is the CR3BP case. The collapse is measured by
+    #    the adaptive effective dimension, not a fixed energy cutoff.
+    if r_eff <= k_sloppy
         return :sloppy_valley
     end
     # 5. full-rank, smooth ⇒ ordinary isolated Morse structure.
@@ -288,7 +306,8 @@ function detect_degeneracy!(
         (gradient_source === :objective && f !== nothing) ?
         _objective_box_gradients(f, sd, fd_h) : _leaf_box_gradients(sd)
 
-    frac, V, a95, aeff = _active_subspace(G, cum95, cum_eff)
+    frac, V, a95, aeff, grad_used, grad_dropped = _active_subspace(G, cum95, cum_eff)
+    eff = spectral_effective_dimension(frac)        # threshold-free effective dimension
     coh, normal, normg = _fold_coherence(G, topq)
     med = isempty(normg) ? 0.0 : median(normg)
     p99 = isempty(normg) ? 0.0 : quantile(normg, 0.99)
@@ -313,7 +332,7 @@ function detect_degeneracy!(
     cdim = cps === nothing ? -1 : _cluster_intrinsic_dim(cps; rel_thresh = cluster_rel_thresh)
 
     verdict = _degeneracy_verdict(
-        n_dim, a95, coh, spike, rel_l2, n_zero, cdim;
+        n_dim, eff.n_round, coh, spike, rel_l2, n_zero, cdim;
         k_sloppy = cld(n_dim, 2),
         coh_threshold = coh_threshold,
         spike_threshold = spike_threshold,
@@ -326,9 +345,22 @@ function detect_degeneracy!(
         :p99_grad => p99,
         :rel_l2 => rel_l2,
         :n_points => Float64(size(G, 1)),
+        # threshold-free effective-dimension estimators (see spectral_effective_dimension)
+        :eff_dim_pr => eff.participation,
+        :eff_dim_entropy => eff.entropy,
+        :eff_dim_gap => Float64(eff.gap_dim),
+        :gap_dominance => eff.gap_dominance,
+        :dim_ambiguous => eff.ambiguous ? 1.0 : 0.0,
+        :active_dim_99 => Float64(aeff),   # legacy cum-99 cutoff, kept for audit
+        # gradient rows that entered the covariance vs were dropped as non-finite
+        # (objective Inf/NaN); for the default :polynomial source this is always 0.
+        :grad_used => Float64(grad_used),
+        :grad_dropped => Float64(grad_dropped),
     )
+    # `effective_dim` now carries the ADAPTIVE rank (round of the participation ratio),
+    # not the old fixed cum-99 cutoff (which moved to signals[:active_dim_99]).
     sd.degeneracy = DegeneracyDiagnostics(
-        verdict, frac, a95, aeff, V, coh, normal, n_zero, hcond, cdim, signals,
+        verdict, frac, a95, eff.n_round, V, coh, normal, n_zero, hcond, cdim, signals,
     )
     return sd.degeneracy
 end
