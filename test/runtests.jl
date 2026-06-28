@@ -186,6 +186,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_oblique_cut.jl") do
     include("test_oblique_cut.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_manifold_resolve.jl") do
+    include("test_manifold_resolve.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_mode_spectrum.jl") do
     include("test_mode_spectrum.jl")
 end

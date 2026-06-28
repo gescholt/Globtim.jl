@@ -217,7 +217,9 @@ export Subdomain,
     active_subspace,
     anisotropic_degree_from_spectrum,
     rotate_to_active_frame!,
-    fold_normal_coherence  # Stage 2: active-subspace rotation resolver
+    fold_normal_coherence,  # Stage 2: active-subspace rotation resolver
+    ManifoldResult,
+    resolve_positive_dim_argmin  # Stage 4: positive-dim argmin manifold resolver
 
 # Timer for performance tracking
 # export _TO  # Internal - users don't need direct access
@@ -301,6 +303,7 @@ include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector (
 include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)
 include("degeneracy_detector.jl") # Stage 0: per-leaf degeneracy classifier (active subspace / fold / Hessian)
 include("active_subspace.jl") # Stage 2: active-subspace rotation resolver (gradient covariance / rotate_to_active_frame!)
+include("manifold_resolve.jl") # Stage 4: positive-dim argmin resolver (regularize-to-Morse trace / symmetry quotient)
 include("error_handling.jl") #Comprehensive error handling framework
 include("validation.jl") #Unified validation framework (consolidates ValidationBoundaries, PipelineErrorBoundaries, PipelineDefenseIntegration)
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
