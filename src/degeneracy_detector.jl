@@ -165,18 +165,31 @@ function _poly_hessian_signature(
     H = zeros(n, n)
     f0 = _peval1(poly, z)
     for k in 1:n
-        zp = copy(z); zp[k] += h
-        zm = copy(z); zm[k] -= h
+        zp = copy(z)
+        zp[k] += h
+        zm = copy(z)
+        zm[k] -= h
         H[k, k] = (_peval1(poly, zp) - 2 * f0 + _peval1(poly, zm)) / h^2
     end
     for k in 1:n, l in (k+1):n
-        zpp = copy(z); zpp[k] += h; zpp[l] += h
-        zpm = copy(z); zpm[k] += h; zpm[l] -= h
-        zmp = copy(z); zmp[k] -= h; zmp[l] += h
-        zmm = copy(z); zmm[k] -= h; zmm[l] -= h
-        H[k, l] = H[l, k] =
-            (_peval1(poly, zpp) - _peval1(poly, zpm) - _peval1(poly, zmp) +
-             _peval1(poly, zmm)) / (4 * h^2)
+        zpp = copy(z)
+        zpp[k] += h
+        zpp[l] += h
+        zpm = copy(z)
+        zpm[k] += h
+        zpm[l] -= h
+        zmp = copy(z)
+        zmp[k] -= h
+        zmp[l] += h
+        zmm = copy(z)
+        zmm[k] -= h
+        zmm[l] -= h
+        H[k, l] =
+            H[l, k] =
+                (
+                    _peval1(poly, zpp) - _peval1(poly, zpm) - _peval1(poly, zmp) +
+                    _peval1(poly, zmm)
+                ) / (4 * h^2)
     end
     eig = sort(eigvals(Symmetric(H)))
     effective_tol =
@@ -193,10 +206,7 @@ end
 
 # Intrinsic dimension of a critical-point cluster via PCA (SVD of the centered
 # coordinate matrix). A curve of minimizers → 1, a surface → 2. -1 if <2 points.
-function _cluster_intrinsic_dim(
-    cps::Vector{Vector{Float64}};
-    rel_thresh::Float64 = 0.1,
-)
+function _cluster_intrinsic_dim(cps::Vector{Vector{Float64}}; rel_thresh::Float64 = 0.1)
     length(cps) < 2 && return -1
     X = permutedims(reduce(hcat, cps))     # (n_cps × n_dim)
     μ = vec(mean(X; dims = 1))
@@ -296,8 +306,17 @@ function detect_degeneracy!(
     # No fit / no samples → nothing to analyze.
     if sd.polynomial === nothing || sd.samples === nothing || size(sd.samples, 1) == 0
         sd.degeneracy = DegeneracyDiagnostics(
-            :undetermined, Float64[], 0, 0, zeros(n_dim, 0), NaN, zeros(n_dim),
-            -1, NaN, -1, Dict{Symbol,Float64}(),
+            :undetermined,
+            Float64[],
+            0,
+            0,
+            zeros(n_dim, 0),
+            NaN,
+            zeros(n_dim),
+            -1,
+            NaN,
+            -1,
+            Dict{Symbol,Float64}(),
         )
         return sd.degeneracy
     end
@@ -323,16 +342,25 @@ function detect_degeneracy!(
         to_norm(c) = (c .- sd.center) ./ sd.half_widths
         best = argmin([_peval1(sd.polynomial, to_norm(c)) for c in cps])
         sig = _poly_hessian_signature(
-            sd.polynomial, to_norm(cps[best]);
-            tol = hessian_tol, relative_tol = hessian_relative_tol,
+            sd.polynomial,
+            to_norm(cps[best]);
+            tol = hessian_tol,
+            relative_tol = hessian_relative_tol,
         )
         n_zero = sig.n_zero
         hcond = sig.cond
     end
-    cdim = cps === nothing ? -1 : _cluster_intrinsic_dim(cps; rel_thresh = cluster_rel_thresh)
+    cdim =
+        cps === nothing ? -1 : _cluster_intrinsic_dim(cps; rel_thresh = cluster_rel_thresh)
 
     verdict = _degeneracy_verdict(
-        n_dim, eff.n_round, coh, spike, rel_l2, n_zero, cdim;
+        n_dim,
+        eff.n_round,
+        coh,
+        spike,
+        rel_l2,
+        n_zero,
+        cdim;
         k_sloppy = cld(n_dim, 2),
         coh_threshold = coh_threshold,
         spike_threshold = spike_threshold,
@@ -360,7 +388,17 @@ function detect_degeneracy!(
     # `effective_dim` now carries the ADAPTIVE rank (round of the participation ratio),
     # not the old fixed cum-99 cutoff (which moved to signals[:active_dim_99]).
     sd.degeneracy = DegeneracyDiagnostics(
-        verdict, frac, a95, eff.n_round, V, coh, normal, n_zero, hcond, cdim, signals,
+        verdict,
+        frac,
+        a95,
+        eff.n_round,
+        V,
+        coh,
+        normal,
+        n_zero,
+        hcond,
+        cdim,
+        signals,
     )
     return sd.degeneracy
 end

@@ -191,8 +191,7 @@ fallback) on a wrong-size or non-orthonormal matrix — a bad rotation must surf
 not silently degrade to a wrong-coordinate fit.
 """
 function _validate_transform(Q::Matrix{Float64}, n::Int)
-    size(Q) == (n, n) ||
-        error("transform must be $n×$n, got $(size(Q))")
+    size(Q) == (n, n) || error("transform must be $n×$n, got $(size(Q))")
     opnorm(Q' * Q - I) <= 1e-8 ||
         error("transform must be orthonormal (‖QᵀQ − I‖ = $(opnorm(Q' * Q - I)))")
     return nothing
@@ -511,8 +510,7 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
         depth = subdomain.depth + 1,
         degree = subdomain.degree,
         parent_id = nothing,
-        per_dim_degree =
-            inherited_per_dim === nothing ? nothing : copy(inherited_per_dim),
+        per_dim_degree = inherited_per_dim === nothing ? nothing : copy(inherited_per_dim),
         transform = subdomain.transform,
     )
 
@@ -692,8 +690,7 @@ and `(:one_d_for_all, d)` specs stay isotropic (returns `nothing`), preserving t
 total-degree basis and byte-identical default behavior.
 """
 _root_per_dim_degree(degree) =
-    (degree isa Tuple && degree[1] === :one_d_per_dim) ? collect(Int.(degree[2])) :
-    nothing #==============================================================================#
+    (degree isa Tuple && degree[1] === :one_d_per_dim) ? collect(Int.(degree[2])) : nothing #==============================================================================#
 
 #                      ERROR ESTIMATION                                         #
 
@@ -761,8 +758,9 @@ function estimate_subdomain_error(
     if sampling === :christoffel
         # Stage 2: the christoffel sampler has its own box→physical mapping that is
         # not yet rotation-aware. Raise rather than silently fit in the wrong frame.
-        subdomain.transform === nothing ||
-            error("christoffel sampling + a non-identity subdomain.transform is not supported yet (Stage 2 rotation handles the tensor path only)")
+        subdomain.transform === nothing || error(
+            "christoffel sampling + a non-identity subdomain.transform is not supported yet (Stage 2 rotation handles the tensor path only)",
+        )
         if use_cache &&
            subdomain.polynomial !== nothing &&
            subdomain.samples !== nothing &&
@@ -924,11 +922,7 @@ function estimate_subdomain_error(
                 for k in chunk_start:chunk_end
                     src_i = eval_sample_indices[k]
                     dst_i = rows_to_eval[k]
-                    box_to_physical!(
-                        x_buf,
-                        view(eval_sample_source, src_i, :),
-                        subdomain,
-                    )
+                    box_to_physical!(x_buf, view(eval_sample_source, src_i, :), subdomain)
                     f_values[dst_i] = f(x_buf)
                 end
             end
@@ -1351,8 +1345,7 @@ function process_subdomain(
     # is what actually drives the fit so anisotropy is no longer collapsed away.
     n_dim = length(subdomain.center)
     effective_spec =
-        subdomain.per_dim_degree !== nothing ?
-        (:one_d_per_dim, subdomain.per_dim_degree) :
+        subdomain.per_dim_degree !== nothing ? (:one_d_per_dim, subdomain.per_dim_degree) :
         (subdomain.degree > 0 ? subdomain.degree : degree)
     effective_degree = maximum(_extract_per_dim_degrees(effective_spec, n_dim))
     subdomain.degree = effective_degree
@@ -1856,8 +1849,7 @@ function adaptive_refine(
             # honor an inherited anisotropic per-dim spec; otherwise fall back to
             # the caller's `degree` (byte-identical to the old root_degree path).
             leaf_spec =
-                sd.per_dim_degree !== nothing ?
-                (:one_d_per_dim, sd.per_dim_degree) : degree
+                sd.per_dim_degree !== nothing ? (:one_d_per_dim, sd.per_dim_degree) : degree
             sd.degree = maximum(_extract_per_dim_degrees(leaf_spec, length(sd.center)))
             estimate_subdomain_error(
                 f,
@@ -2307,8 +2299,7 @@ function two_phase_refine(
             # jl9z.7: honor an inherited anisotropic per-dim spec (parity with
             # adaptive_refine's finalize); else fall back to the caller's `degree`.
             leaf_spec =
-                sd.per_dim_degree !== nothing ?
-                (:one_d_per_dim, sd.per_dim_degree) : degree
+                sd.per_dim_degree !== nothing ? (:one_d_per_dim, sd.per_dim_degree) : degree
             sd.degree = maximum(_extract_per_dim_degrees(leaf_spec, length(sd.center)))
             estimate_subdomain_error(
                 f,

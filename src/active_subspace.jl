@@ -25,11 +25,11 @@ using Base.Threads
 function _cell_centers(n_dim::Int, n_cells::Int)
     ax = [-1.0 + 2.0 * (i - 0.5) / n_cells for i in 1:n_cells]
     pts = Vector{Vector{Float64}}(undef, n_cells^n_dim)
-    @inbounds for lin in 0:(n_cells^n_dim - 1)
+    @inbounds for lin in 0:(n_cells^n_dim-1)
         r = lin
         p = Vector{Float64}(undef, n_dim)
         for d in 1:n_dim
-            p[d] = ax[r % n_cells + 1]
+            p[d] = ax[r%n_cells+1]
             r ÷= n_cells
         end
         pts[lin+1] = p
@@ -107,7 +107,8 @@ the drop counts programmatically.
 function gradient_covariance(f, sd::Subdomain; n_cells::Int = 5, h::Float64 = 0.01)
     G = _objective_cell_gradients(f, sd, n_cells, h)
     C, used, dropped = _finite_gradient_covariance(G)
-    dropped > 0 && @warn "gradient_covariance: dropped $dropped/$(used + dropped) non-finite gradient samples (objective Inf/NaN on infeasible cells)"
+    dropped > 0 &&
+        @warn "gradient_covariance: dropped $dropped/$(used + dropped) non-finite gradient samples (objective Inf/NaN on infeasible cells)"
     return C
 end
 
@@ -169,12 +170,26 @@ function spectral_effective_dimension(
 )
     λ = max.(float.(collect(eigenvalues)), 0.0)
     n = length(λ)
-    n == 0 && return (participation = 0.0, entropy = 0.0, gap_dim = 0,
-        gap_log_ratio = 0.0, gap_dominance = 1.0, n_round = 0, ambiguous = true)
+    n == 0 && return (
+        participation = 0.0,
+        entropy = 0.0,
+        gap_dim = 0,
+        gap_log_ratio = 0.0,
+        gap_dominance = 1.0,
+        n_round = 0,
+        ambiguous = true,
+    )
     tot = sum(λ)
     if tot <= 0   # no gradient signal anywhere ⇒ degenerate; report full dim, flag it
-        return (participation = Float64(n), entropy = Float64(n), gap_dim = n,
-            gap_log_ratio = 0.0, gap_dominance = 1.0, n_round = n, ambiguous = true)
+        return (
+            participation = Float64(n),
+            entropy = Float64(n),
+            gap_dim = n,
+            gap_log_ratio = 0.0,
+            gap_dominance = 1.0,
+            n_round = n,
+            ambiguous = true,
+        )
     end
     p = λ ./ tot
     participation = 1.0 / sum(abs2, p)              # Σp = 1 ⇒ PR = 1/Σp²
@@ -185,8 +200,15 @@ function spectral_effective_dimension(
     entropy = exp(H)
     n_round = clamp(round(Int, participation), 1, n)
     if n == 1
-        return (participation = participation, entropy = entropy, gap_dim = 1,
-            gap_log_ratio = 0.0, gap_dominance = 1.0, n_round = 1, ambiguous = false)
+        return (
+            participation = participation,
+            entropy = entropy,
+            gap_dim = 1,
+            gap_log_ratio = 0.0,
+            gap_dominance = 1.0,
+            n_round = 1,
+            ambiguous = false,
+        )
     end
     # Log-gaps between consecutive eigenvalues (floored so a hard zero gives a large
     # but finite gap = a clean rank cutoff there, not Inf).
@@ -204,9 +226,15 @@ function spectral_effective_dimension(
     med = isempty(others) ? 0.0 : median(others)
     gap_dominance = med > 0 ? gap_log_ratio / med : Inf
     ambiguous = (abs(participation - gap_dim) > 1.0) || (gap_dominance < gap_dominance_min)
-    return (participation = participation, entropy = entropy, gap_dim = gap_dim,
-        gap_log_ratio = gap_log_ratio, gap_dominance = gap_dominance,
-        n_round = n_round, ambiguous = ambiguous)
+    return (
+        participation = participation,
+        entropy = entropy,
+        gap_dim = gap_dim,
+        gap_log_ratio = gap_log_ratio,
+        gap_dominance = gap_dominance,
+        n_round = n_round,
+        ambiguous = ambiguous,
+    )
 end
 
 """
@@ -290,7 +318,8 @@ function rotate_to_active_frame!(
     n = length(sd.center)
     G = _objective_cell_gradients(f, sd, n_cells, h)
     C, n_used, n_dropped = _finite_gradient_covariance(G)
-    n_dropped > 0 && @warn "rotate_to_active_frame!: dropped $n_dropped/$(n_used + n_dropped) non-finite gradient samples (objective Inf/NaN on infeasible cells)"
+    n_dropped > 0 &&
+        @warn "rotate_to_active_frame!: dropped $n_dropped/$(n_used + n_dropped) non-finite gradient samples (objective Inf/NaN on infeasible cells)"
     Q, frac, _ = active_subspace(C)
     # Eigenvectors are in the box's CURRENT frame; compose with it to land in the
     # original physical frame: physical = center + (T·Q)·(ẑ .* half_widths).
@@ -301,18 +330,32 @@ function rotate_to_active_frame!(
     if degree_mode === :adaptive
         eff = spectral_effective_dimension(frac)
         degs = anisotropic_degree_from_spectrum(
-            frac, deg_max; floor_deg = floor_deg, n_active = eff.n_round,
+            frac,
+            deg_max;
+            floor_deg = floor_deg,
+            n_active = eff.n_round,
         )
     elseif degree_mode === :cumulative
         degs = anisotropic_degree_from_spectrum(
-            frac, deg_max; floor_deg = floor_deg, active_cum = active_cum,
+            frac,
+            deg_max;
+            floor_deg = floor_deg,
+            active_cum = active_cum,
         )
     else
-        error("rotate_to_active_frame!: unknown degree_mode $(degree_mode) (expected :cumulative or :adaptive)")
+        error(
+            "rotate_to_active_frame!: unknown degree_mode $(degree_mode) (expected :cumulative or :adaptive)",
+        )
     end
     sd.per_dim_degree = degs
-    return (transform = Qtot, eigenvalues = frac, degrees = degs, effective_dim = eff,
-        n_used = n_used, n_dropped = n_dropped)
+    return (
+        transform = Qtot,
+        eigenvalues = frac,
+        degrees = degs,
+        effective_dim = eff,
+        n_used = n_used,
+        n_dropped = n_dropped,
+    )
 end
 
 """

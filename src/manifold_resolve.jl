@@ -99,7 +99,12 @@ function _trace_curve(
     strong_tol::Float64,
     close_tol::Float64,
 )
-    x = _project_to_manifold!(f, copy(x0); newton_iters = newton_iters, strong_tol = strong_tol)
+    x = _project_to_manifold!(
+        f,
+        copy(x0);
+        newton_iters = newton_iters,
+        strong_tol = strong_tol,
+    )
     start = copy(x)
     pts = [copy(x)]
     t = _manifold_tangent(f, x)
@@ -193,15 +198,27 @@ function resolve_positive_dim_argmin(
     f0 = f(x0)
 
     if symmetry_generator !== nothing
-        pts, closed = _trace_orbit(symmetry_generator, x0; step = step,
-            max_steps = max_steps, close_tol = ctol)
+        pts, closed = _trace_orbit(
+            symmetry_generator,
+            x0;
+            step = step,
+            max_steps = max_steps,
+            close_tol = ctol,
+        )
         source = :symmetry_quotient
     else
         kdim == 1 || error(
             "resolve_positive_dim_argmin: intrinsic dim $kdim ≥ 2 is not supported by the predictor-corrector path (global multi-chart coverage of a k≥2 manifold is an open problem — numerical irreducible decomposition / witness sets). Supply a symmetry_generator for an orbit, or restrict to curves.",
         )
-        pts, closed = _trace_curve(f, x0; step = step, max_steps = max_steps,
-            newton_iters = newton_iters, strong_tol = strong_tol, close_tol = ctol)
+        pts, closed = _trace_curve(
+            f,
+            x0;
+            step = step,
+            max_steps = max_steps,
+            newton_iters = newton_iters,
+            strong_tol = strong_tol,
+            close_tol = ctol,
+        )
         source = :epsilon_continuation
     end
 

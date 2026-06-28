@@ -261,7 +261,9 @@ function solve_and_transform(
     # lifted back through Q below. search_bounds assume an axis-aligned physical box,
     # which is not axis-aligned in the rotated ẑ frame — raise rather than filter wrongly.
     if transform !== nothing && search_bounds !== nothing
-        error("solve_and_transform: search_bounds with a non-identity transform is not supported (the physical search box is not axis-aligned in the rotated frame)")
+        error(
+            "solve_and_transform: search_bounds with a non-identity transform is not supported (the physical search box is not axis-aligned in the rotated frame)",
+        )
     end
 
     # Convert search_bounds from original domain to normalized [-1,1]^n
@@ -292,10 +294,7 @@ function solve_and_transform(
     # (transform === nothing) is the original byte-identical map; a rotated leaf lifts
     # back through Q: z = center + Q·(ẑ .* sample_range) (Stage 2b).
     critical_points = if transform === nothing
-        [
-            sample_range .* [pt[i] for i in 1:dimension] .+ center for
-            pt in raw_critical_points
-        ]
+        [sample_range .* [pt[i] for i in 1:dimension] .+ center for pt in raw_critical_points]
     else
         [
             center .+ transform * (sample_range .* [pt[i] for i in 1:dimension]) for
