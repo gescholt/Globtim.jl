@@ -67,77 +67,38 @@ function pick_cut_dim_spectrum(
     if subdomain.polynomial === nothing
         return 1
     end
-    rel_l2_squared =
-        isfinite(subdomain.relative_l2_error) ? subdomain.relative_l2_error^2 : NaN
-    spec = compute_mode_spectrum(
-        subdomain.polynomial;
-        extended_degree = extended_degree,
-        rel_l2_squared = rel_l2_squared,
-    )
+    spec = subdomain_mode_spectrum(subdomain; extended_degree = extended_degree)
+    return pick_cut_dim_spectrum(spec; axis_mass_floor = axis_mass_floor)
+end
+
+"""
+    pick_cut_dim_spectrum(spec::NamedTuple; axis_mass_floor) -> Int
+
+Spectrum-accepting method: same axis scoring, operating on a precomputed
+`compute_mode_spectrum` / `subdomain_mode_spectrum` result. The per-axis
+restriction is shared with `pick_strategy_per_axis` via `axis_shell_stats`
+(bead 8f4p.5.1 DR-INSTR).
+"""
+function pick_cut_dim_spectrum(spec::NamedTuple; axis_mass_floor::Real = 1e-12)
     n_dim = size(spec.modes, 2)
     n_dim == 0 && return 1
     isempty(spec.spectrum) && return 1
 
-    base_degree = spec.base_degree
-    eta_sq = abs2.(spec.spectrum)
-    n_modes = length(spec.spectrum)
-
+    stats = axis_shell_stats(spec)
     scores = fill(0.0, n_dim)
     for d in 1:n_dim
-        axis_total, decay =
-            _per_axis_total_and_decay(spec.modes, eta_sq, n_modes, d, base_degree)
-        if axis_total < axis_mass_floor
+        if stats[d].total < axis_mass_floor
             scores[d] = 0.0
-        elseif isnan(decay)
-            scores[d] = axis_total
+        elseif isnan(stats[d].decay)
+            scores[d] = stats[d].total
         else
-            scores[d] = -decay
+            scores[d] = -stats[d].decay
         end
     end
 
     # argmax with lowest-index tie-break (Base.argmax already returns the
     # first maximum, which equals the lowest index for equal values).
     return argmax(scores)
-end
-
-# Per-axis spectrum walker. Returns `(axis_total, decay)` where:
-#   axis_total = Σ η²_α over modes α with α[d] == |α|_∞ (axis-d-dominated).
-#   decay      = 0.5 · log(m(d+2) / m(d+4)) over those restricted shells,
-#                NaN when the noise-floor guard (shells d+2, d+4 together
-#                ≥ 1e-3 · axis_total) is not satisfied.
-#
-# Mirrors `_per_axis_verdict` (per_cut_predicate.jl) but emits the raw
-# spectrum quantities instead of a bump/split symbol so both predicates
-# share one definition of the per-axis restriction.
-function _per_axis_total_and_decay(
-    modes::AbstractMatrix{Int},
-    eta_sq::AbstractVector{Float64},
-    n_modes::Int,
-    d::Int,
-    base_degree::Int,
-)
-    n_dim = size(modes, 2)
-    axis_shell_mass = Dict{Int,Float64}()
-    axis_total = 0.0
-    @inbounds for j in 1:n_modes
-        max_a = 0
-        for k in 1:n_dim
-            v = Int(modes[j, k])
-            v > max_a && (max_a = v)
-        end
-        if Int(modes[j, d]) == max_a
-            axis_shell_mass[max_a] = get(axis_shell_mass, max_a, 0.0) + eta_sq[j]
-            axis_total += eta_sq[j]
-        end
-    end
-
-    m_dp2 = get(axis_shell_mass, base_degree + 2, 0.0)
-    m_dp4 = get(axis_shell_mass, base_degree + 4, 0.0)
-    decay_signal_meaningful = axis_total > 0 && (m_dp2 + m_dp4) >= 1e-3 * axis_total
-    decay =
-        (decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ? 0.5 * log(m_dp2 / m_dp4) : NaN
-
-    return axis_total, decay
 end
 
 """

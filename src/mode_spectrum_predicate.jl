@@ -89,13 +89,29 @@ function pick_strategy(
     if subdomain.polynomial === nothing
         return :bump
     end
-    rel_l2_squared =
-        isfinite(subdomain.relative_l2_error) ? subdomain.relative_l2_error^2 : NaN
-    spec = compute_mode_spectrum(
-        subdomain.polynomial;
-        extended_degree = extended_degree,
-        rel_l2_squared = rel_l2_squared,
+    spec = subdomain_mode_spectrum(subdomain; extended_degree = extended_degree)
+    return pick_strategy(
+        spec;
+        θ_decay = θ_decay,
+        θ_coverage = θ_coverage,
+        θ_concentration = θ_concentration,
     )
+end
+
+"""
+    pick_strategy(spec::NamedTuple; θ_decay, θ_coverage, θ_concentration) -> Symbol
+
+Spectrum-accepting method: same decision rule, operating on a precomputed
+`compute_mode_spectrum` / `subdomain_mode_spectrum` result. Callers that
+consult several predicates on the same leaf (the audit drivers — bead
+8f4p.5.1 DR-INSTR) compute the spectrum once and pass it here.
+"""
+function pick_strategy(
+    spec::NamedTuple;
+    θ_decay::Real = 0.0,
+    θ_coverage::Real = 0.005,
+    θ_concentration::Real = 0.5,
+)
     if isempty(spec.spectrum)
         return :bump
     end

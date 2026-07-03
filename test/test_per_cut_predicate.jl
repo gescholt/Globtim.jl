@@ -91,6 +91,60 @@ end
         @test cut_dim === nothing
     end
 
+    @testset "Test 6: spectrum-accepting methods match Subdomain methods (8f4p.5.1)" begin
+        # DR-INSTR contract: computing the spectrum once via
+        # subdomain_mode_spectrum and passing it to the spec-accepting methods
+        # must reproduce the Subdomain methods exactly — the audit drivers
+        # rely on this for the single-compute-per-predcall refactor.
+        f(x) = cheb_T(2, x[1]) + cheb_T(12, x[2])
+        sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
+        estimate_subdomain_error(f, sd, 6, basis = :chebyshev)
+
+        spec = Globtim.subdomain_mode_spectrum(sd)
+        @test Globtim.pick_strategy(spec) === pick_strategy(sd)
+        @test Globtim.pick_strategy_per_axis(spec) == Globtim.pick_strategy_per_axis(sd)
+        @test Globtim.pick_cut_dim_spectrum(spec) == Globtim.pick_cut_dim_spectrum(sd)
+
+        ls_spec = Globtim.pick_strategy_per_axis_lsfit(spec)
+        ls_sd = Globtim.pick_strategy_per_axis_lsfit(sd)
+        @test [r.verdict for r in ls_spec] == [r.verdict for r in ls_sd]
+        # isequal, not ==: no-signal axes carry rho = NaN by contract.
+        @test all(isequal(a.rho, b.rho) for (a, b) in zip(ls_spec, ls_sd))
+        @test all(isequal(a.slope, b.slope) for (a, b) in zip(ls_spec, ls_sd))
+        @test [r.axis_mass for r in ls_spec] == [r.axis_mass for r in ls_sd]
+
+        # axis_shell_stats consistency: per-axis totals equal the sum of the
+        # per-axis shell-mass tables, and every offender shell key exceeds
+        # the base degree.
+        stats = Globtim.axis_shell_stats(spec)
+        @test length(stats) == 2
+        for s in stats
+            @test isapprox(s.total, sum(values(s.shell_mass)); rtol = 1e-12)
+            @test all(k -> k > spec.base_degree, keys(s.shell_mass))
+        end
+        # On T_2(x) + T_12(y) at fit degree 6 the y-axis owns the shell-12
+        # residual: its restricted mass dominates the x-axis's.
+        @test stats[2].total > 10 * stats[1].total
+    end
+
+    @testset "Test 7: empty-spectrum fallbacks via subdomain_mode_spectrum" begin
+        # An unfitted leaf (polynomial === nothing) must yield the legacy
+        # all-:bump fallbacks through the spec path, sized to the leaf dim.
+        sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)])
+        spec = Globtim.subdomain_mode_spectrum(sd)
+        @test isempty(spec.spectrum)
+        @test size(spec.modes, 2) == 3
+        @test Globtim.pick_strategy(spec) === :bump
+        @test Globtim.pick_strategy_per_axis(spec) == [:bump, :bump, :bump]
+        @test Globtim.pick_cut_dim_spectrum(spec) == 1
+        ls = Globtim.pick_strategy_per_axis_lsfit(spec)
+        @test length(ls) == 3
+        @test all(r -> r.verdict === :bump && isnan(r.rho), ls)
+        stats = Globtim.axis_shell_stats(spec)
+        @test length(stats) == 3
+        @test all(s -> s.total == 0.0 && isnan(s.concentration) && isnan(s.decay), stats)
+    end
+
     @testset "Test 5: all-bump fallback agrees with global pick_strategy" begin
         # f = T_5(x) + T_5(y) fit at degree 4 — residual is exactly the two
         # T_5 contributions, each at shell d+1 = 5. Per-axis concentration = 1

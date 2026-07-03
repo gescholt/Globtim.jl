@@ -31,6 +31,8 @@ using Globtim:
     decide_action,
     pick_strategy_per_axis_lsfit,
     decide_action_lsfit,
+    subdomain_mode_spectrum,
+    axis_shell_stats,
     get_bounds
 using HomotopyContinuation  # weakdep activation; mirrors run_experiment.jl
 import JSON3
@@ -58,6 +60,10 @@ function load_audit_section(path::String)
         max_leaves   = Int(get(audit, "max_leaves", 64)),
         l2_tolerance = Float64(get(audit, "l2_tolerance", 1e-4)),
         max_depth    = Int(get(audit, "max_depth", 10)),
+        # DR-INSTR (8f4p.5.1): per-axis shell-mass tables in every predcall
+        # row. The scalar/vector spectrum fields are always logged; this
+        # switch only gates the (heavier) per-shell mass dictionaries.
+        log_mode_spectrum = Bool(get(audit, "log_mode_spectrum", true)),
     )
 end
 
@@ -72,9 +78,11 @@ end
 #
 #   E2 (LS-slope ρ_k predicate):
 #     - `predicate = "default" | "ls_slope"`             (default "default")
-#         "default"  → audit closure returns `pick_strategy(sd)` (unchanged)
-#         "ls_slope" → audit closure returns `decide_action_lsfit(...)`,
-#                      AND logs ρ_per_axis + slope_per_axis per leaf
+#         "default"  → audit closure returns the pick_strategy verdict (unchanged)
+#         "ls_slope" → audit closure returns `decide_action_lsfit(...)`
+#         Since DR-INSTR (8f4p.5.1) BOTH modes log the same row shape,
+#         including ρ_per_axis / slope_per_axis and the spectrum fields —
+#         the mode only selects which predicate drives subdivision.
 #     - `ls_slope_rho_threshold = 2.71828...`            (default exp(1.0))
 #     - `ls_slope_shell_mass_floor = 1e-14`              (default)
 #
@@ -183,84 +191,61 @@ end
 # after every record) so a timeout-killed job still leaves recoverable audit
 # data on disk. Final `predcall.jsonl` is written separately at end-of-run
 # with the `global_split_dim` backfill applied.
+#
+# DR-INSTR (bead 8f4p.5.1): ONE mode spectrum is computed per predicate call
+# and shared by all consumers — pick_strategy, pick_strategy_per_axis, and
+# pick_strategy_per_axis_lsfit (previously 2 independent compute_mode_spectrum
+# calls in default mode, 3 in ls_slope mode). Both modes now log the SAME row
+# shape, so predcall.jsonl is analyzable uniformly:
+#   - ls_verdicts / rho_per_axis / slope_per_axis / ls_action / ls_cut_dim
+#     (previously ls_slope-mode-only; the LS fit is a per-shell OLS on the
+#     already-computed spectrum, so logging it in default mode is free)
+#   - spec_base_degree / spec_extended_degree / spectral_concentration /
+#     shell_decay / window_coverage / dominant_mode (leaf-level spectrum)
+#   - axis_mass / concentration_per_axis / decay_per_axis (the 2-pt
+#     predicate's per-axis inputs — what jw9g.4 back-fits ρ_K from)
+#   - axis_shell_mass (per-axis {shell => η²-mass} tables; gated by
+#     `[audit] log_mode_spectrum` since it is the heavy part of the row)
+#
+# `mode = :default` returns the pick_strategy verdict (byte-identical
+# subdivision decisions to the historical audit path); `mode = :ls_slope`
+# returns the lsfit action.
+
+# JSON has no NaN/Inf literal — map non-finite floats to `null` so predcall
+# rows stay strictly parseable (a NaN ρ on a no-signal axis is data, not error).
+_json_num(x::Real) = isfinite(x) ? Float64(x) : nothing
+_json_vec(v) = Union{Float64,Nothing}[_json_num(x) for x in v]
 
 function make_perstep_audit_predicate(
     records::Vector{NamedTuple},
     partial_io::Union{IO, Nothing},
-    static_decoration::NamedTuple,
+    static_decoration::NamedTuple;
+    mode::Symbol = :default,
+    ρ_threshold::Float64 = exp(1.0),
+    shell_mass_floor::Float64 = 1e-14,
+    log_mode_spectrum::Bool = true,
 )
+    mode in (:default, :ls_slope) ||
+        error("audit predicate mode must be :default or :ls_slope, got :$mode")
     # adaptive_refine calls `predicate(subdomain)` from concurrent
     # Threads.@spawn tasks (see process_subdomain). The lock guards both the
     # records push! (Julia Vector push is not thread-safe) and the partial-IO
     # write (interleaved JSON would corrupt downstream parsers).
     lock = ReentrantLock()
     return function (sd::Subdomain)
-        g = pick_strategy(sd)
-        per_axis = pick_strategy_per_axis(sd)
-        action, cut_dim = decide_action(per_axis)
-        rec = (
-            bounds            = copy(get_bounds(sd)),
-            depth             = sd.depth,
-            degree            = sd.degree,
-            rel_l2            = sd.relative_l2_error,
-            global_verdict    = g,
-            per_axis_verdicts = collect(per_axis),
-            per_axis_action   = action,
-            per_axis_cut_dim  = cut_dim,
-            consulted_at      = :predicate_call,
-            global_split_dim  = nothing,
-        )
-        Base.@lock lock begin
-            push!(records, rec)
-            if partial_io !== nothing
-                JSON3.write(partial_io, merge(rec, static_decoration))
-                println(partial_io)
-                flush(partial_io)
-            end
-        end
-        return g  # byte-identical to baseline pick_strategy run
-    end
-end
+        spec = subdomain_mode_spectrum(sd)
+        stats = axis_shell_stats(spec)
 
-# ── E2 — LS-slope predicate variant (opt-in) ───────────────────────────────
-#
-# Same logging shape as `make_perstep_audit_predicate` PLUS new fields:
-#   - ls_verdicts::Vector{Symbol}         per-axis :bump / :split from LS-slope
-#   - rho_per_axis::Vector{Float64}       Bernstein-ρ estimate per axis (NaN
-#                                          when LS fit can't proceed)
-#   - slope_per_axis::Vector{Float64}     raw OLS slope per axis (NaN ditto)
-#   - ls_action::Symbol                   leaf-level action from decide_action_lsfit
-#   - ls_cut_dim::Union{Int,Nothing}      cut dim chosen by lsfit
-#
-# **Different from `make_perstep_audit_predicate`**: the returned action is
-# `ls_action` (the lsfit decision), NOT `pick_strategy(sd)`. This means the
-# audit driver's subdivision decisions are driven by the LS-slope estimator
-# in `predicate = "ls_slope"` mode. The default-mode closure above is
-# unchanged.
-function make_perstep_audit_predicate_lsfit(
-    records::Vector{NamedTuple},
-    partial_io::Union{IO, Nothing},
-    static_decoration::NamedTuple;
-    ρ_threshold::Float64,
-    shell_mass_floor::Float64,
-)
-    lock = ReentrantLock()
-    return function (sd::Subdomain)
-        # Run BOTH predicates so the legacy tally counters still work and the
-        # JSONL is forward-compatible. `g` and the 2-pt per-axis verdicts go in
-        # for cross-comparison; the lsfit-derived action drives subdivision.
-        g = pick_strategy(sd)
-        per_axis = pick_strategy_per_axis(sd)
+        g = pick_strategy(spec)
+        per_axis = pick_strategy_per_axis(spec)
         action_2pt, cut_dim_2pt = decide_action(per_axis)
         ls_results = pick_strategy_per_axis_lsfit(
-            sd;
+            spec;
             ρ_threshold = ρ_threshold,
             shell_mass_floor = shell_mass_floor,
         )
-        ls_verdicts = [r.verdict for r in ls_results]
-        rho_per_axis = [r.rho for r in ls_results]
-        slope_per_axis = [r.slope for r in ls_results]
         ls_action, ls_cut_dim = decide_action_lsfit(ls_results)
+
         rec = (
             bounds            = copy(get_bounds(sd)),
             depth             = sd.depth,
@@ -270,14 +255,26 @@ function make_perstep_audit_predicate_lsfit(
             per_axis_verdicts = collect(per_axis),
             per_axis_action   = action_2pt,
             per_axis_cut_dim  = cut_dim_2pt,
-            ls_verdicts       = ls_verdicts,
-            rho_per_axis      = rho_per_axis,
-            slope_per_axis    = slope_per_axis,
+            ls_verdicts       = [r.verdict for r in ls_results],
+            rho_per_axis      = _json_vec(r.rho for r in ls_results),
+            slope_per_axis    = _json_vec(r.slope for r in ls_results),
             ls_action         = ls_action,
             ls_cut_dim        = ls_cut_dim,
+            spec_base_degree  = spec.base_degree,
+            spec_extended_degree = spec.extended_degree,
+            spectral_concentration = _json_num(spec.spectral_concentration),
+            shell_decay       = _json_num(spec.shell_decay),
+            window_coverage   = _json_num(spec.window_coverage),
+            dominant_mode     = collect(spec.dominant_mode),
+            axis_mass         = _json_vec(s.total for s in stats),
+            concentration_per_axis = _json_vec(s.concentration for s in stats),
+            decay_per_axis    = _json_vec(s.decay for s in stats),
             consulted_at      = :predicate_call,
             global_split_dim  = nothing,
         )
+        if log_mode_spectrum
+            rec = merge(rec, (axis_shell_mass = [s.shell_mass for s in stats],))
+        end
         Base.@lock lock begin
             push!(records, rec)
             if partial_io !== nothing
@@ -286,9 +283,10 @@ function make_perstep_audit_predicate_lsfit(
                 flush(partial_io)
             end
         end
-        # LS-slope is the active predicate in this mode — return ls_action.
+        # :default returns the pick_strategy verdict (byte-identical to the
+        # baseline run); :ls_slope hands subdivision to the LS-slope action.
         # adaptive_refine wants :bump / :split / :done.
-        return ls_action
+        return mode === :ls_slope ? ls_action : g
     end
 end
 
@@ -361,6 +359,66 @@ function tally_predcalls(records::Vector{NamedTuple})
         n_pc_cut_dim_unknown   = n_pc_cut_dim_unknown,
         predcall_degree_histogram = deg_hist,
         predcall_depth_histogram  = depth_hist,
+    )
+end
+
+# ── DR-INSTR spectrum summary (8f4p.5.1 subtask 3) ─────────────────────────
+#
+# Per-run distribution mirror of the per-axis spectrum signals, written into
+# audit_summary.json so stage-2 can sanity-check calibration (θ_decay,
+# θ_concentration, ρ_threshold) without re-reading predcall.jsonl.
+
+function _quantiles5(v::Vector{Float64})
+    isempty(v) && return nothing
+    s = sort(v)
+    n = length(s)
+    q(p) = s[clamp(1 + round(Int, p * (n - 1)), 1, n)]
+    return (min = s[1], q25 = q(0.25), median = q(0.5), q75 = q(0.75), max = s[end])
+end
+
+function _collect_finite(records, field::Symbol)
+    vals = Float64[]
+    n_missing = 0
+    for r in records
+        for x in getproperty(r, field)
+            if x isa Float64
+                push!(vals, x)
+            else
+                n_missing += 1
+            end
+        end
+    end
+    return vals, n_missing
+end
+
+function summarize_spectrum(records::Vector{NamedTuple})
+    conc, conc_missing = _collect_finite(records, :concentration_per_axis)
+    decay, decay_missing = _collect_finite(records, :decay_per_axis)
+    rho, rho_missing = _collect_finite(records, :rho_per_axis)
+
+    # Histogram of per-axis concentration over 10 uniform bins on [0, 1].
+    conc_hist = zeros(Int, 10)
+    for c in conc
+        conc_hist[clamp(1 + floor(Int, c * 10), 1, 10)] += 1
+    end
+
+    return (
+        concentration_per_axis = (
+            hist_bins01 = conc_hist,
+            n_missing = conc_missing,
+            quantiles = _quantiles5(conc),
+        ),
+        decay_per_axis = (
+            n_nonpos = count(<=(0.0), decay),
+            n_pos = count(>(0.0), decay),
+            n_missing = decay_missing,
+            quantiles = _quantiles5(decay),
+        ),
+        rho_per_axis = (
+            n_below_e = count(<(exp(1.0)), rho),
+            n_missing = rho_missing,
+            quantiles = _quantiles5(rho),
+        ),
     )
 end
 
@@ -458,16 +516,16 @@ function main()
         l2_tolerance = audit_cfg.l2_tolerance,
     )
 
-    audit_pred = if sampling_cfg.predicate === :ls_slope
+    if sampling_cfg.predicate === :ls_slope
         println("  predicate: ls_slope  (ρ_threshold=$(sampling_cfg.ls_slope_rho_threshold), shell_mass_floor=$(sampling_cfg.ls_slope_shell_mass_floor))")
-        make_perstep_audit_predicate_lsfit(
-            records, partial_io, static_decoration;
-            ρ_threshold = sampling_cfg.ls_slope_rho_threshold,
-            shell_mass_floor = sampling_cfg.ls_slope_shell_mass_floor,
-        )
-    else
-        make_perstep_audit_predicate(records, partial_io, static_decoration)
     end
+    audit_pred = make_perstep_audit_predicate(
+        records, partial_io, static_decoration;
+        mode = sampling_cfg.predicate,
+        ρ_threshold = sampling_cfg.ls_slope_rho_threshold,
+        shell_mass_floor = sampling_cfg.ls_slope_shell_mass_floor,
+        log_mode_spectrum = audit_cfg.log_mode_spectrum,
+    )
 
     println("[heartbeat] adaptive_refine start: $(Dates.now())"); flush(stdout)
     t0 = time()
@@ -541,6 +599,7 @@ function main()
             n_predcall = length(records),
             wall_s     = wall,
             tally      = tally,
+            spectrum_summary = summarize_spectrum(records),
         ))
     end
 

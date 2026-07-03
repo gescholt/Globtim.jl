@@ -91,14 +91,33 @@ function pick_strategy_per_axis_lsfit(
             LSFitAxisResult(:bump, NaN, NaN, 0, 0.0) for _ in 1:length(subdomain.center)
         ]
     end
-
-    rel_l2_squared =
-        isfinite(subdomain.relative_l2_error) ? subdomain.relative_l2_error^2 : NaN
-    spec = compute_mode_spectrum(
-        subdomain.polynomial;
-        extended_degree = extended_degree,
-        rel_l2_squared = rel_l2_squared,
+    spec = subdomain_mode_spectrum(subdomain; extended_degree = extended_degree)
+    return pick_strategy_per_axis_lsfit(
+        spec;
+        ρ_threshold = ρ_threshold,
+        θ_concentration = θ_concentration,
+        axis_mass_floor = axis_mass_floor,
+        shell_mass_floor = shell_mass_floor,
     )
+end
+
+"""
+    pick_strategy_per_axis_lsfit(spec::NamedTuple; ρ_threshold, θ_concentration,
+                                 axis_mass_floor, shell_mass_floor)
+        -> Vector{LSFitAxisResult}
+
+Spectrum-accepting method: same LS-slope rule, operating on a precomputed
+`compute_mode_spectrum` / `subdomain_mode_spectrum` result. The offender-mode
+restriction is shared with `pick_strategy_per_axis` via `axis_shell_stats`
+(bead 8f4p.5.1 DR-INSTR).
+"""
+function pick_strategy_per_axis_lsfit(
+    spec::NamedTuple;
+    ρ_threshold::Real = exp(1.0),
+    θ_concentration::Real = 0.5,
+    axis_mass_floor::Real = 1e-12,
+    shell_mass_floor::Real = 1e-32,
+)
     n_dim = size(spec.modes, 2)
     if n_dim == 0
         return [LSFitAxisResult(:bump, NaN, NaN, 0, 0.0)]
@@ -106,81 +125,46 @@ function pick_strategy_per_axis_lsfit(
     if isempty(spec.spectrum)
         return [LSFitAxisResult(:bump, NaN, NaN, 0, 0.0) for _ in 1:n_dim]
     end
-
-    base_degree = spec.base_degree
-    eta_sq = abs2.(spec.spectrum)
-    n_modes = length(spec.spectrum)
-
-    out = Vector{LSFitAxisResult}(undef, n_dim)
-    for d in 1:n_dim
-        out[d] = _per_axis_lsfit_verdict(
-            spec.modes,
-            eta_sq,
-            n_modes,
-            d,
-            base_degree;
+    return [
+        _per_axis_lsfit_verdict(
+            stat,
+            spec.base_degree;
             ρ_threshold = ρ_threshold,
             θ_concentration = θ_concentration,
             mass_floor = axis_mass_floor,
             shell_mass_floor = shell_mass_floor,
-        )
-    end
-    return out
+        ) for stat in axis_shell_stats(spec)
+    ]
 end
 
 function _per_axis_lsfit_verdict(
-    modes::AbstractMatrix{Int},
-    eta_sq::AbstractVector{Float64},
-    n_modes::Int,
-    d::Int,
+    stat::NamedTuple,
     base_degree::Int;
     ρ_threshold::Real,
     θ_concentration::Real,
     mass_floor::Real,
     shell_mass_floor::Real,
 )
-    n_dim = size(modes, 2)
-    axis_shell_mass = Dict{Int,Float64}()
-    axis_total = 0.0
-    @inbounds for j in 1:n_modes
-        max_a = 0
-        for k in 1:n_dim
-            v = Int(modes[j, k])
-            if v > max_a
-                max_a = v
-            end
-        end
-        if Int(modes[j, d]) == max_a
-            axis_shell_mass[max_a] = get(axis_shell_mass, max_a, 0.0) + eta_sq[j]
-            axis_total += eta_sq[j]
-        end
+    if stat.total < mass_floor
+        return LSFitAxisResult(:bump, NaN, NaN, 0, stat.total)
     end
 
-    if axis_total < mass_floor
-        return LSFitAxisResult(:bump, NaN, NaN, 0, axis_total)
-    end
+    slope, rho, n_used = _ls_slope_log(stat.shell_mass, base_degree, shell_mass_floor)
 
     # Concentration shortcut (matches 2-pt predicate): if mass at d+1, d+2
-    # dominates, bumping +2 catches it regardless of geometric decay further out.
-    conc_mass =
-        get(axis_shell_mass, base_degree + 1, 0.0) +
-        get(axis_shell_mass, base_degree + 2, 0.0)
-    concentration = conc_mass / axis_total
-    if concentration >= θ_concentration
-        # Bump regardless of ρ. Still compute ρ for logging.
-        slope, rho, n_used = _ls_slope_log(axis_shell_mass, base_degree, shell_mass_floor)
-        return LSFitAxisResult(:bump, rho, slope, n_used, axis_total)
+    # dominates, bumping +2 catches it regardless of geometric decay further
+    # out. ρ is still reported for logging.
+    if stat.concentration >= θ_concentration
+        return LSFitAxisResult(:bump, rho, slope, n_used, stat.total)
     end
 
-    # General case: LS-slope on log shell mass.
-    slope, rho, n_used = _ls_slope_log(axis_shell_mass, base_degree, shell_mass_floor)
     if n_used < 2 || isnan(rho)
         # Fall back to legacy bump-default when we cannot estimate.
-        return LSFitAxisResult(:bump, rho, slope, n_used, axis_total)
+        return LSFitAxisResult(:bump, rho, slope, n_used, stat.total)
     end
 
     verdict = rho >= ρ_threshold ? :bump : :split
-    return LSFitAxisResult(verdict, rho, slope, n_used, axis_total)
+    return LSFitAxisResult(verdict, rho, slope, n_used, stat.total)
 end
 
 # OLS fit of `log(m_s) = slope · s + intercept` over shells with m_s > floor.

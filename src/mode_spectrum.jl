@@ -222,6 +222,95 @@ function _empty_mode_spectrum(n_dim::Int, base_degree::Int, extended_degree::Int
 end
 
 """
+    subdomain_mode_spectrum(subdomain::Subdomain; extended_degree::Int = 0)
+
+Non-mutating sibling of `compute_subdomain_mode_spectrum!`: compute the mode
+spectrum for a leaf, passing `relative_l2_error²` through so `window_coverage`
+is populated. If `subdomain.polynomial === nothing`, returns the empty
+spectrum sized to the leaf dimension — downstream predicates then produce
+their legacy all-`:bump` fallbacks, so calling any spectrum-accepting
+predicate on this result matches calling its `Subdomain` method directly.
+
+This is the single-compute entry point for callers that consult several
+predicates per leaf (bead 8f4p.5.1 DR-INSTR): compute once here, then pass
+the result to `pick_strategy`, `pick_strategy_per_axis`,
+`pick_strategy_per_axis_lsfit`, and `axis_shell_stats`.
+"""
+function subdomain_mode_spectrum(subdomain::Subdomain; extended_degree::Int = 0)
+    if subdomain.polynomial === nothing
+        return _empty_mode_spectrum(length(subdomain.center), 0, 0)
+    end
+    rel_l2_squared =
+        isfinite(subdomain.relative_l2_error) ? subdomain.relative_l2_error^2 : NaN
+    return compute_mode_spectrum(
+        subdomain.polynomial;
+        extended_degree = extended_degree,
+        rel_l2_squared = rel_l2_squared,
+    )
+end
+
+"""
+    axis_shell_stats(spec::NamedTuple) -> Vector{NamedTuple}
+
+Per-axis offender-restricted shell statistics from a `compute_mode_spectrum`
+result, computed in one pass over the modes. For each axis k the spectrum is
+restricted to the offender modes `S_k = {α : α[k] = |α|_∞}` (ties counted
+toward every tied axis, matching `pick_strategy_per_axis` and
+`pick_strategy_per_axis_lsfit`, which previously each redid this restriction).
+
+Returns a length-`n_dim` vector of NamedTuples with fields:
+- `shell_mass::Dict{Int,Float64}` — η²-mass per shell `s = |α|_∞` on axis k
+- `total::Float64` — total restricted η²-mass (the `axis_mass_floor` gate input)
+- `concentration::Float64` — `(m(d+1) + m(d+2)) / total`, `NaN` when `total == 0`
+- `decay::Float64` — 2-pt `0.5·log(m(d+2)/m(d+4))` with the 4vtd.3 noise-floor
+  guard (shells d+2, d+4 must jointly carry ≥ 1e-3 of the axis mass); `NaN`
+  when undefined
+
+Empty spectrum ⇒ per-axis zero masses with `NaN` concentration/decay.
+"""
+function axis_shell_stats(spec::NamedTuple)
+    n_dim = size(spec.modes, 2)
+    base_degree = spec.base_degree
+    eta_sq = abs2.(spec.spectrum)
+    n_modes = length(spec.spectrum)
+
+    shell_masses = [Dict{Int,Float64}() for _ in 1:n_dim]
+    totals = zeros(n_dim)
+    @inbounds for j in 1:n_modes
+        max_a = 0
+        for k in 1:n_dim
+            v = Int(spec.modes[j, k])
+            if v > max_a
+                max_a = v
+            end
+        end
+        for d in 1:n_dim
+            if Int(spec.modes[j, d]) == max_a
+                shell_masses[d][max_a] = get(shell_masses[d], max_a, 0.0) + eta_sq[j]
+                totals[d] += eta_sq[j]
+            end
+        end
+    end
+
+    return [
+        begin
+            sm = shell_masses[d]
+            total = totals[d]
+            conc_mass =
+                get(sm, base_degree + 1, 0.0) + get(sm, base_degree + 2, 0.0)
+            concentration = total > 0 ? conc_mass / total : NaN
+            m_dp2 = get(sm, base_degree + 2, 0.0)
+            m_dp4 = get(sm, base_degree + 4, 0.0)
+            decay_signal_meaningful = (m_dp2 + m_dp4) >= 1e-3 * total
+            decay =
+                (total > 0 && decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ?
+                0.5 * log(m_dp2 / m_dp4) : NaN
+            (shell_mass = sm, total = total, concentration = concentration, decay = decay)
+        end for d in 1:n_dim
+    ]
+end
+
+"""
     compute_subdomain_mode_spectrum!(subdomain::Subdomain; extended_degree::Int = 0)
 
 Convenience wrapper that calls `compute_mode_spectrum` on the subdomain's

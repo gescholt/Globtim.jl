@@ -55,13 +55,31 @@ function pick_strategy_per_axis(
     if subdomain.polynomial === nothing
         return fill(:bump, length(subdomain.center))
     end
-    rel_l2_squared =
-        isfinite(subdomain.relative_l2_error) ? subdomain.relative_l2_error^2 : NaN
-    spec = compute_mode_spectrum(
-        subdomain.polynomial;
-        extended_degree = extended_degree,
-        rel_l2_squared = rel_l2_squared,
+    spec = subdomain_mode_spectrum(subdomain; extended_degree = extended_degree)
+    return pick_strategy_per_axis(
+        spec;
+        θ_decay = θ_decay,
+        θ_concentration = θ_concentration,
+        axis_mass_floor = axis_mass_floor,
     )
+end
+
+"""
+    pick_strategy_per_axis(spec::NamedTuple; θ_decay, θ_concentration,
+                           axis_mass_floor) -> Vector{Symbol}
+
+Spectrum-accepting method: same per-axis rule, operating on a precomputed
+`compute_mode_spectrum` / `subdomain_mode_spectrum` result. The offender-mode
+restriction (the noise-floor guard from the 4vtd.3 finding included) lives in
+`axis_shell_stats` and is shared with `pick_strategy_per_axis_lsfit` — one
+pass over the modes serves both predicates (bead 8f4p.5.1 DR-INSTR).
+"""
+function pick_strategy_per_axis(
+    spec::NamedTuple;
+    θ_decay::Real = 0.0,
+    θ_concentration::Real = 0.5,
+    axis_mass_floor::Real = 1e-12,
+)
     n_dim = size(spec.modes, 2)
     if n_dim == 0
         return [:bump]
@@ -69,77 +87,27 @@ function pick_strategy_per_axis(
     if isempty(spec.spectrum)
         return fill(:bump, n_dim)
     end
-
-    base_degree = spec.base_degree
-    eta_sq = abs2.(spec.spectrum)
-    n_modes = length(spec.spectrum)
-
-    verdicts = Vector{Symbol}(undef, n_dim)
-    for d in 1:n_dim
-        verdicts[d] = _per_axis_verdict(
-            spec.modes,
-            eta_sq,
-            n_modes,
-            d,
-            base_degree;
+    return [
+        _per_axis_verdict(
+            stat;
             θ_decay = θ_decay,
             θ_concentration = θ_concentration,
             mass_floor = axis_mass_floor,
-        )
-    end
-    return verdicts
+        ) for stat in axis_shell_stats(spec)
+    ]
 end
 
 function _per_axis_verdict(
-    modes::AbstractMatrix{Int},
-    eta_sq::AbstractVector{Float64},
-    n_modes::Int,
-    d::Int,
-    base_degree::Int;
+    stat::NamedTuple;
     θ_decay::Real,
     θ_concentration::Real,
     mass_floor::Real,
 )
-    n_dim = size(modes, 2)
-    axis_shell_mass = Dict{Int,Float64}()
-    axis_total = 0.0
-    @inbounds for j in 1:n_modes
-        max_a = 0
-        for k in 1:n_dim
-            v = Int(modes[j, k])
-            if v > max_a
-                max_a = v
-            end
-        end
-        if Int(modes[j, d]) == max_a
-            axis_shell_mass[max_a] = get(axis_shell_mass, max_a, 0.0) + eta_sq[j]
-            axis_total += eta_sq[j]
-        end
-    end
-
-    if axis_total < mass_floor
+    if stat.total < mass_floor
         return :bump
     end
-
-    conc_mass =
-        get(axis_shell_mass, base_degree + 1, 0.0) +
-        get(axis_shell_mass, base_degree + 2, 0.0)
-    concentration = conc_mass / axis_total
-
-    m_dp2 = get(axis_shell_mass, base_degree + 2, 0.0)
-    m_dp4 = get(axis_shell_mass, base_degree + 4, 0.0)
-    # Noise-floor guard for shell_decay (4vtd.3 finding): when the dominant
-    # axis mass lives far above d+4 (e.g. T_12 contribution with base_d=6
-    # places ~all mass at shell 12, leaving shells 8 and 10 at ~1e-32 LS-fit
-    # noise), `log(m_dp2 / m_dp4)` is computed from roundoff and can give
-    # spurious positive values. Require shells d+2 and d+4 to together
-    # carry ≥ 0.1% of the axis mass before trusting the ratio.
-    decay_signal_meaningful = (m_dp2 + m_dp4) >= 1e-3 * axis_total
-    decay =
-        (decay_signal_meaningful && m_dp2 > 0 && m_dp4 > 0) ? 0.5 * log(m_dp2 / m_dp4) : NaN
-
-    decay_says_bump = !isnan(decay) && decay > θ_decay
-    conc_says_bump = concentration >= θ_concentration
+    decay_says_bump = !isnan(stat.decay) && stat.decay > θ_decay
+    conc_says_bump = stat.concentration >= θ_concentration
     return (decay_says_bump || conc_says_bump) ? :bump : :split
 end
 
