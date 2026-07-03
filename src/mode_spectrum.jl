@@ -296,8 +296,7 @@ function axis_shell_stats(spec::NamedTuple)
         begin
             sm = shell_masses[d]
             total = totals[d]
-            conc_mass =
-                get(sm, base_degree + 1, 0.0) + get(sm, base_degree + 2, 0.0)
+            conc_mass = get(sm, base_degree + 1, 0.0) + get(sm, base_degree + 2, 0.0)
             concentration = total > 0 ? conc_mass / total : NaN
             m_dp2 = get(sm, base_degree + 2, 0.0)
             m_dp4 = get(sm, base_degree + 4, 0.0)
