@@ -63,6 +63,9 @@ A `NamedTuple` with fields:
   `NaN` if either shell is empty (e.g. functions with even-only symmetry
   produce `m(d+1) = m(d+3) = 0` — `shell_decay` between d+2 and d+4 stays
   defined, but `m(d+1)/m(d+2)` would not).
+  DEPRECATED (bead 4vtd.1): comparing two fixed shells NaNs or reads roundoff
+  garbage on single-parity residuals; prefer [`shell_decay_parity`](@ref),
+  which `pick_strategy` now consumes. Kept for one release cycle.
 - `window_coverage::Float64`: `Σ η_α² / rel_l2_squared` if `rel_l2_squared`
   was provided, else NaN. Values near 1 indicate the residual lives entirely
   inside the visible window; values ≪ 1 indicate a long high-frequency tail
@@ -247,6 +250,107 @@ function subdomain_mode_spectrum(subdomain::Subdomain; extended_degree::Int = 0)
         extended_degree = extended_degree,
         rel_l2_squared = rel_l2_squared,
     )
+end
+
+"""
+    shell_decay_parity(shell_mass::AbstractDict{Int,<:Real};
+                       rtol_shell::Real = 1e-9, atol_total::Real = 1e-12)
+    shell_decay_parity(spec::NamedTuple; ...)
+
+Parity-stratified shell-decay rate (bead 4vtd.1): fit `m(s) ∝ λ^s` by least
+squares on `log m(s)` vs `s` SEPARATELY over the even and the odd shells, so
+single-parity residuals (even-symmetric functions like Ackley/Griewank
+populate even shells only) get a finite rate instead of the NaN / roundoff
+garbage the fixed-shell `shell_decay = 0.5·log(m(d+2)/m(d+4))` produces.
+Units match the old scalar — the old scalar IS the 2-point even-pair fit —
+so existing `θ_decay` thresholds carry over.
+
+Shells whose mass is below `rtol_shell` of the total are treated as
+unpopulated (FP-roundoff coefficients of the absent parity would otherwise
+produce an arbitrary-sign garbage rate). A parity class with fewer than 2
+populated shells gets `NaN`.
+
+`combined` is the arithmetic mean of the finite parity rates (in log-rate
+units, i.e. the geometric mean of the multiplicative per-shell factors), the
+single finite one if only one parity is fittable, or `NaN` if neither is.
+
+SENTINEL: an all-zero / empty `shell_mass` (total ≤ `atol_total` — a perfect
+fit) returns `+Inf` for all three rates with `n_even = n_odd = 0`: the
+residual has already decayed away, which any `θ_decay` threshold reads as
+maximally bump-friendly — vacuously right on a converged leaf, and
+distinguishable from "populated but unfittable" (`NaN`, `n_* ≥ 1`).
+
+Returns `(decay_even, decay_odd, combined, n_even, n_odd)` where `n_*` count
+the populated shells per parity.
+"""
+function shell_decay_parity(
+    shell_mass::AbstractDict{Int,<:Real};
+    rtol_shell::Real = 1e-9,
+    atol_total::Real = 1e-12,
+)
+    total = 0.0
+    for m in values(shell_mass)
+        total += Float64(m)
+    end
+    if total <= atol_total
+        return (decay_even = Inf, decay_odd = Inf, combined = Inf, n_even = 0, n_odd = 0)
+    end
+
+    floor_mass = rtol_shell * total
+    s_even = Float64[]
+    y_even = Float64[]
+    s_odd = Float64[]
+    y_odd = Float64[]
+    for (s, m) in shell_mass
+        m > floor_mass || continue
+        if iseven(s)
+            push!(s_even, s)
+            push!(y_even, log(m))
+        else
+            push!(s_odd, s)
+            push!(y_odd, log(m))
+        end
+    end
+
+    decay_even = _parity_ls_decay(s_even, y_even)
+    decay_odd = _parity_ls_decay(s_odd, y_odd)
+    combined = if isfinite(decay_even) && isfinite(decay_odd)
+        (decay_even + decay_odd) / 2
+    elseif isfinite(decay_even)
+        decay_even
+    elseif isfinite(decay_odd)
+        decay_odd
+    else
+        NaN
+    end
+    return (
+        decay_even = decay_even,
+        decay_odd = decay_odd,
+        combined = combined,
+        n_even = length(s_even),
+        n_odd = length(s_odd),
+    )
+end
+
+shell_decay_parity(spec::NamedTuple; kwargs...) =
+    shell_decay_parity(spec.shell_mass; kwargs...)
+
+# -slope of the LS line log m(s) = a + b·s over one parity class; NaN when the
+# class has fewer than 2 populated shells. For exactly 2 shells (spacing 2)
+# this reduces to 0.5·log(m(s₁)/m(s₂)) — the old fixed-shell scalar.
+function _parity_ls_decay(s::Vector{Float64}, y::Vector{Float64})
+    n = length(s)
+    n >= 2 || return NaN
+    s̄ = sum(s) / n
+    ȳ = sum(y) / n
+    num = 0.0
+    den = 0.0
+    @inbounds for i in 1:n
+        ds = s[i] - s̄
+        num += ds * (y[i] - ȳ)
+        den += ds * ds
+    end
+    return -num / den
 end
 
 """

@@ -148,8 +148,12 @@ function pick_strategy(
         return :split
     end
 
-    # Bump signal: shell_decay OR concentration says the residual is bump-catchable.
-    decay_says_bump = !isnan(spec.shell_decay) && spec.shell_decay > θ_decay
+    # Bump signal: shell decay OR concentration says the residual is
+    # bump-catchable. Decay is the parity-stratified rate (4vtd.1) — finite on
+    # single-parity residuals where the fixed-shell scalar NaN'd, +Inf on a
+    # decayed-away residual, NaN only when neither parity has ≥ 2 populated
+    # shells (`NaN > θ` is false, so an unfittable rate never claims bump).
+    decay_says_bump = shell_decay_parity(spec).combined > θ_decay
     conc_says_bump = spec.spectral_concentration >= θ_concentration
     return (decay_says_bump || conc_says_bump) ? :bump : :split
 end

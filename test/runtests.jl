@@ -198,6 +198,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_predicate.jl") do
     include("test_predicate.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_shell_decay_parity.jl") do
+    include("test_shell_decay_parity.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_predicate_done_action.jl") do
     include("test_predicate_done_action.jl")
 end

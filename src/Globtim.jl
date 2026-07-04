@@ -201,6 +201,7 @@ export Subdomain,
     compute_subdomain_mode_spectrum!,  # dksx.0 per-mode residual decomposition
     subdomain_mode_spectrum,  # 8f4p.5.1 single-compute leaf spectrum (non-mutating)
     axis_shell_stats,  # 8f4p.5.1 shared per-axis offender-shell statistics
+    shell_decay_parity,  # 4vtd.1 parity-stratified shell-decay rate
     pick_strategy,
     default_bump,  # ehaj.1 mode-spectrum bump-vs-split predicate
     pick_strategy_per_axis,
