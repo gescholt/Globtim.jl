@@ -162,4 +162,57 @@ end
             @test tree.subdomains[id].per_dim_degree === nothing
         end
     end
+
+    @testset "anisotropic_degree opt-in retargets isotropic leaves through the loop" begin
+        # jl9z.7 Stage 1: the shipped ρ_k chooser is now wired into adaptive_refine
+        # via the `anisotropic_degree` opt-in. On a non-converged ISOTROPIC leaf the
+        # base fit is used as the E2 probe and the leaf is refit at a ρ_k-driven
+        # per-dim degree — the "17.6× fewer shoots" mechanism, now through the loop.
+        #
+        # Function choice matters. `sloppy`'s flat axis is degree-2-EXACT, so beyond
+        # degree 2 its spectrum is pure numerical noise → the ρ_k estimator returns
+        # NaN → the chooser's conservative "no-signal ⇒ max_degree" fallback fires
+        # (that's Stage-2 active-subspace territory, not Stage 1). Here we want two
+        # axes with MEASURABLE geometric decay at different rates: exp(2x₁) decays
+        # slower than exp(0.5x₂) ⇒ d₁ ≥ d₂ — the same ordering pinned by the
+        # standalone chooser test above.
+        steep_flat(x) = exp(2.0 * x[1]) + exp(0.5 * x[2])
+        aniso_kw = (; c = 4.0, floor_degree = 2, max_degree = 10, extended_degree = 6)
+        common = (
+            l2_tolerance = 1e-4,
+            tolerance_mode = :absolute,
+            max_depth = 3,
+            max_leaves = 24,
+            enable_p_refinement = false,
+            parallel = false,
+            verbose = false,
+        )
+
+        tree_on = Globtim.adaptive_refine(
+            steep_flat, _B2, 3;  # scalar base degree == the E2 probe degree
+            common...,
+            anisotropic_degree = aniso_kw,
+        )
+        leaves_on = vcat(tree_on.active_leaves, tree_on.converged_leaves)
+        aniso = [
+            tree_on.subdomains[id] for
+            id in leaves_on if tree_on.subdomains[id].per_dim_degree !== nothing
+        ]
+        @test !isempty(aniso)  # the retarget FIRED through the subdivision loop
+        for sd in aniso
+            pd = sd.per_dim_degree
+            @test length(pd) == 2
+            @test all(2 .<= pd .<= 10)     # clamped into [floor_degree, max_degree]
+            @test pd[1] >= pd[2]           # slower-decay axis gets ≥ degree
+            @test sd.degree == maximum(pd) # scalar summary stays the max
+        end
+
+        # Same config WITHOUT the opt-in ⇒ NOTHING is retargeted. Proves the switch
+        # (not the geometry) drives it: opt-off is byte-identical to today.
+        tree_off = Globtim.adaptive_refine(steep_flat, _B2, 3; common...)
+        for id in
+            vcat(tree_off.active_leaves, tree_off.converged_leaves, tree_off.pruned_leaves)
+            @test tree_off.subdomains[id].per_dim_degree === nothing
+        end
+    end
 end

@@ -1327,6 +1327,7 @@ function process_subdomain(
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
     degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
+    anisotropic_degree::Union{Nothing,NamedTuple} = nothing,
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_base_seed::Union{Nothing,Integer} = nothing,
@@ -1440,6 +1441,44 @@ function process_subdomain(
             l2_error,
             nothing,
         )
+    end
+
+    # Stage 1 (jl9z.7): data-adaptive anisotropic degree retarget. Opt-in
+    # (anisotropic_degree === nothing ⇒ behavior unchanged). On a NON-converged,
+    # still-isotropic, fitted leaf, treat the current fit as the E2 "probe":
+    # estimate per-axis ρ_k from its Chebyshev spectrum and refit at the
+    # ρ_k-driven per-dim degree (high on rough axes, floored on smooth ones).
+    # Emitted as an ActionDegreeBump carrying the per-dim vector; update_tree!
+    # installs it and the leaf re-fits anisotropically next iteration. This is
+    # the "17.6× fewer ODE shoots" CR3BP win, now driven through the subdivision
+    # loop instead of a standalone script. Fires AT MOST ONCE per leaf (guarded
+    # by per_dim_degree === nothing) — once anisotropic, further refinement uses
+    # the uniform bump that PRESERVES the shape. A verdict equal to the current
+    # isotropic degree is a no-op: skip the wasted re-fit and fall through to the
+    # normal bump/split decision. Independent of enable_p_refinement (degree
+    # RESHAPING, not just bumping-before-splitting).
+    if anisotropic_degree !== nothing &&
+       subdomain.per_dim_degree === nothing &&
+       subdomain.polynomial !== nothing
+        per_dim = choose_per_dim_degree_lsfit(subdomain; anisotropic_degree...)
+        length(per_dim) == n_dim || error(
+            "choose_per_dim_degree_lsfit returned $(length(per_dim)) degrees for " *
+            "a $(n_dim)-D leaf (subdomain $subdomain_id)",
+        )
+        if per_dim != fill(effective_degree, n_dim)
+            return ProcessResult(
+                subdomain_id,
+                ActionDegreeBump,
+                false,
+                nothing,
+                nothing,
+                l2_error,
+                maximum(per_dim),  # scalar degree summary
+                nothing,
+                nothing,
+                per_dim,           # anisotropic bump payload
+            )
+        end
     end
 
     # Check if p-refinement is possible
@@ -1627,6 +1666,14 @@ Main adaptive refinement loop with parallel processing.
 - `max_degree::Int=40`: Maximum polynomial degree for p-refinement
 - `degree_step::Int=6`: Degree increment per p-refinement step
 - `cond_threshold::Float64=1e14`: Maximum Vandermonde condition number for p-refinement
+- `anisotropic_degree::Union{Nothing,NamedTuple}=nothing`: opt-in E2 ρ_k-driven
+    anisotropic degree (jl9z.7). `nothing` ⇒ isotropic (behavior unchanged). When
+    set, each non-converged leaf's base fit is used as the E2 probe: per-axis
+    Bernstein radii ρ_k are estimated and the leaf is refit at a data-adaptive
+    per-dim degree (small on smooth/sloppy axes floored at `floor_degree`, larger
+    on rough axes). Fires at most once per leaf; further refinement preserves the
+    anisotropic shape. The NamedTuple is splatted into `choose_per_dim_degree_lsfit`
+    — e.g. `(; c=4.0, floor_degree=2, max_degree=8)`.
 
 # Returns
 - SubdivisionTree with refined subdomains
@@ -1679,6 +1726,7 @@ function adaptive_refine(
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
     degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
+    anisotropic_degree::Union{Nothing,NamedTuple} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
     sampling::Symbol = :tensor,
@@ -1787,6 +1835,7 @@ function adaptive_refine(
             predicate,
             barrier_detector,
             degeneracy_opts,
+            anisotropic_degree,
             sampling,
             christoffel_oversampling,
             rng_base_seed,
@@ -2038,6 +2087,7 @@ function two_phase_refine(
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
     degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
+    anisotropic_degree::Union{Nothing,NamedTuple} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
 )
@@ -2106,6 +2156,7 @@ function two_phase_refine(
         predicate,
         barrier_detector,
         degeneracy_opts,
+        anisotropic_degree,
     )
 
     phase1_iter = 0
