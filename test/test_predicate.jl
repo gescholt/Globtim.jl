@@ -93,6 +93,47 @@ using Globtim:
         @test pick_strategy(sd) === :bump
     end
 
+    @testset "v2 stagnation conjunct (ehaj.6): gate needs rel_l2 far from tol" begin
+        # Hand-built spectrum reproducing the ehaj.2 deuflhard misfire: low
+        # window_coverage with a strongly bump-positive spectrum. The gate must
+        # fire only when the leaf is genuinely far from converged.
+        spec = (
+            spectrum = [1.0, 0.1],
+            modes = [5 0; 6 0],
+            dominant_mode = [5, 0],
+            spectral_concentration = 0.99,
+            shell_mass = Dict(5 => 1.0, 6 => 0.01),
+            shell_decay = 2.0,
+            window_coverage = 1e-4,
+            base_degree = 4,
+            extended_degree = 6,
+        )
+        # Near-converged leaf (deuflhard deg-10 pattern) → gate suppressed, bump.
+        @test pick_strategy(spec; rel_l2 = 5.6e-3) === :bump
+        # Far-from-converged leaf (griewank_3d pattern) → gate fires, split.
+        @test pick_strategy(spec; rel_l2 = 0.5) === :split
+        # rel_l2 unknown → v1-compatible gate (conjunct satisfied), split.
+        @test pick_strategy(spec) === :split
+    end
+
+    @testset "v2 thresholds separate stagnant from bump-friendly (ehaj.2 traces)" begin
+        base = (
+            spectrum = [1.0],
+            modes = [5 0],
+            dominant_mode = [5, 0],
+            shell_mass = Dict(5 => 1.0),
+            base_degree = 4,
+            extended_degree = 6,
+            window_coverage = 0.15,   # above θ_coverage — gate quiet
+        )
+        # griewank_2d root deg-4 fingerprint: decay 0.21, conc 0.60 → split.
+        stagnant = merge(base, (shell_decay = 0.21, spectral_concentration = 0.60))
+        @test pick_strategy(stagnant; rel_l2 = 0.5) === :split
+        # deuflhard root deg-4 fingerprint: decay 2.47, conc 0.99 → bump.
+        friendly = merge(base, (shell_decay = 2.47, spectral_concentration = 0.99))
+        @test pick_strategy(friendly; rel_l2 = 0.28) === :bump
+    end
+
     @testset "adaptive_refine threads predicate through (default unchanged)" begin
         # With predicate=default_bump (the new default), behavior must match
         # the legacy "always bump" path. Smoke test: no errors, tree builds.
