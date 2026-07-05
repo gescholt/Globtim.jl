@@ -73,7 +73,20 @@ A `NamedTuple` with fields:
   CAVEAT: η_α here are LS-fit coefficients, not strict Chebyshev-orthonormal
   coefficients (LS uses Euclidean inner product, not the weighted Chebyshev
   one), so this ratio is a relative comparison across leaves rather than a
-  strict orthonormal energy fraction.
+  strict orthonormal energy fraction. Concretely it under-counts each mode's
+  sample energy by `2^(#zero components of α)` — a dimension- and sparsity-
+  dependent factor. DEPRECATED (bead 4vtd.2): prefer `window_coverage_sample`.
+- `window_coverage_sample::Float64`: Parseval-true in-window energy fraction
+  (bead 4vtd.2), computed from the residual AT THE CACHED SAMPLES with no
+  unit mixing: `1 - ‖f - p_ext‖² / ‖f - p‖²` (Euclidean over the sample
+  grid), where `p` is the existing base fit and `p_ext` the extended-window
+  LS re-fit. Base span ⊆ extended span makes this exact Pythagoras, so the
+  value is a true fraction in [0, 1] comparable across leaves, dimensions,
+  and leaf sizes. A residual at the FP-roundoff floor (relative to `‖f‖²`)
+  returns 1.0 — perfect coverage, never NaN. `NaN` only on the empty
+  spectrum. NOTE: like every sample statistic it cannot see aliasing —
+  energy beyond the grid's Nyquist band folds INTO the window and inflates
+  the fraction; grid density is the only cure.
 - `base_degree::Int`: the degree the fit was originally built at.
 - `extended_degree::Int`: the actual ceiling used (may have been clamped if
   the sample grid did not support the requested ceiling).
@@ -184,14 +197,31 @@ function compute_mode_spectrum(
     m_dp4 = get(shell_mass, base_degree + 4, 0.0)
     shell_decay = (m_dp2 > 0 && m_dp4 > 0) ? 0.5 * log(m_dp2 / m_dp4) : NaN
 
-    # Window coverage: how much of the (squared) residual sits inside the
-    # visible window. Requires the caller to pass relative_l2² since that
+    # Legacy window coverage: how much of the (squared) residual sits inside
+    # the visible window. Requires the caller to pass relative_l2² since that
     # information is on the Subdomain, not the ApproxPoly. NaN signals "no
     # reference available, treat coverage as unknown."
     window_coverage = if isnan(rel_l2_squared) || rel_l2_squared <= 0
         NaN
     else
         total_mass_sq / Float64(rel_l2_squared)
+    end
+
+    # Sample-based (Parseval-true) window coverage (bead 4vtd.2): the fraction
+    # of the base-fit residual's SAMPLE energy that the extended-window re-fit
+    # absorbs. Both fits are LS projections onto nested spans, so Pythagoras
+    # ‖f-p‖² = ‖f-p_ext‖² + ‖p_ext-p‖² holds exactly in the Euclidean sample
+    # inner product and the fraction lives in [0, 1] (clamped for the
+    # weighted/non-nested christoffel fit path, where it is approximate).
+    # A residual at the FP-roundoff floor means the fit already converged at
+    # the samples: coverage 1.0 by convention, never NaN.
+    p_values = evaluate_polynomial_at_samples(poly, samples)
+    total_res_sq = sum(abs2, f_values .- p_values)
+    outside_res_sq = sum(abs2, f_values .- V_ext * coeffs_ext)
+    window_coverage_sample = if total_res_sq <= 1e-28 * sum(abs2, f_values)
+        1.0
+    else
+        clamp((total_res_sq - outside_res_sq) / total_res_sq, 0.0, 1.0)
     end
 
     dom_local_idx = argmax(eta)
@@ -205,6 +235,7 @@ function compute_mode_spectrum(
         shell_mass = shell_mass,
         shell_decay = shell_decay,
         window_coverage = window_coverage,
+        window_coverage_sample = window_coverage_sample,
         base_degree = base_degree,
         extended_degree = ext_d,
     )
@@ -219,6 +250,7 @@ function _empty_mode_spectrum(n_dim::Int, base_degree::Int, extended_degree::Int
         shell_mass = Dict{Int,Float64}(),
         shell_decay = NaN,
         window_coverage = NaN,
+        window_coverage_sample = NaN,
         base_degree = base_degree,
         extended_degree = extended_degree,
     )

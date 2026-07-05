@@ -34,7 +34,7 @@ default_bump(::Subdomain) = :bump
 """
     pick_strategy(subdomain::Subdomain;
                   θ_decay::Real = 0.5,
-                  θ_coverage::Real = 0.005,
+                  θ_coverage::Real = 0.4,
                   θ_concentration::Real = 0.9,
                   θ_stagnant::Real = 1e-2,
                   extended_degree::Int = 0) -> Symbol
@@ -45,11 +45,17 @@ should catch it), else `:split`.
 
 Decision rule (in order):
 
-1. **Stagnation gate**: `window_coverage ≤ θ_coverage` AND
+1. **Stagnation gate**: `window_coverage_sample ≤ θ_coverage` AND
    `relative_l2_error > θ_stagnant`. If most of the residual energy sits
-   *outside* the visible window `|α|_∞ ≤ extended_degree` while the leaf is
-   still genuinely far from converged, bumping inside the window can't help —
-   split. The rel_l2 conjunct is the v2 fix: near convergence the visible
+   *outside* the visible extended-degree window while the leaf is still
+   genuinely far from converged, bumping inside the window can't help —
+   split. Coverage is the Parseval-true sample-based fraction (bead 4vtd.2),
+   a real energy fraction in [0,1]: `θ_coverage = 0.4` reads as "less than
+   40% of the residual is catchable in-window". (The legacy coefficient-ratio
+   `window_coverage` mixed units and was grid-dependent: the ehaj.6 value
+   θ = 0.005 was calibrated on 21-pt oversampled fits and the gate almost
+   never fired on production auto-grid fits, whose legacy values run 10-40×
+   higher.) The rel_l2 conjunct is the v2 fix: near convergence the visible
    window mass collapses toward the noise floor, so low coverage alone also
    fires on nearly-done bump-friendly leaves (ehaj.2: deuflhard_2d, +121%
    evals from 6 spurious splits, every one with shell_decay > 2 and
@@ -73,22 +79,30 @@ stagnant/cone leaves show decay 0.21-0.38 with concentration 0.46-0.76
 θ_concentration = 0.9 separate the two populations; dksx.0a probe verdicts
 are preserved:
 
-| Problem      | concentration | shell_decay | coverage | rel_l2 | v2 verdict |
-|--------------|---------------|-------------|----------|--------|------------|
-| deuflhard_2d | 0.99          | +2.28       | 0.018    | large  | bump       |
-| levy_3d      | 0.90          | +3.34       | 0.019    | large  | bump       |
-| ackley_3d    | 0.22          | -0.62       | 0.004    | large  | split (gate) |
-| griewank_3d  | 0.98          | +1.91       | 0.001    | large  | split (gate) |
+| Problem      | concentration | shell_decay | cov_sample (21pt/auto) | rel_l2 | verdict |
+|--------------|---------------|-------------|------------------------|--------|---------|
+| deuflhard_2d | 0.99          | +2.28       | 0.99 / 0.99            | large  | bump    |
+| levy_3d      | 0.90          | +3.34       | 0.95 / 1.00            | large  | bump    |
+| ackley_3d    | 0.22          | -0.62       | 0.35 / 0.90            | large  | split   |
+| griewank_3d  | 0.98          | +1.91       | 0.16 / 0.11            | large  | split   |
+
+θ_coverage = 0.4 reproduces all four verdicts at BOTH grid configs (4vtd.2
+probe, 2026-07-04): griewank splits via the gate everywhere; ackley splits
+via the gate on oversampled fits and via the decay/concentration axes on
+auto-grid fits, where coarse-grid aliasing folds its high-frequency energy
+into the window and inflates coverage to 0.90 (a limit of any sample
+statistic — grid density is the only cure). Margin: stagnant max 0.35,
+bump-friendly min 0.94 at the calibration config.
 
 Fallbacks:
 - If `subdomain.polynomial === nothing`, returns `:bump` (no signal; preserve
   the legacy bump-by-default behavior so the predicate is backward-compatible).
 - If the spectrum is empty (sample grid too small to extend past `base_degree`),
   returns `:bump` (same reasoning).
-- If `window_coverage` is `NaN`, the stagnation gate is bypassed — defer to
-  the bump-signal axis alone. If `rel_l2` is `NaN` (spec-accepting method
-  without the kwarg), the rel_l2 conjunct is treated as satisfied — v1
-  behavior for callers that can't supply it.
+- If `window_coverage_sample` is `NaN`, the stagnation gate is bypassed —
+  defer to the bump-signal axis alone. If `rel_l2` is `NaN` (spec-accepting
+  method without the kwarg), the rel_l2 conjunct is treated as satisfied —
+  v1 behavior for callers that can't supply it.
 
 Cost: one Vandermonde build + one least-squares solve over the leaf's existing
 sample grid. No new objective evaluations.
@@ -96,7 +110,7 @@ sample grid. No new objective evaluations.
 function pick_strategy(
     subdomain::Subdomain;
     θ_decay::Real = 0.5,
-    θ_coverage::Real = 0.005,
+    θ_coverage::Real = 0.4,
     θ_concentration::Real = 0.9,
     θ_stagnant::Real = 1e-2,
     extended_degree::Int = 0,
@@ -129,7 +143,7 @@ leaf's `relative_l2_error` as `rel_l2` to enable the v2 stagnation conjunct;
 function pick_strategy(
     spec::NamedTuple;
     θ_decay::Real = 0.5,
-    θ_coverage::Real = 0.005,
+    θ_coverage::Real = 0.4,
     θ_concentration::Real = 0.9,
     θ_stagnant::Real = 1e-2,
     rel_l2::Real = NaN,
@@ -139,11 +153,14 @@ function pick_strategy(
     end
 
     # Stagnation gate: residual invisible in the window AND the leaf is still
-    # far from converged. NaN coverage means "no reference" — skip the gate.
+    # far from converged. Reads the Parseval-true sample-based coverage
+    # (bead 4vtd.2) — a real energy fraction in [0,1], so θ_coverage is
+    # interpretable and grid-independent. NaN coverage (empty spectrum, or a
+    # hand-built spec without a reference) — skip the gate.
     # NaN rel_l2 means the caller can't supply it — conjunct treated satisfied.
     far_from_converged = isnan(rel_l2) || rel_l2 > θ_stagnant
-    if !isnan(spec.window_coverage) &&
-       spec.window_coverage <= θ_coverage &&
+    if !isnan(spec.window_coverage_sample) &&
+       spec.window_coverage_sample <= θ_coverage &&
        far_from_converged
         return :split
     end

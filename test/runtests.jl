@@ -206,6 +206,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_synthetic_generators.jl") do
     include("test_synthetic_generators.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_window_coverage_sample.jl") do
+    include("test_window_coverage_sample.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_predicate_done_action.jl") do
     include("test_predicate_done_action.jl")
 end

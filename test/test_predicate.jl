@@ -105,6 +105,7 @@ using Globtim:
             shell_mass = Dict(5 => 1.0, 6 => 0.01),
             shell_decay = 2.0,
             window_coverage = 1e-4,
+            window_coverage_sample = 0.05,   # below θ_coverage — gate armed
             base_degree = 4,
             extended_degree = 6,
         )
@@ -124,7 +125,8 @@ using Globtim:
             shell_mass = Dict(5 => 1.0),
             base_degree = 4,
             extended_degree = 6,
-            window_coverage = 0.15,   # above θ_coverage — gate quiet
+            window_coverage = 0.15,
+            window_coverage_sample = 0.85,   # above θ_coverage — gate quiet
         )
         # griewank_2d root deg-4 fingerprint: decay 0.21, conc 0.60 → split.
         stagnant = merge(base, (shell_decay = 0.21, spectral_concentration = 0.60))

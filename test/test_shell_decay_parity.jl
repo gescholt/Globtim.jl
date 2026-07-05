@@ -189,6 +189,7 @@ using Globtim:
             shell_mass = Dict(6 => 0.5, 8 => 0.01),
             shell_decay = NaN,                     # what the old scalar said
             window_coverage = 0.15,
+            window_coverage_sample = 0.85,         # gate quiet (4vtd.2)
             base_degree = 4,
             extended_degree = 8,
         )
@@ -210,6 +211,7 @@ using Globtim:
             shell_mass = Dict(6 => 0.1, 8 => 0.5),
             shell_decay = NaN,
             window_coverage = 0.15,
+            window_coverage_sample = 0.85,         # gate quiet (4vtd.2)
             base_degree = 4,
             extended_degree = 8,
         )
