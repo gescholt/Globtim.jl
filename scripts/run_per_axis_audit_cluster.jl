@@ -265,6 +265,7 @@ function make_perstep_audit_predicate(
             spectral_concentration = _json_num(spec.spectral_concentration),
             shell_decay       = _json_num(spec.shell_decay),
             window_coverage   = _json_num(spec.window_coverage),
+            window_coverage_sample = _json_num(spec.window_coverage_sample),
             dominant_mode     = collect(spec.dominant_mode),
             axis_mass         = _json_vec(s.total for s in stats),
             concentration_per_axis = _json_vec(s.concentration for s in stats),
