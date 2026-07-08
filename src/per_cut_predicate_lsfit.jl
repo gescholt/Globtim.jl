@@ -247,7 +247,22 @@ been fit (and `extended_degree` should exceed its base degree so offender shells
 exist to fit the slope). `c` calibrates the accuracy target; `c=4` ⇒ a ρ=e axis
 gets degree 4. Extra kwargs pass through to `pick_strategy_per_axis_lsfit`.
 """
-function choose_per_dim_degree_lsfit(
+function choose_per_dim_degree_lsfit(subdomain::Subdomain; kwargs...)
+    return choose_per_dim_degree_lsfit_with_signal(subdomain; kwargs...).degrees
+end
+
+"""
+    choose_per_dim_degree_lsfit_with_signal(subdomain::Subdomain; kwargs...)
+        -> (degrees::Vector{Int}, has_signal::Vector{Bool})
+
+Same computation as [`choose_per_dim_degree_lsfit`](@ref), additionally reporting
+per axis whether the ρ_k estimate carried usable signal (`isfinite(ρ) && ρ > 1`).
+An axis without signal gets `max_degree` in `degrees` — indistinguishable there
+from a genuinely rough axis (ρ near 1), which is exactly why the mask exists:
+the Stage-2 active-subspace fallback (jl9z.7) triggers only when NO axis has
+signal, i.e. the whole LS spectrum was blind, not merely pessimistic.
+"""
+function choose_per_dim_degree_lsfit_with_signal(
     subdomain::Subdomain;
     c::Real = 4.0,
     floor_degree::Int = 2,
@@ -263,11 +278,13 @@ function choose_per_dim_degree_lsfit(
         extended_degree = extended_degree,
         kwargs...,
     )
-    return [
+    has_signal = [isfinite(r.rho) && r.rho > 1.0 for r in results]
+    degrees = [
         begin
             ρ = r.rho
             d = (!isfinite(ρ) || ρ <= 1.0) ? max_degree : ceil(Int, c / log(ρ))
             clamp(d, floor_degree, max_degree)
         end for r in results
     ]
+    return (degrees = degrees, has_signal = has_signal)
 end

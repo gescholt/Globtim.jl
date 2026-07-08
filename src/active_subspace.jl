@@ -302,6 +302,14 @@ Raises if the eigenbasis is not orthonormal (no silent fallback).
   (`n_round`); `active_cum` is ignored. The returned `effective_dim` is the full
   estimator NamedTuple (or `nothing` under `:cumulative`).
 
+`skip_if_ambiguous` (`:adaptive` only): when the spectral effective dimension is
+flagged `ambiguous` (estimators disagree, or a geometric sloppy ramp with no
+decisive gap), do NOT mutate `sd` — no rotation, no per-dim degrees — and return
+with `degrees = nothing`. Forcing a projected rank on such a spectrum is
+meaningless (see [`spectral_effective_dimension`](@ref)); the caller keeps its
+isotropic budget instead. This is the jl9z.7 Stage-2 in-loop contract: the
+subdivision loop must be able to consult the probe without committing to it.
+
 `n_used`/`n_dropped` report how many cell gradients entered the covariance vs were
 dropped as non-finite (infeasible parameters / failed ODE solves).
 """
@@ -314,39 +322,57 @@ function rotate_to_active_frame!(
     floor_deg::Int = 2,
     active_cum::Float64 = 0.95,
     degree_mode::Symbol = :cumulative,
+    skip_if_ambiguous::Bool = false,
 )
+    degree_mode in (:cumulative, :adaptive) || error(
+        "rotate_to_active_frame!: unknown degree_mode $(degree_mode) (expected :cumulative or :adaptive)",
+    )
+    skip_if_ambiguous &&
+        degree_mode !== :adaptive &&
+        error("rotate_to_active_frame!: skip_if_ambiguous requires degree_mode = :adaptive")
     n = length(sd.center)
     G = _objective_cell_gradients(f, sd, n_cells, h)
     C, n_used, n_dropped = _finite_gradient_covariance(G)
     n_dropped > 0 &&
         @warn "rotate_to_active_frame!: dropped $n_dropped/$(n_used + n_dropped) non-finite gradient samples (objective Inf/NaN on infeasible cells)"
     Q, frac, _ = active_subspace(C)
-    # Eigenvectors are in the box's CURRENT frame; compose with it to land in the
-    # original physical frame: physical = center + (T·Q)·(ẑ .* half_widths).
-    Qtot = sd.transform === nothing ? Q : sd.transform * Q
-    _validate_transform(Qtot, n)
-    sd.transform = Qtot
+    # Decide BEFORE mutating: under skip_if_ambiguous an ambiguous spectrum must
+    # leave `sd` untouched (no half-installed rotation).
     eff = nothing
+    degs = nothing
     if degree_mode === :adaptive
         eff = spectral_effective_dimension(frac)
-        degs = anisotropic_degree_from_spectrum(
-            frac,
-            deg_max;
-            floor_deg = floor_deg,
-            n_active = eff.n_round,
-        )
-    elseif degree_mode === :cumulative
+        if !(skip_if_ambiguous && eff.ambiguous)
+            degs = anisotropic_degree_from_spectrum(
+                frac,
+                deg_max;
+                floor_deg = floor_deg,
+                n_active = eff.n_round,
+            )
+        end
+    else
         degs = anisotropic_degree_from_spectrum(
             frac,
             deg_max;
             floor_deg = floor_deg,
             active_cum = active_cum,
         )
-    else
-        error(
-            "rotate_to_active_frame!: unknown degree_mode $(degree_mode) (expected :cumulative or :adaptive)",
+    end
+    if degs === nothing
+        return (
+            transform = nothing,
+            eigenvalues = frac,
+            degrees = nothing,
+            effective_dim = eff,
+            n_used = n_used,
+            n_dropped = n_dropped,
         )
     end
+    # Eigenvectors are in the box's CURRENT frame; compose with it to land in the
+    # original physical frame: physical = center + (T·Q)·(ẑ .* half_widths).
+    Qtot = sd.transform === nothing ? Q : sd.transform * Q
+    _validate_transform(Qtot, n)
+    sd.transform = Qtot
     sd.per_dim_degree = degs
     return (
         transform = Qtot,

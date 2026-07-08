@@ -215,4 +215,110 @@ end
             @test tree_off.subdomains[id].per_dim_degree === nothing
         end
     end
+
+    @testset "choose_per_dim_degree_lsfit_with_signal: mask contract" begin
+        steep_flat(x) = exp(2.0 * x[1]) + exp(0.5 * x[2])
+        sd = Subdomain(_B2)
+        Globtim.estimate_subdomain_error(steep_flat, sd, 3; basis = :chebyshev)
+        r = choose_per_dim_degree_lsfit_with_signal(sd; c = 4.0, floor_degree = 2,
+            max_degree = 10, extended_degree = 6)
+        @test all(r.has_signal)                      # both axes decay measurably
+        # The scalar-returning wrapper is exactly the .degrees slice.
+        @test choose_per_dim_degree_lsfit(sd; c = 4.0, floor_degree = 2,
+            max_degree = 10, extended_degree = 6) == r.degrees
+
+        # Constant axis ⇒ no signal there; max_degree in degrees, false in mask —
+        # the mask distinguishes "blind" from "genuinely rough" where degrees can't.
+        steep_const(x) = exp(2.0 * x[1]) + 0.0 * x[2]
+        sc = Subdomain(_B2)
+        Globtim.estimate_subdomain_error(steep_const, sc, 3; basis = :chebyshev)
+        rc = choose_per_dim_degree_lsfit_with_signal(sc; c = 4.0, floor_degree = 2,
+            max_degree = 8, extended_degree = 6)
+        @test !rc.has_signal[2]
+        @test rc.degrees[2] == 8
+
+        # A 1-shell probe (extended = base + 1) blinds the LS fit on EVERY axis:
+        # the deterministic all-no-signal fixture the Stage-2 loop test rides on.
+        s1 = Subdomain(_B2)
+        Globtim.estimate_subdomain_error(steep_flat, s1, 3; basis = :chebyshev)
+        r1 = choose_per_dim_degree_lsfit_with_signal(s1; c = 4.0, floor_degree = 2,
+            max_degree = 8, extended_degree = 4)
+        @test !any(r1.has_signal)
+    end
+
+    @testset "Stage 2: active-subspace fallback fires on an all-blind leaf" begin
+        # An oblique smooth ridge: active direction [1, 0.5]/‖·‖, genuinely flat
+        # orthogonal to it. With a 1-shell probe (extended_degree = base + 1) the
+        # LS ρ_k estimator is blind on BOTH axes, so Stage 1 alone would blast the
+        # leaf to isotropic max_degree. With active_fallback the gradient-covariance
+        # probe (rank-1 ⇒ unambiguous) rotates the leaf and floors the sloppy axis.
+        ridge(x) = exp(x[1] + 0.5 * x[2])
+        aniso_kw = (; c = 4.0, floor_degree = 2, max_degree = 8, extended_degree = 4,
+            active_fallback = true, fallback_n_cells = 5, fallback_h = 0.01)
+        common = (
+            l2_tolerance = 1e-6,
+            tolerance_mode = :absolute,
+            max_depth = 2,
+            max_leaves = 8,
+            enable_p_refinement = false,
+            parallel = false,
+            verbose = false,
+        )
+        tree = Globtim.adaptive_refine(ridge, _B2, 3; common...,
+            anisotropic_degree = aniso_kw)
+        leaves = vcat(tree.active_leaves, tree.converged_leaves)
+        rotated = [
+            tree.subdomains[id] for
+            id in leaves if tree.subdomains[id].per_dim_degree !== nothing
+        ]
+        @test !isempty(rotated)                     # the fallback FIRED in the loop
+        for sd in rotated
+            @test sd.transform !== nothing          # frame was rotated
+            @test sd.per_dim_degree == [8, 2]       # active at max, sloppy floored
+            @test sd.degree == 8                    # scalar summary = maximum
+        end
+
+        # Same blind leaf with active_fallback = false keeps Stage-1 behavior:
+        # isotropic max_degree blast, NO rotation.
+        tree_s1 = Globtim.adaptive_refine(ridge, _B2, 3; common...,
+            anisotropic_degree = (; c = 4.0, floor_degree = 2, max_degree = 8,
+                extended_degree = 4))
+        leaves_s1 = vcat(tree_s1.active_leaves, tree_s1.converged_leaves)
+        blasted = [
+            tree_s1.subdomains[id] for
+            id in leaves_s1 if tree_s1.subdomains[id].per_dim_degree !== nothing
+        ]
+        @test !isempty(blasted)
+        for sd in blasted
+            @test sd.transform === nothing
+            @test sd.per_dim_degree == [8, 8]
+        end
+    end
+
+    @testset "Stage 2: ambiguous probe declines — no rotation, ladder proceeds" begin
+        # Uniform-decade sloppy ramp: gradient covariance has NO decisive rank
+        # (every eigen log-gap equal ⇒ ambiguous), and the 1-shell probe blinds the
+        # LS estimator. Neither probe found exploitable structure ⇒ the leaf must
+        # fall through to the ordinary split ladder — NOT a max_degree blast, NOT a
+        # forced rotation. exp (not x²) so a degree-3 fit cannot be exact and the
+        # leaf genuinely reaches the decision path.
+        ramp(x) = exp(x[1]) + 1e-1 * exp(x[2]) + 1e-2 * exp(x[3]) + 1e-3 * exp(x[4])
+        _B4 = [(-1.0, 1.0) for _ in 1:4]
+        tree = Globtim.adaptive_refine(ramp, _B4, 3;
+            l2_tolerance = 1e-10,          # unreachable at deg 3 ⇒ forces the decision path
+            tolerance_mode = :absolute,
+            max_depth = 1,
+            max_leaves = 4,
+            enable_p_refinement = false,
+            parallel = false,
+            verbose = false,
+            anisotropic_degree = (; c = 4.0, floor_degree = 2, max_degree = 8,
+                extended_degree = 4, active_fallback = true, fallback_n_cells = 3))
+        all_ids = vcat(tree.active_leaves, tree.converged_leaves, tree.pruned_leaves)
+        for id in all_ids
+            @test tree.subdomains[id].per_dim_degree === nothing
+            @test tree.subdomains[id].transform === nothing
+        end
+        @test length(tree.subdomains) > 1           # the split ladder DID proceed
+    end
 end

@@ -1460,12 +1460,60 @@ function process_subdomain(
     if anisotropic_degree !== nothing &&
        subdomain.per_dim_degree === nothing &&
        subdomain.polynomial !== nothing
-        per_dim = choose_per_dim_degree_lsfit(subdomain; anisotropic_degree...)
+        # Stage-2 keys (active-subspace no-signal fallback) are stripped before
+        # splatting into the chooser, which only knows Stage-1 kwargs.
+        active_fallback = get(anisotropic_degree, :active_fallback, false)
+        fallback_n_cells = get(anisotropic_degree, :fallback_n_cells, 3)
+        fallback_h = get(anisotropic_degree, :fallback_h, 0.01)
+        chooser_kw = Base.structdiff(
+            anisotropic_degree,
+            NamedTuple{(:active_fallback, :fallback_n_cells, :fallback_h)},
+        )
+        per_dim, has_signal =
+            choose_per_dim_degree_lsfit_with_signal(subdomain; chooser_kw...)
         length(per_dim) == n_dim || error(
             "choose_per_dim_degree_lsfit returned $(length(per_dim)) degrees for " *
             "a $(n_dim)-D leaf (subdomain $subdomain_id)",
         )
-        if per_dim != fill(effective_degree, n_dim)
+        if !any(has_signal) && active_fallback
+            # Stage 2 (jl9z.7): the LS ρ_k spectrum was blind on EVERY axis, so
+            # Stage 1's answer would be an isotropic max_degree blast. Consult the
+            # gradient-covariance probe instead: if its spectrum has an unambiguous
+            # effective rank, rotate the leaf to the active frame and take the
+            # spectrum-derived per-dim degrees (installed on the subdomain by
+            # rotate_to_active_frame!); the ActionDegreeBump then clears the stale
+            # fit so the next iteration refits in the rotated frame. An AMBIGUOUS
+            # spectrum (sloppy ramp, no decisive gap) means neither probe found
+            # exploitable structure — fall through to the ordinary gradual
+            # bump/split ladder rather than blasting to max_degree.
+            fb_deg_max = get(chooser_kw, :max_degree, 12)
+            fb_floor = get(chooser_kw, :floor_degree, 2)
+            info = rotate_to_active_frame!(
+                f,
+                subdomain;
+                n_cells = fallback_n_cells,
+                h = fallback_h,
+                deg_max = fb_deg_max,
+                floor_deg = fb_floor,
+                degree_mode = :adaptive,
+                skip_if_ambiguous = true,
+            )
+            if info.degrees !== nothing
+                return ProcessResult(
+                    subdomain_id,
+                    ActionDegreeBump,
+                    false,
+                    nothing,
+                    nothing,
+                    l2_error,
+                    maximum(info.degrees),  # scalar degree summary
+                    nothing,
+                    nothing,
+                    info.degrees,           # rotated-frame anisotropic payload
+                )
+            end
+            # ambiguous probe → no anisotropic retarget; continue to bump/split
+        elseif per_dim != fill(effective_degree, n_dim)
             return ProcessResult(
                 subdomain_id,
                 ActionDegreeBump,
@@ -1673,7 +1721,15 @@ Main adaptive refinement loop with parallel processing.
     per-dim degree (small on smooth/sloppy axes floored at `floor_degree`, larger
     on rough axes). Fires at most once per leaf; further refinement preserves the
     anisotropic shape. The NamedTuple is splatted into `choose_per_dim_degree_lsfit`
-    — e.g. `(; c=4.0, floor_degree=2, max_degree=8)`.
+    — e.g. `(; c=4.0, floor_degree=2, max_degree=8)`. Three keys are reserved for
+    the Stage-2 active-subspace fallback and stripped before the splat:
+    `active_fallback::Bool=false` — when the LS ρ_k spectrum is blind on EVERY
+    axis (Stage 1 would blast the leaf to isotropic `max_degree`), probe the
+    gradient covariance instead; an unambiguous spectrum rotates the leaf to its
+    active frame with spectrum-derived per-dim degrees, an ambiguous one falls
+    through to the ordinary bump/split ladder. `fallback_n_cells::Int=3`,
+    `fallback_h::Float64=0.01` — probe grid (costs `(n+1)·n_cellsⁿ` extra
+    objective evaluations on the leaf, only when triggered).
 
 # Returns
 - SubdivisionTree with refined subdomains

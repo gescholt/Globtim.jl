@@ -211,6 +211,7 @@ export Subdomain,
     pick_strategy_per_axis_lsfit,
     LSFitAxisResult,
     choose_per_dim_degree_lsfit,  # jl9z.7 ρ_k-driven anisotropic per-dim degree
+    choose_per_dim_degree_lsfit_with_signal,  # jl9z.7 Stage 2: + per-axis signal mask
     penalty_barrier_detector,
     flat_barrier_detector,  # yhta: penalty/flat-barrier leaf-masking detectors
     DegeneracyDiagnostics,

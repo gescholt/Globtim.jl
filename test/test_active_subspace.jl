@@ -171,4 +171,40 @@ end
         @test sd0.l2_error ≈ sdI.l2_error rtol = 1e-12
         @test sd0.samples ≈ sdI.samples
     end
+
+    @testset "skip_if_ambiguous: no half-installed rotation (jl9z.7 Stage 2)" begin
+        # A geometric sloppy ramp: gradient scales decay by a uniform decade per
+        # axis, so every eigen log-gap is equal — no decisive rank, `ambiguous`.
+        ramp(x) = x[1]^2 + 1e-2 * x[2]^2 + 1e-4 * x[3]^2 + 1e-6 * x[4]^2
+        _B4 = [(-1.0, 1.0) for _ in 1:4]
+
+        sd = Subdomain(_B4)
+        info = rotate_to_active_frame!(ramp, sd; n_cells = 3, h = 0.01,
+            deg_max = 8, floor_deg = 2, degree_mode = :adaptive,
+            skip_if_ambiguous = true)
+        @test info.effective_dim.ambiguous          # the fixture IS ambiguous
+        @test info.degrees === nothing              # probe declined to commit
+        @test info.transform === nothing
+        @test sd.transform === nothing              # sd left untouched
+        @test sd.per_dim_degree === nothing
+        @test all(isfinite, info.eigenvalues)       # spectrum still reported
+
+        # Unambiguous spectrum (one oblique active direction) DOES install.
+        sd2 = Subdomain(_B3)
+        info2 = rotate_to_active_frame!(_tilted, sd2; n_cells = 5, h = 0.01,
+            deg_max = 6, floor_deg = 2, degree_mode = :adaptive,
+            skip_if_ambiguous = true)
+        @test !info2.effective_dim.ambiguous
+        @test info2.degrees !== nothing
+        @test sd2.transform !== nothing
+        @test sd2.per_dim_degree == info2.degrees
+        @test info2.degrees[1] == 6                 # active axis at deg_max
+        @test all(info2.degrees[2:end] .== 2)       # sloppy tail floored
+
+        # skip_if_ambiguous is an :adaptive-mode contract; :cumulative has no
+        # ambiguity notion, so combining them is a caller bug (raise, no guess).
+        sd3 = Subdomain(_B3)
+        @test_throws ErrorException rotate_to_active_frame!(_tilted, sd3;
+            degree_mode = :cumulative, skip_if_ambiguous = true)
+    end
 end
