@@ -123,11 +123,22 @@ function load_cf_section(path::String)
         "[audit_cf] predcall_dir (String, root to walk for predcall.jsonl) " *
         "is required in $path",
     )
+    mode = Symbol(get(cf, "mode", "cut_axis"))
+    mode in (:cut_axis, :split_vs_stop) || error(
+        "[audit_cf] mode must be \"cut_axis\" or \"split_vs_stop\", got \"$mode\"",
+    )
     return (
+        mode                 = mode,
         predcall_dir         = String(cf["predcall_dir"]),
         max_leaves_per_child = Int(get(cf, "max_leaves_per_child", 16)),
         max_depth            = Int(get(cf, "max_depth", 10)),
         experiment_filter    = get(cf, "experiment_filter", nothing),
+        # Smoke / cost-pinning knob: process only the first N disagreement
+        # leaves (0 = all). A smoke config sets max_records = 1.
+        max_records          = Int(get(cf, "max_records", 0)),
+        # Stratified subsample: at most N leaves per stage-1 experiment,
+        # evenly spaced along the depth-sorted list (0 = no cap).
+        per_experiment_cap   = Int(get(cf, "per_experiment_cap", 0)),
     )
 end
 
@@ -136,7 +147,11 @@ end
 function find_predcall_files(root::String)
     isdir(root) || error("predcall_dir does not exist: $root")
     paths = String[]
+    # Skip vemc/T1.0 validation reruns — they duplicate production cells'
+    # leaves (same patterns as per_axis_audit_aggregate.jl).
+    smoke_patterns = ("smoke", "_run", "postfix", "prevemc", "_old_")
     for (dir, _, files) in walkdir(root)
+        any(p -> occursin(p, basename(dir)), smoke_patterns) && continue
         for fn in files
             fn == "predcall.jsonl" && push!(paths, joinpath(dir, fn))
         end
@@ -145,9 +160,10 @@ function find_predcall_files(root::String)
     return paths
 end
 
-function load_disagreements(root::String; experiment_filter)
+function load_disagreements(root::String; experiment_filter, mode::Symbol)
     paths = find_predcall_files(root)
     out = NamedTuple[]
+    n_bump_feasible_skipped = 0
     for path in paths
         for line in eachline(path)
             isempty(strip(line)) && continue
@@ -156,10 +172,29 @@ function load_disagreements(root::String; experiment_filter)
                 String(r.experiment) == experiment_filter || continue
             end
             String(r.consulted_at) == "predicate_call" || continue
-            String(r.per_axis_action) == "split" || continue
-            r.per_axis_cut_dim !== nothing || continue
-            r.global_split_dim !== nothing || continue
-            Int(r.per_axis_cut_dim) != Int(r.global_split_dim) || continue
+            if mode === :cut_axis
+                # Cut-axis disagreement: per-axis wants a split on a
+                # different axis than select_cut_dimension.
+                String(r.per_axis_action) == "split" || continue
+                r.per_axis_cut_dim !== nothing || continue
+                r.global_split_dim !== nothing || continue
+                Int(r.per_axis_cut_dim) != Int(r.global_split_dim) || continue
+            else  # :split_vs_stop — the "looser" events
+                # Global pick_strategy splits; per-axis says all-axes-bump.
+                # Phase B census (2026-07-11): every such event sits at
+                # degree == max_degree, so "bump" is not actionable — the
+                # per-axis policy's effective action is STOP. Leaves with
+                # bump headroom would need a genuine bump branch; none exist
+                # in the current data, so they are counted and skipped
+                # loudly rather than silently misfiled.
+                String(r.global_verdict) == "split" || continue
+                any(v -> String(v) == "split", r.per_axis_verdicts) && continue
+                r.global_split_dim !== nothing || continue
+                if Int(r.degree) < Int(r.max_degree)
+                    n_bump_feasible_skipped += 1
+                    continue
+                end
+            end
             bounds = [(Float64(b[1]), Float64(b[2])) for b in r.bounds]
             push!(out, (
                 source           = path,
@@ -168,13 +203,41 @@ function load_disagreements(root::String; experiment_filter)
                 depth            = Int(r.depth),
                 degree           = Int(r.degree),
                 rel_l2           = Float64(r.rel_l2),
-                per_axis_cut_dim = Int(r.per_axis_cut_dim),
+                per_axis_cut_dim = r.per_axis_cut_dim === nothing ? nothing :
+                                   Int(r.per_axis_cut_dim),
                 global_split_dim = Int(r.global_split_dim),
                 base_degree      = Int(r.base_degree),
                 max_degree       = Int(r.max_degree),
                 max_leaves_stage1 = Int(r.max_leaves),
                 l2_tolerance     = Float64(r.l2_tolerance),
             ))
+        end
+    end
+    if n_bump_feasible_skipped > 0
+        println("WARNING: skipped $n_bump_feasible_skipped looser leaves with ",
+                "degree < max_degree (genuine bump branch not implemented; ",
+                "0 such leaves existed in the 2026-07 census)")
+    end
+    return out
+end
+
+# Stratified subsample: at most `cap` leaves per experiment, evenly spaced
+# along the depth-sorted list so the depth spectrum survives the cap.
+function apply_per_experiment_cap(leaves::Vector{NamedTuple}, cap::Int)
+    cap > 0 || return leaves
+    by_exp = Dict{String,Vector{NamedTuple}}()
+    for l in leaves
+        push!(get!(by_exp, l.experiment, NamedTuple[]), l)
+    end
+    out = NamedTuple[]
+    for exp in sort(collect(keys(by_exp)))
+        grp = sort(by_exp[exp]; by = l -> (l.depth, l.rel_l2))
+        n = length(grp)
+        if n <= cap
+            append!(out, grp)
+        else
+            idx = unique(round.(Int, range(1, n; length = cap)))
+            append!(out, grp[idx])
         end
     end
     return out
@@ -203,6 +266,9 @@ function run_child_subtrees(objective, parent_bounds, cut_dim::Int;
             l2_tolerance  = l2_tol,
             tolerance_mode = :relative,
             predicate     = pick_strategy,
+            # T1.0: inner-only grid-eval threading (~3x at 8 threads); same
+            # call-site setting as the stage-1 audit driver.
+            thread_evals  = true,
         )
         leaves = vcat(tree.active_leaves,
                       tree.converged_leaves,
@@ -264,14 +330,27 @@ function main()
     println("  predcall_dir: $(cf_cfg.predcall_dir)")
 
     leaves = load_disagreements(cf_cfg.predcall_dir;
-                                experiment_filter = cf_cfg.experiment_filter)
-    println("Loaded $(length(leaves)) disagreement leaves.")
+                                experiment_filter = cf_cfg.experiment_filter,
+                                mode = cf_cfg.mode)
+    println("Loaded $(length(leaves)) disagreement leaves (mode=$(cf_cfg.mode)).")
+    if cf_cfg.per_experiment_cap > 0
+        leaves = apply_per_experiment_cap(leaves, cf_cfg.per_experiment_cap)
+        println("per_experiment_cap=$(cf_cfg.per_experiment_cap) → $(length(leaves)) leaves.")
+    end
+    if cf_cfg.max_records > 0 && length(leaves) > cf_cfg.max_records
+        leaves = leaves[1:cf_cfg.max_records]
+        println("max_records=$(cf_cfg.max_records) → processing first $(length(leaves)).")
+    end
     flush(stdout)
 
     output_dir = config.output_dir !== nothing ? config.output_dir : mktempdir()
     mkpath(output_dir)
     cp(realpath(path), joinpath(output_dir, "experiment_config.toml");
        force = true, follow_symlinks = true)
+
+    # Stream each verdict as it lands so a timeout-killed job keeps its
+    # completed leaves (same pattern as the stage-1 predcall.partial.jsonl).
+    partial_io = open(joinpath(output_dir, "verdicts.partial.jsonl"), "w")
 
     records = NamedTuple[]
     n_done = 0
@@ -283,24 +362,44 @@ function main()
         # base_degree/max_degree (carried in the predcall row), with the
         # l2_tol from config if set, else the leaf's audit-time tolerance.
         l2_tol_leaf = l2_tol_cfg !== nothing ? l2_tol_cfg : leaf.l2_tolerance
-        # Branch A: global's chosen axis
+        # Branch A: global's chosen axis.
+        #
+        # Child start degree differs by mode. Production children inherit the
+        # parent's degree on subdivision (adaptive_subdivision.jl Subdomain
+        # docs). In :cut_axis mode both branches restart at the cell's
+        # base_degree — the bias cancels between branches and keeps the bzvt
+        # 3D protocol comparable. In :split_vs_stop mode the stop branch has
+        # no such bias to cancel, so branch A must be production-faithful:
+        # children start at the leaf's fit degree (== the degree cap for
+        # every looser event).
+        a_base_degree = cf_cfg.mode === :cut_axis ? leaf.base_degree : leaf.degree
         a = run_child_subtrees(
             objective, leaf.bounds, leaf.global_split_dim;
-            base_degree = leaf.base_degree, degree_step = degree_step,
+            base_degree = a_base_degree, degree_step = degree_step,
             max_degree = leaf.max_degree, l2_tol = l2_tol_leaf,
             max_leaves_per_child = cf_cfg.max_leaves_per_child,
             max_depth = cf_cfg.max_depth,
         )
-        # Branch B: per-axis's chosen axis
-        b = run_child_subtrees(
-            objective, leaf.bounds, leaf.per_axis_cut_dim;
-            base_degree = leaf.base_degree, degree_step = degree_step,
-            max_degree = leaf.max_degree, l2_tol = l2_tol_leaf,
-            max_leaves_per_child = cf_cfg.max_leaves_per_child,
-            max_depth = cf_cfg.max_depth,
-        )
+        # Branch B: per-axis's action — its chosen cut axis in :cut_axis
+        # mode; in :split_vs_stop mode the per-axis policy's effective
+        # action at the degree cap is STOP, so branch B is the leaf as-is
+        # (1 leaf, the recorded rel_l2, zero cost). declare_winner then
+        # reads: split must beat the parent's error by >1% or the stop
+        # branch wins on budget.
+        b = if cf_cfg.mode === :cut_axis
+            run_child_subtrees(
+                objective, leaf.bounds, leaf.per_axis_cut_dim;
+                base_degree = leaf.base_degree, degree_step = degree_step,
+                max_degree = leaf.max_degree, l2_tol = l2_tol_leaf,
+                max_leaves_per_child = cf_cfg.max_leaves_per_child,
+                max_depth = cf_cfg.max_depth,
+            )
+        else
+            (total_leaves = 1, max_rel_l2 = leaf.rel_l2, wall_s = 0.0)
+        end
         winner = declare_winner(a, b)
         push!(records, (
+            mode             = String(cf_cfg.mode),
             experiment       = leaf.experiment,
             source_predcall  = leaf.source,
             depth            = leaf.depth,
@@ -309,12 +408,16 @@ function main()
             max_degree       = leaf.max_degree,
             max_leaves_stage1 = leaf.max_leaves_stage1,
             budget           = cf_cfg.max_leaves_per_child,
+            parent_rel_l2    = leaf.rel_l2,
             global_split_dim = leaf.global_split_dim,
             per_axis_cut_dim = leaf.per_axis_cut_dim,
             branch_global    = a,
             branch_per_axis  = b,
             winner           = winner,
         ))
+        JSON3.write(partial_io, records[end])
+        println(partial_io)
+        flush(partial_io)
         @printf("[%d/%d] d=%d b=%d  global(%d, %.2e)  per_axis(%d, %.2e)  → %s\n",
             n_done, n_total, leaf.depth, cf_cfg.max_leaves_per_child,
             a.total_leaves, a.max_rel_l2,
@@ -322,6 +425,7 @@ function main()
             winner)
         flush(stdout)
     end
+    close(partial_io)
     total_wall = time() - t_start
 
     n_per_axis = count(r -> r.winner == "per_axis", records)
