@@ -162,8 +162,7 @@ function pick_strategy(
     # splits (and 4/4 of levy_2d's) while touching zero split decisions on
     # ackley/griewank/fhn3d. Disabled by default (Inf) pending DR-FLIP
     # (8f4p.5.3).
-    if !isnan(spec.window_coverage_sample) &&
-       spec.window_coverage_sample >= θ_coverage_full
+    if !isnan(spec.window_coverage_sample) && spec.window_coverage_sample >= θ_coverage_full
         return :bump
     end
 
