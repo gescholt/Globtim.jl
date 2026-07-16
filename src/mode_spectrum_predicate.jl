@@ -113,6 +113,7 @@ function pick_strategy(
     θ_coverage::Real = 0.4,
     θ_concentration::Real = 0.9,
     θ_stagnant::Real = 1e-2,
+    θ_coverage_full::Real = Inf,
     extended_degree::Int = 0,
 )
     if subdomain.polynomial === nothing
@@ -125,13 +126,14 @@ function pick_strategy(
         θ_coverage = θ_coverage,
         θ_concentration = θ_concentration,
         θ_stagnant = θ_stagnant,
+        θ_coverage_full = θ_coverage_full,
         rel_l2 = subdomain.relative_l2_error,
     )
 end
 
 """
     pick_strategy(spec::NamedTuple; θ_decay, θ_coverage, θ_concentration,
-                  θ_stagnant, rel_l2) -> Symbol
+                  θ_stagnant, θ_coverage_full, rel_l2) -> Symbol
 
 Spectrum-accepting method: same decision rule, operating on a precomputed
 `compute_mode_spectrum` / `subdomain_mode_spectrum` result. Callers that
@@ -146,9 +148,22 @@ function pick_strategy(
     θ_coverage::Real = 0.4,
     θ_concentration::Real = 0.9,
     θ_stagnant::Real = 1e-2,
+    θ_coverage_full::Real = Inf,
     rel_l2::Real = NaN,
 )
     if isempty(spec.spectrum)
+        return :bump
+    end
+
+    # Full-coverage guard (ehaj.5 v3): sample coverage ≈ 1 means the residual
+    # energy is already inside the window, so the structure is resolvable by
+    # degree escalation — never split. Calibrated on the ehaj.3 traces: at
+    # θ_coverage_full = 0.99 this suppresses 87/116 of levy_3d's harmful
+    # splits (and 4/4 of levy_2d's) while touching zero split decisions on
+    # ackley/griewank/fhn3d. Disabled by default (Inf) pending DR-FLIP
+    # (8f4p.5.3).
+    if !isnan(spec.window_coverage_sample) &&
+       spec.window_coverage_sample >= θ_coverage_full
         return :bump
     end
 

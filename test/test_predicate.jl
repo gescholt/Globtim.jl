@@ -56,6 +56,23 @@ using Globtim:
         @test pick_strategy(sd) === :split
     end
 
+    @testset "Full-coverage guard (ehaj.5 v3): cov≈1 flips :split to :bump" begin
+        # T_8 leaf: both bump signals say :split (see the T_8 testset above),
+        # but its residual energy sits entirely inside the extended window, so
+        # window_coverage_sample ≈ 1. With the guard armed at 0.99 the leaf
+        # must bump — the levy misfire pattern. Default (Inf) leaves :split.
+        T8(t) = 128t^8 - 256t^6 + 160t^4 - 32t^2 + 1
+        f(x) = T8(x[1])
+        sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
+        estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
+        @test pick_strategy(sd) === :split
+        @test pick_strategy(sd; θ_coverage_full = 0.99) === :bump
+        # Guard must not override the low-coverage stagnation gate (they are
+        # disjoint regimes): forcing the gate with θ_coverage = 1e9 while the
+        # guard threshold sits above the leaf's coverage keeps :split.
+        @test pick_strategy(sd; θ_coverage = 1e9, θ_coverage_full = 1e9) === :split
+    end
+
     @testset "Coverage gate: low coverage forces :split (griewank pattern)" begin
         # Force the coverage axis to dominate by setting θ_coverage above the
         # leaf's measured window_coverage. Even with concentration=1, the
