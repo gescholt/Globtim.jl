@@ -12,7 +12,7 @@ using Globtim
             @test sum(weights) ≈ 2.0 atol = 1e-13
             @test all(-1.0 .<= nodes .<= 1.0)
             # exactness: an n-point rule integrates degree 2n-1 exactly
-            for k in 0:(2n-1)
+            for k = 0:(2n-1)
                 exact = iseven(k) ? 2.0 / (k + 1) : 0.0
                 @test sum(weights .* nodes .^ k) ≈ exact atol = 1e-12
             end
