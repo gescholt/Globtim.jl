@@ -39,10 +39,10 @@ function compute_l2_norm_quadrature(
     # Iterate over all tensor product combinations
     for idx in Iterators.product([1:n for n in n_points]...)
         # Get the n-dimensional point
-        x = [nodes_1d[i][idx[i]] for i = 1:n_dims]
+        x = [nodes_1d[i][idx[i]] for i in 1:n_dims]
 
         # Get the n-dimensional weight (product of 1D weights)
-        w = prod(weights_1d[i][idx[i]] for i = 1:n_dims)
+        w = prod(weights_1d[i][idx[i]] for i in 1:n_dims)
 
         # Evaluate function and accumulate
         l2_norm_squared += w * abs2(f(x))
@@ -62,7 +62,7 @@ the weights are 2·(first eigenvector component)².
 function gauss_legendre(n::Int)
     n >= 1 || error("Number of quadrature points must be >= 1, got $n")
     n == 1 && return [0.0], [2.0]
-    β = [k / sqrt(4.0 * k^2 - 1.0) for k = 1:(n-1)]
+    β = [k / sqrt(4.0 * k^2 - 1.0) for k in 1:(n-1)]
     E = eigen(SymTridiagonal(zeros(n), β))
     return E.values, 2.0 .* abs2.(@view E.vectors[1, :])
 end
