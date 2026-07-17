@@ -100,6 +100,10 @@ const TIMEOUT_TESTFILE = 120   # Included test files (sparsification, truncation
 end
 
 # Active test files — each guarded with a timeout
+with_timeout(TIMEOUT_TESTFILE, label = "test_quadrature_l2.jl") do
+    include("test_quadrature_l2.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_sparsification.jl") do
     include("test_sparsification.jl")
 end

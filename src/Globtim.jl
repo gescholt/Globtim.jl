@@ -14,7 +14,6 @@ using DataFrames
 using Optim
 using Dates
 using LinearSolve
-using PolyChaos
 using TOML
 
 @enum PrecisionType begin

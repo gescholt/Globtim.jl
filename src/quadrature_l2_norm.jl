@@ -1,7 +1,6 @@
 # quadrature_l2_norm.jl
 # Quadrature-based L2 norm implementation
 
-using PolyChaos
 using LinearAlgebra
 using StaticArrays
 
@@ -53,44 +52,42 @@ function compute_l2_norm_quadrature(
 end
 
 """
-    create_orthogonal_polys(n_points::Vector{Int}, basis::Symbol)
+    gauss_legendre(n::Int)
 
-Create orthogonal polynomial objects for each dimension.
+Gauss-Legendre quadrature nodes and weights on [-1,1] (weight function 1,
+weights sum to 2), computed via Golub-Welsch: the nodes are the eigenvalues
+of the symmetric tridiagonal Jacobi matrix of the Legendre recurrence, and
+the weights are 2·(first eigenvector component)².
+"""
+function gauss_legendre(n::Int)
+    n >= 1 || error("Number of quadrature points must be >= 1, got $n")
+    n == 1 && return [0.0], [2.0]
+    β = [k / sqrt(4.0 * k^2 - 1.0) for k in 1:(n-1)]
+    E = eigen(SymTridiagonal(zeros(n), β))
+    return E.values, 2.0 .* abs2.(@view E.vectors[1, :])
+end
 
-# Arguments
-- `n_points`: Number of points in each dimension
-- `basis`: Polynomial basis type
+"""
+    get_quadrature_rules(n_points::Vector{Int}, basis::Symbol)
 
-# Returns
-- Vector of orthogonal polynomial objects
+Return per-dimension quadrature nodes and weights on [-1,1].
+
+All supported bases (:chebyshev, :legendre, :uniform) use Gauss-Legendre
+quadrature, which integrates polynomials exactly; :uniform differs from
+:legendre only by measure normalization, which the returned weights already
+absorb (they sum to 2 in every case).
 """
 function get_quadrature_rules(n_points::Vector{Int}, basis::Symbol)
+    basis in (:chebyshev, :legendre, :uniform) ||
+        error("Unknown basis: $basis. Supported: :chebyshev, :legendre, :uniform")
+
     nodes_1d = Vector{Vector{Float64}}()
     weights_1d = Vector{Vector{Float64}}()
-
     for n in n_points
-        if basis == :chebyshev
-            # For now, use Gauss-Legendre quadrature for Chebyshev basis
-            # This gives exact results for polynomial integration
-            op = LegendreOrthoPoly(n)
-            push!(nodes_1d, op.quad.nodes)
-            push!(weights_1d, op.quad.weights)
-        elseif basis == :legendre
-            # Gauss-Legendre quadrature on [-1,1]
-            op = LegendreOrthoPoly(n)
-            push!(nodes_1d, op.quad.nodes)
-            push!(weights_1d, op.quad.weights)
-        elseif basis == :uniform
-            # Uniform measure quadrature on [-1,1]
-            op = Uniform_11OrthoPoly(n)
-            push!(nodes_1d, op.quad.nodes)
-            # The weights are normalized to sum to 1, but for [-1,1] we need them to sum to 2
-            push!(weights_1d, op.quad.weights .* 2.0)
-        else
-            error("Unknown basis: $basis. Supported: :chebyshev, :legendre, :uniform")
-        end
+        nodes, weights = gauss_legendre(n)
+        push!(nodes_1d, nodes)
+        push!(weights_1d, weights)
     end
-
     return nodes_1d, weights_1d
 end
 

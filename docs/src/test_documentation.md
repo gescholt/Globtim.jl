@@ -255,7 +255,7 @@ Pkg.test("Globtim")
 - Test
 - LinearAlgebra
 - StaticArrays
-- PolyChaos (for quadrature tests)
+- LinearAlgebra stdlib (Gauss-Legendre quadrature via Golub-Welsch, for quadrature tests)
 - ForwardDiff (for differentiation tests)
 - DataFrames (for analysis tests)
 - HomotopyContinuation (for critical point tests)

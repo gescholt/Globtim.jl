@@ -19,7 +19,6 @@ Core dependencies are always loaded when `using Globtim` is executed. These pack
 - **LinearSolve** (v3.25): Linear system solving
 - **MultivariatePolynomials** (v0.5): Abstract interface for polynomial systems
 - **Optim** (v1.13): BFGS optimization for critical point refinement
-- **PolyChaos** (v0.2.11): Polynomial chaos expansion utilities
 - **StaticArrays** (v1.9): Performance-critical array operations
 - **Statistics**: Standard library for statistical functions
 - **StatsBase** (v0.34): Statistical utilities
