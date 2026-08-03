@@ -380,7 +380,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         F,
         basis,
         precision,
-        normalized,
+        _stored_normalized(basis, normalized),  # 7vug: Chebyshev coeffs are plain-T_n
         power_of_two_denom,
         cond_vandermonde,
     )

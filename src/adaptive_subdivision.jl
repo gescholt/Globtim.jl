@@ -804,7 +804,7 @@ function estimate_subdomain_error(
             chr_result.f_values,
             basis,
             Float64Precision,
-            true,
+            _stored_normalized(basis, true),  # 7vug: christoffel coeffs are plain tensor-Chebyshev
             false,
             chr_result.kappa,
         )
@@ -1064,7 +1064,7 @@ function construct_polynomial_on_subdomain(
         f_values,
         basis,
         Float64Precision,
-        true,
+        _stored_normalized(basis, true),  # 7vug: Chebyshev coeffs (V \ f) are plain-T_n
         false,
         cond(V),
     )

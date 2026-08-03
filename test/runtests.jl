@@ -116,6 +116,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_relative_l2.jl") do
     include("test_relative_l2.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_evaluate_reproduces_fit.jl") do
+    include("test_evaluate_reproduces_fit.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_hc_solve_kwargs.jl") do
     include("test_hc_solve_kwargs.jl")
 end

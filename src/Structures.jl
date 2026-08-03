@@ -203,6 +203,23 @@ function ApproxPoly(
     )
 end
 
+"""
+    _stored_normalized(basis, normalized) -> Bool
+
+Correct value for an `ApproxPoly`'s `normalized` field given how its coefficients were fit.
+
+**Bug 7vug.** `lambda_vandermonde` builds the Chebyshev Vandermonde in the *plain* `T_n` basis
+(`T_0=1, T_1=x, T_n=2xT_{n-1}-T_{n-2}` — no `√(2/π)` weights), regardless of any `normalized`
+request, so a Chebyshev fit's stored `coeffs` are **plain-`T_n` coefficients** and the represented
+polynomial is `p = Σ cⱼ Tⱼ`. But `evaluate`, the HC solve (`solve_polynomial_system` →
+`symbolic_chebyshev(normalized)`), and `to_exact_monomial_basis` all apply the `√(2/π)` weights
+when `normalized=true` — reconstructing/solving a *different* polynomial. Storing `normalized=false`
+for Chebyshev makes every reconstruction path use the same plain basis the coefficients live in.
+Legendre is left untouched: its Vandermonde *does* normalize (`symbolic_legendre(normalized=true)`),
+so `normalized=true` is correct there.
+"""
+_stored_normalized(basis::Symbol, normalized::Bool) = basis === :chebyshev ? false : normalized
+
 # Convenience accessor functions
 get_basis(p::ApproxPoly) = p.basis
 get_precision(p::ApproxPoly) = p.precision
