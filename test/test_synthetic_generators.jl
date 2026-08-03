@@ -1,7 +1,10 @@
 using Test
 using Globtim
 using Globtim: Subdomain, estimate_subdomain_error, pick_strategy_per_axis_lsfit
-using Random
+# Random via Globtim (see note in test_anisotropic_degree.jl): Julia 1.12 `Pkg.test` dedupes
+# Random out of the test env's direct deps, so `using Random` fails there. `import Globtim.Random`
+# binds `Random` in every env; use it qualified (`Random.Xoshiro`).
+import Globtim.Random
 
 include(joinpath(@__DIR__, "synthetic_generators.jl"))
 using .SyntheticGenerators:
@@ -45,7 +48,7 @@ using .SyntheticGenerators:
             @test abs(f(x0 + e) - f(x0 - e)) / (2h) < 1e-6
         end
         # …and xstar beats random points (strict convexity ⇒ unique min).
-        rng = Xoshiro(42)
+        rng = Random.Xoshiro(42)
         fmin = f(x0)
         for _ in 1:50
             p = 2 .* rand(rng, 2) .- 1

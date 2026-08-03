@@ -1,7 +1,10 @@
 using Test
 using Globtim
 using LinearAlgebra
-using Random
+# Random via Globtim (which depends on it): Julia 1.12 `Pkg.test` dedupes the stdlib Random
+# out of the test env's direct deps, so a bare `using Random` fails there. `import Globtim.Random`
+# binds `Random` in every env (Globtim always loads Random); use it qualified (`Random.seed!`).
+import Globtim.Random
 
 # Bead jl9z.7: anisotropic per-dimension degree must SURVIVE the subdivision loop.
 #
