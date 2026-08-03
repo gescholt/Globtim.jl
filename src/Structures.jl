@@ -218,7 +218,8 @@ for Chebyshev makes every reconstruction path use the same plain basis the coeff
 Legendre is left untouched: its Vandermonde *does* normalize (`symbolic_legendre(normalized=true)`),
 so `normalized=true` is correct there.
 """
-_stored_normalized(basis::Symbol, normalized::Bool) = basis === :chebyshev ? false : normalized
+_stored_normalized(basis::Symbol, normalized::Bool) =
+    basis === :chebyshev ? false : normalized
 
 # Convenience accessor functions
 get_basis(p::ApproxPoly) = p.basis
