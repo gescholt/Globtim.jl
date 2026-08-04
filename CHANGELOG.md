@@ -2,6 +2,34 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
+## [1.2.0] - 2026-08-03
+
+### Added
+
+- **Subdivision predicate suite (mode-spectrum → cut decision).** `pick_strategy` v2 with stagnation-gated coverage and recalibrated thresholds; `pick_cut_dim_spectrum` axis selector; Parseval-true sample-based `window_coverage`; parity-stratified `shell_decay`; per-axis mode-spectrum instrumentation persisted per predicate call; opt-in full-coverage guard (`θ_coverage_full`, default off); a `:done` terminal state for low-start subdivision growth.
+- **Anisotropic-degree refinement (opt-in).** Eibner–Melenk least-squares-slope `ρ_k` estimator; `ρ_k` anisotropic-degree opt-in wired through `adaptive_refine`.
+- **Christoffel-preconditioned weighted-LS sampling (opt-in).**
+- **Degenerate / positive-dimensional minima handling.** Degeneracy detector with anisotropic-degree plumbing; active-subspace rotation infrastructure; oblique fold-aligned cuts with rotation-aware critical-point lift-back; positive-dimensional argmin resolver (regularize-to-Morse + manifold report); dimension-adaptive degeneracy detection with non-finite-gradient hardening; active-subspace fallback for LS-blind leaves.
+- **Gradient-residual convergence gate** (`GRADRES-GATE`) for refinement stopping.
+- **Stabilize-then-batch solver path** — benefit matrix, stagnation gate, warm-start batch solver.
+- **`Globtim.Metrics` public module** (lifted from the internal `_metrics.jl`).
+- **Per-leaf logging** — `adaptive_refine` and `two_phase_refine` emit leaf rows via a `logger` kwarg.
+- **`L2_squared` distance** and `[model].distance_function_override` in the catalogue; LBFGS whitelisted for `L2_squared` refinement.
+- **Penalty / flat-barrier leaf masking** in `adaptive_subdivision`.
+- **Planted-decay generator + closed-form decision oracle** for subdivision-predicate testing.
+
+### Changed
+
+- **Dropped the `PolyChaos` dependency**; vendored Gauss–Legendre quadrature in-package. This unblocks **ForwardDiff 1.x** (compat widened to `"0.10, 1"`).
+- Public package repositories renamed to the `<Name>.jl` convention (Globtim.jl, GlobtimPostProcessing.jl, GlobtimPlots.jl, DynamicObjectives.jl).
+
+### Fixed
+
+- **Chebyshev polynomial reconstruction (bug 7vug).** The Chebyshev Vandermonde fits plain-`Tₙ` coefficients, but `evaluate`, the HomotopyContinuation solve, and `to_exact_monomial_basis` all applied `√(2/π)` normalization weights (`normalized=true`) — so `evaluate` did not reproduce fitted values and the solver operated on a distorted polynomial `p_norm ≠` the fitted `f`-approximant. Chebyshev fits now store `normalized=false` (coefficient-preserving); Legendre is unchanged (its Vandermonde already normalizes). Restores value-faithful `evaluate` and correct critical-point structure.
+- Thread safety: removed `@timeit` from `generate_grid` (data race under threaded evaluation).
+- Threaded evaluation: inner-only `thread_evals` at the `adaptive_refine` call site.
+- Test suite: route `Random` through `Globtim` (Julia 1.12 `Pkg.test` drops stdlib `Random` from the direct test deps); qualify the `StandardExperiment` submodule path in the gradient-residual-gate test.
+
 ## [1.1.0] - 2026-04-30
 
 ### Added
