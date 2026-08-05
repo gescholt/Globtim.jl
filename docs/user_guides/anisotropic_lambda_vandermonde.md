@@ -190,5 +190,3 @@ grid = generate_anisotropic_grid([10, 20], basis=:chebyshev)
 
 ## See Also
 - [Grid-Based MainGenerate Guide](grid_based_maingen.md)
-- [Anisotropic Grids Documentation](../anisotropic_grids.md)
-- [Phase 2 Implementation Details](../development/phase2_lambda_vandermonde_breakdown.md)

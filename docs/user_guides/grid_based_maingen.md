@@ -177,6 +177,4 @@ pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid pro
 ## See Also
 
 - [Anisotropic Lambda Vandermonde Guide](anisotropic_lambda_vandermonde.md)
-- [Anisotropic Grids Documentation](../anisotropic_grids.md)
-- [MainGenerate API Reference](../api/main_generate.md)
-- [Grid Generation Functions](../api/grid_generation.md)
+- [API Reference](../src/api_reference.md)
