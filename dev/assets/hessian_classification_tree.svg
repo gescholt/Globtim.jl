@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#444"/>
+    </marker>
+    <style>
+      .root  { fill: #f4f6fa; stroke: #2c3e50; stroke-width: 1.5; }
+      .branch{ fill: #ffffff; stroke: #555;    stroke-width: 1.2; }
+      .leaf-min { fill: #e8f1fa; stroke: #4682b4; stroke-width: 1.8; }
+      .leaf-max { fill: #fbe9ec; stroke: #c41e3a; stroke-width: 1.8; }
+      .leaf-sad { fill: #f0eaf7; stroke: #6a3fa0; stroke-width: 1.8; }
+      .leaf-deg { fill: #f2f2f2; stroke: #7a7a7a; stroke-width: 1.5; stroke-dasharray: 4 3; }
+      .leaf-err { fill: #fff5e6; stroke: #b8860b; stroke-width: 1.5; stroke-dasharray: 4 3; }
+      .title    { font-size: 18px; font-weight: 600; fill: #1a1a1a; }
+      .subtitle { font-size: 12px; fill: #555; }
+      .label    { font-size: 13px; fill: #1a1a1a; }
+      .label-bold { font-size: 13px; font-weight: 600; fill: #1a1a1a; }
+      .tag      { font-size: 13px; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-weight: 600; fill: #1a1a1a; }
+      .edge     { fill: none; stroke: #444; stroke-width: 1.4; }
+    </style>
+  </defs>
+
+  <text x="490" y="28" class="title" text-anchor="middle">Hessian-based critical-point classification</text>
+  <text x="490" y="48" class="subtitle" text-anchor="middle">Decision rule applied inside <tspan class="tag">analyze_critical_points</tspan> with threshold τ = <tspan class="tag">hessian_tol_zero</tspan></text>
+
+  <!-- Root box -->
+  <rect class="root" x="320" y="70" width="340" height="58" rx="6"/>
+  <text x="490" y="92" class="label-bold" text-anchor="middle">Compute H = ∇²f(x*) at refined CP</text>
+  <text x="490" y="112" class="subtitle" text-anchor="middle">ForwardDiff.jl — machine-precision Hessian</text>
+
+  <!-- Connection root → eigenvalues -->
+  <line x1="490" y1="128" x2="490" y2="158" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Eigenvalue node -->
+  <rect class="branch" x="290" y="160" width="400" height="58" rx="6"/>
+  <text x="490" y="182" class="label-bold" text-anchor="middle">Eigenvalues  λ₁ ≤ λ₂ ≤ … ≤ λₙ</text>
+  <text x="490" y="202" class="subtitle" text-anchor="middle">Compare each λᵢ against ±τ</text>
+
+  <!-- Distribute 5 children -->
+  <!-- vertical drop -->
+  <line x1="490" y1="218" x2="490" y2="250" class="edge"/>
+  <!-- horizontal split bar from x=110 to x=870 -->
+  <line x1="110" y1="250" x2="870" y2="250" class="edge"/>
+  <!-- 5 verticals from bar to leaf tops at y=290 -->
+  <line x1="110" y1="250" x2="110" y2="290" class="edge" marker-end="url(#arrow)"/>
+  <line x1="295" y1="250" x2="295" y2="290" class="edge" marker-end="url(#arrow)"/>
+  <line x1="490" y1="250" x2="490" y2="290" class="edge" marker-end="url(#arrow)"/>
+  <line x1="685" y1="250" x2="685" y2="290" class="edge" marker-end="url(#arrow)"/>
+  <line x1="870" y1="250" x2="870" y2="290" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Leaf: minimum -->
+  <rect class="leaf-min" x="30" y="290" width="160" height="170" rx="8"/>
+  <text x="110" y="316" class="label-bold" text-anchor="middle">all λᵢ &gt; τ</text>
+  <text x="110" y="338" class="subtitle" text-anchor="middle">positive definite</text>
+  <line x1="50" y1="354" x2="170" y2="354" stroke="#4682b4" stroke-width="1"/>
+  <text x="110" y="384" class="tag" text-anchor="middle" fill="#4682b4">:minimum</text>
+  <text x="110" y="410" class="subtitle" text-anchor="middle">strict local min</text>
+  <text x="110" y="428" class="subtitle" text-anchor="middle">on f(x)</text>
+  <text x="110" y="450" class="subtitle" text-anchor="middle" font-style="italic">target of refinement</text>
+
+  <!-- Leaf: maximum -->
+  <rect class="leaf-max" x="215" y="290" width="160" height="170" rx="8"/>
+  <text x="295" y="316" class="label-bold" text-anchor="middle">all λᵢ &lt; −τ</text>
+  <text x="295" y="338" class="subtitle" text-anchor="middle">negative definite</text>
+  <line x1="235" y1="354" x2="355" y2="354" stroke="#c41e3a" stroke-width="1"/>
+  <text x="295" y="384" class="tag" text-anchor="middle" fill="#c41e3a">:maximum</text>
+  <text x="295" y="410" class="subtitle" text-anchor="middle">strict local max</text>
+  <text x="295" y="428" class="subtitle" text-anchor="middle">on f(x)</text>
+
+  <!-- Leaf: saddle -->
+  <rect class="leaf-sad" x="410" y="290" width="160" height="170" rx="8"/>
+  <text x="490" y="316" class="label-bold" text-anchor="middle">mixed signs</text>
+  <text x="490" y="334" class="subtitle" text-anchor="middle">some &gt; τ,  some &lt; −τ</text>
+  <line x1="430" y1="354" x2="550" y2="354" stroke="#6a3fa0" stroke-width="1"/>
+  <text x="490" y="384" class="tag" text-anchor="middle" fill="#6a3fa0">:saddle</text>
+  <text x="490" y="410" class="subtitle" text-anchor="middle">indefinite H</text>
+  <text x="490" y="428" class="subtitle" text-anchor="middle">unstable in some dirs</text>
+
+  <!-- Leaf: degenerate -->
+  <rect class="leaf-deg" x="605" y="290" width="160" height="170" rx="8"/>
+  <text x="685" y="316" class="label-bold" text-anchor="middle">any |λᵢ| ≤ τ</text>
+  <text x="685" y="338" class="subtitle" text-anchor="middle">eigenvalue ≈ 0</text>
+  <line x1="625" y1="354" x2="745" y2="354" stroke="#7a7a7a" stroke-width="1"/>
+  <text x="685" y="384" class="tag" text-anchor="middle" fill="#3a3a3a">:degenerate</text>
+  <text x="685" y="410" class="subtitle" text-anchor="middle">2nd-order test</text>
+  <text x="685" y="428" class="subtitle" text-anchor="middle">inconclusive</text>
+
+  <!-- Leaf: error -->
+  <rect class="leaf-err" x="790" y="290" width="160" height="170" rx="8"/>
+  <text x="870" y="316" class="label-bold" text-anchor="middle">Hessian failed</text>
+  <text x="870" y="338" class="subtitle" text-anchor="middle">ForwardDiff exception</text>
+  <line x1="810" y1="354" x2="930" y2="354" stroke="#b8860b" stroke-width="1"/>
+  <text x="870" y="384" class="tag" text-anchor="middle" fill="#8a6a08">:error</text>
+  <text x="870" y="410" class="subtitle" text-anchor="middle">non-differentiable</text>
+  <text x="870" y="428" class="subtitle" text-anchor="middle">at refined point</text>
+
+  <!-- Footer -->
+  <text x="490" y="498" class="subtitle" text-anchor="middle">
+    Default <tspan class="tag">hessian_tol_zero = 1e-8</tspan>.  Looser τ → more <tspan class="tag">:degenerate</tspan> labels (genuine cusps vs flat numerics).
+  </text>
+  <text x="490" y="520" class="subtitle" text-anchor="middle">
+    Returned per row in <tspan class="tag">df_enhanced.critical_point_type</tspan> alongside eigenvalue diagnostics (κ(H), det H, ‖H‖<tspan dy="3" font-size="9">F</tspan><tspan dy="-3">).</tspan>
+  </text>
+</svg>
