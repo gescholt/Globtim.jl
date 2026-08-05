@@ -16,7 +16,7 @@ f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine on f(x)    -->  
 
 If you use Globtim in your research, please cite the underlying algorithm paper:
 
-> Safey El Din, M., Scholten, G., & Trélat, E. (2026). *Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain*. **Mathematics of Control, Signals, and Systems**. [doi:10.1007/s00498-026-00441-3](https://doi.org/10.1007/s00498-026-00441-3)
+> Safey El Din, M., Scholten, G., & Trélat, E. (2026). *Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain*. **Mathematics of Control, Signals, and Systems**. [doi:10.1007/s00498-026-00441-3](https://doi.org/10.1007/s00498-026-00441-3). Free access: [HAL hal-05160251](https://hal.sorbonne-universite.fr/hal-05160251v2).
 
 ```bibtex
 @article{safeyeldin2026probabilistic,
@@ -25,6 +25,7 @@ If you use Globtim in your research, please cite the underlying algorithm paper:
   journal = {Mathematics of Control, Signals, and Systems},
   year    = {2026},
   doi     = {10.1007/s00498-026-00441-3},
+  note    = {Free access: HAL hal-05160251, https://hal.sorbonne-universite.fr/hal-05160251v2},
 }
 ```
 

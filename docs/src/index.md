@@ -77,18 +77,17 @@ pkg> add GlobtimPlots
 
 Globtim implements the algorithm introduced in:
 
-> Mohab Safey El Din, Georgy Scholten, and Emmanuel Trélat.
-> **Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain.**
-> 2025. HAL preprint [hal-05160251](https://hal.science/hal-05160251).
+> Safey El Din, M., Scholten, G., & Trélat, E. (2026). *Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain*. **Mathematics of Control, Signals, and Systems**. [doi:10.1007/s00498-026-00441-3](https://doi.org/10.1007/s00498-026-00441-3). Free access: [HAL hal-05160251](https://hal.sorbonne-universite.fr/hal-05160251v2).
 
 If you use Globtim in your research, please cite this paper:
 
 ```bibtex
-@unpublished{safeyeldin2025morse,
-  title  = {Probabilistic algorithm for computing all local minimizers of Morse functions on a compact domain},
-  author = {Safey El Din, Mohab and Scholten, Georgy and Tr{\'e}lat, Emmanuel},
-  year   = {2025},
-  note   = {HAL preprint hal-05160251},
-  url    = {https://hal.science/hal-05160251}
+@article{safeyeldin2026probabilistic,
+  author  = {Safey El Din, Mohab and Scholten, Georgy and Tr{\'e}lat, Emmanuel},
+  title   = {Probabilistic algorithm for computing all local minimizers of {Morse} functions on a compact domain},
+  journal = {Mathematics of Control, Signals, and Systems},
+  year    = {2026},
+  doi     = {10.1007/s00498-026-00441-3},
+  note    = {Free access: HAL hal-05160251, https://hal.sorbonne-universite.fr/hal-05160251v2},
 }
 ```
