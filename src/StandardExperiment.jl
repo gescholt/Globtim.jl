@@ -390,7 +390,7 @@ result = run_standard_experiment(
 # GRADRES-GATE (bead jw9g.1): runtime convergence test on the *recovered minimizer*
 # rather than the L2 approximation error. The displacement bound ‖H⁻¹∇w(p_true)‖ — and
 # hence the recovered global minimizer — saturates at low degree while the L2 error keeps
-# falling many orders of magnitude (finding F9; T3 sweep korok 721071). Unlike
+# falling many orders of magnitude (finding F9; T3 sweep cluster 721071). Unlike
 # `recovery_error`, this reads only `best_estimate`, so it needs no true parameters and is
 # valid in a genuine estimation run. Returns true once the recovered minimizer has moved
 # less than `tol` (relative) for the two most recent successful degrees — i.e. it has

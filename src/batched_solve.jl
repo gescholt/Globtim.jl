@@ -74,7 +74,7 @@ Constraints (explicit, no silent fallback):
     of zeroed targets (so it buys no speed) AND per-cell zeroing breaks the shared
     support grouping. Sparsify XOR warm-start.
   * an anchor failure fails the whole group; the leaves get the classified status
-    (`:hc_missing` vs `:exception`) — never a silent empty result (korok regression).
+    (`:hc_missing` vs `:exception`) — never a silent empty result (cluster regression).
 """
 function solve_tree_leaves_warmstart(
     tree::SubdivisionTree;

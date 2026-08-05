@@ -1,5 +1,5 @@
 # per_axis_cut_selection.jl
-# Per-axis spectrum-based cut-dim selector (bead globopt_merged-4vtd.5,
+# Per-axis spectrum-based cut-dim selector (bead 4vtd.5,
 # Phase 1 GREEN). Companion to per_cut_predicate.jl's `pick_strategy_per_axis`
 # / `decide_action`: both consume the same per-axis-restricted mode spectrum,
 # but this file's `pick_cut_dim_spectrum` answers a different question — once

@@ -2,7 +2,7 @@ using Test
 using Globtim
 using Globtim: Subdomain, estimate_subdomain_error, select_cut_dimension
 
-# Tests for bead globopt_merged-4vtd.5 — per-axis spectrum-based cut selection.
+# Tests for bead 4vtd.5 — per-axis spectrum-based cut selection.
 # Phase 0 RED: `pick_cut_dim_spectrum` is not implemented yet, so every test
 # below must fail with UndefVarError (or `LoadError` wrapping one). Phase 1
 # GREEN will land the implementation in pkg/globtim/src/per_axis_cut_selection.jl

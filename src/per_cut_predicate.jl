@@ -1,5 +1,5 @@
 # per_cut_predicate.jl
-# Per-cut-direction bump-vs-split predicate (bead globopt_merged-4vtd.3,
+# Per-cut-direction bump-vs-split predicate (bead 4vtd.3,
 # Phase 1 GREEN). Extends the global `pick_strategy` (mode_spectrum_predicate.jl)
 # with per-axis verdicts and a coupled split/cut-dim decision.
 #

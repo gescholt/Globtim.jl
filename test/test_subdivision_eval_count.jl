@@ -9,7 +9,7 @@
 #    produce the canonical eval counts below. This guards against regressions
 #    in the sample-reuse path or the convergence check.
 #
-# Tracks bead globopt_merged-zwbs.8 (SMOKE-INFRA).
+# Tracks bead zwbs.8 (SMOKE-INFRA).
 
 using Test
 using Globtim

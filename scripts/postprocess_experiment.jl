@@ -115,21 +115,23 @@ end
 # ── Cluster path remapping ────────────────────────────────────────────────────
 
 const REPO_ROOT = dirname(dirname(dirname(@__DIR__)))
-const CLUSTER_MARKERS = ["globopt_merged/", "globopt/globopt_merged/"]
+# Repo-root directory name, derived (not hardcoded) — used to strip cluster-absolute
+# path prefixes down to a tail that re-resolves against the local REPO_ROOT.
+const CLUSTER_MARKERS = [basename(REPO_ROOT) * "/"]
 
 """
     _remap_cluster_path(path) -> Union{String, Nothing}
 
 Remap a catalogue path to the local repo root. Handles:
-1. Absolute cluster paths (`/mnt/beegfs/.../globopt_merged/globtim_results/foo.jsonl`)
+1. Absolute cluster paths (`/cluster/scratch/.../<repo-root>/globtim_results/foo.jsonl`)
 2. Mis-resolved relative paths (`/repo/globtim_results/paper/exp/../../DynamicObjectives/...`)
    where the config loader resolved `../../` against the wrong base directory.
 
-Strategy: extract a recognizable tail (after `globopt_merged/` or known package dirs)
+Strategy: extract a recognizable tail (after the repo-root directory or known package dirs)
 and re-resolve it against the local repo root, trying `pkg/` prefix if needed.
 """
 function _remap_cluster_path(path::String)
-    # Strategy 1: Find globopt_merged/ marker and extract relative tail
+    # Strategy 1: Find the repo-root-dir marker and extract relative tail
     for marker in CLUSTER_MARKERS
         idx = findlast(marker, path)
         idx === nothing && continue
@@ -342,7 +344,7 @@ function reconstruct_objective(results_dir::String)
     if catalogue_path !== nothing && entry_name !== nothing
         if !isfile(catalogue_path)
             # Try to resolve cluster paths to local repo paths
-            # Cluster saves absolute paths like /mnt/beegfs/.../globopt_merged/globtim_results/foo.jsonl
+            # Cluster saves absolute paths like /cluster/scratch/.../<repo-root>/globtim_results/foo.jsonl
             # Locally, the same file is at <repo_root>/globtim_results/foo.jsonl
             local_path = _remap_cluster_path(catalogue_path)
             if local_path !== nothing && isfile(local_path)

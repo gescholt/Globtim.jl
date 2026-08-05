@@ -23,7 +23,7 @@ Solve the gradient system on every leaf polynomial of a finished
 ## Notes
 - `:hc_missing` exists as a distinct status because silently succeeding with
   zero critical points from a whole tree of HC failures was a real regression
-  (see korok shootout, 2026-04-23). Downstream reporters MUST treat a leaf
+  (see cluster shootout, 2026-04-23). Downstream reporters MUST treat a leaf
   count of `:hc_missing` as a bug signal, not a "no CPs in this domain" result.
 - Deduplication only removes near-duplicates that arise because adjacent
   subdomains share boundary regions; it does NOT classify minima vs saddles.

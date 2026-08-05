@@ -2,7 +2,7 @@ using Test
 using Globtim
 using Globtim: Subdomain, estimate_subdomain_error, pick_strategy
 
-# Tests for bead globopt_merged-4vtd.3 — per-cut-direction bump-vs-split
+# Tests for bead 4vtd.3 — per-cut-direction bump-vs-split
 # predicate. The current `pick_strategy` returns one global verdict per leaf;
 # this file exercises the new per-axis API: `pick_strategy_per_axis` (returns
 # a Vector{Symbol} of length n_dim) and `decide_action` (combines into an

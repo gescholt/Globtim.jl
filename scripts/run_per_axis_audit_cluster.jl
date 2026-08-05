@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 # run_per_axis_audit_cluster.jl
-# Bead globopt_merged-vh7e (D.2) — cluster-scale per-step audit of the
+# Bead vh7e (D.2) — cluster-scale per-step audit of the
 # per-axis bump-vs-split predicate, driven by a TOML config.
 #
 # Sister of experiments/sandbox/run_per_axis_audit_perstep_3d.jl (bzvt, local

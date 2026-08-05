@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 # run_per_axis_counterfactual_cluster.jl
-# Bead globopt_merged-vh7e (D.2) — cluster-scale counterfactual A/B on the
+# Bead vh7e (D.2) — cluster-scale counterfactual A/B on the
 # per-axis cut-dim disagreements logged by run_per_axis_audit_cluster.jl.
 #
 # For each disagreement leaf (per_axis_cut_dim != global_split_dim), fork the
