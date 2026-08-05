@@ -18,7 +18,7 @@ Build polynomial approximation with precision control.
 
 **Signature:**
 ```julia
-Constructor(T::TestInput, degree; precision=AdaptivePrecision, basis=:chebyshev, verbose=0, grid=nothing)
+Constructor(T::TestInput, degree; precision=Float64Precision, basis=:chebyshev, verbose=0, grid=nothing)
 ```
 
 **Parameters:**

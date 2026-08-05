@@ -39,7 +39,7 @@ end
         verbose = 1,
         basis::Symbol = :chebyshev,
         GN::Union{Int,Nothing} = nothing,
-        precision::PrecisionType = RationalPrecision,
+        precision::PrecisionType = Float64Precision,
         normalized::Bool = true,
         power_of_two_denom::Bool = false
     )::ApproxPoly
@@ -83,7 +83,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     verbose = 1,
     basis::Symbol = :chebyshev,
     GN::Union{Int,Nothing} = nothing,
-    precision::PrecisionType = RationalPrecision,
+    precision::PrecisionType = Float64Precision,
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
     thread_evals::Bool = false,
@@ -402,7 +402,7 @@ polynomial of the specified degree.
 # Keyword Arguments
 - `verbose::Int=0`: Verbosity level (0=silent, 1=basic info, 2=detailed)
 - `basis::Symbol=:chebyshev`: Basis type (`:chebyshev` or `:legendre`)
-- `precision::PrecisionType=RationalPrecision`: Precision type for coefficients
+- `precision::PrecisionType=Float64Precision`: Precision type for coefficients (default; use `RationalPrecision` for exact/symbolic paths — `to_exact_monomial_basis`, msolve)
 - `normalized::Bool=false`: Whether to normalize the polynomial
 - `power_of_two_denom::Bool=false`: Use power-of-two denominators for rationals
 - `grid::Union{Nothing,Matrix{Float64}}=nothing`: Pre-generated grid matrix (rows are points)
@@ -452,7 +452,7 @@ TimerOutputs.@timeit _TO function Constructor(
     degree;
     verbose = 0,
     basis::Symbol = :chebyshev,
-    precision::PrecisionType = RationalPrecision,
+    precision::PrecisionType = Float64Precision,
     normalized::Bool = false,
     power_of_two_denom::Bool = false,
     grid::Union{Nothing,Matrix{Float64}} = nothing,

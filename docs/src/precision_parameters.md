@@ -491,12 +491,12 @@ pol = smart_precision_selection(Deuflhard, 2, 8, 1.2)
 
 ## Best Practices
 
-### 1. Start with AdaptivePrecision
-For most applications, `Float64Precision` is sufficient:
+### 1. Start with the default (`Float64Precision`)
+For most applications, `Float64Precision` — the default — is sufficient:
 
 ```julia
-# Recommended default approach
-pol = Constructor(TR, degree, precision=AdaptivePrecision)
+# Recommended default approach (Float64Precision is the default)
+pol = Constructor(TR, degree)
 ```
 
 ### 2. Use Float64Precision for Batch Processing

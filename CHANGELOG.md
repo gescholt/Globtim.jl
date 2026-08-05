@@ -20,6 +20,7 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ### Changed
 
+- **`Constructor`/`MainGenerate` now default to `precision = Float64Precision`** (was `RationalPrecision`). The `Constructor` path always computes Float64 coefficients (a Float64 `LinearSolve` LU on the Vandermonde system) and stores `precision` only as metadata, so the old default *mislabeled* Float64 coefficients as rational; the field is now honest and matches the documented default. The exact/symbolic paths are unchanged — `exact_polynomial_coefficients`, `to_exact_monomial_basis`, and `lege_pol` still default to `RationalPrecision`, and the msolve backend converts to `Rational{BigInt}` internally regardless. Pass `precision = RationalPrecision` to `Constructor` when you want that intent recorded on the polynomial for downstream exact work.
 - **Dropped the `PolyChaos` dependency**; vendored Gauss–Legendre quadrature in-package. This unblocks **ForwardDiff 1.x** (compat widened to `"0.10, 1"`).
 - Public package repositories renamed to the `<Name>.jl` convention (Globtim.jl, GlobtimPostProcessing.jl, GlobtimPlots.jl, DynamicObjectives.jl).
 
