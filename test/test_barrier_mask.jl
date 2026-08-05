@@ -4,7 +4,7 @@ using Globtim
 # Bead yhta: penalty/flat-barrier leaf masking in adaptive_subdivision.
 #
 # An objective that returns a finite penalty PLATEAU over part of the domain
-# (e.g. OptTraj.IndirectShootingObjective on unstable costate corners) creates a
+# (e.g. an ODE-shooting objective on unstable-integration corners) creates a
 # discontinuous edge. When the edge is NOT axis-aligned, cut optimization cannot
 # cleanly isolate it, so the L2 estimator keeps splitting (and, with
 # p-refinement, re-fitting higher-degree polynomials on the step) — runaway work

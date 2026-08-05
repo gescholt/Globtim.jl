@@ -2,15 +2,15 @@
 # Penalty / flat-barrier leaf masking for adaptive_subdivision (bead yhta).
 #
 # Some objectives return a finite *penalty sentinel* over part of the domain
-# instead of raising — e.g. `OptTraj.IndirectShootingObjective` returns
-# `log1p(penalty)` for costate samples that drive the integrated arc to
-# `retcode=Unstable` (it keeps the objective total rather than crash the run;
-# see its docstring). Such a region is a flat plateau with a discontinuous
-# edge. The L2 estimator sees high error at the edge and keeps splitting (and,
-# with `enable_p_refinement`, re-fits ever-higher-degree polynomials on the
+# instead of raising — e.g. an ODE-shooting objective that returns
+# `log1p(penalty)` for samples that drive the integrated arc to
+# `retcode=Unstable` (keeping the objective total rather than crashing the
+# run). Such a region is a flat plateau with a discontinuous edge. The L2
+# estimator sees high error at the edge and keeps splitting (and, with
+# `enable_p_refinement`, re-fits ever-higher-degree polynomials on the
 # discontinuity) — work that never reduces error and either exhausts the
-# leaf/time budget or times out. Three 5-D CR3BP runs with `--prefine` timed
-# out at 6 h on exactly this (bead yhta).
+# leaf/time budget or times out. Long high-dimensional shooting runs with
+# `--prefine` have timed out at 6 h on exactly this (bead yhta).
 #
 # A *barrier detector* is a `Vector{Float64} -> Bool` predicate consulted by
 # `process_subdomain` (and the `adaptive_refine` / `two_phase_refine` finalize
@@ -44,7 +44,7 @@ forever.
 
 # Example
 ```julia
-det = penalty_barrier_detector(log1p(10.0))          # IndirectShootingObjective sentinel
+det = penalty_barrier_detector(log1p(10.0))          # ODE-shooting penalty sentinel
 tree = adaptive_refine(obj, bounds, 6; enable_p_refinement=true, barrier_detector=det)
 ```
 """
