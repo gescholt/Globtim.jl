@@ -4,7 +4,7 @@ Globtim's approach to global optimization consists of three main phases:
 
 ![Globtim — algorithm overview](assets/algorithm_overview.svg)
 
-Subdivision strategies (`:B_iso`, `:B_aniso`, `:adaptive_interleaved`, …) wrap Phase 1 — they iterate over leaves of an adaptive partition, then aggregate Phase 2/3 results across all leaves. See [Subdivision Strategies](https://github.com/gescholt/globopt_merged/blob/main/docs/SUBDIVISION_STRATEGIES.md) for the partition-level extensions.
+Subdivision strategies (`:B_iso`, `:B_aniso`, `:adaptive_interleaved`, …) wrap Phase 1 — they iterate over leaves of an adaptive partition, then aggregate Phase 2/3 results across all leaves.
 
 ## 1. Polynomial Approximation
 
@@ -17,9 +17,9 @@ Globtim uses tensorized Chebyshev or Legendre grids for function sampling:
 ```julia
 # Create polynomial approximation
 pol = Constructor(
-    TR,           # Test input specification
-    degree,       # Polynomial degree
-    "chebyshev"   # Basis type (default)
+    TR,                  # Test input specification
+    degree;              # Polynomial degree
+    basis = :chebyshev,  # Basis type (default; :legendre also supported)
 )
 ```
 
@@ -58,6 +58,7 @@ where p(x) is our polynomial approximation.
 
 ```julia
 using DynamicPolynomials
+using HomotopyContinuation  # provides the default :hc solver (weak-dependency extension)
 
 # Define polynomial variables
 @polyvar x[1:n_dims]

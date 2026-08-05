@@ -1,6 +1,6 @@
 # API Reference
 
-> **Note:** As of v1.1.2, the public API has been streamlined to include only essential functions.
+> **Note:** As of v1.2.0, the public API has been streamlined to include only essential functions.
 
 ## Main Functions
 
@@ -78,11 +78,7 @@ df_enhanced, df_min = analyze_critical_points(f, df, TR, enable_hessian=true, ve
 
 | Function | Purpose |
 |----------|---------|
-| `chebyshev_extrema(n)` | Generate Chebyshev extrema points |
-| `chebyshev_polys(x, n)` | Evaluate Chebyshev polynomials |
-| `grid_sample(TR, n)` | Create sampling grid |
-| `sample_objective_on_grid(f, grid)` | Evaluate objective on grid |
-| `lambda_vandermonde(grid, degree)` | Construct Vandermonde matrix |
+| `lambda_vandermonde(grid, degree)` | Construct the Chebyshev/Legendre Vandermonde matrix |
 
 ---
 

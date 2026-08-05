@@ -102,7 +102,7 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectangu
 ## Visualization
 
 For plotting the polynomial level set with critical points overlaid, use the
-[GlobtimPlots](globtimplots.md) package. Load a Makie backend (`CairoMakie` for
+[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) package. Load a Makie backend (`CairoMakie` for
 static files, `GLMakie` for interactive windows) **before** calling any plot function:
 
 ```julia
@@ -115,7 +115,7 @@ fig = cairo_plot_polyapprox_levelset(apol, ainp, df_enhanced, df_min)
 CairoMakie.save("levelset.png", fig)
 ```
 
-See the [GlobtimPlots documentation](globtimplots.md) for the full set of plot types
+See the [GlobtimPlots documentation](https://github.com/gescholt/GlobtimPlots.jl) for the full set of plot types
 (Morse spectra, subdivision partitions, convergence sweeps).
 
 For post-experiment analysis (refinement, parameter recovery, campaign comparison),

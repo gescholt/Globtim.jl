@@ -25,6 +25,8 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 ### 2. Find Critical Points
 
 ```julia
+using HomotopyContinuation  # loads the default :hc solver (weak-dependency extension)
+
 pol = Constructor(TR, 8)
 @polyvar x[1:2]
 solutions = solve_polynomial_system(x, pol)
@@ -140,5 +142,5 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 - [Critical Point Analysis](critical_point_analysis.md) - Advanced refinement
 - [Sparsification](sparsification.md) - Polynomial complexity reduction
 - [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl) - Refine critical points to high accuracy, campaign analysis
-- [GlobtimPlots](globtimplots.md) - Visualize experiments and results
+- [GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) - Visualize experiments and results
 - [API Reference](api_reference.md) - Complete function documentation

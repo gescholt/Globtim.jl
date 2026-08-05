@@ -1,15 +1,11 @@
 push!(LOAD_PATH, "../src/")
 using Documenter, Globtim
 
-# WGLMakie requires a browser/display and is not available in CI.
-# In CI we run in draft mode (skips @example block execution) so WGLMakie
-# is never needed — docs structure and docstring validity are still checked.
+# Self-contained docs: this environment depends ONLY on Globtim (+ Documenter),
+# so the site builds on the public Globtim.jl mirror without the sibling
+# GlobtimPlots / GlobtimPostProcessing path-sources (which don't exist there).
+# @example blocks are skipped in CI via draft mode; docs structure is still checked.
 const CI = get(ENV, "CI", "false") == "true"
-if !CI
-    using WGLMakie, Bonito
-    WGLMakie.activate!()
-    Makie.inline!(true)
-end
 
 makedocs(
     sitename = "Globtim.jl Documentation",
@@ -49,8 +45,6 @@ makedocs(
         "Exact Conversion" => "exact_conversion.md",
         "Grid Formats" => "grid_formats.md",
         "Precision" => "precision_parameters.md",
-        "GlobtimPlots" => "globtimplots.md",
-        "Interactive Visualizations" => "interactive_test.md",
         "API Reference" => "api_reference.md",
     ],
     checkdocs = :none,

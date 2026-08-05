@@ -53,7 +53,7 @@ Pkg.add(url="https://github.com/gescholt/Globtim.jl")
 ## Quick Start
 
 ```julia
-using Globtim, DynamicPolynomials
+using Globtim, DynamicPolynomials, HomotopyContinuation  # HC enables the default :hc solver
 
 # Define a test function (or use your own)
 f = Deuflhard  # Built-in test function
@@ -164,7 +164,7 @@ Globtim.jl/
 ├── src/                    # Core package source
 │   ├── Globtim.jl          # Main module
 │   ├── ApproxConstruct.jl  # Polynomial construction
-│   ├── hom_solve.jl        # Homotopy continuation solver
+│   ├── poly_solver.jl      # Critical-point solver (HC via weak-dep extension)
 │   └── ...
 ├── test/                   # Test suite
 ├── docs/                   # Documenter.jl documentation

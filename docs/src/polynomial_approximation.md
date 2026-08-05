@@ -103,8 +103,8 @@ Convert from orthogonal basis to exact monomial representation:
 # Get exact monomial coefficients
 exact_coeffs = to_exact_monomial_basis(pol, grid_points)
 
-# Or directly from function
-exact_coeffs = exact_polynomial_coefficients(f, degree, domain_bounds)
+# Or directly from function (dim = number of variables)
+exact_coeffs = exact_polynomial_coefficients(f, dim, degree)
 ```
 
 This enables:
@@ -124,7 +124,7 @@ sparse_poly, stats = sparsify_polynomial(polynomial, threshold=1e-10)
 # Analyze tradeoffs
 results = analyze_sparsification_tradeoff(
     polynomial,
-    thresholds=logspace(-12, -6, 20),
+    thresholds=10 .^ range(-12, -6, length=20),
     compute_error_norm=true
 )
 ```
