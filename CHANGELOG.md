@@ -30,6 +30,7 @@ All notable changes to Globtim.jl will be documented in this file.
 - Thread safety: removed `@timeit` from `generate_grid` (data race under threaded evaluation).
 - Threaded evaluation: inner-only `thread_evals` at the `adaptive_refine` call site.
 - Test suite: route `Random` through `Globtim` (Julia 1.12 `Pkg.test` drops stdlib `Random` from the direct test deps); qualify the `StandardExperiment` submodule path in the gradient-residual-gate test.
+- **`Constructor`'s docstring now attaches** — a stray comment sat between the docstring and its `@timeit`-wrapped definition, so `?Constructor` returned "No documentation found" and the symbol was absent from the rendered docs. The API Reference page now auto-renders docstrings via Documenter `@docs` blocks instead of drifting hand-written tables.
 
 ## [1.1.0] - 2026-04-30
 

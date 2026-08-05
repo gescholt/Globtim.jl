@@ -446,7 +446,6 @@ grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
 pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid provided
 ```
 """
-# Update the Constructor function to pass through the vector scale_factor and support grids
 TimerOutputs.@timeit _TO function Constructor(
     T::TestInput,
     degree;
