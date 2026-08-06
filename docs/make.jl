@@ -4,8 +4,9 @@ using Documenter, Globtim
 # Self-contained docs: this environment depends ONLY on Globtim (+ Documenter),
 # so the site builds on the public Globtim.jl mirror without the sibling
 # GlobtimPlots / GlobtimPostProcessing path-sources (which don't exist there).
-# @example blocks are skipped in CI via draft mode; docs structure is still checked.
-const CI = get(ENV, "CI", "false") == "true"
+# @example blocks are executed at build time (draft = false) so the docs show real output and
+# a broken example fails the build. The docs env has HomotopyContinuation (the :hc solver); no
+# Makie backend or display is needed, so the examples run headless in CI.
 
 makedocs(
     sitename = "Globtim.jl Documentation",
@@ -48,7 +49,7 @@ makedocs(
         "API Reference" => "api_reference.md",
     ],
     checkdocs = :none,
-    draft = CI,   # skips @example execution in CI; still validates structure
+    draft = false,   # execute @example blocks (verified, real output)
 )
 
 deploydocs(

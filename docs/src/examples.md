@@ -1,6 +1,37 @@
 # Examples
 
-This page demonstrates Globtim features with inline examples and visual results.
+Every code block on this page is **executed when the documentation is built**, so the output shown is real.
+
+## A complete example
+
+The full workflow on a smooth four-well objective — approximate, find *every* critical point, then keep the minima:
+
+```@example fourwell
+using Globtim, DynamicPolynomials, HomotopyContinuation
+
+# Four-well objective: global minima at (±1, ±1), a maximum at the origin, four saddles.
+f(x) = (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2
+
+TR  = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.5)   # search box [-1.5, 1.5]²
+pol = Constructor(TR, 8)                                          # degree-8 Chebyshev fit
+
+@polyvar x[1:2]
+sols = solve_polynomial_system(x, pol)                           # solve ∇p = 0
+df   = process_crit_pts(sols, f, TR)                             # → true critical points of f
+df_enhanced, df_min = analyze_critical_points(f, df, TR; enable_hessian = true, verbose = false)
+
+println("L² approximation error : ", round(pol.nrm, sigdigits = 3))
+println("critical points found  : ", size(df, 1))
+println("minima found           : ", size(df_min, 1))
+```
+
+Degree 8 recovers this quartic essentially exactly (`pol.nrm ≈ 1e-15`), and Globtim finds all **nine** critical points — the four global minima at (±1, ±1), plus four saddles and the central maximum. The recovered minima:
+
+```@example fourwell
+using DataFrames   # nrow/eachrow come from DataFrames, which analyze_critical_points returns
+sort!(df_min, [:x1, :x2])
+[(round(r.x1, digits = 3), round(r.x2, digits = 3)) for r in eachrow(df_min)]
+```
 
 ## Runnable demo scripts
 
@@ -8,7 +39,7 @@ Self-contained scripts ship in the [`examples/`](https://github.com/gescholt/Glo
 
 | Script | What it shows |
 |---|---|
-| `custom_function_demo.jl` | Define a custom 2D objective, build the polynomial approximation, find critical points |
+| `custom_function_demo.jl` | Define a custom 2D objective, build the approximation, find critical points |
 | `quick_subdivision_demo.jl` | Adaptive subdivision on sphere / Rosenbrock / Rastrigin / anisotropic |
 | `domain_sweep_demo.jl` | Sweep over domain sizes for a fixed objective |
 | `high_dimensional_demo.jl` | 3D / 4D scaling behaviour |
@@ -17,141 +48,95 @@ Self-contained scripts ship in the [`examples/`](https://github.com/gescholt/Glo
 | `anisotropic_grid_demo.jl` | Anisotropic Chebyshev / Legendre grids |
 | `basis_comparison.jl` | Chebyshev vs Legendre nodes / convergence on the 1D Runge function |
 
-For an end-to-end tour across all three packages (find → refine → plot), see the
-[Ecosystem Walkthrough](ecosystem_walkthrough.md).
+For an end-to-end tour across the whole package family (find → refine → plot), see the [Ecosystem Walkthrough](ecosystem_walkthrough.md).
 
----
+## Custom objectives
 
-## Test Function Gallery
+Any function that accepts a vector `x` and returns a scalar works. Here a tilted double-well finds its two minima:
 
-Visual examples of Globtim finding critical points on standard benchmark functions.
+```@example custom
+using Globtim, DynamicPolynomials, HomotopyContinuation
 
-### Deuflhard
-![Deuflhard Function](assets/plots/deuflhard.png)
-
-### Holder Table
-![Holder Table Function](assets/plots/holder_table.pdf)
-
-### Beale
-![Beale Function](assets/plots/beale.pdf)
-
-### Branin
-![Branin Function](assets/plots/branin.pdf)
-
----
-
-## Basic 2D Workflow
-
-**Core API sequence:**
-
-| Step | API Call |
-|------|----------|
-| 1. Define problem | `TestInput(f, dim=2, center=[0.0,0.0], sample_range=1.2)` |
-| 2. Build polynomial | `Constructor(TR, degree)` |
-| 3. Find critical pts | `solve_polynomial_system(x, pol)` |
-| 4. Process solutions | `process_crit_pts(solutions, f, TR)` |
-| 5. Analyze & classify | `analyze_critical_points(f, df, TR, enable_hessian=true)` |
-
----
-
-## Custom Objective Functions
-
-Define any function accepting a vector `x` and returning a scalar:
-
-```julia
-my_function(x) = (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1*sin(10*x[1]*x[2])
+g(x) = (x[1]^2 - 1)^2 + x[2]^2 + 0.3 * x[1]   # tilt breaks the symmetry between the wells
+TR = TestInput(g, dim = 2, center = [0.0, 0.0], sample_range = 1.5)
+pol = Constructor(TR, 8)
+@polyvar x[1:2]
+df = process_crit_pts(solve_polynomial_system(x, pol), g, TR)
+_, df_min = analyze_critical_points(g, df, TR; enable_hessian = true, verbose = false)
+println("minima: ", size(df_min, 1), "  (global at the deeper, tilted-down well)")
 ```
 
----
+## 1D functions with scalar input
 
-## Statistical Analysis with Tables
+For `dim = 1`, Globtim accepts ordinary scalar functions (`sin`, `cos`, …):
 
-The enhanced statistics and table rendering/export live in the
-[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)
-package, which consumes the `df_enhanced` DataFrame produced by
-`analyze_critical_points`:
+```@example onedim
+using Globtim, DynamicPolynomials, HomotopyContinuation
 
-```julia
-using GlobtimPostProcessing
-# render statistical tables and export to CSV / Markdown / LaTeX
-export_analysis_tables(tables, "critical_point_analysis", output_dir; formats=[:csv, :markdown, :latex])
+f = x -> sin(3x) + 0.1x^2
+TR = TestInput(f, dim = 1, center = [0.0], sample_range = Float64(π))
+pol = Constructor(TR, 12)
+@polyvar x[1:1]
+df = process_crit_pts(solve_polynomial_system(x, pol), f, TR)
+_, df_min = analyze_critical_points(f, df, TR; enable_hessian = true, verbose = false)
+println("critical points: ", size(df, 1), "   minima: ", size(df_min, 1))
 ```
 
----
+## Domain size matters
 
-## High-Dimensional Problems (3D/4D)
-
-**Tips:**
-- Use `AdaptivePrecision` for accuracy/performance balance
-- Reduce polynomial degree as dimension increases (4D → degree 4-6)
-- Disable Hessian analysis for faster results: `enable_hessian=false`
-
----
-
-## Domain Exploration
-
-Test different domain sizes to find all critical points:
+Globtim finds the critical points **inside the search box**. Widen the box to capture more of them, and use a rectangular box (`sample_range` as a vector) for anisotropic domains:
 
 ```julia
-TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=r)      # uniform
-TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=[2.0, 1.0])  # rectangular
+TR = TestInput(f, dim = 2, center = [0.0, 0.0], sample_range = 1.5)        # square [-1.5, 1.5]²
+TR = TestInput(f, dim = 2, center = [0.0, 0.0], sample_range = [2.0, 1.0]) # rectangle [-2,2]×[-1,1]
 ```
 
----
+## High-dimensional problems (3D / 4D)
+
+The same workflow scales to 3D and 4D. Practical tips:
+
+- Reduce the polynomial degree as dimension grows (4D → degree 4–6 is often enough for smooth objectives).
+- Use `precision = AdaptivePrecision` when you need higher-accuracy coefficients (e.g. for sparsification or the symbolic solver).
+- Pass `enable_hessian = false` to `analyze_critical_points` for a faster pass when you only need the minima.
+
+See `high_dimensional_demo.jl` for a worked 3D/4D scaling example.
 
 ## Visualization
 
-For plotting the polynomial level set with critical points overlaid, use the
-[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) package. Load a Makie backend (`CairoMakie` for
-static files, `GLMakie` for interactive windows) **before** calling any plot function:
+Plotting the polynomial level set with critical points overlaid lives in the [GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) package. Load a Makie backend (`CairoMakie` for static files, `GLMakie` for interactive windows) **before** calling any plot function:
 
 ```julia
-using GlobtimPlots
-using CairoMakie
+using GlobtimPlots, CairoMakie
 
-apol = adapt_polynomial_data(pol)   # adapt globtim objects for plotting
+apol = adapt_polynomial_data(pol)    # adapt Globtim objects for plotting
 ainp = adapt_problem_input(TR)
-fig = cairo_plot_polyapprox_levelset(apol, ainp, df_enhanced, df_min)
+fig  = cairo_plot_polyapprox_levelset(apol, ainp, df_enhanced, df_min)
 CairoMakie.save("levelset.png", fig)
 ```
 
-See the [GlobtimPlots documentation](https://github.com/gescholt/GlobtimPlots.jl) for the full set of plot types
-(Morse spectra, subdivision partitions, convergence sweeps).
+See the [GlobtimPlots repository](https://github.com/gescholt/GlobtimPlots.jl) for the full set of plot types (Morse spectra, subdivision partitions, convergence sweeps).
 
-For post-experiment analysis (refinement, parameter recovery, campaign comparison),
-use [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl).
+## Statistical analysis and tables
 
----
-
-## Polynomial Degree Comparison
-
-Compare Chebyshev vs Legendre bases and analyze how polynomial degree affects approximation quality and critical point discovery. See the [Polynomial Approximation](polynomial_approximation.md) page for theoretical background.
-
----
-
-## 1D Functions with Scalar Input
-
-Works with functions like `sin`, `cos` that expect scalar input:
+Enhanced statistics and CSV / Markdown / LaTeX table export live in [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl), which consumes the `df_enhanced` DataFrame produced above:
 
 ```julia
-f = x -> sin(3x) + 0.1*x^2
-TR = TestInput(f, dim=1, center=[0.0], sample_range=π)
+using GlobtimPostProcessing
+export_analysis_tables(tables, "critical_point_analysis", output_dir; formats = [:csv, :markdown, :latex])
 ```
 
----
+## Test-function gallery
 
-## Basin Analysis
+Globtim on the Deuflhard test function — sample grid, polynomial approximant, and recovered minima:
 
-Analyze convergence basins for critical points. The `df_min` DataFrame includes:
-- `basin_points` - Number of points converging to this minimum
-- `average_convergence_steps` - Mean BFGS iterations
-- `region_coverage_count` - Spatial coverage metric
+![Deuflhard function](assets/plots/deuflhard.png)
 
----
+More benchmark objectives (Beale, Branin, Hölder Table, …) are available as built-in test functions; see the [FUNCTION_REGISTRY](api_reference.md) and `examples/` scripts to reproduce them.
 
-## Next Steps
+## Next steps
 
-- [Getting Started](getting_started.md) - Basic concepts and setup
-- [API Reference](api_reference.md) - Complete function documentation
-- [Precision Parameters](precision_parameters.md) - Numerical precision options
-- [Sparsification](sparsification.md) - Polynomial complexity reduction
+- [Getting Started](getting_started.md) — basic concepts and setup
+- [Core Algorithm](core_algorithm.md) — the mathematical approach
+- [API Reference](api_reference.md) — the rendered function reference
+- [Precision](precision_parameters.md) — precision types and trade-offs
+- [Sparsification](sparsification.md) — polynomial complexity reduction
