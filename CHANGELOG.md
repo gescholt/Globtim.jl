@@ -2,6 +2,12 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
+## [1.2.1] - 2026-08-06
+
+### Fixed
+
+- `pick_cut_dim_spectrum` (per-axis spectrum-based cut selector): use an explicit, floating-point-tolerant lowest-index tie-break instead of a bare `argmax`. On isotropic inputs the per-axis scores are equal only up to rounding, so ULP differences flipped the chosen axis across platforms — the aarch64 CI picked axis 2 where local x86 picked axis 1. The tie-break is now deterministic and platform-independent (returns the lowest index whose score is within a relative tolerance of the maximum).
+
 ## [1.2.0] - 2026-08-03
 
 ### Added

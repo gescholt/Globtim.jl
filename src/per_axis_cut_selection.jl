@@ -96,9 +96,17 @@ function pick_cut_dim_spectrum(spec::NamedTuple; axis_mass_floor::Real = 1e-12)
         end
     end
 
-    # argmax with lowest-index tie-break (Base.argmax already returns the
-    # first maximum, which equals the lowest index for equal values).
-    return argmax(scores)
+    # argmax with an EXPLICIT lowest-index tie-break that is robust to FP noise.
+    # For isotropic inputs the per-axis scores are equal only up to rounding, so a
+    # bare `argmax` can flip the winning index across platforms (aarch64 CI vs
+    # local x86 — bead 4vtd.5). Return the lowest index whose score is within a
+    # relative tolerance of the maximum.
+    best = maximum(scores)
+    tol = 1e-9 * max(abs(best), 1.0)
+    for d in 1:n_dim
+        scores[d] ≥ best - tol && return d
+    end
+    return 1   # unreachable: the maximum itself is always within tol
 end
 
 """
