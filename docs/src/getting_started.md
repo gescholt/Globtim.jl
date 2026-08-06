@@ -104,16 +104,6 @@ For dimension ≥ 4:
 - Use coefficient truncation to manage polynomial complexity
 - Monitor memory usage with higher degrees
 
-### HPC Cluster Usage
-
-```julia
-pol = Constructor(TR, 8, precision=AdaptivePrecision, verbose=0)
-```
-
-- `Float64Precision`: Fastest, lowest memory; sufficient for most cases
-- `AdaptivePrecision`: Higher coefficient precision; useful for sparsification workflows
-- Avoid `RationalPrecision` for large-scale computations
-
 ---
 
 ## Built-in Test Functions

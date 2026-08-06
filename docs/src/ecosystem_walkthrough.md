@@ -46,6 +46,12 @@ using DynamicPolynomials   # for @polyvar
 my_objective(x) = (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1 * sin(10 * x[1] * x[2])
 ```
 
+!!! note "Objectives from DynamicObjectives.jl"
+    Objectives don't have to be hand-written. The collaborator package
+    [DynamicObjectives.jl](https://github.com/gescholt/DynamicObjectives.jl) supplies a
+    catalogue of ODE-based objective functions — parameter-estimation landscapes from
+    dynamical-systems models — that drop into the workflow below in place of `my_objective`.
+
 ## Step 2 — globtim finds the critical points
 
 globtim approximates `my_objective` by a polynomial on the box, then solves

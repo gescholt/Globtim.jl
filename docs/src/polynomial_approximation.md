@@ -64,7 +64,6 @@ norm_riemann = discrete_l2_norm_riemann(polynomial, grid)
 ```
 
 **Characteristics:**
-- O(n^d) complexity for d dimensions
 - Accuracy depends on grid density
 - Suitable for quick estimates
 
@@ -150,28 +149,6 @@ For functions with different scales per dimension:
 grid = generate_anisotropic_grid([20, 10, 5], basis=:chebyshev)
 pol = Constructor(TR, grid)
 ```
-
-## Best Practices
-
-1. **Degree Selection**
-   - Start with degree 6-8 for exploration
-   - Increase to 10-12 for production runs
-   - Monitor approximation error via `pol.nrm`
-
-2. **Basis Choice**
-   - Use Chebyshev (default) for general functions
-   - Try Legendre for uniform-weighted problems
-   - Both support exact conversion and sparsification
-
-3. **L2-Norm Computation**
-   - Use quadrature for final results
-   - Riemann sums for quick iteration
-   - Check relative difference for validation
-
-4. **Memory Management**
-   - Enable sparsification for high-degree polynomials
-   - Use anisotropic grids for multiscale functions
-   - Monitor coefficient growth with dimension
 
 ## Related Documentation
 
