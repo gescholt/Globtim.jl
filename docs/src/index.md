@@ -55,19 +55,20 @@ For a detailed walkthrough, see [Getting Started](getting_started.md).
 
 ## Ecosystem
 
-Globtim is part of a three-package ecosystem for global optimization:
+Globtim is the core of a family of packages spanning objective generation, optimization, analysis, and visualization. Each package's documentation lives in its repository (README + `docs/`); rendered documentation sites are being rolled out as the companion packages are registered.
 
-| Package | Description | Repository |
-|:--------|:------------|:-----------|
-| **Globtim** | Core polynomial approximation and critical point finding | [GitHub](https://github.com/gescholt/Globtim.jl) |
-| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery, campaign analysis | [GitHub](https://github.com/gescholt/GlobtimPostProcessing.jl) |
-| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) for experiments and campaigns | [GitHub](https://github.com/gescholt/GlobtimPlots.jl) |
+| Package | Role | Documentation |
+|:--------|:-----|:--------------|
+| **Globtim** | Core: polynomial approximation + all-critical-point finding | you are here — [repo](https://github.com/gescholt/Globtim.jl) |
+| **[DynamicObjectives](https://github.com/gescholt/DynamicObjectives.jl)** | ODE-based objective functions + model catalogue (inputs to Globtim) | [repo & docs](https://github.com/gescholt/DynamicObjectives.jl) |
+| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery, campaign analysis | [repo & docs](https://github.com/gescholt/GlobtimPostProcessing.jl) |
+| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie / GLMakie / WGLMakie) | [repo & docs](https://github.com/gescholt/GlobtimPlots.jl) |
 
 ```
-Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)
+DynamicObjectives (objectives) --> Globtim (optimize) --> GlobtimPostProcessing (analyze) --> GlobtimPlots (visualize)
 ```
 
-Install companion packages:
+See the [Ecosystem Walkthrough](ecosystem_walkthrough.md) for one objective carried end-to-end across the family. Once registered, install the companion packages with:
 ```julia
 pkg> add GlobtimPostProcessing
 pkg> add GlobtimPlots
