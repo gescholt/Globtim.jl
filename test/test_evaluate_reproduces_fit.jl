@@ -8,6 +8,12 @@
 # and HC solved a distorted polynomial. Fix: store `normalized=false` for Chebyshev
 # (`_stored_normalized`), so every reconstruction path uses the same plain basis the
 # coefficients live in.
+#
+# Bug fp0b (Legendre mirror). The Legendre Vandermonde ALWAYS normalizes (orthonormal Legendre),
+# so a Legendre fit's coeffs are normalized-Legendre and must be reconstructed with normalized=true.
+# Pre-fix, a default (normalized=false) Legendre fit stored `false` ⇒ evaluate/solve reconstructed
+# the wrong polynomial (critical points shifted ~0.09, silently). Fix: `_stored_normalized(basis)`
+# is basis-determined and pins Legendre to `true`.
 using Test
 using Globtim
 using LinearAlgebra
@@ -45,7 +51,30 @@ using LinearAlgebra
         end
     end
 
-    # Legendre must be untouched: its Vandermonde normalizes, so normalized=true is correct there.
-    pol_leg = Constructor(TR, 12, basis = :legendre, normalized = true)
-    @test pol_leg.normalized == true
+    # Legendre (bug fp0b): the Vandermonde ALWAYS normalizes, so a Legendre fit's stored flag must
+    # be `true` regardless of the request — else `evaluate`/solve reconstruct the wrong polynomial.
+    # Test the previously-buggy default (normalized=false) AND explicit true; both must reproduce.
+    for nrm_req in (true, false)
+        pol = Constructor(TR, 12, basis = :legendre, normalized = nrm_req)
+
+        # (1) Legendre coeffs are normalized-Legendre ⇒ stored flag is true regardless of the request.
+        @test pol.normalized == true
+
+        # (2) evaluate reproduces the fitted values at the polynomial's OWN grid nodes.
+        #     Pre-fix (stored false) this reconstructed a plain-Legendre poly ≠ the fit.
+        np = length(pol.z)
+        node(i) = size(pol.grid, 1) == np ? pol.grid[i, :] : pol.grid[:, i]
+        zscale = max(1.0, maximum(abs, pol.z))
+        node_err = maximum(
+            abs(Globtim.evaluate(pol, pol.center .+ pol.scale_factor .* node(i)) - pol.z[i])
+            for i in 1:np
+        )
+        @test node_err < 1e-4 * zscale
+
+        # (3) evaluate approximates f at fresh interior points to fit accuracy.
+        for t in ([0.1, 0.0], [0.5, 0.3], [-0.3, -0.4], [0.2, 0.6])
+            x = TR.center .+ TR.sample_range .* t
+            @test isapprox(Globtim.evaluate(pol, x), f(x); atol = 1e-3, rtol = 1e-3)
+        end
+    end
 end

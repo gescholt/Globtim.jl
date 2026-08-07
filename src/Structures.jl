@@ -204,22 +204,26 @@ function ApproxPoly(
 end
 
 """
-    _stored_normalized(basis, normalized) -> Bool
+    _stored_normalized(basis) -> Bool
 
-Correct value for an `ApproxPoly`'s `normalized` field given how its coefficients were fit.
+Correct value for an `ApproxPoly`'s `normalized` field, determined ENTIRELY by `basis`. The
+Vandermonde's normalization depends only on `basis` (`lambda_vandermonde` takes no `normalized`
+argument), so the caller's `normalized` request never affects which basis the fitted coefficients
+live in — coupling the stored flag to that request is precisely what bugs 7vug/fp0b were.
 
-**Bug 7vug.** `lambda_vandermonde` builds the Chebyshev Vandermonde in the *plain* `T_n` basis
-(`T_0=1, T_1=x, T_n=2xT_{n-1}-T_{n-2}` — no `√(2/π)` weights), regardless of any `normalized`
-request, so a Chebyshev fit's stored `coeffs` are **plain-`T_n` coefficients** and the represented
-polynomial is `p = Σ cⱼ Tⱼ`. But `evaluate`, the HC solve (`solve_polynomial_system` →
-`symbolic_chebyshev(normalized)`), and `to_exact_monomial_basis` all apply the `√(2/π)` weights
-when `normalized=true` — reconstructing/solving a *different* polynomial. Storing `normalized=false`
-for Chebyshev makes every reconstruction path use the same plain basis the coefficients live in.
-Legendre is left untouched: its Vandermonde *does* normalize (`symbolic_legendre(normalized=true)`),
-so `normalized=true` is correct there.
+**Bug 7vug (Chebyshev).** `lambda_vandermonde` builds the Chebyshev Vandermonde in the *plain* `T_n`
+basis (`T_0=1, T_1=x, T_n=2xT_{n-1}-T_{n-2}` — no `√(2/π)` weights), so a Chebyshev fit's stored
+`coeffs` are **plain-`T_n` coefficients** (`p = Σ cⱼ Tⱼ`). But `evaluate`, the HC solve
+(`solve_polynomial_system` → `symbolic_chebyshev(normalized)`), and `to_exact_monomial_basis` apply
+the `√(2/π)` weights when `normalized=true` — reconstructing a *different* polynomial. ⇒ store `false`.
+
+**Bug fp0b (Legendre).** The Legendre Vandermonde ALWAYS normalizes (orthonormal Legendre), so a
+Legendre fit's `coeffs` are **normalized-Legendre** and every reconstruction path must use
+`normalized=true`. Previously this field passed the caller's request through, so a default
+`Constructor(...; basis=:legendre)` (`normalized=false`) stored an inconsistent flag and every solve
+reconstructed the wrong polynomial (critical points shifted ~0.09, silently). ⇒ pin `true`.
 """
-_stored_normalized(basis::Symbol, normalized::Bool) =
-    basis === :chebyshev ? false : normalized
+_stored_normalized(basis::Symbol) = basis === :chebyshev ? false : true
 
 # Convenience accessor functions
 get_basis(p::ApproxPoly) = p.basis
