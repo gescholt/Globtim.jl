@@ -12,6 +12,13 @@ using DataFrames
 using DynamicPolynomials
 using LinearAlgebra
 
+# Pin CWD to this test directory. `with_timeout` runs each test file inside a `Threads.@spawn`ed
+# task, and a spawned task loses the source-relative include context — so a bare
+# `include("test_xyz.jl")` there resolves against the process CWD, not @__DIR__. Running from the
+# repo root then fails to find the file. Pkg.test already sets CWD here; this makes a direct
+# `julia .../runtests.jl` from any directory behave the same.
+cd(@__DIR__)
+
 # Default timeouts in seconds (override with GLOBTIM_TEST_TIMEOUT_MULTIPLIER)
 const TIMEOUT_CONSTRUCT = 60    # Polynomial construction
 const TIMEOUT_SOLVE = 300   # HomotopyContinuation system solve
