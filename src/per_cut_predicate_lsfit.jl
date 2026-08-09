@@ -302,8 +302,7 @@ function choose_per_dim_degree_lsfit_with_signal(
                 # blind axis: converged-blind (mass at the floor) → floor_degree,
                 # but only on a leaf where some other axis has signal; unfittable
                 # (mass present) or all-blind leaf → conservative max_degree.
-                (any_signal && r.axis_mass < axis_mass_floor) ? floor_degree :
-                max_degree
+                (any_signal && r.axis_mass < axis_mass_floor) ? floor_degree : max_degree
             else
                 ceil(Int, c / log(ρ))
             end
