@@ -240,9 +240,22 @@ the gradient energy yet still needs `d ≥ 2` to *place* the deep optimum at
 lx_z≈0.18 — `[6,6,1,1,1]` degrades (3.34e-2) while `[6,6,2,2,2]` does not
 (1.60e-2). So `floor_degree` defaults to 2, never 0/1.
 
-Axes with no usable signal (`ρ_k` is `NaN`, ≤ 1, or non-finite) fall back to
-`max_degree` — the conservative choice (we have no evidence the axis is flat, so
-don't starve it). Requires `subdomain.polynomial !== nothing`; the leaf must have
+Axes with no usable signal (`ρ_k` is `NaN`, ≤ 1, or non-finite) are split into
+two cases (rho_k_crossval_probe.jl, jl9z.7):
+
+- **converged-blind** — no fittable shells AND `axis_mass < axis_mass_floor`:
+  the residual has already decayed below the floor on this axis. Measured on
+  the ODE PE bank these are the MOST analytic axes (ray ρ 60–160 where the
+  fitted axes sit at ρ 10–30), so the old conservative `max_degree` fallback
+  *inverted* the allocation (easiest axes got the most degree). They now get
+  `floor_degree`. Applied only when at least one axis HAS signal — an all-blind
+  leaf keeps the `max_degree` blast so Stage-2 trigger semantics (and the
+  no-fallback behavior) are unchanged, and a non-converged leaf is never
+  downgraded to all-floor.
+- **unfittable** — mass present (`axis_mass ≥ axis_mass_floor`) but fewer than
+  2 populated shells: genuinely unknown, keeps the conservative `max_degree`.
+
+Requires `subdomain.polynomial !== nothing`; the leaf must have
 been fit (and `extended_degree` should exceed its base degree so offender shells
 exist to fit the slope). `c` calibrates the accuracy target; `c=4` ⇒ a ρ=e axis
 gets degree 4. Extra kwargs pass through to `pick_strategy_per_axis_lsfit`.
@@ -268,6 +281,7 @@ function choose_per_dim_degree_lsfit_with_signal(
     floor_degree::Int = 2,
     max_degree::Int = 12,
     extended_degree::Int = 0,
+    axis_mass_floor::Real = 1e-12,
     kwargs...,
 )
     floor_degree >= 0 || error("floor_degree must be ≥ 0, got $floor_degree")
@@ -276,13 +290,23 @@ function choose_per_dim_degree_lsfit_with_signal(
     results = pick_strategy_per_axis_lsfit(
         subdomain;
         extended_degree = extended_degree,
+        axis_mass_floor = axis_mass_floor,
         kwargs...,
     )
     has_signal = [isfinite(r.rho) && r.rho > 1.0 for r in results]
+    any_signal = any(has_signal)
     degrees = [
         begin
             ρ = r.rho
-            d = (!isfinite(ρ) || ρ <= 1.0) ? max_degree : ceil(Int, c / log(ρ))
+            d = if !isfinite(ρ) || ρ <= 1.0
+                # blind axis: converged-blind (mass at the floor) → floor_degree,
+                # but only on a leaf where some other axis has signal; unfittable
+                # (mass present) or all-blind leaf → conservative max_degree.
+                (any_signal && r.axis_mass < axis_mass_floor) ? floor_degree :
+                max_degree
+            else
+                ceil(Int, c / log(ρ))
+            end
             clamp(d, floor_degree, max_degree)
         end for r in results
     ]

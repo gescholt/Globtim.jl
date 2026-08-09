@@ -135,14 +135,18 @@ end
             extended_degree = 6)
         @test all(dfloor .>= 5)
 
-        # No-signal axis (constant in x₂) → conservative max_degree fallback, not
-        # below-floor. (The flat→LOW reduction is Stage 2's active-subspace job.)
+        # Converged-blind axis (constant in x₂ ⇒ zero offender mass) on a leaf
+        # whose OTHER axis has signal → floor_degree, not the max_degree blast.
+        # Measured on the ODE PE bank (rho_k_crossval_probe.jl): blind-by-mass
+        # axes are the MOST analytic ones (ray ρ 60–160), so max_degree inverted
+        # the allocation. Stage 2 (all-blind) semantics are unchanged — see the
+        # mask-contract testset.
         steep_const(x) = exp(2.0 * x[1]) + 0.0 * x[2]
         sc = Subdomain(_B2)
         Globtim.estimate_subdomain_error(steep_const, sc, 3; basis = :chebyshev)
         dc = choose_per_dim_degree_lsfit(sc; c = 4.0, floor_degree = 2, max_degree = 8,
             extended_degree = 6)
-        @test dc[2] == 8
+        @test dc[2] == 2
 
         # Misconfigured floor/max raises (no silent clamp swap).
         @test_throws ErrorException choose_per_dim_degree_lsfit(sd; floor_degree = 9,
@@ -230,15 +234,18 @@ end
         @test choose_per_dim_degree_lsfit(sd; c = 4.0, floor_degree = 2,
             max_degree = 10, extended_degree = 6) == r.degrees
 
-        # Constant axis ⇒ no signal there; max_degree in degrees, false in mask —
-        # the mask distinguishes "blind" from "genuinely rough" where degrees can't.
+        # Constant axis ⇒ no signal there; false in the mask, and — because its
+        # offender mass sits at the floor while axis 1 HAS signal — the
+        # converged-blind rule assigns floor_degree (a dead axis is the cheapest,
+        # not the roughest; see rho_k_crossval_probe.jl). The mask still
+        # distinguishes "blind" from "genuinely rough" where degrees can't.
         steep_const(x) = exp(2.0 * x[1]) + 0.0 * x[2]
         sc = Subdomain(_B2)
         Globtim.estimate_subdomain_error(steep_const, sc, 3; basis = :chebyshev)
         rc = choose_per_dim_degree_lsfit_with_signal(sc; c = 4.0, floor_degree = 2,
             max_degree = 8, extended_degree = 6)
         @test !rc.has_signal[2]
-        @test rc.degrees[2] == 8
+        @test rc.degrees[2] == 2
 
         # A 1-shell probe (extended = base + 1) blinds the LS fit on EVERY axis:
         # the deterministic all-no-signal fixture the Stage-2 loop test rides on.

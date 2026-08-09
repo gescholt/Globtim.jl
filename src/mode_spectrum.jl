@@ -106,9 +106,17 @@ function compute_mode_spectrum(
     n_dim = size(poly.support, 2)
     base_degree = isempty(poly.support) ? 0 : Int(maximum(poly.support))
 
-    # poly.grid is stored as (n_dim, n_samples); lambda_vandermonde wants
-    # (n_samples, n_dim), matching `samples` in construct_polynomial_on_subdomain.
-    samples = collect(poly.grid')
+    # poly.grid orientation differs by producer: construct_polynomial_on_subdomain
+    # stores (n_dim, n_samples); MainGenerate/Constructor stores (n_samples, n_dim).
+    # lambda_vandermonde wants (n_samples, n_dim). Disambiguate via the support's
+    # n_dim; a square grid is resolved to the subdomain convention (n_dim, n_samples).
+    samples = if size(poly.grid, 1) == n_dim
+        collect(poly.grid')
+    elseif size(poly.grid, 2) == n_dim
+        poly.grid
+    else
+        return _empty_mode_spectrum(n_dim, base_degree, base_degree)
+    end
     f_values = poly.z
 
     n_samples = size(samples, 1)
