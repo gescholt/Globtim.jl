@@ -2,6 +2,38 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
+## [1.3.0] - 2026-08-10
+
+### Removed
+
+- **`ModelRegistry.register_ode_models!`**. It reached into `Main` for 15 ODE model
+  constructors belonging to DynamicObjectives, inverting the dependency direction that
+  1.0's "Circular Dependency" fix established. It worked only when that package happened
+  to be loaded first, and returned silently when it was not — so the registry's contents
+  depended on `using` order. The registry now contains only Globtim's own 21 benchmark
+  entries. A package supplying extra models registers them itself via `register_model!`;
+  Globtim no longer goes looking.
+- **`scripts/`**. All five drivers (`run_experiment.jl`, `postprocess_experiment.jl`,
+  `plot_experiment.jl`, `run_per_axis_audit_cluster.jl`,
+  `run_per_axis_counterfactual_cluster.jl`) loaded packages Globtim does not declare —
+  `DynamicObjectives`, `GlobtimPostProcessing`, `HomotopyContinuation`, `CairoMakie` — so
+  none of them could run from an installed copy of this package. They now live in the
+  monorepo at `experiments/drivers/`. For an end-to-end walkthrough see
+  `docs/src/ecosystem_walkthrough.md`.
+
+### Changed
+
+- `ModelRegistry.__init__` no longer wraps registration in `try/catch … @warn`. Benchmark
+  functions come from `LibFunctions.jl` inside this package; if registering them fails,
+  Globtim is broken and now says so rather than continuing with a half-filled registry.
+  The per-load `@info` summary is gone.
+
+### Added
+
+- `test/test_model_registry.jl` — pins the standalone-package contract (no ODE models, 21
+  benchmarks, nothing picked up from `Main` even when a decoy module is bound there) and
+  covers the generic registry round-trip, which previously had no tests.
+
 ## [1.2.1] - 2026-08-06
 
 ### Fixed

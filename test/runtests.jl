@@ -147,6 +147,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_trial_cut_reuse.jl") do
     include("test_trial_cut_reuse.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_model_registry.jl") do
+    include("test_model_registry.jl")
+end
+
 with_timeout(TIMEOUT_AQUA, label = "test_aqua.jl") do
     include("test_aqua.jl")
 end
