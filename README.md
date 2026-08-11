@@ -47,14 +47,30 @@ A canonical BibTeX entry is also kept at [`CITATION.bib`](CITATION.bib).
 
 ## Installation
 
-```julia
-using Pkg
-Pkg.add("Globtim")
+Requires **Julia 1.12** or newer.
+
+Press `]` at the Julia prompt to enter Pkg mode, then:
+
+```julia-repl
+pkg> add Globtim HomotopyContinuation
 ```
 
-For the latest development version:
+Backspace returns you to the normal prompt. Equivalently, without Pkg mode:
+
 ```julia
-Pkg.add(url="https://github.com/gescholt/Globtim.jl")
+using Pkg
+Pkg.add(["Globtim", "HomotopyContinuation"])
+```
+
+`HomotopyContinuation` is a separate install on purpose — it is a weak dependency, loaded
+through a package extension. Globtim's default `:hc` solver is unavailable until you
+`using HomotopyContinuation` alongside Globtim, so install it unless you intend to use
+[msolve](https://msolve.lip6.fr/) instead.
+
+For the latest development version:
+
+```julia-repl
+pkg> add https://github.com/gescholt/Globtim.jl
 ```
 
 ## Quick Start
@@ -151,14 +167,14 @@ Two solvers are available for computing critical points:
 
 Globtim is part of a three-package ecosystem:
 
-Globtim is registered; the companion packages are installed from their public
-repositories (`Pkg.add(url=...)`):
+Globtim and GlobtimPostProcessing are in the General registry; GlobtimPlots is
+installed from its public repository:
 
-| Package | Purpose | Install |
-|---------|---------|---------|
-| **Globtim** | Polynomial approximation and critical point finding | `Pkg.add("Globtim")` |
-| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery | `Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl")` |
-| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) | `Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")` |
+| Package | Purpose | Install (Pkg mode) |
+|---------|---------|--------------------|
+| **Globtim** | Polynomial approximation and critical point finding | `add Globtim` |
+| **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery | `add GlobtimPostProcessing` |
+| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie/GLMakie) | `add https://github.com/gescholt/GlobtimPlots.jl` |
 
 ```
 Globtim (experiments) --> GlobtimPostProcessing (analysis) --> GlobtimPlots (visualization)

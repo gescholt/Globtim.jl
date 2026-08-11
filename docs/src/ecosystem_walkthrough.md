@@ -23,16 +23,16 @@ add accuracy and pictures.
 
 ### Install
 
-`Globtim` is registered in the General registry; the two companion packages are
-installed from their public repositories:
+`Globtim` and `GlobtimPostProcessing` are in the General registry; `GlobtimPlots` is
+installed from its public repository. In Pkg mode (press `]`):
 
 ```julia
-using Pkg
-Pkg.add("Globtim")                                                  # core (registered)
-Pkg.add(url="https://github.com/gescholt/GlobtimPostProcessing.jl") # refinement & analysis
-Pkg.add(url="https://github.com/gescholt/GlobtimPlots.jl")          # visualization
-Pkg.add("CairoMakie")                                               # a Makie backend for plotting
+pkg> add Globtim HomotopyContinuation GlobtimPostProcessing CairoMakie
+pkg> add https://github.com/gescholt/GlobtimPlots.jl
 ```
+
+`HomotopyContinuation` backs Globtim's default `:hc` solver (a weak dependency, so it
+installs separately); `CairoMakie` is the Makie backend GlobtimPlots draws with.
 
 ## Step 1 — Define an objective
 

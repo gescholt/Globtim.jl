@@ -40,10 +40,18 @@ For functions that vary on different scales in different regions, Globtim uses *
 
 ## Installation
 
+Requires Julia 1.12 or newer. Press `]` at the Julia prompt to enter Pkg mode
+(backspace exits):
+
 ```julia
 julia> ]
-pkg> add Globtim
+pkg> add Globtim HomotopyContinuation
 ```
+
+`HomotopyContinuation` is a weak dependency loaded through a package extension, so it
+installs separately. The default `:hc` solver stays unavailable until you
+`using HomotopyContinuation` alongside Globtim — install it unless you plan to use
+msolve instead.
 
 ### Additional Dependencies
 - **Visualization**: `add CairoMakie` or `add GLMakie`
@@ -68,10 +76,11 @@ Globtim is the core of a family of packages spanning objective generation, optim
 DynamicObjectives (objectives) --> Globtim (optimize) --> GlobtimPostProcessing (analyze) --> GlobtimPlots (visualize)
 ```
 
-See the [Ecosystem Walkthrough](ecosystem_walkthrough.md) for one objective carried end-to-end across the family. Once registered, install the companion packages with:
+See the [Ecosystem Walkthrough](ecosystem_walkthrough.md) for one objective carried end-to-end across the family. GlobtimPostProcessing is registered; GlobtimPlots and DynamicObjectives install from their repositories until they are:
 ```julia
 pkg> add GlobtimPostProcessing
-pkg> add GlobtimPlots
+pkg> add https://github.com/gescholt/GlobtimPlots.jl
+pkg> add https://github.com/gescholt/DynamicObjectives.jl
 ```
 
 ## Citation
