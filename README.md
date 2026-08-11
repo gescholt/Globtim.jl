@@ -104,11 +104,21 @@ println("Found $(nrow(df_min)) local minima")
 
 ## Running Experiments with TOML Configs
 
-Experiments can be driven entirely by TOML configuration files, which specify the function, domain, polynomial degree, solver, and refinement settings:
+Experiments can be driven entirely by TOML configuration files, which specify the function, domain, polynomial degree, solver, and refinement settings.
 
-```bash
-julia --project=. scripts/run_experiment.jl examples/configs/ackley_3d.toml
+`Globtim.load_experiment_config` and `run_standard_experiment` read these configs, so you
+can drive the pipeline from your own script:
+
+```julia
+using Globtim, HomotopyContinuation
+
+config = load_experiment_config("ackley_3d.toml")
+result = run_standard_experiment(config_to_experiment_params(config)...)
 ```
+
+The batch command-line runner that wraps this lives in the development monorepo rather
+than in the released package — it needs DynamicObjectives and GlobtimPostProcessing,
+which Globtim does not depend on.
 
 Example config for a static benchmark:
 
@@ -191,7 +201,7 @@ Globtim.jl/
 │   └── ...
 ├── test/                   # Test suite
 ├── docs/                   # Documenter.jl documentation
-├── scripts/                # Experiment runner scripts
+├── examples/               # Runnable example scripts
 └── .github/workflows/      # CI (tests, docs, TagBot, CompatHelper)
 ```
 
