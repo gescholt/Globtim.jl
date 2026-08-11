@@ -23,6 +23,10 @@ cd(@__DIR__)
 const TIMEOUT_CONSTRUCT = 60    # Polynomial construction
 const TIMEOUT_SOLVE = 300   # HomotopyContinuation system solve
 const TIMEOUT_TESTFILE = 120   # Included test files (sparsification, truncation, etc.)
+# Aqua's persistent_tasks check spawns a subprocess that loads Globtim from
+# scratch (~50s locally, and a cold CI runner is slower), so test_aqua.jl gets
+# its own budget rather than eating into TIMEOUT_TESTFILE.
+const TIMEOUT_AQUA = 420
 
 @testset "Polynomial System Solving" begin
     # Test parameters
@@ -143,7 +147,7 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_trial_cut_reuse.jl") do
     include("test_trial_cut_reuse.jl")
 end
 
-with_timeout(TIMEOUT_TESTFILE, label = "test_aqua.jl") do
+with_timeout(TIMEOUT_AQUA, label = "test_aqua.jl") do
     include("test_aqua.jl")
 end
 
