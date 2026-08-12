@@ -134,3 +134,85 @@ function decide_action(verdicts::AbstractVector{Symbol})
         return (:split, split_idx)
     end
 end
+
+"""
+    decide_action(verdicts, stats; degree, max_degree, mass_floor = 1e-12)
+        -> (action::Symbol, cut_dim::Union{Int,Nothing})
+
+Cap-aware combination (bead 8f4p.5.4). Identical to the verdicts-only method
+except when the leaf is already at `max_degree` and every axis said `:bump`.
+
+Why that case needs its own rule: `adaptive_refine` only honours `:bump` when
+`next_degree <= max_degree` — otherwise it falls through to the split path and
+picks the axis with `select_cut_dimension`, which never sees these per-axis
+verdicts. So at the cap a `:bump` is not "keep refining in place", it is
+"split, and let a generic heuristic choose where". The predicate has an opinion
+about *which* axis is least resolved and currently throws it away.
+
+Measured motivation: in the post-7vug 3D A/B, every one of fhn3d_tight's 7
+predicate disagreements sat at `degree == max_degree`, producing byte-identical
+trees; lv3d_improved disagreed 0/199. The predicate was inert on exactly the
+objectives it targets. Bead 5z7b found the same on an independent census (all
+193 looser events at the cap).
+
+Axis choice when capped and all-`:bump`, in order:
+1. Among axes carrying mass with a finite `decay`, the **smallest** `decay` —
+   slowest spectral decay is the least-resolved direction, so cutting there
+   buys the most.
+2. If no axis has a usable `decay`, the largest restricted `total` mass.
+3. If neither is available, `(:split, nothing)` — the honest answer is "must
+   split, no preference", and the caller falls back to `select_cut_dimension`.
+
+Ties break to the lowest index, matching the verdicts-only method.
+
+`stats` is an `axis_shell_stats(spec)` result, i.e. per-axis NamedTuples with
+`total` and `decay`.
+"""
+function decide_action(
+    verdicts::AbstractVector{Symbol},
+    stats::AbstractVector;
+    degree::Integer,
+    max_degree::Integer,
+    mass_floor::Real = 1e-12,
+)
+    split_idx = findfirst(==(:split), verdicts)
+    if split_idx !== nothing
+        return (:split, split_idx)
+    end
+    # Below the cap a :bump is a real bump — nothing to second-guess.
+    if degree < max_degree
+        return (:bump, nothing)
+    end
+    return (:split, _capped_cut_axis(stats; mass_floor = mass_floor))
+end
+
+"""
+    _capped_cut_axis(stats; mass_floor) -> Union{Int,Nothing}
+
+Pick the least-resolved axis from `axis_shell_stats` output. See
+`decide_action`'s cap-aware method for the ordering rationale. Returns
+`nothing` when the spectrum carries no usable signal.
+"""
+function _capped_cut_axis(stats::AbstractVector; mass_floor::Real = 1e-12)
+    isempty(stats) && return nothing
+
+    best_idx, best_decay = nothing, Inf
+    for (k, s) in enumerate(stats)
+        s.total < mass_floor && continue
+        isnan(s.decay) && continue
+        if s.decay < best_decay
+            best_idx, best_decay = k, s.decay
+        end
+    end
+    best_idx === nothing || return best_idx
+
+    # No usable decay anywhere — fall back to the axis carrying the most
+    # restricted mass, which is where the offending modes live.
+    mass_idx, best_mass = nothing, mass_floor
+    for (k, s) in enumerate(stats)
+        if s.total > best_mass
+            mass_idx, best_mass = k, s.total
+        end
+    end
+    return mass_idx
+end

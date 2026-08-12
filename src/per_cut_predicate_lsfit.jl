@@ -203,19 +203,66 @@ function _ls_slope_log(shell_mass::Dict{Int,Float64}, base_degree::Int, floor::R
 end
 
 """
-    decide_action_lsfit(results::AbstractVector{LSFitAxisResult})
+    decide_action_lsfit(results; degree = -1, max_degree = typemax(Int),
+                        mass_floor = 1e-12)
         -> (action::Symbol, cut_dim::Union{Int,Nothing})
 
 Same combination rule as `decide_action`: any `:split` wins, lowest-indexed
 ties win. Operates on the `.verdict` slice of an `LSFitAxisResult` vector.
+
+Cap-aware mirror of the spectrum-based `decide_action` (bead 8f4p.5.4). Same
+reasoning: at `degree == max_degree` a `:bump` cannot bump, so `adaptive_refine`
+splits anyway and chooses the axis via `select_cut_dimension`, discarding these
+per-axis results. Returning an explicit axis puts the predicate's evidence back
+into that decision.
+
+Axis choice when capped and all-`:bump`: the smallest `rho`. In the Bernstein
+picture `rho` is the ellipse parameter governing the geometric convergence rate
+`O(rho^-d)` along that axis, so the smallest `rho` is the slowest-converging —
+the direction where added degree buys least and a cut buys most. That is the
+same "least-resolved axis" criterion the spectrum method expresses via smallest
+`decay`. Falls back to largest `axis_mass`, then `nothing`.
+
+Ties break to the lowest index.
+
+Kwargs are optional and default to "no cap in sight" (`degree = -1`,
+`max_degree = typemax(Int)`), which reproduces the original results-only
+behaviour exactly — the cap branch is unreachable, so an all-`:bump` result set
+returns `(:bump, nothing)`. This is a single method rather than two because
+Julia does not dispatch on keyword arguments: a second definition with the same
+positional signature would silently replace the first rather than overload it.
 """
-function decide_action_lsfit(results::AbstractVector{LSFitAxisResult})
+function decide_action_lsfit(
+    results::AbstractVector{LSFitAxisResult};
+    degree::Integer = -1,
+    max_degree::Integer = typemax(Int),
+    mass_floor::Real = 1e-12,
+)
     split_idx = findfirst(r -> r.verdict === :split, results)
-    if split_idx === nothing
-        return (:bump, nothing)
-    else
+    if split_idx !== nothing
         return (:split, split_idx)
     end
+    if degree < max_degree
+        return (:bump, nothing)
+    end
+
+    best_idx, best_rho = nothing, Inf
+    for (k, r) in enumerate(results)
+        r.axis_mass < mass_floor && continue
+        isnan(r.rho) && continue
+        if r.rho < best_rho
+            best_idx, best_rho = k, r.rho
+        end
+    end
+    best_idx === nothing || return (:split, best_idx)
+
+    mass_idx, best_mass = nothing, mass_floor
+    for (k, r) in enumerate(results)
+        if r.axis_mass > best_mass
+            mass_idx, best_mass = k, r.axis_mass
+        end
+    end
+    return (:split, mass_idx)
 end
 
 """

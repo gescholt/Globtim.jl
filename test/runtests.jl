@@ -151,6 +151,15 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_model_registry.jl") do
     include("test_model_registry.jl")
 end
 
+# Cap-aware leaf decision + the predicate -> cut-axis channel (bead 8f4p.5.4)
+with_timeout(TIMEOUT_TESTFILE, label = "test_cap_aware_decide.jl") do
+    include("test_cap_aware_decide.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_predicate_cut_dim.jl") do
+    include("test_predicate_cut_dim.jl")
+end
+
 with_timeout(TIMEOUT_AQUA, label = "test_aqua.jl") do
     include("test_aqua.jl")
 end

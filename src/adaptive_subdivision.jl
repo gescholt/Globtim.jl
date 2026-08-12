@@ -1529,9 +1529,27 @@ function process_subdomain(
         end
     end
 
+    # A predicate may return either a bare action Symbol (the long-standing
+    # contract) or a `(action, cut_dim)` tuple as `decide_action` does. The tuple
+    # form lets a per-axis predicate name the axis to cut; without it the axis is
+    # chosen below by `select_cut_dimension`, which never sees the predicate's
+    # evidence. That mattered: at `degree == max_degree` a `:bump` cannot bump and
+    # falls through to the split path anyway, so the predicate's opinion about
+    # WHERE to cut was silently discarded exactly when it had one (bead 8f4p.5.4).
+    predicate_cut_dim = nothing
+
     # Check if p-refinement is possible
     if enable_p_refinement
-        decision = predicate(subdomain)
+        decision_raw = predicate(subdomain)
+        decision = decision_raw
+        if decision_raw isa Tuple
+            decision = first(decision_raw)
+            raw_dim = length(decision_raw) >= 2 ? decision_raw[2] : nothing
+            # Ignore an out-of-range hint rather than trusting it blindly.
+            if raw_dim isa Integer && 1 <= raw_dim <= length(subdomain.center)
+                predicate_cut_dim = Int(raw_dim)
+            end
+        end
         if decision === :done
             # Predicate explicitly accepts the current fit. Stops refinement on
             # this leaf even when relative_l2_error > l2_tolerance — used by
@@ -1575,7 +1593,11 @@ function process_subdomain(
     end
 
     # Fall back to h-refinement (split)
-    if subdomain.polynomial !== nothing && subdomain.samples !== nothing
+    if predicate_cut_dim !== nothing
+        # The predicate named an axis — honour it. This is the only path by which
+        # per-axis evidence reaches the cut choice (bead 8f4p.5.4).
+        split_dim = predicate_cut_dim
+    elseif subdomain.polynomial !== nothing && subdomain.samples !== nothing
         split_dim = select_cut_dimension(subdomain)
     else
         split_dim = select_cut_dimension_by_width(subdomain)
