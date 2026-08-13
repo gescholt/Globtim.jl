@@ -14,5 +14,11 @@ using Globtim
     #
     # undocumented_names is off by Aqua's own default and stays off for now: 60
     # public names lack docstrings. Tracked separately — flip it on there.
-    Aqua.test_all(Globtim)
+    # persistent_tasks tmax: Aqua defaults to 10s for the spawned subprocess to
+    # load the package and exit. A cold load under CI contention can exceed that
+    # and be misread as a lingering task — observed here as a real flake on
+    # 2026-08-13 (failed with a formatter running alongside, passed on an idle
+    # machine, same commit). A genuine persistent task never exits, so a longer
+    # budget costs nothing on the happy path and removes the false positive.
+    Aqua.test_all(Globtim; persistent_tasks = (; tmax = 90))
 end
