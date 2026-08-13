@@ -174,6 +174,12 @@ with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_pipeline_integration_l8.jl")
     include("test_pipeline_integration_l8.jl")
 end
 
+# ODE-objective quality: FD noise floor, Hessian reliability, penalty regions,
+# and the pipeline on an integration-defined objective (bead q9zc)
+with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_ode_objective_quality_l9.jl") do
+    include("test_ode_objective_quality_l9.jl")
+end
+
 # HC completeness against analytically known critical-point counts (bead mooi)
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_hc_completeness_l7.jl") do
     include("test_hc_completeness_l7.jl")
