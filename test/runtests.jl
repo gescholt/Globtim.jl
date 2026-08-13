@@ -27,7 +27,7 @@ const TIMEOUT_TESTFILE = 120   # Included test files (sparsification, truncation
 # scratch (~50s locally, and a cold CI runner is slower), so test_aqua.jl gets
 # its own budget rather than eating into TIMEOUT_TESTFILE.
 const TIMEOUT_AQUA = 420
-# The two HC-heavy ladder files (L6 ~32s, L7 ~45s locally) each solve several
+# The HC-heavy ladder files (L6 ~32s, L7 ~45s, L8 ~37s locally) each solve several
 # gradient systems; path-tracking on a cold runner is slower, so they get their
 # own budget rather than eating into TIMEOUT_TESTFILE.
 const TIMEOUT_HC_COMPLETENESS = 420
@@ -167,6 +167,11 @@ end
 # Approximation quality vs degree / GN / domain size (bead kidt)
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_approx_quality_l6.jl") do
     include("test_approx_quality_l6.jl")
+end
+
+# Full chain f -> grid -> poly -> HC -> refine -> classify -> dedup (bead h0vk)
+with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_pipeline_integration_l8.jl") do
+    include("test_pipeline_integration_l8.jl")
 end
 
 # HC completeness against analytically known critical-point counts (bead mooi)
