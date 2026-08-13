@@ -27,9 +27,9 @@ const TIMEOUT_TESTFILE = 120   # Included test files (sparsification, truncation
 # scratch (~50s locally, and a cold CI runner is slower), so test_aqua.jl gets
 # its own budget rather than eating into TIMEOUT_TESTFILE.
 const TIMEOUT_AQUA = 420
-# L7 solves ~10 gradient systems with HC (incl. a 3D one with 27 roots): ~45s
-# locally, and path-tracking on a cold runner is slower, so it gets its own
-# budget rather than eating into TIMEOUT_TESTFILE.
+# The two HC-heavy ladder files (L6 ~32s, L7 ~45s locally) each solve several
+# gradient systems; path-tracking on a cold runner is slower, so they get their
+# own budget rather than eating into TIMEOUT_TESTFILE.
 const TIMEOUT_HC_COMPLETENESS = 420
 
 @testset "Polynomial System Solving" begin
@@ -162,6 +162,11 @@ end
 
 with_timeout(TIMEOUT_TESTFILE, label = "test_predicate_cut_dim.jl") do
     include("test_predicate_cut_dim.jl")
+end
+
+# Approximation quality vs degree / GN / domain size (bead kidt)
+with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_approx_quality_l6.jl") do
+    include("test_approx_quality_l6.jl")
 end
 
 # HC completeness against analytically known critical-point counts (bead mooi)
