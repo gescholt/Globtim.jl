@@ -331,10 +331,43 @@ The enhanced DataFrame includes these additional columns:
 - `function_value_cluster`: Cluster identifier for points with similar function values
 - `nearest_neighbor_dist`: Distance to nearest neighboring critical point
 - `gradient_norm`: L2 norm of gradient at the critical point
-- `y1, y2, ..., yn`: BFGS-refined coordinates
+- `y1, y2, ..., yn`: BFGS **descent endpoint** — see the warning below; this is
+  where minimizing from `x` lands, NOT a sharpened estimate of the critical
+  point at `x`. From a saddle or maximum it is a *different* point entirely.
 - `close`: Boolean indicating if point is close to boundary
 - `steps`: Number of BFGS optimization steps taken
 - `converged`: Boolean indicating if BFGS optimization converged
+
+!!! warning "`minimizers` is NOT a subset of the `:minimum` rows of `df` (bead qc9c)"
+    The two returned tables answer different questions, and conflating them
+    overstates what the polynomial approximation achieved:
+
+    - `count(==(:minimum), df.critical_point_type)` — **roots of the polynomial
+      system that are minima of `f`**. This measures the approximation.
+    - `nrow(df_min)` — **distinct minima of `f` reachable by BFGS descent from
+      any root**, deduplicated. Descent from a saddle or maximum lands on a
+      minimum that need not be a root at all, so this is generally a superset.
+
+    Both classify the Hessian of the same true `f`; they simply evaluate it at
+    different points (`df` at the raw root `x`, `df_min` at the descent
+    endpoint). Neither is wrong — but only the first is a statement about the
+    polynomial.
+
+    Measured on Deuflhard 2D (GN=20, domain [-1.2,1.2]², 6 analytic minima):
+
+    | degree | root-minima found | `nrow(minimizers)` found |
+    |---|---|---|
+    | 6 | **0 / 6** | 6 / 6 |
+    | 8 | 2 / 6 | 6 / 6 |
+    | 10 | 2 / 6 | 5 / 6 |
+    | 12 | 6 / 6 | 6 / 6 |
+
+    At degree 6 the polynomial captures **none** of the six minima; every one
+    reported comes from descent. Read `nrow(minimizers)` as a capture rate and
+    you would credit degree 6 with a perfect score for work BFGS did.
+
+    Use `df.critical_point_type` for capture/recall claims about the
+    approximation, and `df_min` for "what did the pipeline end up reporting".
 
 # Hessian Classification (when `enable_hessian=true`)
 When enabled, adds comprehensive Hessian-based analysis:

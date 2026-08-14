@@ -201,7 +201,16 @@ _match(pt, target; tol = 1e-6) = norm(pt .- target) < tol
     # 8f — critical-point mode vs minimum mode
     # ========================================================================
 
-    @testset "minimum mode is a strict subset of critical-point mode" begin
+    # NOTE (bead qc9c): the subset relation asserted here holds BECAUSE this
+    # fixture is exactly representable at degree 4, so every polynomial root sits
+    # on a true critical point and BFGS descent has nowhere else to go. It is NOT
+    # a general property. `minimizers` is populated from BFGS descent endpoints,
+    # and descending from a saddle or maximum lands on a minimum that need not be
+    # a root at all — so in general minimizers is a SUPERSET of the `:minimum`
+    # rows of `enhanced`, not a subset. Measured on Deuflhard 2D at degree 6:
+    # 0 of 6 true minima are roots, yet all 6 are reported as minimizers.
+    # Do not generalise these assertions to an inexact fit.
+    @testset "minimum mode is a strict subset of critical-point mode (exact fit only)" begin
         r = _pipeline(_EXACT_DEGREE)
         @test nrow(r.minimizers) < nrow(r.enhanced)      # 4 of 9
         @test all(t -> t == :minimum, r.minimizers.critical_point_type)
