@@ -92,6 +92,10 @@ mutable struct Subdomain
     degeneracy::Union{Nothing,DegeneracyDiagnostics}
     # Stage 2: orthonormal frame rotation Q; nothing ⇒ axis-aligned (default).
     transform::Union{Nothing,Matrix{Float64}}
+    # y0j: row indices of `f_values` whose stored value is a PENALTY substitute for a
+    # non-finite evaluation (Inf → 10·max|finite|), not a real f-value. Children must
+    # not inherit these rows — inheriting a penalty as data poisons the child fit.
+    penalized_rows::Vector{Int}
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -128,6 +132,7 @@ function Subdomain(
         per_dim_degree,     # jl9z.7: anisotropic per-axis degree (nothing ⇒ isotropic)
         degeneracy,         # Stage 0: degeneracy verdict (nothing until detected)
         transform,          # Stage 2: frame rotation Q (nothing ⇒ axis-aligned)
+        Int[],              # y0j: penalized_rows (no penalty substitutions yet)
     )
 end
 
@@ -744,6 +749,7 @@ function estimate_subdomain_error(
     use_cache::Bool = true,
     thread_evals::Bool = false,
     inherit_from::Union{Nothing,Subdomain} = nothing,
+    reuse_tol_frac::Float64 = 0.0,
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_seed::Union{Nothing,Integer} = nothing,
@@ -831,11 +837,14 @@ function estimate_subdomain_error(
     # at a compatible grid size (e.g. a child populated by find_optimal_cut_sparse).
     # We verify sample count rather than degree because only the grid determines
     # the underlying evaluation cost we want to avoid.
+    # `>=` not `==`: a child fitted on a COMBINED (inherited + fresh) sample set carries
+    # more rows than the standard grid — that fit is at least as informed, so reuse it
+    # (y0j; with `==` the trial-cut children would be thrown away and re-evaluated).
     if use_cache &&
        subdomain.polynomial !== nothing &&
        subdomain.samples !== nothing &&
        subdomain.f_values !== nothing &&
-       size(subdomain.samples, 1) == expected_n_samples &&
+       size(subdomain.samples, 1) >= expected_n_samples &&
        isfinite(subdomain.l2_error)
         return subdomain.l2_error
     end
@@ -860,6 +869,12 @@ function estimate_subdomain_error(
         size(inherit_from.samples, 1) == length(inherit_from.f_values)
     if inherit_ok
         inside_idx = points_inside_child(inherit_from.samples, inherit_from, subdomain)
+        # Never inherit a penalty-substituted row: its cached value is 10·max|finite|,
+        # not f — inheriting it as data poisons the child fit (Inf-region isolation).
+        # The child re-evaluates its own nodes there and applies its own penalties.
+        if !isempty(inherit_from.penalized_rows)
+            inside_idx = setdiff(inside_idx, inherit_from.penalized_rows)
+        end
     else
         inside_idx = Int[]
     end
@@ -880,8 +895,17 @@ function estimate_subdomain_error(
             )
         end
         inherited_f = inherit_from.f_values[inside_idx]
-        # combined = [inherited; fresh[new_idx]] (new_idx ⊆ 1:n_fresh, no dups with inherited)
-        grid_matrix, new_idx = combine_inherited_and_fresh(inherited_samples, fresh_grid)
+        # combined = [inherited; fresh[new_idx]] (new_idx ⊆ 1:n_fresh, no dups with inherited).
+        # reuse_tol_frac > 0 is the ACTUAL savings lever (y0j): drop fresh nodes with an
+        # inherited neighbour within that fraction of the mean node spacing. The inherited
+        # point itself stays in the LS system (exact f at exact coordinates — no Option-B
+        # value substitution), and the combined scattered set is handled correctly by the
+        # pointwise Vandermonde. At the default 0.0 (exact-coincidence dedup) inherited rows
+        # only enrich the fit; every fresh node is still evaluated.
+        dedup_tol =
+            reuse_tol_frac > 0 ? reuse_tol_frac * 2.0 / (maximum(per_dim_GN) + 1) : 1e-10
+        grid_matrix, new_idx =
+            combine_inherited_and_fresh(inherited_samples, fresh_grid; tol = dedup_tol)
         n_inh = size(inherited_samples, 1)
         f_values = Vector{Float64}(undef, size(grid_matrix, 1))
         @inbounds for k in 1:n_inh
@@ -944,6 +968,7 @@ function estimate_subdomain_error(
     end
 
     # Handle Inf values from failed evaluations (e.g., ODE integration failures)
+    penalized_rows = Int[]
     n_inf = count(isinf, f_values)
     if n_inf == n_total
         # All evaluations failed — no data to fit. Flag infeasible so
@@ -955,15 +980,19 @@ function estimate_subdomain_error(
         subdomain.samples = grid_matrix
         subdomain.f_values = f_values
         subdomain.infeasible = true
+        subdomain.penalized_rows = collect(1:n_total)
         return Inf
     elseif n_inf > 0
         # Partial failures: replace Inf with a large penalty value so the polynomial
         # can still be constructed. The high error in these regions will cause
         # subdivision to split them, eventually isolating the failing region.
+        # The substituted row indices are recorded on the subdomain (below) so children
+        # never inherit a penalty as if it were a real f-value (y0j).
         finite_vals = filter(isfinite, f_values)
         penalty = 10.0 * maximum(abs, finite_vals)
         for i in 1:n_total
             if isinf(f_values[i])
+                push!(penalized_rows, i)
                 f_values[i] = penalty
             end
         end
@@ -980,10 +1009,13 @@ function estimate_subdomain_error(
         basis,
     )
 
-    # Compute L2 error
+    # Compute L2 error. Weight = 2^n / n_rows: identical to prod(2/(GN_d+1)) on a pure
+    # tensor grid, but stays UNBIASED when inherited rows enlarge the sample set (y0j) —
+    # the per-dim formula would inflate l2_error by the row surplus, and the inflation
+    # differs per cut candidate, systematically biasing find_optimal_cut_sparse.
     poly_values = evaluate_polynomial_at_samples(pol, grid_matrix)
     errors = f_values .- poly_values
-    weight = prod(2.0 ./ (per_dim_GN .+ 1))
+    weight = 2.0^n_dim / n_total
     l2_error = sqrt(sum(abs2.(errors)) * weight)
 
     # Compute relative L2 error: ||f - p||_L2 / ||f||_L2
@@ -1009,6 +1041,7 @@ function estimate_subdomain_error(
     subdomain.polynomial = pol
     subdomain.samples = grid_matrix
     subdomain.f_values = f_values
+    subdomain.penalized_rows = penalized_rows
 
     @debug "estimate_subdomain_error" l2_error rel_l2 norm_f degree = per_dim_degrees n_total
 
@@ -1043,11 +1076,11 @@ function construct_polynomial_on_subdomain(
     # Solve least squares for coefficients
     coeffs = V \ f_values
 
-    # Compute L2 norm of residual (||f - p||_L2)
+    # Compute L2 norm of residual (||f - p||_L2). Weight normalizes by the ACTUAL row
+    # count (== prod(2/(GN_d+1)) on the standard tensor grid): correct for combined
+    # inherited+fresh sets (y0j) and for n_samples_per_dim overrides alike.
     poly_values = V * coeffs
-    per_dim_degrees = _extract_per_dim_degrees(degree, n_dim)
-    per_dim_GN = 2 .* per_dim_degrees
-    weight = prod(2.0 ./ (per_dim_GN .+ 1))
+    weight = 2.0^n_dim / size(samples, 1)
     residuals = f_values .- poly_values
     nrm = sqrt(sum(abs2.(residuals)) * weight)
 
@@ -1111,7 +1144,19 @@ function find_optimal_cut_sparse(
     n_candidates::Int = 3,
     basis::Symbol = :chebyshev,
     thread_evals::Bool = false,
+    reuse_parent_samples::Bool = false,
+    reuse_tol_frac::Float64 = 0.0,
 )
+    # y0j: the subdomain being split has its own samples/f_values cached from its fit —
+    # every trial child below can inherit the cached rows that land inside its half.
+    # This is where the split-path evaluations actually happen (n_candidates × 2 child
+    # fits per split), so this inherit matters far more than the final-children one.
+    trial_inherit =
+        (
+            reuse_parent_samples &&
+            subdomain.samples !== nothing &&
+            subdomain.f_values !== nothing
+        ) ? subdomain : nothing
     # Candidate positions in normalized [-1, 1] coordinates
     # Default: -0.5, 0.0, 0.5 (quarter, half, three-quarters)
     if n_candidates == 3
@@ -1134,6 +1179,8 @@ function find_optimal_cut_sparse(
             degree,
             basis = basis,
             thread_evals = thread_evals,
+            inherit_from = trial_inherit,
+            reuse_tol_frac = reuse_tol_frac,
         )
         err_right = estimate_subdomain_error(
             f,
@@ -1141,6 +1188,8 @@ function find_optimal_cut_sparse(
             degree,
             basis = basis,
             thread_evals = thread_evals,
+            inherit_from = trial_inherit,
+            reuse_tol_frac = reuse_tol_frac,
         )
 
         # Combined error (sum weighted by volume for fair comparison)
@@ -1323,6 +1372,7 @@ function process_subdomain(
     tolerance_mode::Symbol = :relative,
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = true,
+    reuse_tol_frac::Float64 = 0.0,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
@@ -1377,6 +1427,7 @@ function process_subdomain(
         eval_progress = eval_progress,
         thread_evals = thread_evals,
         inherit_from = inherit_from,
+        reuse_tol_frac = reuse_tol_frac,
         n_samples_per_dim = n_samples_per_dim,
         sampling = sampling,
         christoffel_oversampling = christoffel_oversampling,
@@ -1613,6 +1664,8 @@ function process_subdomain(
             effective_spec,
             basis = basis,
             thread_evals = thread_evals,
+            reuse_parent_samples = reuse_parent_samples,
+            reuse_tol_frac = reuse_tol_frac,
         )
         trial_children = (trial_left, trial_right)
     else
@@ -1800,6 +1853,7 @@ function adaptive_refine(
     cond_threshold::Float64 = 1e14,
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = true,
+    reuse_tol_frac::Float64 = 0.0,
     n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
@@ -1909,6 +1963,7 @@ function adaptive_refine(
             tolerance_mode,
             thread_evals,
             reuse_parent_samples,
+            reuse_tol_frac,
             n_samples_per_dim,
             predicate,
             barrier_detector,
@@ -2162,6 +2217,8 @@ function two_phase_refine(
     cond_threshold::Float64 = 1e14,
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = true,
+    reuse_tol_frac::Float64 = 0.0,
+    n_samples_per_dim::Int = 0,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
     degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
@@ -2231,6 +2288,8 @@ function two_phase_refine(
         tolerance_mode,
         thread_evals,
         reuse_parent_samples,
+        reuse_tol_frac,
+        n_samples_per_dim,
         predicate,
         barrier_detector,
         degeneracy_opts,

@@ -161,3 +161,44 @@ end
     )
     @test counter_off.n == 81
 end
+
+@testset "y0j reuse_tol_frac: exact-tol is a no-op, tolerance saves evaluations" begin
+    f = x -> sin(3x[1]) * cos(3x[2]) + 0.1 * sum(abs2, x)
+    bounds = [(-1.0, 1.0), (-1.0, 1.0)]
+    calls = Ref(0)
+    g = x -> (calls[] += 1; f(x))
+
+    run(reuse, frac) = begin
+        calls[] = 0
+        tree = adaptive_refine(
+            g,
+            bounds,
+            3;
+            l2_tolerance = 1e-3,
+            tolerance_mode = :absolute,
+            max_leaves = 12,
+            max_depth = 4,
+            reuse_parent_samples = reuse,
+            reuse_tol_frac = frac,
+        )
+        (calls[], tree)
+    end
+
+    n_off, tree_off = run(false, 0.0)
+    n_exact, tree_exact = run(true, 0.0)
+    # default tolerance (exact-coincidence dedup): inheritance only ENRICHES fits (adds
+    # inherited rows, drops nothing), so evaluation counts stay ~unchanged. Not bit-
+    # identical — the extra rows can nudge a cut decision — but must stay within a few
+    # percent and never save (savings require reuse_tol_frac > 0).
+    @test n_off * 0.95 <= n_exact <= n_off * 1.05
+
+    n_tol, tree_tol = run(true, 0.75)
+    @test n_tol < 0.9 * n_off              # the tolerance is the actual savings lever
+    # and the thinned fits still converge the same problem
+    leaves = vcat(tree_tol.converged_leaves, tree_tol.active_leaves)
+    worst = maximum(
+        tree_tol.subdomains[i].l2_error for
+        i in leaves if isfinite(tree_tol.subdomains[i].l2_error)
+    )
+    @test worst < 0.05
+end
