@@ -1146,6 +1146,9 @@ function find_optimal_cut_sparse(
     thread_evals::Bool = false,
     reuse_parent_samples::Bool = false,
     reuse_tol_frac::Float64 = 0.0,
+    sampling::Symbol = :tensor,
+    christoffel_oversampling::Float64 = 2.0,
+    rng_seed::Union{Nothing,Integer} = nothing,
 )
     # y0j: the subdomain being split has its own samples/f_values cached from its fit —
     # every trial child below can inherit the cached rows that land inside its half.
@@ -1181,6 +1184,9 @@ function find_optimal_cut_sparse(
             thread_evals = thread_evals,
             inherit_from = trial_inherit,
             reuse_tol_frac = reuse_tol_frac,
+            sampling = sampling,
+            christoffel_oversampling = christoffel_oversampling,
+            rng_seed = rng_seed,
         )
         err_right = estimate_subdomain_error(
             f,
@@ -1190,6 +1196,9 @@ function find_optimal_cut_sparse(
             thread_evals = thread_evals,
             inherit_from = trial_inherit,
             reuse_tol_frac = reuse_tol_frac,
+            sampling = sampling,
+            christoffel_oversampling = christoffel_oversampling,
+            rng_seed = rng_seed,
         )
 
         # Combined error (sum weighted by volume for fair comparison)
@@ -1666,6 +1675,9 @@ function process_subdomain(
             thread_evals = thread_evals,
             reuse_parent_samples = reuse_parent_samples,
             reuse_tol_frac = reuse_tol_frac,
+            sampling = sampling,
+            christoffel_oversampling = christoffel_oversampling,
+            rng_seed = leaf_seed,
         )
         trial_children = (trial_left, trial_right)
     else
