@@ -290,3 +290,58 @@ TimerOutputs.@timeit _TO function generate_grid_small_n(
         fill(GN + 1, N)...,
     )
 end
+
+"""
+    generate_sparse_samples(n, degree; oversample=2.0, measure=:chebyshev, rng=Random.default_rng())
+
+Draw a non-tensor sample set for a total-degree-`degree` least-squares fit in `n` dimensions:
+`ceil(oversample * binomial(n + degree, n))` points in `[-1,1]^n`, returned as a
+`Matrix{Float64}` with one point per row (the layout `MainGenerate` expects for a provided
+grid). Pass the result to `Constructor(T, degree; grid=..., grid_mode=:nontensor,
+sample_measure=measure)`.
+
+This is the sampling front-end that decouples the sample count from the tensor grid
+(bead 4hs0): a tensor grid needs `(degree+1)^n` points, this needs only a small multiple of
+the basis size `binom(degree+n, n)`.
+
+# Measures
+- `:chebyshev` (default): each coordinate is drawn from the arcsine (Chebyshev) density
+  `1/(π√(1-x²))` via `x = cos(πu)`, `u ~ U[0,1]`. This is the product-Chebyshev measure —
+  the natural sampling measure for Chebyshev least squares; it controls the LS condition
+  number at moderate oversampling far better than uniform sampling at high degree.
+- `:uniform`: uniform on `[-1,1]^n`.
+
+`oversample < 1` is rejected: fewer samples than basis functions makes the LS system
+underdetermined.
+"""
+function generate_sparse_samples(
+    n::Int,
+    degree::Int;
+    oversample::Float64 = 2.0,
+    measure::Symbol = :chebyshev,
+    rng::Random.AbstractRNG = Random.default_rng(),
+)
+    n >= 1 || throw(ArgumentError("dimension must be ≥ 1, got $n"))
+    degree >= 0 || throw(ArgumentError("degree must be ≥ 0, got $degree"))
+    oversample >= 1.0 || throw(
+        ArgumentError(
+            "oversample must be ≥ 1 (got $oversample): fewer samples than basis functions is underdetermined",
+        ),
+    )
+    measure in (:chebyshev, :uniform) ||
+        throw(ArgumentError("measure must be :chebyshev or :uniform, got $measure"))
+
+    n_basis = binomial(n + degree, n)
+    n_pts = ceil(Int, oversample * n_basis)
+    S = Matrix{Float64}(undef, n_pts, n)
+    if measure === :chebyshev
+        for j in 1:n, i in 1:n_pts
+            S[i, j] = cos(pi * rand(rng))
+        end
+    else
+        for j in 1:n, i in 1:n_pts
+            S[i, j] = 2.0 * rand(rng) - 1.0
+        end
+    end
+    return S
+end

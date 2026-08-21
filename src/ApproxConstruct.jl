@@ -278,9 +278,18 @@ function lambda_vandermonde(
     basis::Symbol = :chebyshev,
     force_anisotropic::Bool = false,
     force_tensorized::Bool = false,
+    force_original::Bool = false,
 )
     # Convert to matrix if needed for analysis
     S_matrix = isa(S, Matrix) ? S : S
+
+    # Non-tensor (scattered) point sets: the tensorized/anisotropic implementations assume
+    # tensor-product structure and are WRONG on scattered points — force the pointwise
+    # original implementation (sparse/least-squares front-end, bead 4hs0).
+    if force_original
+        @debug "Vandermonde: Using original implementation (forced — non-tensor point set)"
+        return lambda_vandermonde_original(Lambda, S, basis = basis)
+    end
 
     # Quick dimension check
     if size(S_matrix, 2) == 1

@@ -121,6 +121,42 @@ function compute_norm(
 end
 
 """
+    compute_norm_scattered(scale_factor, VL, sol, F, measure, S)
+
+L2 residual norm for a NON-TENSOR (scattered) sample set `S` (points as rows), by Monte-Carlo
+quadrature with the importance weights of the sampling `measure` the points were drawn from
+(`:uniform` or `:chebyshev`, see `generate_sparse_samples`). For `:chebyshev` samples the
+weight is `∏ₖ π√(1-xₖ²)/N` — using uniform weights there would systematically overweight the
+edge-dense points. Scale conventions mirror `compute_norm`: scalar `scale_factor` integrates
+over `[-1,1]^n` (weights sum → `2^n`); vector `scale_factor` multiplies by `∏ scale_factor`
+(total mass → `∏ 2·scale_factor`), matching the tensor fallbacks.
+"""
+function compute_norm_scattered(
+    scale_factor::Union{Float64,Vector{Float64}},
+    VL,
+    sol,
+    F,
+    measure::Symbol,
+    S::Matrix{Float64},
+)
+    residuals = VL * sol.u - F
+    n_pts, n = size(S)
+    weights = if measure === :chebyshev
+        [prod(pi * sqrt(max(1.0 - S[i, k]^2, 0.0)) for k in 1:n) / n_pts for i in 1:n_pts]
+    elseif measure === :uniform
+        fill(2.0^n / n_pts, n_pts)
+    else
+        throw(
+            ArgumentError(
+                "unknown sample measure $measure (expected :chebyshev or :uniform)",
+            ),
+        )
+    end
+    vol_scale = isa(scale_factor, Number) ? 1.0 : prod(scale_factor)
+    return sqrt(vol_scale * sum(abs2.(residuals) .* weights))
+end
+
+"""
     relative_l2_error(pol::ApproxPoly) -> Float64
 
 Compute the relative L2 approximation error: `||f - p||_L2 / ||f||_L2`.

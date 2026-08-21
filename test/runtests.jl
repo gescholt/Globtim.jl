@@ -139,6 +139,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_hc_solve_kwargs.jl") do
     include("test_hc_solve_kwargs.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_sparse_sampling.jl") do
+    include("test_sparse_sampling.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_standard_experiment_resume.jl") do
     include("test_standard_experiment_resume.jl")
 end

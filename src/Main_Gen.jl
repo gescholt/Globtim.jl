@@ -87,9 +87,15 @@ TimerOutputs.@timeit _TO function MainGenerate(
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
     thread_evals::Bool = false,
+    grid_degree::Union{Int,Nothing} = nothing,
+    sample_measure::Symbol = :uniform,
 )::ApproxPoly
     # Check if d is a grid (Matrix format)
     grid_provided = isa(d, Matrix)
+    # Non-tensor (sparse/least-squares) mode: caller supplies BOTH an arbitrary point set and
+    # the target total degree, decoupling degree from point count (bead 4hs0). Without this,
+    # the tensor inference below silently lowers the degree to round(N^(1/n)) - 1.
+    nontensor = grid_provided && grid_degree !== nothing
 
     if grid_provided
         # Validate grid dimensions
@@ -100,25 +106,38 @@ TimerOutputs.@timeit _TO function MainGenerate(
         matrix_from_grid = d
         total_points = size(d, 1)
 
-        # Infer points per dimension from total grid size
-        # For tensor product grids: total_points = n_per_dim^dim
-        n_per_dim = round(Int, total_points^(1 / n))
+        if nontensor
+            # Degree is authoritative; the point set only needs to overdetermine the basis.
+            degree_est = grid_degree
+            n_basis = binomial(n + degree_est, n)
+            total_points >= n_basis || error(
+                "Non-tensor fit at degree=$(degree_est) in $(n)D needs at least " *
+                "binomial(n+d, n) = $(n_basis) sample points, got $(total_points). " *
+                "Increase the sample count (e.g. generate_sparse_samples oversample ≥ 1).",
+            )
+            actual_GN = -1  # sentinel: no per-dimension grid structure exists
+        else
+            # Infer points per dimension from total grid size
+            # For tensor product grids: total_points = n_per_dim^dim
+            n_per_dim = round(Int, total_points^(1 / n))
 
-        # Set GN following convention: GN+1 points per dimension
-        actual_GN = n_per_dim - 1
+            # Set GN following convention: GN+1 points per dimension
+            actual_GN = n_per_dim - 1
 
-        # Check tensor product structure and warn if non-conforming
-        expected_points = (actual_GN + 1)^n
-        if total_points != expected_points
-            @warn "Grid may not be a tensor product. Expected $(expected_points) points " *
-                  "for $(n)D grid with $(n_per_dim) points per dimension, but got $(total_points) points. " *
-                  "Proceeding with inferred degree=$(actual_GN), but results may have degraded accuracy."
+            # Check tensor product structure and warn if non-conforming
+            expected_points = (actual_GN + 1)^n
+            if total_points != expected_points
+                @warn "Grid may not be a tensor product. Expected $(expected_points) points " *
+                      "for $(n)D grid with $(n_per_dim) points per dimension, but got $(total_points) points. " *
+                      "Proceeding with inferred degree=$(actual_GN), but results may have degraded accuracy. " *
+                      "For a genuine non-tensor point set, pass grid_degree (Constructor: grid_mode=:nontensor)."
+            end
+
+            # Degree equals GN for tensor product grids
+            degree_est = actual_GN
         end
 
-        # Degree equals GN for tensor product grids
-        degree_est = actual_GN
-
-        # Generate Lambda support based on inferred degree
+        # Generate Lambda support based on the (provided or inferred) degree
         Lambda = SupportGen(n, (:one_d_for_all, degree_est))
 
         # Set D for compatibility
@@ -205,8 +224,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
         matrix_from_grid = reduce(vcat, map(x -> x', reshape(grid, :)))
     end
 
-    # Check if grid is anisotropic
-    is_anisotropic = grid_provided && is_grid_anisotropic(matrix_from_grid)
+    # Check if grid is anisotropic (tensor grids only — scattered sets go to force_original)
+    is_anisotropic = grid_provided && !nontensor && is_grid_anisotropic(matrix_from_grid)
 
     # Call lambda_vandermonde with appropriate flag
     TimerOutputs.@timeit _TO "vandermonde_construction" begin
@@ -215,6 +234,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
             matrix_from_grid,
             basis = basis,
             force_anisotropic = is_anisotropic,
+            force_original = nontensor,
         )
     end
 
@@ -351,7 +371,11 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Compute L2 norm using proper quadrature weights
     # This ensures monotonic decrease with degree (by containment)
+    # Non-tensor point sets get Monte-Carlo weights for their sampling measure instead of
+    # tensor quadrature (which needs per-dimension grid structure).
     TimerOutputs.@timeit _TO "norm_computation" nrm =
+        nontensor ?
+        compute_norm_scattered(scale_factor, VL, sol, F, sample_measure, matrix_from_grid) :
         compute_norm(scale_factor, VL, sol, F, basis, actual_GN, n)
 
     # Guard: NaN/Inf norm means numerical breakdown — fail fast with diagnostics
@@ -406,6 +430,12 @@ polynomial of the specified degree.
 - `normalized::Bool=false`: Whether to normalize the polynomial
 - `power_of_two_denom::Bool=false`: Use power-of-two denominators for rationals
 - `grid::Union{Nothing,Matrix{Float64}}=nothing`: Pre-generated grid matrix (rows are points)
+- `grid_mode::Symbol=:tensor`: How to interpret a provided `grid`. `:tensor` (legacy) infers the
+  degree from the point count assuming tensor structure and IGNORES the positional `degree`.
+  `:nontensor` treats the positional `degree` as authoritative and fits it on the arbitrary
+  point set by least squares (sparse front-end; pair with `generate_sparse_samples`).
+- `sample_measure::Symbol=:uniform`: For `grid_mode=:nontensor`, the measure the points were
+  drawn from (`:uniform` or `:chebyshev`) — sets the Monte-Carlo quadrature weights of `nrm`.
 
 # Returns
 - `ApproxPoly`: Polynomial approximation object containing:
@@ -443,7 +473,11 @@ pol = Constructor(TR, 12, normalized=true)
 # Using a pre-generated anisotropic grid
 grid_aniso = generate_anisotropic_grid([10, 5], basis=:chebyshev)
 grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
-pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid provided
+pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid provided (grid_mode=:tensor)
+
+# Sparse least-squares fit: degree 8 from ~2·binom(8+3,3) points instead of 9^3 (bead 4hs0)
+S = generate_sparse_samples(3, 8; oversample=2.0, measure=:chebyshev)
+pol_sparse = Constructor(TR, 8, grid=S, grid_mode=:nontensor, sample_measure=:chebyshev)
 ```
 """
 TimerOutputs.@timeit _TO function Constructor(
@@ -455,12 +489,24 @@ TimerOutputs.@timeit _TO function Constructor(
     normalized::Bool = false,
     power_of_two_denom::Bool = false,
     grid::Union{Nothing,Matrix{Float64}} = nothing,
+    grid_mode::Symbol = :tensor,
+    sample_measure::Symbol = :uniform,
     thread_evals::Bool = false,
     stagnation_stop::Bool = false,
     stagnation_threshold::Float64 = 0.01,
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
+    end
+    if !(grid_mode in (:tensor, :nontensor))
+        throw(ArgumentError("grid_mode must be :tensor or :nontensor, got $grid_mode"))
+    end
+    if grid_mode === :nontensor && isnothing(grid)
+        throw(
+            ArgumentError(
+                "grid_mode=:nontensor requires a grid (e.g. from generate_sparse_samples)",
+            ),
+        )
     end
 
     # If grid is provided, use it directly
@@ -480,6 +526,10 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
             thread_evals = thread_evals,
+            # :nontensor — the positional degree is authoritative for the fit; the point set
+            # only needs to overdetermine the basis (sparse/LS front-end, bead 4hs0).
+            grid_degree = grid_mode === :nontensor ? degree : nothing,
+            sample_measure = sample_measure,
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
