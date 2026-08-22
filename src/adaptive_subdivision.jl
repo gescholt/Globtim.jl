@@ -2045,6 +2045,8 @@ function adaptive_refine(
             leaf_spec =
                 sd.per_dim_degree !== nothing ? (:one_d_per_dim, sd.per_dim_degree) : degree
             sd.degree = maximum(_extract_per_dim_degrees(leaf_spec, length(sd.center)))
+            # Honor the run's sampling mode: without it a leftover-Inf leaf falls back to
+            # a TENSOR fit here — at 7-D that is (2·deg+1)⁷ ODE solves inside the finalize.
             estimate_subdomain_error(
                 f,
                 sd,
@@ -2053,6 +2055,9 @@ function adaptive_refine(
                 eval_progress = eval_progress,
                 thread_evals = thread_evals,
                 n_samples_per_dim = n_samples_per_dim,
+                sampling = sampling,
+                christoffel_oversampling = christoffel_oversampling,
+                rng_seed = rng_base_seed === nothing ? nothing : (rng_base_seed + leaf_id),
             )
         end
         # Phase 1 prune fires here too — re-eval may discover infeasibility on
@@ -2231,6 +2236,9 @@ function two_phase_refine(
     reuse_parent_samples::Bool = true,
     reuse_tol_frac::Float64 = 0.0,
     n_samples_per_dim::Int = 0,
+    sampling::Symbol = :tensor,
+    christoffel_oversampling::Float64 = 2.0,
+    rng_base_seed::Union{Nothing,Integer} = nothing,
     predicate::Function = default_bump,
     barrier_detector::Union{Nothing,Function} = nothing,
     degeneracy_opts::Union{Nothing,NamedTuple} = nothing,
@@ -2302,6 +2310,9 @@ function two_phase_refine(
         reuse_parent_samples,
         reuse_tol_frac,
         n_samples_per_dim,
+        sampling,
+        christoffel_oversampling,
+        rng_base_seed,
         predicate,
         barrier_detector,
         degeneracy_opts,
@@ -2508,6 +2519,9 @@ function two_phase_refine(
                 basis = basis,
                 thread_evals = thread_evals,
                 n_samples_per_dim = n_samples_per_dim,
+                sampling = sampling,
+                christoffel_oversampling = christoffel_oversampling,
+                rng_seed = rng_base_seed === nothing ? nothing : (rng_base_seed + leaf_id),
             )
         end
         if sd.infeasible
