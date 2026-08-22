@@ -1,10 +1,13 @@
 """
     solve_tree_leaves(tree::SubdivisionTree; solver=:hc, dedup_tol=1e-6)
-        -> (; critical_points::Vector{Vector{Float64}}, leaf_status::Dict{Int,Symbol})
+        -> (; critical_points::Vector{Vector{Float64}}, cp_leaf_ids::Vector{Int},
+             leaf_status::Dict{Int,Symbol})
 
 Solve the gradient system on every leaf polynomial of a finished
 `SubdivisionTree`. Returns a NamedTuple with deduplicated critical points
-(original-domain coordinates) and a per-leaf status map.
+(original-domain coordinates), the id of the leaf that produced each kept
+point (`cp_leaf_ids`, aligned with `critical_points`), and a per-leaf status
+map.
 
 ## Workflow
 1. Iterate `converged_leaves ∪ active_leaves` (active leaves hit a depth/count
@@ -40,6 +43,7 @@ function solve_tree_leaves(
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )
     all_cps = Vector{Float64}[]
+    all_leaf_tags = Int[]
     leaf_status = Dict{Int,Symbol}()
     leaf_ids = vcat(tree.converged_leaves, tree.active_leaves)
 
@@ -64,6 +68,7 @@ function solve_tree_leaves(
                 transform = sd.transform,  # Stage 2b: lift CPs back through the leaf's frame
             )
             append!(all_cps, cps)
+            append!(all_leaf_tags, fill(leaf_id, length(cps)))
             leaf_status[leaf_id] = :ran
         catch e
             @warn "solve_tree_leaves: HC solve failed on leaf $leaf_id" exception = e
@@ -71,8 +76,12 @@ function solve_tree_leaves(
         end
     end
 
+    keep_idx = _dedup_point_indices(all_cps, dedup_tol)
     return (;
-        critical_points = _dedup_points(all_cps, dedup_tol),
+        critical_points = all_cps[keep_idx],
+        # CP→leaf provenance, aligned with critical_points (bead 4iy5.2 step 0:
+        # yield-vs-observables analysis needs to know which leaf produced each CP).
+        cp_leaf_ids = all_leaf_tags[keep_idx],
         leaf_status = leaf_status,
     )
 end
@@ -99,13 +108,23 @@ Greedy deduplication: keep the first occurrence of any cluster of points
 whose pairwise Euclidean distance is less than `tol`.
 """
 function _dedup_points(points::Vector{Vector{Float64}}, tol::Float64)
-    isempty(points) && return points
-    kept = Vector{Float64}[]
-    for pt in points
-        is_dup = any(kept) do k
-            sum(abs2, pt .- k) < tol^2
+    return points[_dedup_point_indices(points, tol)]
+end
+
+"""
+    _dedup_point_indices(points, tol) -> Vector{Int}
+
+Index-returning core of [`_dedup_points`](@ref): indices of the first
+occurrence of each cluster, so callers can subset parallel arrays
+(e.g. per-point leaf provenance) consistently.
+"""
+function _dedup_point_indices(points::Vector{Vector{Float64}}, tol::Float64)
+    keep = Int[]
+    for (i, pt) in enumerate(points)
+        is_dup = any(keep) do j
+            sum(abs2, pt .- points[j]) < tol^2
         end
-        is_dup || push!(kept, pt)
+        is_dup || push!(keep, i)
     end
-    return kept
+    return keep
 end

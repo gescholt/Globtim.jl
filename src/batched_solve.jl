@@ -97,6 +97,7 @@ function solve_tree_leaves_warmstart(
     path_stats = Dict{Int,NTuple{3,Int}}()
     isempty(leaves) && return (;
         critical_points = all_cps,
+        cp_leaf_ids = nothing,      # provenance not threaded through the warmstart batches
         leaf_status = leaf_status,
         path_stats = path_stats,
     )
@@ -137,6 +138,7 @@ function solve_tree_leaves_warmstart(
 
     return (;
         critical_points = _dedup_points(all_cps, dedup_tol),
+        cp_leaf_ids = nothing,      # provenance not threaded through the warmstart batches
         leaf_status = leaf_status,
         path_stats = path_stats,
     )
