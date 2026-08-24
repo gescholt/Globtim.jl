@@ -74,6 +74,10 @@ Base.@kwdef struct ExperimentPipelineConfig
     solver_abstol::Union{Nothing,Float64} = nothing
     solver_reltol::Union{Nothing,Float64} = nothing
     solver_numpoints::Union{Nothing,Int} = nothing
+    # HC start system: "auto" (polyhedral for n>=3) | "total_degree" | "polyhedral".
+    # total_degree is the escape hatch when the polyhedral lifting overflows
+    # (observed: OverflowError at degree 9 in 6 variables, job 935109).
+    hc_start_system::Union{Nothing,String} = nothing
 
     # [refinement] — optional post-processing
     refinement_enabled::Bool = false
@@ -957,6 +961,12 @@ function load_experiment_config(path::String)
     solver_abstol = haskey(sol, "abstol") ? Float64(sol["abstol"]) : nothing
     solver_reltol = haskey(sol, "reltol") ? Float64(sol["reltol"]) : nothing
     solver_numpoints = haskey(sol, "numpoints") ? Int(sol["numpoints"]) : nothing
+    hc_start_system = haskey(sol, "start_system") ? String(sol["start_system"]) : nothing
+    hc_start_system === nothing ||
+        hc_start_system in ("auto", "total_degree", "polyhedral") ||
+        error(
+            "[solver] start_system must be auto, total_degree, or polyhedral (got $hc_start_system)",
+        )
 
     # Parse refinement
     refinement_enabled = get(ref, "enabled", false)::Bool
@@ -1140,6 +1150,7 @@ function load_experiment_config(path::String)
         solver_abstol = solver_abstol,
         solver_reltol = solver_reltol,
         solver_numpoints = solver_numpoints,
+        hc_start_system = hc_start_system,
         # [refinement]
         refinement_enabled = refinement_enabled,
         refinement_method = refinement_method,

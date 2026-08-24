@@ -420,6 +420,7 @@ function run_standard_experiment(;
     metadata::Dict{String,Any} = Dict{String,Any}(),
     true_params::Union{Vector{Float64},Nothing} = nothing,
     solver::Symbol = :hc,
+    start_system::Symbol = :auto,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     stagnation_stop::Bool = false,
@@ -486,6 +487,7 @@ function run_standard_experiment(;
                     output_dir,
                     true_params;
                     solver = solver,
+                    start_system = start_system,
                     msolve_threads = msolve_threads,
                     msolve_timeout_seconds = msolve_timeout_seconds,
                 ),
@@ -680,6 +682,7 @@ function process_single_degree(
     output_dir::String,
     true_params::Union{Vector{Float64},Nothing};
     solver::Symbol = :hc,
+    start_system::Symbol = :auto,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
 )
@@ -721,6 +724,7 @@ function process_single_degree(
         pol,
         bounds;
         solver = solver,
+        start_system = start_system,
         msolve_threads = msolve_threads,
         msolve_timeout_seconds = msolve_timeout_seconds,
     )
