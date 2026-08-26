@@ -25,7 +25,7 @@ using JSON3
 using SHA
 using Dates
 
-export emit_ledger_record
+export emit_ledger_record, prior_run_ids
 
 """
 Walk up from `start` to the enclosing git repository root, or `nothing`.
@@ -66,6 +66,33 @@ function _git_state(repo_root::Union{AbstractString,Nothing})
 end
 
 _sanitize_slug(s::AbstractString) = replace(s, r"[^A-Za-z0-9_.-]" => "-")
+
+"""
+    prior_run_ids(slug; start = pwd()) -> Vector{String}
+
+Run_ids of existing central-ledger records carrying this slug. Use when a
+rerun replaces earlier runs of the same experiment: pass the result as
+`supersedes` so the lineage stays explicit (drivers expose this as a
+`--supersede-prior` flag). Empty when no repo/ledger is reachable.
+"""
+function prior_run_ids(slug::AbstractString; start::AbstractString = pwd())
+    root = find_repo_root(start)
+    root === nothing && return String[]
+    ledger = joinpath(root, "experiments", "ledger.jsonl")
+    isfile(ledger) || return String[]
+    slug_s = _sanitize_slug(slug)
+    ids = String[]
+    for line in eachline(ledger)
+        isempty(strip(line)) && continue
+        rec = try
+            JSON3.read(line)
+        catch
+            continue
+        end
+        String(rec["slug"]) == slug_s && push!(ids, String(rec["run_id"]))
+    end
+    return ids
+end
 
 """
     emit_ledger_record(; slug, outdir, kwargs...) -> run_id
