@@ -87,7 +87,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     normalized::Bool = true,
     power_of_two_denom::Bool = false,
     thread_evals::Bool = false,
-    grid_degree::Union{Int,Nothing} = nothing,
+    grid_degree::Union{Int,Tuple,Nothing} = nothing,
     sample_measure::Symbol = :uniform,
 )::ApproxPoly
     # Check if d is a grid (Matrix format)
@@ -107,12 +107,17 @@ TimerOutputs.@timeit _TO function MainGenerate(
         total_points = size(d, 1)
 
         if nontensor
-            # Degree is authoritative; the point set only needs to overdetermine the basis.
-            degree_est = grid_degree
-            n_basis = binomial(n + degree_est, n)
+            # Degree is authoritative; the point set only needs to overdetermine the
+            # basis. A tuple grid_degree (any DegreeSpec, e.g. anisotropic simplex)
+            # sets the support directly; a bare Int means total degree (bead 4hs0).
+            degree_spec =
+                grid_degree isa Tuple ? grid_degree : (:one_d_for_all, grid_degree)
+            degree_est = grid_degree isa Tuple ? maximum(grid_degree[2]) : grid_degree
+            Lambda = SupportGen(n, degree_spec)
+            n_basis = Lambda.size[1]
             total_points >= n_basis || error(
-                "Non-tensor fit at degree=$(degree_est) in $(n)D needs at least " *
-                "binomial(n+d, n) = $(n_basis) sample points, got $(total_points). " *
+                "Non-tensor fit at degree=$(degree_spec) in $(n)D needs at least " *
+                "$(n_basis) sample points (the support cardinality), got $(total_points). " *
                 "Increase the sample count (e.g. generate_sparse_samples oversample ≥ 1).",
             )
             actual_GN = -1  # sentinel: no per-dimension grid structure exists
@@ -135,10 +140,9 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
             # Degree equals GN for tensor product grids
             degree_est = actual_GN
+            degree_spec = (:one_d_for_all, degree_est)
+            Lambda = SupportGen(n, degree_spec)
         end
-
-        # Generate Lambda support based on the (provided or inferred) degree
-        Lambda = SupportGen(n, (:one_d_for_all, degree_est))
 
         # Set D for compatibility
         D = degree_est
@@ -152,12 +156,14 @@ TimerOutputs.@timeit _TO function MainGenerate(
             maximum(d[2])
         elseif d[1] == :one_d_per_dim
             maximum(d[2])
+        elseif d[1] == :one_d_per_dim_simplex
+            maximum(d[2])
         elseif d[1] == :fully_custom
             0
         else
             throw(
                 ArgumentError(
-                    "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom.",
+                    "Invalid degree format. Use :one_d_for_all, :one_d_per_dim, :one_d_per_dim_simplex, or :fully_custom.",
                 ),
             )
         end
@@ -389,8 +395,8 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Store the basis parameters in the ApproxPoly object
     # Use the smart constructor to get correct type parameters
-    # For grid input, store the inferred degree format
-    degree_info = grid_provided ? (:one_d_for_all, degree_est) : d
+    # For grid input, store the provided (nontensor) or inferred (tensor) degree spec
+    degree_info = grid_provided ? degree_spec : d
 
     return ApproxPoly(
         sol.u,

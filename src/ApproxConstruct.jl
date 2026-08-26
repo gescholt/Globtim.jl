@@ -51,12 +51,30 @@ function get_lambda_exponent_vectors(d, n)
         end
         resize!(lambda_vectors, count)
         return lambda_vectors
+    elseif d[1] == :one_d_per_dim_simplex
+        # Anisotropic (weighted) simplex: exponents with sum_j nu_j/d_j <= 1 — the
+        # simplex with vertices d_j*e_j. Keeps per-axis resolution d_j while
+        # excluding the mixed high-degree corners of the tensor box, which dominate
+        # the BKK path count of the gradient system (bead t8sy).
+        dv = d[2]
+        all(dv .>= 1) || throw(ArgumentError("Simplex degrees must all be >= 1, got $dv"))
+        lambda_vectors = Vector{Vector{Int}}()
+        for idx in Iterators.product((0:di for di in dv)...)
+            if sum(idx[j] // dv[j] for j in eachindex(dv)) <= 1
+                push!(lambda_vectors, collect(Int, idx))
+            end
+        end
+        return lambda_vectors
     elseif d[1] == :fully_custom
         lambda_vectors = get_lambda_vectors(d[2])
         @assert all(e -> length(e) == n, lambda_vectors) "All exponent vectors must have length n"
         return lambda_vectors
     else
-        throw(ArgumentError("Invalid degree format. Use :one_d_for_all or :one_d_per_dim."))
+        throw(
+            ArgumentError(
+                "Invalid degree format. Use :one_d_for_all, :one_d_per_dim, or :one_d_per_dim_simplex.",
+            ),
+        )
     end
 end
 
@@ -90,12 +108,14 @@ function SupportGen(n::Int, d)::NamedTuple
         maximum(d[2])
     elseif d[1] == :one_d_per_dim
         maximum(d[2])
+    elseif d[1] == :one_d_per_dim_simplex
+        maximum(d[2])
     elseif d[1] == :fully_custom
         Inf
     else
         throw(
             ArgumentError(
-                "Invalid degree format. Use :one_d_for_all or :one_d_per_dim or :fully_custom.",
+                "Invalid degree format. Use :one_d_for_all, :one_d_per_dim, :one_d_per_dim_simplex, or :fully_custom.",
             ),
         )
     end
