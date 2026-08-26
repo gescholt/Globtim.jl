@@ -100,6 +100,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
+    path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
 )
     # Optional coefficient sparsification: zero out small coefficients before
     # constructing the DynamicPolynomials polynomial. DynamicPolynomials automatically
@@ -130,7 +131,20 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
             power_of_two_denom,
             return_system,
             start_system,
+            path_stats_ref,
         )
+        # Enrich the solve stats with the truncation facts known at this level
+        # (bead iirm): support size before/after sparsification.
+        if path_stats_ref !== nothing && path_stats_ref[] !== nothing
+            path_stats_ref[] = merge(
+                path_stats_ref[],
+                (;
+                    sparsify_threshold = sparsify_threshold,
+                    n_coeffs_total = length(coeffs),
+                    n_coeffs_kept = count(!iszero, actual_coeffs),
+                ),
+            )
+        end
         # Apply search_bounds as midpoint filter for HC (no interval data available)
         if search_bounds !== nothing && !return_system
             result = filter(result) do pt
@@ -360,6 +374,7 @@ function solve_polynomial_system_from_approx(
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
+    path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
 )::Vector{Vector{Float64}}
     return solve_polynomial_system(
         x,
@@ -374,6 +389,7 @@ function solve_polynomial_system_from_approx(
         msolve_threads = msolve_threads,
         msolve_timeout_seconds = msolve_timeout_seconds,
         search_bounds = search_bounds,
+        path_stats_ref = path_stats_ref,
     )
 end
 

@@ -1,7 +1,8 @@
 module GlobtimHomotopyContinuationExt
 
 using Globtim
-using HomotopyContinuation: solve, real_solutions, System, solutions, nsolutions, @var
+using HomotopyContinuation:
+    solve, real_solutions, System, solutions, nsolutions, ntracked, nsingular, @var
 import HomotopyContinuation   # for HomotopyContinuation.differentiate (parametric path)
 using MultivariatePolynomials: differentiate   # cold path: differentiate DynamicPolynomials
 
@@ -16,6 +17,7 @@ function Globtim._solve_hc(
     power_of_two_denom,
     return_system,
     start_system,
+    path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
 )
     pol = Globtim.main_nd(
         x,
@@ -39,6 +41,19 @@ function Globtim._solve_hc(
     sys = System(grad)
     hc_result = solve(sys, start_system = actual_start, show_progress = false)
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
+
+    # Out-channel for solve statistics (bead iirm): how many paths the chosen
+    # start system actually tracked, vs solutions found. Filled only when the
+    # caller passes a Ref — the return contract is unchanged.
+    if path_stats_ref !== nothing
+        path_stats_ref[] = (;
+            start_system = actual_start,
+            paths_tracked = ntracked(hc_result),
+            n_solutions = nsolutions(hc_result),
+            n_singular = nsingular(hc_result),
+            n_real = length(rl_sol),
+        )
+    end
 
     if return_system
         return rl_sol, (pol, sys, Int(length(hc_result)))

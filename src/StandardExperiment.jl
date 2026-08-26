@@ -251,6 +251,7 @@ function solve_and_transform(
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     transform::Union{Nothing,Matrix{Float64}} = nothing,
+    path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -287,6 +288,7 @@ function solve_and_transform(
             msolve_threads = msolve_threads,
             msolve_timeout_seconds = msolve_timeout_seconds,
             search_bounds = normalized_search_bounds,
+            path_stats_ref = path_stats_ref,
         )
     end
 

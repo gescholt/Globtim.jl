@@ -1,13 +1,15 @@
 """
     solve_tree_leaves(tree::SubdivisionTree; solver=:hc, dedup_tol=1e-6)
         -> (; critical_points::Vector{Vector{Float64}}, cp_leaf_ids::Vector{Int},
-             leaf_status::Dict{Int,Symbol})
+             leaf_status::Dict{Int,Symbol}, path_stats::Dict{Int,NamedTuple})
 
 Solve the gradient system on every leaf polynomial of a finished
 `SubdivisionTree`. Returns a NamedTuple with deduplicated critical points
 (original-domain coordinates), the id of the leaf that produced each kept
-point (`cp_leaf_ids`, aligned with `critical_points`), and a per-leaf status
-map.
+point (`cp_leaf_ids`, aligned with `critical_points`), a per-leaf status
+map, and per-leaf HC solve statistics (`path_stats`: start system actually
+used, `paths_tracked`, solution counts, and the sparsification support
+before/after — recorded per leaf for `:hc`; empty for `:msolve`).
 
 ## Workflow
 1. Iterate `converged_leaves ∪ active_leaves` (active leaves hit a depth/count
@@ -45,6 +47,10 @@ function solve_tree_leaves(
     all_cps = Vector{Float64}[]
     all_leaf_tags = Int[]
     leaf_status = Dict{Int,Symbol}()
+    # Per-leaf HC solve statistics (bead iirm): tracked-path counts must be
+    # recorded, not inferred from the start-system's nominal bound. :hc only;
+    # msolve leaves no entry.
+    path_stats = Dict{Int,NamedTuple}()
     leaf_ids = vcat(tree.converged_leaves, tree.active_leaves)
 
     for leaf_id in leaf_ids
@@ -55,6 +61,7 @@ function solve_tree_leaves(
         end
 
         leaf_bounds = get_bounds(sd)
+        stats_ref = Base.RefValue{Any}(nothing)
 
         try
             cps, _ = solve_and_transform(
@@ -66,10 +73,12 @@ function solve_tree_leaves(
                 msolve_threads = msolve_threads,
                 search_bounds = search_bounds,
                 transform = sd.transform,  # Stage 2b: lift CPs back through the leaf's frame
+                path_stats_ref = stats_ref,
             )
             append!(all_cps, cps)
             append!(all_leaf_tags, fill(leaf_id, length(cps)))
             leaf_status[leaf_id] = :ran
+            stats_ref[] === nothing || (path_stats[leaf_id] = stats_ref[])
         catch e
             @warn "solve_tree_leaves: HC solve failed on leaf $leaf_id" exception = e
             leaf_status[leaf_id] = _classify_solve_failure(e)
@@ -83,6 +92,7 @@ function solve_tree_leaves(
         # yield-vs-observables analysis needs to know which leaf produced each CP).
         cp_leaf_ids = all_leaf_tags[keep_idx],
         leaf_status = leaf_status,
+        path_stats = path_stats,
     )
 end
 

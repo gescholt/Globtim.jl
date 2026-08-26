@@ -55,6 +55,34 @@ Base.showerror(io::IO, ::_TestHCMissingErr) = print(
         @test all(v == :ran for v in values(r.leaf_status))
     end
 
+    @testset "path_stats recorded per :ran leaf (bead iirm)" begin
+        f(x) = (x[1] - 0.3)^2 + (x[2] - 0.1)^2
+        bounds = [(-1.0, 1.0), (-1.0, 1.0)]
+        tree = Globtim.adaptive_refine(
+            f,
+            bounds,
+            4;
+            max_depth = 1,
+            max_leaves = 4,
+            parallel = false,
+        )
+        r = Globtim.solve_tree_leaves(tree; solver = :hc, start_system = :total_degree)
+        @test hasproperty(r, :path_stats)
+        ran = [k for (k, v) in r.leaf_status if v == :ran]
+        @test !isempty(ran)
+        for leaf_id in ran
+            @test haskey(r.path_stats, leaf_id)
+            s = r.path_stats[leaf_id]
+            # degree-4 fit in 2 vars: total-degree start tracks (4-1)^2 = 9 paths
+            @test s.start_system == :total_degree
+            @test s.paths_tracked == 9
+            @test s.n_solutions <= s.paths_tracked
+            @test s.n_real <= s.n_solutions
+            @test s.n_coeffs_total == 15  # binom(2+4, 2)
+            @test s.n_coeffs_kept == s.n_coeffs_total  # no sparsification requested
+        end
+    end
+
     @testset "_classify_solve_failure distinguishes :hc_missing" begin
         @test Globtim._classify_solve_failure(_TestHCMissingErr()) == :hc_missing
         @test Globtim._classify_solve_failure(ErrorException("unrelated")) == :exception
