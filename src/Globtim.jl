@@ -513,6 +513,11 @@ export PathConfig,
 # For visualization, use: using GlobtimPlots
 # See docs/VISUALIZATION.md for complete migration guide
 
+# ExperimentLedger - per-run provenance records + append-only experiment ledger
+include("ExperimentLedger.jl")
+using .ExperimentLedger
+export emit_ledger_record
+
 # StandardExperiment - unified experiment template (Phase 2)
 include("StandardExperiment.jl")
 using .StandardExperiment

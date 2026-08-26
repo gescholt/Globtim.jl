@@ -655,6 +655,28 @@ function run_standard_experiment(;
     checkpoint_path = joinpath(output_dir, "checkpoint.jld2")
     isfile(checkpoint_path) && rm(checkpoint_path)
 
+    # Provenance: one ledger record per run (in-dir ledger_record.json +
+    # opportunistic append to experiments/ledger.jsonl). Metadata may carry
+    # "ledger_slug", "bead", "supersedes", "config_path" to enrich the record.
+    # A provenance failure must not discard hours of finished computation, so
+    # it warns loudly instead of rethrowing.
+    try
+        Globtim.emit_ledger_record(;
+            slug = string(get(metadata, "ledger_slug", objective_name)),
+            outdir = output_dir,
+            headline = Dict{String,Any}(
+                "total_critical_points" => total_critical_points,
+                "success_rate" => success_rate,
+                "total_time_s" => total_time,
+            ),
+            config_path = get(metadata, "config_path", nothing),
+            supersedes = String[string(s) for s in get(metadata, "supersedes", String[])],
+            bead = get(metadata, "bead", nothing),
+        )
+    catch err
+        @warn "ExperimentLedger: failed to emit ledger record — run has NO provenance entry" output_dir err
+    end
+
     return experiment_summary
 end
 

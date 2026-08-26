@@ -295,6 +295,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_zero_polynomial_guard.jl") do
     include("test_zero_polynomial_guard.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_experiment_ledger.jl") do
+    include("test_experiment_ledger.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
     include("test_tree_solve_observability.jl")
 end
