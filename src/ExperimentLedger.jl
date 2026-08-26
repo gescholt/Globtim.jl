@@ -90,7 +90,11 @@ the in-dir record; `ledger_collect.jl` picks it up after results sync).
 - `job_id`: scheduler job id; defaults to `ENV["SLURM_JOB_ID"]` when set.
 - `manual`: `true` for hand-written / backfilled records (two-tier trust).
 - `append_to_ledger`: pass `false` to write only the in-dir record (tests,
-  scratch experiments that must not enter the central ledger).
+  scratch experiments that must not enter the central ledger). Defaults to
+  the env switch `GLOBTIM_LEDGER_APPEND` (unset/1 = append) — cluster jobs
+  export `GLOBTIM_LEDGER_APPEND=0` so the tracked ledger.jsonl never gets
+  dirtied on the clone (which would block its ff-only pulls); their in-dir
+  records reach the ledger through ledger_collect.jl after results sync.
 """
 function emit_ledger_record(;
     slug::AbstractString,
@@ -103,7 +107,7 @@ function emit_ledger_record(;
     status::AbstractString = "completed",
     job_id = get(ENV, "SLURM_JOB_ID", nothing),
     manual::Bool = false,
-    append_to_ledger::Bool = true,
+    append_to_ledger::Bool = get(ENV, "GLOBTIM_LEDGER_APPEND", "1") != "0",
 )
     isdir(outdir) || error("emit_ledger_record: outdir does not exist: $outdir")
     slug_s = _sanitize_slug(slug)
