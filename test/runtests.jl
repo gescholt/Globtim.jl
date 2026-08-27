@@ -303,6 +303,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
     include("test_tree_solve_observability.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_cert_subdiv_tolerance.jl") do
+    include("test_cert_subdiv_tolerance.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_sparsification_cached.jl") do
     include("test_sparsification_cached.jl")
 end

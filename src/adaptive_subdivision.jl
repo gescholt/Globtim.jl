@@ -1841,6 +1841,21 @@ tree = adaptive_refine(f, bounds, 4; l2_tolerance=1e-4, tolerance_mode=:absolute
 tree = adaptive_refine(f, bounds, 10; l2_tolerance=1e-4, tolerance_mode=:absolute,
                        enable_p_refinement=true, max_degree=40, degree_step=6)
 ```
+
+## Choosing the tolerance mode (certificate-slack rule, bead dfzo.1)
+
+`:relative` normalizes each leaf's error by `‖f‖_L²(leaf)`. On flat leaves
+where the objective is near ZERO (valley floors, sloppy directions) that
+denominator is at the scale of the residual itself, so the relative test
+cannot pass: such leaves bump to `max_degree` and split to `max_depth`,
+over-refining exactly the region where a high-degree approximant
+manufactures spurious critical points at the scale of its own error.
+
+When the tree feeds critical-point enumeration under a capture certificate,
+use `tolerance_mode = :absolute` with `l2_tolerance` set to the
+certificate's slack budget (`λ ε²/4`-scale): flat leaves then converge at
+low degree — a low-degree polynomial cannot oscillate — and the spurious
+accumulation disappears. Regression: `test_cert_subdiv_tolerance.jl`.
 """
 function adaptive_refine(
     f,
