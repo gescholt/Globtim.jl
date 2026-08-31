@@ -32,22 +32,25 @@ function christoffel_kernel_chebyshev(
     @assert size(Λdata, 2) == n "Λdata column count must equal length(x)"
 
     max_deg = maximum(Λdata)
-    # Per-axis Chebyshev table:  T_tab[k+1, i] = T_k(x_i)   (Julia 1-indexed)
-    T_tab = Matrix{Float64}(undef, max_deg + 1, n)
+    # Per-axis Chebyshev table:  T_tab[k+1, i] = T_k(x_i)   (Julia 1-indexed).
+    # Eltype follows the input — the old `Float64(x[i])` silently truncated
+    # Dual/BigFloat inputs inside a generic signature (audit P2, bead 0pld).
+    TT = promote_type(Float64, eltype(x))
+    T_tab = Matrix{TT}(undef, max_deg + 1, n)
     @inbounds for i in 1:n
-        xi = Float64(x[i])
-        T_tab[1, i] = 1.0
+        xi = TT(x[i])
+        T_tab[1, i] = one(TT)
         if max_deg >= 1
             T_tab[2, i] = xi
         end
         for k in 2:max_deg
-            T_tab[k+1, i] = 2.0 * xi * T_tab[k, i] - T_tab[k-1, i]
+            T_tab[k+1, i] = 2 * xi * T_tab[k, i] - T_tab[k-1, i]
         end
     end
 
-    K_val = 0.0
+    K_val = zero(TT)
     @inbounds for j in 1:m
-        prod_sq = 1.0
+        prod_sq = one(TT)
         nnz = 0
         for k in 1:n
             αk = Int(Λdata[j, k])
@@ -65,6 +68,12 @@ end
 """
     christoffel_random_sample_chebyshev(n::Int, Λdata, K::Int; rng=default_rng())
         -> (S::Matrix{Float64} (K × n), sqrt_w::Vector{Float64} (K))
+
+!!! note "Reproducibility requires an explicit `rng`"
+    The `default_rng()` fallback is the task-local RNG: called from a spawned
+    leaf task it is not reproducible across runs. Pass a seeded RNG (the
+    subdivision drivers derive one per leaf from `rng_base_seed + leaf_id`)
+    whenever the sample set must be replayable.
 
 Draw `K` points i.i.d. from the product arcsine measure on `[-1,1]^n`
 (which is the orthogonality measure for the first-kind Chebyshev basis),

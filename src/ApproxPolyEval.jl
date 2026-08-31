@@ -7,7 +7,7 @@ using ForwardDiff
 using DynamicPolynomials
 
 """
-    evaluate(poly::ApproxPoly, x::AbstractVector{<:Real})::Float64
+    evaluate(poly::ApproxPoly, x::AbstractVector{<:Number})
 
 Evaluate polynomial approximation at point `x`.
 
@@ -15,20 +15,27 @@ The point `x` should be in the original (unscaled) domain. The function internal
 scales `x` by `poly.scale_factor` to map to the [-1,1]^n reference domain where
 the orthogonal basis polynomials are defined.
 
+Complex points are supported (the recurrences are polynomial): the fitted
+approximant is a polynomial, so its analytic continuation off the real axis is
+well-defined — this is what lets the zqfv singularity probes interrogate the
+SURROGATE's complex structure directly. ForwardDiff Duals also pass through.
+
 # Arguments
 - `poly::ApproxPoly`: The polynomial approximation object
-- `x::AbstractVector{<:Real}`: Point at which to evaluate (in original domain)
+- `x::AbstractVector{<:Number}`: Point at which to evaluate (in original domain)
 
 # Returns
-- `Float64`: Value of the polynomial approximation at `x`
+- Value of the polynomial approximation at `x`; the type follows the input
+  (`Float64` for real input, `ComplexF64` for complex, Dual for Duals).
 
 # Example
 ```julia
 poly = MainGenerate(f, 2, (:one_d_for_all, 8), 0.05, 0.95, 1.5, 1.0)
 val = evaluate(poly, [0.5, 0.3])
+zval = evaluate(poly, [0.5 + 0.1im, 0.3])  # analytic continuation
 ```
 """
-function evaluate(poly::ApproxPoly, x::AbstractVector{T})::T where {T<:Real}
+function evaluate(poly::ApproxPoly, x::AbstractVector{T}) where {T<:Number}
     # Transform from original domain to [-1,1]^n normalized domain
     # x_normalized = (x - center) / scale_factor
     x_scaled = (x .- poly.center) ./ poly.scale_factor

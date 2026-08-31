@@ -34,13 +34,6 @@ end
 # VALIDATION CONSTANTS
 # ============================================================================
 
-const VALID_PRECISION_TYPES = [
-    "Float64Precision",
-    "AdaptivePrecision",
-    "RationalPrecision",
-    "BigFloatPrecision",
-    "BigIntPrecision",
-]
 const VALID_BASIS_TYPES = ["chebyshev", "legendre"]
 const VALID_RESULT_FORMATS = ["json", "hdf5"]
 const VALID_DOMAIN_STRATEGIES = ["centered_at_true", "explicit_bounds", "random_offset"]
@@ -57,21 +50,9 @@ const VALID_ODE_SOLVERS = [
     "KenCarp4",
     "KenCarp5",                # SDIRK methods
 ]
-const VALID_PRECISION_MODES =
-    ["float64", "adaptive", "Float64Precision", "AdaptivePrecision"]
-
 # ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================
-
-"""
-    validate_precision_type(precision::String) -> Bool
-
-Validate that precision type is supported.
-"""
-function validate_precision_type(precision::String)
-    precision in VALID_PRECISION_TYPES
-end
 
 """
     validate_basis_type(basis::String) -> Bool
@@ -115,9 +96,9 @@ end
 export ConfigError, ConfigValidationError, ConfigParseError
 
 # Validation constants
-export VALID_PRECISION_TYPES, VALID_BASIS_TYPES, VALID_RESULT_FORMATS
-export VALID_DOMAIN_STRATEGIES, VALID_ODE_SOLVERS, VALID_PRECISION_MODES
+export VALID_BASIS_TYPES, VALID_RESULT_FORMATS
+export VALID_DOMAIN_STRATEGIES, VALID_ODE_SOLVERS
 
 # Validation functions
-export validate_precision_type, validate_basis_type
+export validate_basis_type
 export print_validation_errors
