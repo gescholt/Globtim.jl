@@ -159,6 +159,11 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_model_registry.jl") do
     include("test_model_registry.jl")
 end
 
+# Thermodynamic phase-stability fixture: Margules TPD registry entry (bead 3ztw.1)
+with_timeout(TIMEOUT_TESTFILE, label = "test_margules_tpd.jl") do
+    include("test_margules_tpd.jl")
+end
+
 # Cap-aware leaf decision + the predicate -> cut-axis channel (bead 8f4p.5.4)
 with_timeout(TIMEOUT_TESTFILE, label = "test_cap_aware_decide.jl") do
     include("test_cap_aware_decide.jl")

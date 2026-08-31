@@ -1710,6 +1710,107 @@ const FUNCTION_REGISTRY = Dict{Function,FunctionRegistryEntry}(
 
 # ── Fixed-dimension benchmark functions ──
 
+"""
+    MargulesTPD(w::AbstractVector) -> Float64
+
+Gibbs tangent-plane-distance (TPD) of a two-suffix Margules binary mixture in the
+logit chart — a closed-form, Clapeyron-free thermodynamic phase-stability fixture.
+
+The mixture has excess Gibbs energy `Gᴱ/RT = A y₁ y₂` (so `ln γ₁ = A y₂²`,
+`ln γ₂ = A y₁²`) with `A = 3` (above the consolute value `A = 2`, so the mixture
+phase-splits) and feed `z = (0.4, 0.6)`. The trial composition is parameterised by
+the logit coordinate `w = ln(y₁/y₂)`, i.e. `y₁ = 1/(1 + e⁻ʷ)`:
+
+    tpd(w) = Σᵢ yᵢ [ ln yᵢ + ln γᵢ(y) − dᵢ ],    dᵢ = ln zᵢ + ln γᵢ(z)
+
+The logit chart is a diffeomorphism onto the open simplex, so the stationary
+points of `tpd(w)` are exactly the interior stationary points of the TPD.
+
+# Arguments
+- `w::AbstractVector`: length-1 vector, the logit coordinate
+
+# Domain
+- Standard: [-5, 5] (`y₁` ∈ [0.0067, 0.9933])
+- Global minimum: `w* ≈ 2.8737` with `tpd ≈ -0.2101` (see `MARGULES_TPD_KNOWN_CPS`)
+
+# Properties
+- Analytic on the whole domain (no `y ln y` face singularity in this chart)
+- Exactly three stationary points: two minima and one maximum (the feed), so the
+  Poincaré–Hopf count `N_min − N_max = 1` holds
+- `tpd = 0` at the feed `w = ln(z₁/z₂)` by construction; both minima are negative,
+  i.e. the feed is thermodynamically unstable
+- ForwardDiff-compatible (generic arithmetic throughout)
+
+# Known Critical Points
+All three stationary points are tabulated in `MARGULES_TPD_KNOWN_CPS` to 16
+significant digits (BigFloat Newton on `∂tpd/∂y₁ = 0`).
+
+# References
+- Michelsen, M.L. The isothermal flash problem. Part I. Stability. Fluid Phase
+  Equilib. 9, 1–19 (1982).
+- Prausnitz, Lichtenthaler & Azevedo, Molecular Thermodynamics of Fluid-Phase
+  Equilibria, 3rd ed. (two-suffix Margules model).
+"""
+function MargulesTPD(w::Real)
+    A = 3.0
+    z1, z2 = 0.4, 0.6
+    d1 = log(z1) + A * z2^2
+    d2 = log(z2) + A * z1^2
+    y1 = 1 / (1 + exp(-w))
+    y2 = 1 - y1
+    return y1 * (log(y1) + A * y2^2 - d1) + y2 * (log(y2) + A * y1^2 - d2)
+end
+
+# the 1D pipeline (MainGenerate with n = 1) calls objectives with a scalar;
+# the vector method serves the registry / run_standard_experiment convention
+function MargulesTPD(w::AbstractVector)
+    length(w) == 1 || throw(
+        ArgumentError("MargulesTPD is 1D (logit chart of a binary), got dim $(length(w))"),
+    )
+    return MargulesTPD(w[1])
+end
+
+"""
+    MARGULES_TPD_KNOWN_CPS
+
+The complete stationary-point set of [`MargulesTPD`](@ref) on the standard domain
+[-5, 5], computed by BigFloat Newton iteration on `∂tpd/∂y₁ = 0` and rounded to
+Float64. Fields per entry: logit coordinate `w`, mole fraction `y1`, TPD value
+`tpd` (exactly 0 at the feed), and classification `kind` (`:minimum`/`:maximum`).
+
+Satisfies the 1D Poincaré–Hopf identity `N_min − N_max = 1`.
+"""
+const MARGULES_TPD_KNOWN_CPS = [
+    (
+        w = -2.2149910623646933,
+        y1 = 0.0984123409572452,
+        tpd = -0.04371741386698166,
+        kind = :minimum,
+    ),
+    (w = -0.4054651081081644, y1 = 0.4, tpd = 0.0, kind = :maximum),          # the feed y = z
+    (
+        w = 2.873729271580178,
+        y1 = 0.9465323966147238,
+        tpd = -0.21008299540692857,
+        kind = :minimum,
+    ),
+]
+
+export MargulesTPD, MARGULES_TPD_KNOWN_CPS
+
+push!(
+    FUNCTION_REGISTRY,
+    MargulesTPD => (
+        name = "MargulesTPD",
+        default_bounds = (-5.0, 5.0),
+        global_min_location = _ -> [2.873729271580178],
+        global_min_value = _ -> -0.21008299540692857,
+        properties = [:multimodal, :fixed_dim, :thermodynamic],
+        min_dim = 1,
+        max_dim = 1,
+    ),
+)
+
 push!(
     FUNCTION_REGISTRY,
     Deuflhard => (
