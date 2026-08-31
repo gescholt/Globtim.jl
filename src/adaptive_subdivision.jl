@@ -725,6 +725,10 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
   points concurrently via `@spawn`-chunked tasks. Caller is responsible for
   passing a thread-safe `f` (e.g. an ODE objective that uses `remake` rather
   than in-place parameter mutation). `eval_progress` is ignored in this mode.
+- `compute_cond`: When `false`, skip the `cond()` (full SVD) of the Vandermonde
+  in the fitted polynomial and store `NaN` instead. Used by the trial-cut fits
+  in `find_optimal_cut_sparse`, where κ is never read; the p-refinement gate
+  recomputes it on demand (`_fit_cond`) if such a fit is adopted for a leaf.
 - `inherit_from`: Optional parent `Subdomain`. When the parent has cached
   `samples`/`f_values`, any parent sample that remaps inside this subdomain's
   box is reused (its `f`-value is inherited), and `f` is evaluated only on
@@ -753,6 +757,7 @@ function estimate_subdomain_error(
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_seed::Union{Nothing,Integer} = nothing,
+    compute_cond::Bool = true,
 )
     n_dim = dimension(subdomain)
 
@@ -1007,6 +1012,7 @@ function estimate_subdomain_error(
         grid_matrix,
         f_values,
         basis,
+        compute_cond = compute_cond,
     )
 
     # Compute L2 error. Weight = 2^n / n_rows: identical to prod(2/(GN_d+1)) on a pure
@@ -1056,12 +1062,13 @@ Construct polynomial approximation on a subdomain using least squares.
 This wraps the existing Globtim infrastructure (MainGenerate pattern).
 """
 function construct_polynomial_on_subdomain(
-    _,
+    _f,  # unused; kwarg lowering forbids a bare `_` positional
     subdomain::Subdomain,
     degree,
     samples::Matrix{Float64},
     f_values::Vector{Float64},
-    basis::Symbol,
+    basis::Symbol;
+    compute_cond::Bool = true,
 )
     n_dim = dimension(subdomain)
 
@@ -1099,8 +1106,31 @@ function construct_polynomial_on_subdomain(
         Float64Precision,
         _stored_normalized(basis),  # 7vug/fp0b: basis-determined (Cheb plain-T_n, Legendre normalized)
         false,
-        cond(V),
+        # cond() is a full SVD — as expensive as the fit itself. Trial-cut fits
+        # (find_optimal_cut_sparse) skip it; NaN marks "not computed" and the
+        # p-refinement gate recomputes on demand via _fit_cond.
+        compute_cond ? cond(V) : NaN,
     )
+end
+
+"""
+    _fit_cond(subdomain::Subdomain) -> Float64
+
+Condition number of the Vandermonde behind `subdomain.polynomial`. Returns the
+stored value when the fit computed it; a fit adopted from a trial cut carries
+`NaN` (cond() skipped on the hot path), in which case the Vandermonde is rebuilt
+from the cached samples and κ computed here. Only the p-refinement degree-bump
+gate needs this, and a leaf passes through it at most once (bump → refit at the
+higher degree recomputes; blocked → the leaf is split), so no caching.
+"""
+function _fit_cond(subdomain::Subdomain)
+    pol = subdomain.polynomial
+    κ = pol.cond_vandermonde
+    isnan(κ) || return κ
+    subdomain.samples === nothing && return Inf
+    Lambda = SupportGen(dimension(subdomain), pol.degree)
+    V = lambda_vandermonde(Lambda, subdomain.samples, basis = pol.basis)
+    return cond(V)
 end #==============================================================================#
 
 #                      OPTIMAL CUT SELECTION                                    #
@@ -1175,7 +1205,11 @@ function find_optimal_cut_sparse(
     for (i, cut_pos) in enumerate(candidates)
         left, right = subdivide_domain(subdomain, dim, cut_pos)
 
-        # Estimate error on both children
+        # Estimate error on both children. compute_cond=false: cond() is a full
+        # SVD per fit, and this runs per candidate × 2 children × dim × leaf ×
+        # iteration — the hottest fit path in subdivision. Nothing reads the
+        # trial fits' κ; if a trial child is later adopted as a real leaf, the
+        # p-refinement gate recomputes κ on demand (_fit_cond).
         err_left = estimate_subdomain_error(
             f,
             left,
@@ -1187,6 +1221,7 @@ function find_optimal_cut_sparse(
             sampling = sampling,
             christoffel_oversampling = christoffel_oversampling,
             rng_seed = rng_seed,
+            compute_cond = false,
         )
         err_right = estimate_subdomain_error(
             f,
@@ -1199,6 +1234,7 @@ function find_optimal_cut_sparse(
             sampling = sampling,
             christoffel_oversampling = christoffel_oversampling,
             rng_seed = rng_seed,
+            compute_cond = false,
         )
 
         # Combined error (sum weighted by volume for fair comparison)
@@ -1633,10 +1669,13 @@ function process_subdomain(
         next_per_dim =
             subdomain.per_dim_degree === nothing ? nothing :
             (subdomain.per_dim_degree .+ degree_step)
-        cond_ok =
-            subdomain.polynomial !== nothing &&
-            subdomain.polynomial.cond_vandermonde < cond_threshold
-        if next_degree <= max_degree && cond_ok && decision === :bump
+        # _fit_cond last: it can trigger a Vandermonde rebuild + SVD when the
+        # leaf's fit was adopted from a trial cut (cond skipped on that path),
+        # so only pay for it when the bump would otherwise go through.
+        if decision === :bump &&
+           next_degree <= max_degree &&
+           subdomain.polynomial !== nothing &&
+           _fit_cond(subdomain) < cond_threshold
             return ProcessResult(
                 subdomain_id,
                 ActionDegreeBump,

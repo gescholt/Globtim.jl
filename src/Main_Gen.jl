@@ -244,16 +244,6 @@ TimerOutputs.@timeit _TO function MainGenerate(
         )
     end
 
-    if verbose >= 1
-        @info "  🔢 Computing Gram matrix ($(size(VL, 2)) × $(size(VL, 2)))..."
-    end
-    TimerOutputs.@timeit _TO "gram_matrix" begin
-        G_original = VL' * VL
-    end
-    if verbose >= 1
-        @info "  ✓ Gram matrix computed"
-    end
-
     # Log if using anisotropic algorithm
     if verbose >= 1 && is_anisotropic
         @info "  Detected anisotropic grid structure — using enhanced algorithm"
@@ -328,50 +318,45 @@ TimerOutputs.@timeit _TO function MainGenerate(
         @info "  ✓ Function evaluation complete"
     end
 
-    # Always compute condition number — essential diagnostic for numerical stability
+    # Always compute condition number — essential diagnostic for numerical stability.
+    # κ(V) of the rectangular Vandermonde, matching the subdivision path — NOT the
+    # Gram κ(VᵀV) = κ(V)² the old normal-equations solve reported.
     if verbose >= 1
         @info "  📐 Computing condition number..."
     end
     cond_vandermonde = TimerOutputs.@timeit _TO "condition_number" begin
-        cond(G_original)
+        cond(VL)
     end
     if verbose >= 1
         @info "  ✓ Condition number: $(cond_vandermonde)"
     end
 
     if verbose >= 1
-        @info "  🔧 Solving linear system..."
+        @info "  🔧 Solving least-squares system..."
     end
     TimerOutputs.@timeit _TO "linear_solve_vandermonde" begin
-        RHS = VL' * F
-        linear_prob = LinearProblem(G_original, RHS)
-        # Use LU factorization to avoid QR pivot type issues in Julia 1.11
-        if verbose >= 1
-            sol = LinearSolve.solve(
-                linear_prob,
-                LinearSolve.LUFactorization(),
-                verbose = true,
-            )
-        else
-            sol = LinearSolve.solve(linear_prob, LinearSolve.LUFactorization())
-        end
+        # Least squares directly on the rectangular Vandermonde (pivoted QR):
+        # conditioning is κ(V), where the former VᵀV + LU normal equations
+        # squared it to κ(V)² — the path behind the silent zero-vector LAPACK
+        # failure at Deuflhard 2D deg 12 (bead xosc). Same solve the
+        # subdivision path uses (construct_polynomial_on_subdomain).
+        sol = (u = VL \ F,)
     end
     if verbose >= 1
-        @info "  ✓ Linear system solved"
+        @info "  ✓ Least-squares system solved"
     end
 
-    # Guard: all-zero coefficients indicate LinearSolve failed silently. On some
-    # platforms (observed on cluster LAPACK at Deuflhard 2D deg 12, bead xosc)
-    # the LU factorization emits a `solver_failure` warning and returns a zero
-    # vector. Without this guard the zero polynomial cascades into HC.System
-    # with a cryptic 'reducing over an empty collection' ArgumentError.
+    # Guard: all-zero coefficients indicate the LS solve failed silently
+    # (historically: cluster LAPACK returning a zero vector on the old
+    # normal-equations path, bead xosc). Without this guard the zero polynomial
+    # cascades into HC.System with a cryptic 'reducing over an empty
+    # collection' ArgumentError.
     if maximum(abs, sol.u) == 0
         error(
             "Constructor produced zero polynomial at degree=$(grid_provided ? degree_est : d) — " *
-            "LinearSolve returned a zero solution for the Vandermonde system " *
+            "least-squares solve returned a zero solution for the Vandermonde system " *
             "(cond_vandermonde=$(cond_vandermonde), GN=$(actual_GN), basis=$(basis)). " *
-            "Likely a silent LinearSolve failure; try precision=RationalPrecision, " *
-            "reduce GN, or lower the degree.",
+            "Reduce GN or lower the degree.",
         )
     end
 
