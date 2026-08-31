@@ -215,8 +215,8 @@ Solve the gradient system using the msolve binary (Gröbner basis + real root is
 Returns raw solution points in [-1,1]^n — same contract as `_solve_hc`.
 
 Uses rational arithmetic internally for exact Gröbner basis computation.
-Calls the system `msolve` binary via `msolve_polynomial_system`, then parses
-the output with `msolve_raw_points`.
+Writes the gradient system to a temp file, runs the system `msolve` binary
+on it, then parses the output with `msolve_raw_points`.
 """
 function _solve_msolve(
     x,

@@ -96,7 +96,6 @@ export TestInput,
     solve_polynomial_system,
     solve_polynomial_with_defaults,
     recommended_solver,
-    msolve_polynomial_system,
     msolve_parser,
     msolve_raw_points,
     msolve_raw_points_with_intervals,
@@ -112,7 +111,6 @@ export TestInput,
     SupportGen,
     construct_chebyshev_approx,
     subdivide_domain,
-    solve_and_parse,
     analyze_critical_points,
     generate_grid_small_n,
     simple_lambda_vandermonde,
@@ -280,7 +278,10 @@ include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("ApproxPolyEval.jl") #ApproxPoly evaluation and gradient functions.
-include("msolve_system.jl") #polynomial system solving with Msolve.
+# msolve_system.jl retired (0pld): its msolve_polynomial_system/solve_and_parse
+# hard-coded normalized=true, reconstructing the 7vug-distorted polynomial for
+# Chebyshev fits. The live msolve path is solve_polynomial_system(solver=:msolve)
+# → _solve_msolve, which honors the fit's normalized flag.
 include("poly_solver.jl") #polynomial system solving (HC + msolve backends)
 include("solver_timeout.jl") #production timeout wrapper for HC/msolve (dljm)
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.

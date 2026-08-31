@@ -155,24 +155,22 @@ Convert value to BigFloat with adaptive precision based on magnitude and context
 For AdaptivePrecision, we use BigFloat but with smart precision selection.
 """
 function _convert_value_adaptive(val)
-    # Set BigFloat precision based on value magnitude and global context
-    # Higher precision for smaller values (more sensitive to precision loss)
+    # Precision by magnitude: smaller values are more sensitive to precision
+    # loss. The do-block form scopes the precision change to this task —
+    # the save/mutate/restore of the global default was racy under @spawn
+    # (numerics audit P1, bead 0pld; same pattern as Samples.jl).
     abs_val = abs(Float64(val))
 
     if abs_val < 1e-12
         # Very small values need high precision
-        old_precision = Base.precision(BigFloat)
-        Base.setprecision(BigFloat, 512)  # High precision
-        result = BigFloat(val)
-        Base.setprecision(BigFloat, old_precision)
-        return result
+        return setprecision(BigFloat, 512) do
+            BigFloat(val)
+        end
     elseif abs_val < 1e-6
         # Small values need medium precision
-        old_precision = Base.precision(BigFloat)
-        Base.setprecision(BigFloat, 256)  # Medium precision
-        result = BigFloat(val)
-        Base.setprecision(BigFloat, old_precision)
-        return result
+        return setprecision(BigFloat, 256) do
+            BigFloat(val)
+        end
     else
         # Normal values use standard BigFloat precision
         return BigFloat(val)
