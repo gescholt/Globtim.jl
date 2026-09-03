@@ -236,7 +236,7 @@ function validate_params(
     if GN < 2
         push!(errors, "GN must be ≥ 2, got $(GN)")
     elseif GN > 100
-        push!(errors, "GN must be ≤ 100, got $(GN) ($(GN^4) grid points in 4D)")
+        push!(errors, "GN must be ≤ 100, got $(GN) ($((GN+1)^4) grid points in 4D)")
     end
 
     # Degree range validation
@@ -595,7 +595,10 @@ function print_params(io::IO, params::ExperimentParams; title = "Experiment Para
     println(io, title)
     println(io, "="^60)
     println(io, "  Domain size:     ±$(params.domain_size)")
-    println(io, "  Grid samples:    GN=$(params.GN) ($(params.GN^4) points in 4D)")
+    println(
+        io,
+        "  Grid samples:    GN=$(params.GN) ($(params.GN + 1) nodes/dim, $((params.GN + 1)^4) points in 4D)",
+    )
     println(
         io,
         "  Degree range:    $(first(params.degree_range)):$(last(params.degree_range))",

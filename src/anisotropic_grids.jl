@@ -64,8 +64,8 @@ Unified interface for generating isotropic or anisotropic grids.
 
 # Arguments
 - `grid_spec`: Either:
-  - `Int`: Number of points per dimension (isotropic grid)
-  - `Vector{Int}`: Number of points for each dimension (anisotropic grid)
+  - `Int`: Grid parameter per dimension (isotropic grid); the grid has `grid_spec + 1` nodes per dimension
+  - `Vector{Int}`: Grid parameter for each dimension (anisotropic grid); dimension `i` gets `grid_spec[i] + 1` nodes
 - `n_dims`: Number of dimensions (only needed for isotropic case)
 - `basis`: Node type (:chebyshev, :legendre, or :uniform)
 

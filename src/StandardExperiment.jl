@@ -437,7 +437,7 @@ function run_standard_experiment(;
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
-    # Build tensor representation ONCE (evaluates objective on GN^dimension grid points)
+    # Build tensor representation ONCE (evaluates objective on (GN+1)^dimension grid points)
     # This is invariant across degrees — only Constructor depends on degree.
     TR = Globtim.TestInput(
         objective_function,

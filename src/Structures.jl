@@ -242,7 +242,7 @@ Container for test parameters and objective function.
 Fields:
 - `dim::Int`: Problem dimension
 - `center::Vector{Float64}`: Center point of search region
-- `GN::Union{Int,Nothing}`: Grid size (optional)
+- `GN::Union{Int,Nothing}`: Grid parameter (optional); the tensor grid has GN+1 Chebyshev nodes per dimension
 - `prec::Union{Tuple{Float64,Float64},Nothing}`: Precision parameters (α,δ) 
 - `tolerance::Union{Float64,Nothing}`: Convergence tolerance
 - `noise::Union{Tuple{Float64,Float64},Nothing}`: Noise parameters
