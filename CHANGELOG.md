@@ -2,6 +2,89 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
+## [1.4.0] - 2026-09-09
+
+Note: 1.3.0 was tagged in this file but never published to the package repository, so
+1.4.0 is the first release carrying any of the changes below it.
+
+### Removed
+
+- **`execute_multi_tolerance_analysis`, `execute_single_tolerance_analysis` and
+  `deuflhard_4d_composite`** (`src/multi_tolerance_analysis.jl`). The multi-tolerance
+  driver ran a real pipeline — `Constructor`, `solve_polynomial_system`,
+  `process_crit_pts` — and then discarded every result, returning hardcoded `0.0`
+  distances, `"unknown"` point types, sixteen synthetic orthants and a fixed
+  `success_rates = (0.8, 0.8, 0.8)`. Exported code that silently invents its own output
+  is worse than no code; nothing in or out of the package called it. The result types it
+  populated (`OrthantResult`, `ToleranceResult`, `MultiToleranceResults`) live in
+  `data_structures.jl` and are unaffected.
+- **`msolve_polynomial_system` / `solve_and_parse`** (`src/msolve_system.jl`). Both
+  hard-coded `normalized=true`, so for a Chebyshev fit they reconstructed a polynomial
+  other than the one that was fitted. The live msolve path is
+  `solve_polynomial_system(solver=:msolve)`, which honours the fit's stored flag.
+
+### Fixed
+
+- **Legendre fits reconstructed the wrong polynomial.** The Legendre Vandermonde always
+  normalizes, so a Legendre fit's coefficients are orthonormal-Legendre and every
+  reconstruction path must use `normalized=true`. `ApproxPoly` instead stored whatever
+  the caller requested, so the default `Constructor(...; basis=:legendre)` stored
+  `normalized=false` and every subsequent solve reconstructed a different polynomial —
+  critical points shifted by ~0.09, silently. The flag is now determined entirely by the
+  basis (`_stored_normalized`), which is the Legendre counterpart of the Chebyshev fix in
+  1.2.0. Legendre results from 1.2.x are affected.
+- **Refinement in normalized coordinates was a silent no-op on tight boxes.** Bounded
+  refinement now works in normalized coordinates, so a refinement step on a small box
+  actually moves.
+- **`minimizers` is a superset of the `:minimum` rows of `df`, not a correction to
+  them.** The relationship was documented backwards, so callers intersecting the two
+  dropped genuine minimizers.
+- Four tiers of numerics-audit fixes covering `Dual`/`BigFloat` inputs reaching generic
+  signatures, and the zero-polynomial guard on the normal-equations path (previously an
+  outright failure at Deuflhard 2D degree 12).
+- The per-axis spectrum cut selector's tie-break is deterministic across platforms.
+- `runtests.jl` pins its working directory to `@__DIR__`, so the suite runs from anywhere.
+
+### Added
+
+- **`emit_ledger_record`** (`Globtim.ExperimentLedger`) — writes a per-run provenance
+  record (git SHA + dirty flag, sha256 of each artifact, headline numbers, `supersedes`
+  lineage) into a run's output directory. `run_standard_experiment` emits one
+  automatically; the `metadata` keys `ledger_slug`, `issue_id`, `supersedes` and
+  `config_path` enrich it.
+- **Sparse / least-squares sampling front-end** — `generate_sparse_samples` and
+  `compute_norm_scattered` decouple the sample count from the tensor grid: a degree-`d`
+  fit in `n` variables needs a small multiple of `binom(d+n, n)` points rather than
+  `(d+1)^n`.
+- **Parent→child sample reuse** in adaptive subdivision — children inherit the parent
+  samples that remap inside their box, and `reuse_tol_frac` drops fresh nodes close to an
+  inherited one. Penalty substitutes are never inherited as if they were real values.
+- **Certificate-slack leaf-convergence rule** — an absolute tolerance mode for deciding
+  when a leaf has converged, alongside the existing relative rule.
+- **Anisotropic weighted-simplex degree spec** (`:one_d_per_dim_simplex`), and
+  `floor_degree` for axes the LS slope estimator cannot resolve.
+- **Cap-aware leaf decision** — a leaf at the degree cap now passes its per-axis evidence
+  through to the cut-axis choice instead of discarding it, and the predicate reports which
+  axis to cut.
+- **Solve observability** — `path_stats` per leaf (tracked-path counts, support size
+  before and after sparsification), CP→leaf provenance (`cp_leaf_ids`), and
+  `plateau_frac`.
+- **`[solver] start_system`** in TOML config (`auto`, `total_degree`, `polyhedral`),
+  plumbed through to the HomotopyContinuation solve.
+- **`MargulesTPD`** in `FUNCTION_REGISTRY` — a dependency-free tangent-plane-distance
+  fixture for phase-stability work.
+- Test levels L6–L9: approximation quality against degree/grid/domain, HC completeness,
+  full-pipeline integration against ground truth, and ODE objective quality.
+
+### Changed
+
+- **Relicensed from GPL-3.0 to MIT.**
+- `emit_ledger_record`'s `bead` keyword is now `issue_id`, and the record's JSON key
+  changes to match. The old name referred to this project's private issue tracker and
+  meant nothing to anyone outside it.
+- Comments and docstrings no longer cite internal issue ids, local filesystem paths, or
+  monorepo-only script paths — none of which resolve for anyone installing this package.
+
 ## [1.3.0] - 2026-08-10
 
 ### Removed
@@ -64,7 +147,7 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ### Fixed
 
-- **Chebyshev polynomial reconstruction (bug 7vug).** The Chebyshev Vandermonde fits plain-`Tₙ` coefficients, but `evaluate`, the HomotopyContinuation solve, and `to_exact_monomial_basis` all applied `√(2/π)` normalization weights (`normalized=true`) — so `evaluate` did not reproduce fitted values and the solver operated on a distorted polynomial `p_norm ≠` the fitted `f`-approximant. Chebyshev fits now store `normalized=false` (coefficient-preserving); Legendre is unchanged (its Vandermonde already normalizes). Restores value-faithful `evaluate` and correct critical-point structure.
+- **Chebyshev polynomial reconstruction.** The Chebyshev Vandermonde fits plain-`Tₙ` coefficients, but `evaluate`, the HomotopyContinuation solve, and `to_exact_monomial_basis` all applied `√(2/π)` normalization weights (`normalized=true`) — so `evaluate` did not reproduce fitted values and the solver operated on a distorted polynomial `p_norm ≠` the fitted `f`-approximant. Chebyshev fits now store `normalized=false` (coefficient-preserving); Legendre is unchanged (its Vandermonde already normalizes). Restores value-faithful `evaluate` and correct critical-point structure.
 - Thread safety: removed `@timeit` from `generate_grid` (data race under threaded evaluation).
 - Threaded evaluation: inner-only `thread_evals` at the `adaptive_refine` call site.
 - Test suite: route `Random` through `Globtim` (Julia 1.12 `Pkg.test` drops stdlib `Random` from the direct test deps); qualify the `StandardExperiment` submodule path in the gradient-residual-gate test.

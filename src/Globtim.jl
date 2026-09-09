@@ -182,8 +182,8 @@ export Subdomain,
     n_leaves,
     n_active,
     n_pruned,
-    n_masked,  # yhta: barrier-masked leaf count
-    leaf_degree_spec,  # jl9z.7: anisotropic per-dim degree accessor
+    n_masked,  # Barrier-masked leaf count
+    leaf_degree_spec,  # Anisotropic per-dim degree accessor
     total_error,
     error_balance_ratio,
     dimension,
@@ -197,22 +197,22 @@ export Subdomain,
     ActionSplit,
     ActionPruned,  # hp-refinement
     compute_mode_spectrum,
-    compute_subdomain_mode_spectrum!,  # dksx.0 per-mode residual decomposition
-    subdomain_mode_spectrum,  # 8f4p.5.1 single-compute leaf spectrum (non-mutating)
-    axis_shell_stats,  # 8f4p.5.1 shared per-axis offender-shell statistics
-    shell_decay_parity,  # 4vtd.1 parity-stratified shell-decay rate
+    compute_subdomain_mode_spectrum!,  # Per-mode residual decomposition
+    subdomain_mode_spectrum,  # Single-compute leaf spectrum (non-mutating)
+    axis_shell_stats,  # Shared per-axis offender-shell statistics
+    shell_decay_parity,  # Parity-stratified shell-decay rate
     pick_strategy,
-    default_bump,  # ehaj.1 mode-spectrum bump-vs-split predicate
+    default_bump,  # Mode-spectrum bump-vs-split predicate
     pick_strategy_per_axis,
-    decide_action,  # 4vtd.3 per-cut-direction predicate
-    pick_cut_dim_spectrum,  # 4vtd.5 per-axis spectrum-based cut-dim selector
+    decide_action,  # Per-cut-direction predicate
+    pick_cut_dim_spectrum,  # Per-axis spectrum-based cut-dim selector
     pick_cut_direction_spectrum,  # Stage 3: best-direction (oblique fold-aligned) cut selector
     pick_strategy_per_axis_lsfit,
     LSFitAxisResult,
-    choose_per_dim_degree_lsfit,  # jl9z.7 ρ_k-driven anisotropic per-dim degree
-    choose_per_dim_degree_lsfit_with_signal,  # jl9z.7 Stage 2: + per-axis signal mask
+    choose_per_dim_degree_lsfit,  # ρ_k-driven anisotropic per-dim degree
+    choose_per_dim_degree_lsfit_with_signal,  # Stage 2: + per-axis signal mask
     penalty_barrier_detector,
-    flat_barrier_detector,  # yhta: penalty/flat-barrier leaf-masking detectors
+    flat_barrier_detector,  # Penalty/flat-barrier leaf-masking detectors
     DegeneracyDiagnostics,
     detect_degeneracy!,  # Stage 0: per-leaf degeneracy detector
     box_to_physical!,
@@ -278,21 +278,20 @@ include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("ApproxPolyEval.jl") #ApproxPoly evaluation and gradient functions.
-# msolve_system.jl retired (0pld): its msolve_polynomial_system/solve_and_parse
-# hard-coded normalized=true, reconstructing the 7vug-distorted polynomial for
+# msolve_system.jl retired: its msolve_polynomial_system/solve_and_parse
+# hard-coded normalized=true, reconstructing a distorted polynomial for
 # Chebyshev fits. The live msolve path is solve_polynomial_system(solver=:msolve)
 # → _solve_msolve, which honors the fit's normalized flag.
 include("poly_solver.jl") #polynomial system solving (HC + msolve backends)
-include("solver_timeout.jl") #production timeout wrapper for HC/msolve (dljm)
+include("solver_timeout.jl") #production timeout wrapper for HC/msolve
 include("ParsingOutputs.jl") #functions to parse the output of the polynomial approximation.
-include("data_structures.jl") #Enhanced data structures for multi-tolerance analysis
+include("data_structures.jl") #Enhanced result / orthant data structures
 include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
-# enhanced_analysis.jl removed — types and functions live in GlobtimPostProcessing (htxw)
+# enhanced_analysis.jl removed — types and functions live in GlobtimPostProcessing
 include("grid_utils.jl") #Grid format conversion utilities
 include("subdomain_management.jl") #4D subdomain decomposition management
-include("multi_tolerance_analysis.jl") #Multi-tolerance execution framework
 include("function_value_analysis.jl") #Function value error analysis
 include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsification
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
@@ -301,12 +300,12 @@ include("anisotropic_grids.jl") #Anisotropic grid generation
 include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
 include("degeneracy_types.jl") #DegeneracyDiagnostics type (parsed before adaptive_subdivision so the Subdomain.degeneracy field can reference it; Stage 0)
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
-include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse (y0j)
-include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition (dksx.0)
-include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum (ehaj.1)
-include("barrier_mask.jl") #Penalty/flat-barrier leaf masking for subdivision (yhta)
-include("per_cut_predicate.jl") #Per-cut-direction predicate (4vtd.3)
-include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector (4vtd.5)
+include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse
+include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition
+include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum
+include("barrier_mask.jl") #Penalty/flat-barrier leaf masking for subdivision
+include("per_cut_predicate.jl") #Per-cut-direction predicate
+include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector
 include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)
 include("degeneracy_detector.jl") # Stage 0: per-leaf degeneracy classifier (active subspace / fold / Hessian)
 include("active_subspace.jl") # Stage 2: active-subspace rotation resolver (gradient covariance / rotate_to_active_frame!)
@@ -367,10 +366,6 @@ export generate_4d_orthant_centers, create_orthant_test_inputs
 #     merge_orthant_results,
 #     analyze_orthant_coverage,
 #     compute_orthant_statistics
-
-# Multi-tolerance analysis functions
-export execute_multi_tolerance_analysis,
-    execute_single_tolerance_analysis, deuflhard_4d_composite
 
 # Enhanced BFGS functions - only export main refinement function
 export enhanced_bfgs_refinement
