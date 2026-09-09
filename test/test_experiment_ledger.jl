@@ -56,7 +56,7 @@ end
             slug = "unit test/slug",
             outdir = dir,
             headline = Dict("recovery" => 1.0e-7, "bad" => Inf),
-            issue_id = "qqy7",
+            issue_id = "ISSUE-123",
             job_id = nothing,
             append_to_ledger = false,
         )

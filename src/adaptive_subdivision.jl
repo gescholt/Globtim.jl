@@ -1320,7 +1320,7 @@ struct ProcessResult
     new_per_dim_degree::Union{Nothing,Vector{Int}}  # Anisotropic bump payload
 end
 
-# Backward-compatible constructor for the 7-arg call sites (pre-eqk).
+# Backward-compatible constructor for the 7-arg call sites.
 ProcessResult(
     subdomain_id,
     action,
