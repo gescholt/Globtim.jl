@@ -1,5 +1,5 @@
-# Tests for ExperimentLedger (bead qqy7) and the anisotropic-simplex degree
-# spec (bead t8sy). Both live here because the simplex spec landed alongside
+# Tests for ExperimentLedger and the anisotropic-simplex degree
+# spec. Both live here because the simplex spec landed alongside
 # the ledger and shares the small-fixture style.
 
 using Test
@@ -56,7 +56,7 @@ end
             slug = "unit test/slug",
             outdir = dir,
             headline = Dict("recovery" => 1.0e-7, "bad" => Inf),
-            bead = "qqy7",
+            issue_id = "qqy7",
             job_id = nothing,
             append_to_ledger = false,
         )

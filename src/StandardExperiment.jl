@@ -1,8 +1,8 @@
 """
-StandardExperiment Module - Unified Experiment Template (Phase 2)
+StandardExperiment Module - Unified Experiment Template
 
-**Phase 2 Update (2025-11-23)**: Critical point refinement moved to globtimpostprocessing.
-This module now exports ONLY raw critical points from HomotopyContinuation.
+Critical point refinement lives in globtimpostprocessing; this module exports
+ONLY raw critical points from HomotopyContinuation.
 
 Provides standardized experiment execution that:
 - Eliminates code duplication across experiment templates
@@ -56,9 +56,6 @@ result_refined = refine_experiment_results(
     ode_refinement_config()
 )
 ```
-
-Created: 2025-10-02
-Updated: 2025-11-23 (Phase 2 - Refinement Migration)
 """
 module StandardExperiment
 
@@ -320,8 +317,8 @@ end
 
 Execute standardized experiment with RAW critical point export only.
 
-**Phase 2 Update**: Refinement has been moved to globtimpostprocessing package.
-This function now exports only raw critical points from HomotopyContinuation.
+Refinement lives in the globtimpostprocessing package; this function exports
+only raw critical points from HomotopyContinuation.
 
 # Arguments
 - `objective_function`: Callable with signature f(point::Vector{Float64}) -> Float64.
@@ -389,7 +386,7 @@ result = run_standard_experiment(
 )
 ```
 """
-# GRADRES-GATE (bead jw9g.1): runtime convergence test on the *recovered minimizer*
+# GRADRES-GATE: runtime convergence test on the *recovered minimizer*
 # rather than the L2 approximation error. The displacement bound ‖H⁻¹∇w(p_true)‖ — and
 # hence the recovered global minimizer — saturates at low degree while the L2 error keeps
 # falling many orders of magnitude (finding F9; T3 sweep cluster 721071). Unlike
@@ -659,7 +656,7 @@ function run_standard_experiment(;
 
     # Provenance: one ledger record per run (in-dir ledger_record.json +
     # opportunistic append to experiments/ledger.jsonl). Metadata may carry
-    # "ledger_slug", "bead", "supersedes", "config_path" to enrich the record.
+    # "ledger_slug", "issue_id", "supersedes", "config_path" to enrich the record.
     # A provenance failure must not discard hours of finished computation, so
     # it warns loudly instead of rethrowing.
     try
@@ -673,7 +670,7 @@ function run_standard_experiment(;
             ),
             config_path = get(metadata, "config_path", nothing),
             supersedes = String[string(s) for s in get(metadata, "supersedes", String[])],
-            bead = get(metadata, "bead", nothing),
+            issue_id = get(metadata, "issue_id", nothing),
         )
     catch err
         @warn "ExperimentLedger: failed to emit ledger record — run has NO provenance entry" output_dir err

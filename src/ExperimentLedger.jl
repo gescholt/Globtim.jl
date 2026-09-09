@@ -112,7 +112,7 @@ the in-dir record; `ledger_collect.jl` picks it up after results sync).
   every regular file directly in `outdir` (excluding the record itself).
 - `config_path`: path of the config that produced the run, if any (hashed).
 - `supersedes`: run_ids of earlier runs this one replaces.
-- `bead`: bd issue id this run belongs to.
+- `issue_id`: issue-tracker id this run belongs to.
 - `status`: `"completed"` (default), `"failed"`, or `"interrupted"`.
 - `job_id`: scheduler job id; defaults to `ENV["SLURM_JOB_ID"]` when set.
 - `manual`: `true` for hand-written / backfilled records (two-tier trust).
@@ -130,7 +130,7 @@ function emit_ledger_record(;
     artifacts::Union{Vector{String},Nothing} = nothing,
     config_path::Union{AbstractString,Nothing} = nothing,
     supersedes::Vector{String} = String[],
-    bead::Union{AbstractString,Nothing} = nothing,
+    issue_id::Union{AbstractString,Nothing} = nothing,
     status::AbstractString = "completed",
     job_id = get(ENV, "SLURM_JOB_ID", nothing),
     manual::Bool = false,
@@ -180,7 +180,7 @@ function emit_ledger_record(;
         "artifacts" => artifact_records,
         "headline" => headline_safe,
         "supersedes" => supersedes,
-        "bead" => bead,
+        "issue_id" => issue_id,
     )
     if config_path !== nothing
         isfile(config_path) ||
