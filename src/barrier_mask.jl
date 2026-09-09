@@ -1,5 +1,5 @@
 # barrier_mask.jl
-# Penalty / flat-barrier leaf masking for adaptive_subdivision (bead yhta).
+# Penalty / flat-barrier leaf masking for adaptive_subdivision.
 #
 # Some objectives return a finite *penalty sentinel* over part of the domain
 # instead of raising — e.g. an ODE-shooting objective that returns
@@ -10,7 +10,7 @@
 # `enable_p_refinement`, re-fits ever-higher-degree polynomials on the
 # discontinuity) — work that never reduces error and either exhausts the
 # leaf/time budget or times out. Long high-dimensional shooting runs with
-# `--prefine` have timed out at 6 h on exactly this (bead yhta).
+# `--prefine` have timed out at 6 h on exactly this.
 #
 # A *barrier detector* is a `Vector{Float64} -> Bool` predicate consulted by
 # `process_subdomain` (and the `adaptive_refine` / `two_phase_refine` finalize

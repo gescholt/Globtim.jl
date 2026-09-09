@@ -10,8 +10,8 @@
 # where the active subspace aligns with axes, so anisotropic degree pays off
 # maximally and the dim-N tensor-grid cost collapses.
 #
-# The covariance math is the same Constantine active-subspace primitive prototyped
-# in experiments/sandbox/fold_indicator_probe.jl. Gradients are box-normalized
+# The covariance math is the standard Constantine active-subspace primitive.
+# Gradients are box-normalized
 # (∇_ẑ f) by forward differences on the objective over a cell-centered grid (cells
 # are interior so perturbations stay in-box). The rotation enters f-evaluation only
 # through box_to_physical! (so it composes with the current frame).
@@ -307,7 +307,7 @@ flagged `ambiguous` (estimators disagree, or a geometric sloppy ramp with no
 decisive gap), do NOT mutate `sd` — no rotation, no per-dim degrees — and return
 with `degrees = nothing`. Forcing a projected rank on such a spectrum is
 meaningless (see [`spectral_effective_dimension`](@ref)); the caller keeps its
-isotropic budget instead. This is the jl9z.7 Stage-2 in-loop contract: the
+isotropic budget instead. This is the Stage-2 in-loop contract: the
 subdivision loop must be able to consult the probe without committing to it.
 
 `n_used`/`n_dropped` report how many cell gradients entered the covariance vs were

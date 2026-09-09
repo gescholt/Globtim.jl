@@ -1,9 +1,8 @@
 # per_cut_predicate.jl
-# Per-cut-direction bump-vs-split predicate (bead 4vtd.3,
-# Phase 1 GREEN). Extends the global `pick_strategy` (mode_spectrum_predicate.jl)
+# Per-cut-direction bump-vs-split predicate. Extends the global `pick_strategy` (mode_spectrum_predicate.jl)
 # with per-axis verdicts and a coupled split/cut-dim decision.
 #
-# Motivation (from bead 4vtd.3): the global predicate decides "should I split?"
+# Motivation: the global predicate decides "should I split?"
 # before knowing "where would I split?" On anisotropic landscapes (e.g.
 # T_2(x) + T_20(y)) the global verdict can be wrong because the per-axis
 # information is already in the spectrum but is being averaged away.
@@ -70,9 +69,9 @@ end
 
 Spectrum-accepting method: same per-axis rule, operating on a precomputed
 `compute_mode_spectrum` / `subdomain_mode_spectrum` result. The offender-mode
-restriction (the noise-floor guard from the 4vtd.3 finding included) lives in
+restriction (the noise-floor guard included) lives in
 `axis_shell_stats` and is shared with `pick_strategy_per_axis_lsfit` — one
-pass over the modes serves both predicates (bead 8f4p.5.1 DR-INSTR).
+pass over the modes serves both predicates.
 """
 function pick_strategy_per_axis(
     spec::NamedTuple;
@@ -122,7 +121,7 @@ Combine per-axis verdicts into a leaf-level decision.
   verdict is `:split`. Lowest-index tie-break is documented and deterministic.
 
 This separation (per-axis verdict ↔ leaf decision) lets callers override the
-combination policy — e.g., bead 4vtd.5 may swap the lowest-index tie-break
+combination policy — e.g. swapping the lowest-index tie-break
 for "axis with greatest restricted mass" without changing the per-axis
 predicate itself.
 """
@@ -139,7 +138,7 @@ end
     decide_action(verdicts, stats; degree, max_degree, mass_floor = 1e-12)
         -> (action::Symbol, cut_dim::Union{Int,Nothing})
 
-Cap-aware combination (bead 8f4p.5.4). Identical to the verdicts-only method
+Cap-aware combination. Identical to the verdicts-only method
 except when the leaf is already at `max_degree` and every axis said `:bump`.
 
 Why that case needs its own rule: `adaptive_refine` only honours `:bump` when
@@ -149,11 +148,11 @@ verdicts. So at the cap a `:bump` is not "keep refining in place", it is
 "split, and let a generic heuristic choose where". The predicate has an opinion
 about *which* axis is least resolved and currently throws it away.
 
-Measured motivation: in the post-7vug 3D A/B, every one of fhn3d_tight's 7
+Measured motivation: in a 3D A/B, every one of fhn3d_tight's 7
 predicate disagreements sat at `degree == max_degree`, producing byte-identical
 trees; lv3d_improved disagreed 0/199. The predicate was inert on exactly the
-objectives it targets. Bead 5z7b found the same on an independent census (all
-193 looser events at the cap).
+objectives it targets. An independent census found the same (all 193 looser
+events at the cap).
 
 Axis choice when capped and all-`:bump`, in order:
 1. Among axes carrying mass with a finite `decay`, the **smallest** `decay` —

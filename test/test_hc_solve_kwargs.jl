@@ -1,5 +1,5 @@
 @testset "HC solve kwargs (sparsify + polyhedral)" begin
-    # Test the sparsify_threshold and start_system kwargs added in bead zs7q.
+    # Test the sparsify_threshold and start_system kwargs.
     # Uses 3D Rosenbrock to exercise :polyhedral and sparsification code paths
     # that are NOT hit by the default 2D tests (which resolve to :total_degree).
 

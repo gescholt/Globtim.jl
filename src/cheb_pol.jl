@@ -158,7 +158,7 @@ function _convert_value_adaptive(val)
     # Precision by magnitude: smaller values are more sensitive to precision
     # loss. The do-block form scopes the precision change to this task —
     # the save/mutate/restore of the global default was racy under @spawn
-    # (numerics audit P1, bead 0pld; same pattern as Samples.jl).
+    # (numerics audit P1; same pattern as Samples.jl).
     abs_val = abs(Float64(val))
 
     if abs_val < 1e-12

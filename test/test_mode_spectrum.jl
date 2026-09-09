@@ -6,11 +6,11 @@ using Globtim:
     compute_mode_spectrum,
     compute_subdomain_mode_spectrum!
 
-# Tests for compute_mode_spectrum (bead dksx.0): per-Chebyshev-mode residual
+# Tests for compute_mode_spectrum: per-Chebyshev-mode residual
 # decomposition, computed from an existing fit's cached samples without new
 # objective evaluations.
 
-@testset "compute_mode_spectrum (dksx.0)" begin
+@testset "compute_mode_spectrum" begin
     @testset "Degree-2 polynomial fit at d=4 → empty residual spectrum" begin
         # f(x, y) = x² + y² is exactly representable at degree 2; a degree-4
         # fit captures it with no residual. All η_α for d < |α|_∞ ≤ d* should

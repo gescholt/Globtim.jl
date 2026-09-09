@@ -1,5 +1,5 @@
 """
-Tests for the sparsification polynomial-equality short-circuit (bead oasi).
+Tests for the sparsification polynomial-equality short-circuit.
 
 Regression guards:
 - sparsify_polynomial returns `n_zeroed::Int`.
@@ -54,7 +54,7 @@ using Globtim
     @testset "real-sparsification variant is not cached" begin
         # Use a richer Chebyshev spectrum so moderate sparsification retains
         # enough structure for HC to solve (the bare quadratic above degenerates
-        # the gradient system — classic xosc territory).
+        # the gradient system — classic zero-polynomial territory).
         f = x -> 0.3 * cos(2 * x[1]) + 0.2 * sin(2 * x[2]) + 0.1 * x[1] * x[2]
         results = Globtim.run_sparsification_experiment(
             objective = f,

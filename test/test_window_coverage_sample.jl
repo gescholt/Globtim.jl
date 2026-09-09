@@ -7,7 +7,7 @@ using Globtim:
     compute_mode_spectrum,
     pick_strategy
 
-# Tests for the sample-based (Parseval-true) window coverage (bead 4vtd.2).
+# Tests for the sample-based (Parseval-true) window coverage.
 #
 # The legacy `window_coverage = Σ η_α² / rel_l2²` mixes units: the numerator
 # sums SQUARED LS COEFFICIENTS (Euclidean, basis columns not orthonormal —
@@ -32,10 +32,10 @@ T3(t) = 4t^3 - 3t
 T5(t) = 16t^5 - 20t^3 + 5t
 T20(t) = cos(20 * acos(clamp(t, -1.0, 1.0)))
 
-@testset "window_coverage_sample (4vtd.2)" begin
+@testset "window_coverage_sample" begin
 
     # ---------------------------------------------------------------------
-    # Test 1 (bead): residual entirely inside the window ⇒ coverage ≈ 1,
+    # Test 1: residual entirely inside the window ⇒ coverage ≈ 1,
     # AND the legacy metric on the same fit reads a misleading 0.5.
     # ---------------------------------------------------------------------
     @testset "in-window residual: sample ≈ 1, legacy misleads by 2× (2D)" begin
@@ -68,7 +68,7 @@ T20(t) = cos(20 * acos(clamp(t, -1.0, 1.0)))
     end
 
     # ---------------------------------------------------------------------
-    # Test 2 (bead): residual entirely OUTSIDE the window ⇒ coverage ≈ 0.
+    # Test 2: residual entirely OUTSIDE the window ⇒ coverage ≈ 0.
     # Needs a fine grid: on the auto grid everything above the Nyquist band
     # aliases back into the window (see the aliasing testset below).
     # ---------------------------------------------------------------------
@@ -110,7 +110,7 @@ T20(t) = cos(20 * acos(clamp(t, -1.0, 1.0)))
         # the window, so BOTH metrics report high coverage — no statistic
         # computed from these samples can tell T₂₀ from -T₆. Pinned here so
         # nobody mistakes the sample-based metric for an aliasing detector;
-        # grid density (4vtd bead family: n_samples_per_dim) is the only cure.
+        # grid density (n_samples_per_dim) is the only cure.
         f(x) = T20(x[1])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         estimate_subdomain_error(f, sd, 3, basis = :chebyshev)
@@ -120,7 +120,7 @@ T20(t) = cos(20 * acos(clamp(t, -1.0, 1.0)))
     end
 
     # ---------------------------------------------------------------------
-    # Test 3 (bead): leaf-size behavior. The sample metric is a true
+    # Test 3: leaf-size behavior. The sample metric is a true
     # fraction on every leaf and varies continuously with leaf width.
     # ---------------------------------------------------------------------
     @testset "leaf-width sweep: true fraction, no discontinuity" begin
@@ -138,7 +138,7 @@ T20(t) = cos(20 * acos(clamp(t, -1.0, 1.0)))
     end
 
     # ---------------------------------------------------------------------
-    # Test 4 (bead): NaN guard. Zero / roundoff-floor residual must give
+    # Test 4: NaN guard. Zero / roundoff-floor residual must give
     # coverage 1.0 with no NaN, where the legacy metric NaNs (rel_l2² = 0)
     # or divides roundoff by roundoff.
     # ---------------------------------------------------------------------

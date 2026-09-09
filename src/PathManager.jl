@@ -14,8 +14,6 @@ Design Principles:
 3. HPC-aware with environment variable overrides
 4. Strict validation, fail fast on misconfiguration
 5. Security-first (prevent directory traversal)
-
-Created: 2025-10-22
 """
 module PathManager
 

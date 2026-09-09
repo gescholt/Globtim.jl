@@ -36,19 +36,19 @@ Represents a subdomain in the adaptive refinement tree.
 - `infeasible::Bool`: All sample evaluations returned Inf — region is unfit for polynomial
   approximation and should be terminated as `ActionPruned` rather than split forever.
 - `masked::Bool`: Sampled values are a finite penalty/flat-barrier plateau (detected by a
-  caller-supplied `barrier_detector`; bead yhta). Like `infeasible` it terminates the leaf as
+  caller-supplied `barrier_detector`). Like `infeasible` it terminates the leaf as
   `ActionPruned` — but the data is finite, not Inf. Masked leaves are excluded from
   `total_error` and from `solve_tree_leaves` (the polynomial fits a discontinuity, so its
   critical points are spurious). Default `false`; only set when barrier masking is enabled.
 - `mode_spectrum::Vector{Float64}`: Per-Chebyshev-mode residual coefficients η_α
-  for modes with `degree < |α|_∞ ≤ extended_degree` (bead dksx.0). Empty until
+  for modes with `degree < |α|_∞ ≤ extended_degree`. Empty until
   `compute_subdomain_mode_spectrum!` is called.
 - `dominant_mode::Vector{Int}`: argmax_α η_α (multi-index of the residual's
   largest mode); zeros until computed.
 - `spectral_concentration::Float64`: fraction of squared η-mass in modes with
   `|α|_∞ ∈ {degree+1, degree+2}`. NaN until computed.
-- `per_dim_degree::Union{Nothing, Vector{Int}}`: anisotropic per-axis polynomial degree
-  (bead jl9z.7). `nothing` ⇒ isotropic at `degree`. When set, `degree` carries the scalar
+- `per_dim_degree::Union{Nothing, Vector{Int}}`: anisotropic per-axis polynomial
+  degree. `nothing` ⇒ isotropic at `degree`. When set, `degree` carries the scalar
   `maximum(per_dim_degree)` summary (for display/metrics/the `degree > 0` sentinel) while the
   vector carries the real spec consumed by `estimate_subdomain_error` / the fit. Children
   inherit the parent's vector (copied, not aliased) on subdivision.
@@ -80,19 +80,19 @@ mutable struct Subdomain
     split_dim::Union{Int,Nothing}
     split_pos::Union{Float64,Nothing}
     infeasible::Bool
-    masked::Bool  # yhta: finite penalty/flat-barrier plateau — terminal, excluded from solve & error
-    # dksx.0: per-mode residual decomposition (filled lazily by
+    masked::Bool  # Finite penalty/flat-barrier plateau — terminal, excluded from solve & error
+    # Per-mode residual decomposition (filled lazily by
     # compute_subdomain_mode_spectrum! when the spectral predicate is needed).
     mode_spectrum::Vector{Float64}
     dominant_mode::Vector{Int}
     spectral_concentration::Float64
-    # jl9z.7: anisotropic per-axis degree; nothing ⇒ isotropic at `degree`.
+    # Anisotropic per-axis degree; nothing ⇒ isotropic at `degree`.
     per_dim_degree::Union{Nothing,Vector{Int}}
     # Stage 0: per-leaf degeneracy verdict; nothing until detect_degeneracy! runs.
     degeneracy::Union{Nothing,DegeneracyDiagnostics}
     # Stage 2: orthonormal frame rotation Q; nothing ⇒ axis-aligned (default).
     transform::Union{Nothing,Matrix{Float64}}
-    # y0j: row indices of `f_values` whose stored value is a PENALTY substitute for a
+    # Row indices of `f_values` whose stored value is a PENALTY substitute for a
     # non-finite evaluation (Inf → 10·max|finite|), not a real f-value. Children must
     # not inherit these rows — inheriting a penalty as data poisons the child fit.
     penalized_rows::Vector{Int}
@@ -125,14 +125,14 @@ function Subdomain(
         nothing,
         nothing,
         false,              # infeasible
-        false,              # masked (yhta)
+        false,              # masked
         Float64[],          # mode_spectrum (uncomputed)
         Int[],              # dominant_mode (uncomputed)
         NaN,                # spectral_concentration (uncomputed)
-        per_dim_degree,     # jl9z.7: anisotropic per-axis degree (nothing ⇒ isotropic)
+        per_dim_degree,     # Anisotropic per-axis degree (nothing ⇒ isotropic)
         degeneracy,         # Stage 0: degeneracy verdict (nothing until detected)
         transform,          # Stage 2: frame rotation Q (nothing ⇒ axis-aligned)
-        Int[],              # y0j: penalized_rows (no penalty substitutions yet)
+        Int[],              # penalized_rows (no penalty substitutions yet)
     )
 end
 
@@ -178,8 +178,8 @@ end
     leaf_degree_spec(subdomain::Subdomain)
 
 Return the degree specification to fit this leaf at: a per-dimension tuple
-`(:one_d_per_dim, [d₁,…,dₙ])` when the leaf carries an anisotropic `per_dim_degree`
-(bead jl9z.7), otherwise the scalar `degree`. This is the single accessor every
+`(:one_d_per_dim, [d₁,…,dₙ])` when the leaf carries an anisotropic
+`per_dim_degree`, otherwise the scalar `degree`. This is the single accessor every
 fit/estimate call site uses instead of reading `subdomain.degree` directly, so
 anisotropy survives splits instead of being collapsed to `maximum(...)`.
 """
@@ -273,7 +273,7 @@ function SubdivisionTree(initial_domain::Subdomain)
 end
 
 # Constructor from bounds (optional degree sets the root subdomain's degree;
-# per_dim_degree seeds an anisotropic root, bead jl9z.7)
+# per_dim_degree seeds an anisotropic root)
 function SubdivisionTree(
     bounds::Vector{Tuple{Float64,Float64}};
     degree::Int = 0,
@@ -301,7 +301,7 @@ n_pruned(tree::SubdivisionTree) = length(tree.pruned_leaves)
 """
     n_masked(tree::SubdivisionTree)
 
-Return number of leaves terminated as penalty/flat-barrier plateaus (bead yhta).
+Return number of leaves terminated as penalty/flat-barrier plateaus.
 Masked leaves live in `pruned_leaves` (so `n_pruned` counts them too) but carry
 `subdomain.masked == true`; this returns the barrier-only subset.
 """
@@ -490,7 +490,7 @@ function subdivide_domain(subdomain::Subdomain, dim::Int, cut_position::Float64)
     right_half_widths = copy(subdomain.half_widths)
     right_half_widths[dim] = subdomain.half_widths[dim] * (1.0 - cut_position) / 2
 
-    # jl9z.7: children inherit the parent's anisotropic per-dim degree (copied,
+    # Children inherit the parent's anisotropic per-dim degree (copied,
     # not aliased, so a later in-place bump on one child can't mutate its sibling
     # or the parent). nothing ⇒ children stay isotropic at `degree`.
     inherited_per_dim =
@@ -689,7 +689,7 @@ end
 """
     _root_per_dim_degree(degree) -> Union{Nothing, Vector{Int}}
 
-jl9z.7: a caller-supplied `(:one_d_per_dim, [d₁,…,dₙ])` spec seeds the root leaf's
+A caller-supplied `(:one_d_per_dim, [d₁,…,dₙ])` spec seeds the root leaf's
 anisotropic `per_dim_degree` so the per-axis budget survives every split. Scalar
 and `(:one_d_for_all, d)` specs stay isotropic (returns `nothing`), preserving the
 total-degree basis and byte-identical default behavior.
@@ -734,7 +734,7 @@ Uses sparse Chebyshev sampling (~2× number of coefficients) for efficiency.
   box is reused (its `f`-value is inherited), and `f` is evaluated only on
   the fresh Chebyshev rows that don't coincide with an inherited point. The
   least-squares solve uses the combined (non-tensor) sample set. This is the
-  y0j parent→child reuse integration point; see `subdivision_reuse.jl` for
+  parent→child reuse integration point; see `subdivision_reuse.jl` for
   the pure remap/dedupe helpers.
 
 # Returns
@@ -815,7 +815,7 @@ function estimate_subdomain_error(
             chr_result.f_values,
             basis,
             Float64Precision,
-            _stored_normalized(basis),  # 7vug/fp0b: basis-determined (Cheb plain tensor-T_n, Legendre normalized)
+            _stored_normalized(basis),  # Basis-determined (Cheb plain tensor-T_n, Legendre normalized)
             false,
             chr_result.kappa,
         )
@@ -844,7 +844,7 @@ function estimate_subdomain_error(
     # the underlying evaluation cost we want to avoid.
     # `>=` not `==`: a child fitted on a COMBINED (inherited + fresh) sample set carries
     # more rows than the standard grid — that fit is at least as informed, so reuse it
-    # (y0j; with `==` the trial-cut children would be thrown away and re-evaluated).
+    # (with `==` the trial-cut children would be thrown away and re-evaluated).
     if use_cache &&
        subdomain.polynomial !== nothing &&
        subdomain.samples !== nothing &&
@@ -863,7 +863,7 @@ function estimate_subdomain_error(
     fresh_grid = grid_to_matrix(grid)  # (n_fresh, n_dim) in child normalized coords
     n_fresh = size(fresh_grid, 1)
 
-    # y0j: inherit parent samples that remap inside this child's box.
+    # Inherit parent samples that remap inside this child's box.
     # We split the work into `rows_to_eval` (indices into the combined sample
     # matrix that need a fresh f-evaluation) and the remaining rows whose
     # f-values are copied from the parent cache.
@@ -901,7 +901,7 @@ function estimate_subdomain_error(
         end
         inherited_f = inherit_from.f_values[inside_idx]
         # combined = [inherited; fresh[new_idx]] (new_idx ⊆ 1:n_fresh, no dups with inherited).
-        # reuse_tol_frac > 0 is the ACTUAL savings lever (y0j): drop fresh nodes with an
+        # reuse_tol_frac > 0 is the ACTUAL savings lever: drop fresh nodes with an
         # inherited neighbour within that fraction of the mean node spacing. The inherited
         # point itself stays in the LS system (exact f at exact coordinates — no Option-B
         # value substitution), and the combined scattered set is handled correctly by the
@@ -992,7 +992,7 @@ function estimate_subdomain_error(
         # can still be constructed. The high error in these regions will cause
         # subdivision to split them, eventually isolating the failing region.
         # The substituted row indices are recorded on the subdomain (below) so children
-        # never inherit a penalty as if it were a real f-value (y0j).
+        # never inherit a penalty as if it were a real f-value.
         finite_vals = filter(isfinite, f_values)
         penalty = 10.0 * maximum(abs, finite_vals)
         for i in 1:n_total
@@ -1016,7 +1016,7 @@ function estimate_subdomain_error(
     )
 
     # Compute L2 error. Weight = 2^n / n_rows: identical to prod(2/(GN_d+1)) on a pure
-    # tensor grid, but stays UNBIASED when inherited rows enlarge the sample set (y0j) —
+    # tensor grid, but stays UNBIASED when inherited rows enlarge the sample set —
     # the per-dim formula would inflate l2_error by the row surplus, and the inflation
     # differs per cut candidate, systematically biasing find_optimal_cut_sparse.
     poly_values = evaluate_polynomial_at_samples(pol, grid_matrix)
@@ -1085,7 +1085,7 @@ function construct_polynomial_on_subdomain(
 
     # Compute L2 norm of residual (||f - p||_L2). Weight normalizes by the ACTUAL row
     # count (== prod(2/(GN_d+1)) on the standard tensor grid): correct for combined
-    # inherited+fresh sets (y0j) and for n_samples_per_dim overrides alike.
+    # inherited+fresh sets and for n_samples_per_dim overrides alike.
     poly_values = V * coeffs
     weight = 2.0^n_dim / size(samples, 1)
     residuals = f_values .- poly_values
@@ -1104,7 +1104,7 @@ function construct_polynomial_on_subdomain(
         f_values,
         basis,
         Float64Precision,
-        _stored_normalized(basis),  # 7vug/fp0b: basis-determined (Cheb plain-T_n, Legendre normalized)
+        _stored_normalized(basis),  # Basis-determined (Cheb plain-T_n, Legendre normalized)
         false,
         # cond() is a full SVD — as expensive as the fit itself. Trial-cut fits
         # (find_optimal_cut_sparse) skip it; NaN marks "not computed" and the
@@ -1180,7 +1180,7 @@ function find_optimal_cut_sparse(
     christoffel_oversampling::Float64 = 2.0,
     rng_seed::Union{Nothing,Integer} = nothing,
 )
-    # y0j: the subdomain being split has its own samples/f_values cached from its fit —
+    # The subdomain being split has its own samples/f_values cached from its fit —
     # every trial child below can inherit the cached rows that land inside its half.
     # This is where the split-path evaluations actually happen (n_candidates × 2 child
     # fits per split), so this inherit matters far more than the final-children one.
@@ -1317,7 +1317,7 @@ struct ProcessResult
     new_degree::Union{Int,Nothing}  # for ActionDegreeBump: the scalar degree summary to try next
     trial_children::Union{Nothing,Tuple{Subdomain,Subdomain}}
     trial_cut_pos::Union{Nothing,Float64}
-    new_per_dim_degree::Union{Nothing,Vector{Int}}  # jl9z.7: anisotropic bump payload
+    new_per_dim_degree::Union{Nothing,Vector{Int}}  # Anisotropic bump payload
 end
 
 # Backward-compatible constructor for the 7-arg call sites (pre-eqk).
@@ -1342,8 +1342,8 @@ ProcessResult(
     nothing,
 )
 
-# Backward-compatible constructor for the 9-arg call sites (eqk: trial children,
-# pre-jl9z.7 anisotropic bump).
+# Backward-compatible constructor for the 9-arg call sites (trial children,
+# pre-anisotropic bump).
 ProcessResult(
     subdomain_id,
     action,
@@ -1432,7 +1432,7 @@ function process_subdomain(
 
     subdomain = tree.subdomains[subdomain_id]
 
-    # Resolve the degree SPEC to fit this leaf at (jl9z.7). Precedence:
+    # Resolve the degree SPEC to fit this leaf at. Precedence:
     #   1. an inherited/assigned anisotropic per-dim vector (survives splits), else
     #   2. a previously-bumped scalar degree on the leaf, else
     #   3. the caller's `degree` argument (which may itself be a per-dim tuple).
@@ -1446,7 +1446,7 @@ function process_subdomain(
     effective_degree = maximum(_extract_per_dim_degrees(effective_spec, n_dim))
     subdomain.degree = effective_degree
 
-    # y0j: locate the parent's sample cache so inheritable rows can be reused.
+    # Locate the parent's sample cache so inheritable rows can be reused.
     # This fires on the first process_subdomain for a freshly-split child —
     # after that, the subdomain has its own samples cached and the next call
     # (e.g. from a degree bump retry) goes through the standard path.
@@ -1493,7 +1493,7 @@ function process_subdomain(
         )
     end
 
-    # yhta: penalty/flat-barrier masking. A leaf whose sampled values are a
+    # Penalty/flat-barrier masking. A leaf whose sampled values are a
     # finite penalty plateau (constant sentinel or near-constant) cannot be
     # improved by splitting or p-refining a discontinuity — the L2 estimator
     # just keeps chasing the step. Mask it as a terminal pruned leaf so the
@@ -1539,7 +1539,7 @@ function process_subdomain(
         )
     end
 
-    # Stage 1 (jl9z.7): data-adaptive anisotropic degree retarget. Opt-in
+    # Stage 1: data-adaptive anisotropic degree retarget. Opt-in
     # (anisotropic_degree === nothing ⇒ behavior unchanged). On a NON-converged,
     # still-isotropic, fitted leaf, treat the current fit as the E2 "probe":
     # estimate per-axis ρ_k from its Chebyshev spectrum and refit at the
@@ -1572,7 +1572,7 @@ function process_subdomain(
             "a $(n_dim)-D leaf (subdomain $subdomain_id)",
         )
         if !any(has_signal) && active_fallback
-            # Stage 2 (jl9z.7): the LS ρ_k spectrum was blind on EVERY axis, so
+            # Stage 2: the LS ρ_k spectrum was blind on EVERY axis, so
             # Stage 1's answer would be an isotropic max_degree blast. Consult the
             # gradient-covariance probe instead: if its spectrum has an unambiguous
             # effective rank, rotate the leaf to the active frame and take the
@@ -1631,7 +1631,7 @@ function process_subdomain(
     # chosen below by `select_cut_dimension`, which never sees the predicate's
     # evidence. That mattered: at `degree == max_degree` a `:bump` cannot bump and
     # falls through to the split path anyway, so the predicate's opinion about
-    # WHERE to cut was silently discarded exactly when it had one (bead 8f4p.5.4).
+    # WHERE to cut was silently discarded exactly when it had one.
     predicate_cut_dim = nothing
 
     # Check if p-refinement is possible
@@ -1663,7 +1663,7 @@ function process_subdomain(
             )
         end
         next_degree = effective_degree + degree_step
-        # jl9z.7: an anisotropic leaf bumps every axis by degree_step so the
+        # An anisotropic leaf bumps every axis by degree_step so the
         # per-dim shape is preserved; the scalar `next_degree` (= max axis) still
         # gates against max_degree. Isotropic leaves carry nothing → unchanged.
         next_per_dim =
@@ -1694,7 +1694,7 @@ function process_subdomain(
     # Fall back to h-refinement (split)
     if predicate_cut_dim !== nothing
         # The predicate named an axis — honour it. This is the only path by which
-        # per-axis evidence reaches the cut choice (bead 8f4p.5.4).
+        # per-axis evidence reaches the cut choice.
         split_dim = predicate_cut_dim
     elseif subdomain.polynomial !== nothing && subdomain.samples !== nothing
         split_dim = select_cut_dimension(subdomain)
@@ -1796,7 +1796,7 @@ function update_tree!(
     elseif result.action == ActionDegreeBump
         # p-refinement: increase degree, stay active for re-processing
         subdomain.degree = result.new_degree
-        # jl9z.7: install the bumped anisotropic vector (if any) so the re-fit
+        # Install the bumped anisotropic vector (if any) so the re-fit
         # uses the per-dim spec; nothing leaves the leaf isotropic.
         subdomain.per_dim_degree = result.new_per_dim_degree
         subdomain.polynomial = nothing
@@ -1841,7 +1841,7 @@ Main adaptive refinement loop with parallel processing.
 - `degree_step::Int=6`: Degree increment per p-refinement step
 - `cond_threshold::Float64=1e14`: Maximum Vandermonde condition number for p-refinement
 - `anisotropic_degree::Union{Nothing,NamedTuple}=nothing`: opt-in E2 ρ_k-driven
-    anisotropic degree (jl9z.7). `nothing` ⇒ isotropic (behavior unchanged). When
+    anisotropic degree. `nothing` ⇒ isotropic (behavior unchanged). When
     set, each non-converged leaf's base fit is used as the E2 probe: per-axis
     Bernstein radii ρ_k are estimated and the leaf is refit at a data-adaptive
     per-dim degree (small on smooth/sloppy axes floored at `floor_degree`, larger
@@ -1881,7 +1881,7 @@ tree = adaptive_refine(f, bounds, 10; l2_tolerance=1e-4, tolerance_mode=:absolut
                        enable_p_refinement=true, max_degree=40, degree_step=6)
 ```
 
-## Choosing the tolerance mode (certificate-slack rule, bead dfzo.1)
+## Choosing the tolerance mode (certificate-slack rule)
 
 `:relative` normalizes each leaf's error by `‖f‖_L²(leaf)`. On flat leaves
 where the objective is near ZERO (valley floors, sloppy directions) that
@@ -1945,7 +1945,7 @@ function adaptive_refine(
     tree = SubdivisionTree(
         bounds;
         degree = root_degree,
-        per_dim_degree = _root_per_dim_degree(degree),  # jl9z.7: seed anisotropic root
+        per_dim_degree = _root_per_dim_degree(degree),  # Seed anisotropic root
     )
 
     if logger !== nothing
@@ -2093,7 +2093,7 @@ function adaptive_refine(
     for leaf_id in copy(tree.active_leaves)  # copy: we modify during iteration
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
-            # Record the degree used (same logic as process_subdomain). jl9z.7:
+            # Record the degree used (same logic as process_subdomain):
             # honor an inherited anisotropic per-dim spec; otherwise fall back to
             # the caller's `degree` (byte-identical to the old root_degree path).
             leaf_spec =
@@ -2121,7 +2121,7 @@ function adaptive_refine(
             push!(tree.pruned_leaves, leaf_id)
             continue
         end
-        # yhta: barrier masking also applies to leaves that survived to finalize
+        # Barrier masking also applies to leaves that survived to finalize
         # (stopped by the depth/leaf cap while still active) so they aren't
         # solved for spurious critical points or counted in total_error.
         if barrier_detector !== nothing &&
@@ -2351,7 +2351,7 @@ function two_phase_refine(
     tree = SubdivisionTree(
         bounds;
         degree = root_degree,
-        per_dim_degree = _root_per_dim_degree(degree),  # jl9z.7: seed anisotropic root
+        per_dim_degree = _root_per_dim_degree(degree),  # Seed anisotropic root
     )
 
     hp_kwargs = (;
@@ -2561,7 +2561,7 @@ function two_phase_refine(
     for leaf_id in copy(tree.active_leaves)  # copy: we modify during iteration
         sd = tree.subdomains[leaf_id]
         if sd.l2_error == Inf
-            # jl9z.7: honor an inherited anisotropic per-dim spec (parity with
+            # Honor an inherited anisotropic per-dim spec (parity with
             # adaptive_refine's finalize); else fall back to the caller's `degree`.
             leaf_spec =
                 sd.per_dim_degree !== nothing ? (:one_d_per_dim, sd.per_dim_degree) : degree
@@ -2583,7 +2583,7 @@ function two_phase_refine(
             push!(tree.pruned_leaves, leaf_id)
             continue
         end
-        # yhta: barrier masking for leaves still active at the cap (parity with adaptive_refine).
+        # Barrier masking for leaves still active at the cap (parity with adaptive_refine).
         if barrier_detector !== nothing &&
            sd.f_values !== nothing &&
            barrier_detector(sd.f_values)

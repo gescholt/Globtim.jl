@@ -55,7 +55,7 @@ function get_lambda_exponent_vectors(d, n)
         # Anisotropic (weighted) simplex: exponents with sum_j nu_j/d_j <= 1 — the
         # simplex with vertices d_j*e_j. Keeps per-axis resolution d_j while
         # excluding the mixed high-degree corners of the tensor box, which dominate
-        # the BKK path count of the gradient system (bead t8sy).
+        # the BKK path count of the gradient system.
         dv = d[2]
         all(dv .>= 1) || throw(ArgumentError("Simplex degrees must all be >= 1, got $dv"))
         lambda_vectors = Vector{Vector{Int}}()
@@ -305,7 +305,7 @@ function lambda_vandermonde(
 
     # Non-tensor (scattered) point sets: the tensorized/anisotropic implementations assume
     # tensor-product structure and are WRONG on scattered points — force the pointwise
-    # original implementation (sparse/least-squares front-end, bead 4hs0).
+    # original implementation (sparse/least-squares front-end).
     if force_original
         @debug "Vandermonde: Using original implementation (forced — non-tensor point set)"
         return lambda_vandermonde_original(Lambda, S, basis = basis)

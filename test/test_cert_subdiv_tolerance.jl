@@ -1,5 +1,5 @@
 """
-Tests for the certificate-slack (absolute) leaf-convergence rule — bead dfzo.1
+Tests for the certificate-slack (absolute) leaf-convergence rule
 (CS-1 of the CERT-SUBDIV epic).
 
 The pathology being guarded: `tolerance_mode = :relative` normalizes each

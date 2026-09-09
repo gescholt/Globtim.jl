@@ -1,5 +1,5 @@
 """
-Level-7 HomotopyContinuation completeness tests (bead mooi).
+Level-7 HomotopyContinuation completeness tests.
 
 The question is not "did the solver return something" — test_hc_solve_kwargs.jl
 already exercises the code paths and asserts only `length(cps) >= 1`. L7 asks
@@ -20,7 +20,7 @@ Because p is itself a degree-4 polynomial, a degree-4 Chebyshev approximation on
 the true gradient system rather than an approximation of it. That separates
 solver completeness from approximation quality, which is L6's question.
 
-`normalized = false` throughout: the 7vug fix made that the coefficient-preserving
+`normalized = false` throughout: that is the coefficient-preserving
 Chebyshev path, and it is what the pipeline and validation scripts use. Passing
 `normalized = true` here would solve a differently-scaled polynomial.
 """
@@ -77,7 +77,7 @@ function _match_analytic(cps, expected; tol = 1e-6)
     return (length(expected) - length(missed)) / length(expected), missed
 end
 
-@testset "L7 HC Completeness (mooi)" begin
+@testset "L7 HC Completeness" begin
 
     # ========================================================================
     # 7a — known critical-point count

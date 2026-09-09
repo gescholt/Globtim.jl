@@ -1,4 +1,4 @@
-# Pure helpers for y0j parent→child sample reuse (Option A).
+# Pure helpers for parent→child sample reuse.
 #
 # These functions take existing `Subdomain` values and a matrix of parent
 # sample points in parent-normalized `[-1,1]^n` coordinates, and produce the

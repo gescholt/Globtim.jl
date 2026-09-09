@@ -1,7 +1,7 @@
 # mode_spectrum_predicate.jl
 # Per-leaf bump-vs-split predicate driven by the mode-spectrum metrics
 # (`shell_decay`, `window_coverage`, `spectral_concentration`) computed from
-# `compute_mode_spectrum`. Bead ehaj.1 (epic ehaj — PREDICATE-EPIC).
+# `compute_mode_spectrum`.
 #
 # Used by `adaptive_refine` to decide, when `enable_p_refinement = true`,
 # whether to bump the polynomial degree on a leaf or split the leaf. The
@@ -39,7 +39,7 @@ default_bump(::Subdomain) = :bump
                   θ_stagnant::Real = 1e-2,
                   extended_degree::Int = 0) -> Symbol
 
-Mode-spectrum-driven bump-vs-split predicate (v2 — bead ehaj.6). Returns
+Mode-spectrum-driven bump-vs-split predicate (v2). Returns
 `:bump` if the leaf's residual is concentrated near the cutoff (a degree bump
 should catch it), else `:split`.
 
@@ -49,15 +49,15 @@ Decision rule (in order):
    `relative_l2_error > θ_stagnant`. If most of the residual energy sits
    *outside* the visible extended-degree window while the leaf is still
    genuinely far from converged, bumping inside the window can't help —
-   split. Coverage is the Parseval-true sample-based fraction (bead 4vtd.2),
+   split. Coverage is the Parseval-true sample-based fraction,
    a real energy fraction in [0,1]: `θ_coverage = 0.4` reads as "less than
    40% of the residual is catchable in-window". (The legacy coefficient-ratio
-   `window_coverage` mixed units and was grid-dependent: the ehaj.6 value
+   `window_coverage` mixed units and was grid-dependent: the legacy value
    θ = 0.005 was calibrated on 21-pt oversampled fits and the gate almost
    never fired on production auto-grid fits, whose legacy values run 10-40×
    higher.) The rel_l2 conjunct is the v2 fix: near convergence the visible
    window mass collapses toward the noise floor, so low coverage alone also
-   fires on nearly-done bump-friendly leaves (ehaj.2: deuflhard_2d, +121%
+   fires on nearly-done bump-friendly leaves (deuflhard_2d, +121%
    evals from 6 spurious splits, every one with shell_decay > 2 and
    rel_l2 ≤ 5.6e-3).
 2. **Bump signal**: at least one of
@@ -67,8 +67,7 @@ Decision rule (in order):
      shells `{d+1, d+2}` — bump catches it even when shell_decay is
      undefined or noisy because shells d+2/d+4 are both roundoff).
 
-Calibration: dksx.0a fixed-probe measurements plus the ehaj.2 per-degree
-decision traces (experiments/sandbox/results/predicate_ab_2d/). The v1
+Calibration: fixed-probe measurements plus per-degree decision traces. The v1
 thresholds (θ_decay = 0.0, θ_concentration = 0.5) made the bump signal
 vacuously true along real refinement paths — the predicate only ever
 disagreed with `default_bump` at the degree cap. Measured discrimination at
@@ -76,7 +75,7 @@ low degree: bump-friendly leaves show decay ≥ 1.7 with concentration ≥ 0.97
 (deuflhard deg 4-12; locally_id/L2_squared deg 4: decay 6.8, conc 0.99997),
 stagnant/cone leaves show decay 0.21-0.38 with concentration 0.46-0.76
 (griewank_2d deg 4; locally_id/L2_norm deg 6-12). θ_decay = 0.5 /
-θ_concentration = 0.9 separate the two populations; dksx.0a probe verdicts
+θ_concentration = 0.9 separate the two populations; the probe verdicts
 are preserved:
 
 | Problem      | concentration | shell_decay | cov_sample (21pt/auto) | rel_l2 | verdict |
@@ -86,8 +85,8 @@ are preserved:
 | ackley_3d    | 0.22          | -0.62       | 0.35 / 0.90            | large  | split   |
 | griewank_3d  | 0.98          | +1.91       | 0.16 / 0.11            | large  | split   |
 
-θ_coverage = 0.4 reproduces all four verdicts at BOTH grid configs (4vtd.2
-probe, 2026-07-04): griewank splits via the gate everywhere; ackley splits
+θ_coverage = 0.4 reproduces all four verdicts at BOTH grid configs (probe,
+2026-07-04): griewank splits via the gate everywhere; ackley splits
 via the gate on oversampled fits and via the decay/concentration axes on
 auto-grid fits, where coarse-grid aliasing folds its high-frequency energy
 into the window and inflates coverage to 0.90 (a limit of any sample
@@ -137,8 +136,8 @@ end
 
 Spectrum-accepting method: same decision rule, operating on a precomputed
 `compute_mode_spectrum` / `subdomain_mode_spectrum` result. Callers that
-consult several predicates on the same leaf (the audit drivers — bead
-8f4p.5.1 DR-INSTR) compute the spectrum once and pass it here. Pass the
+consult several predicates on the same leaf (the audit drivers) compute the
+spectrum once and pass it here. Pass the
 leaf's `relative_l2_error` as `rel_l2` to enable the v2 stagnation conjunct;
 `NaN` (the default) treats the conjunct as satisfied (v1-compatible gate).
 """
@@ -155,20 +154,20 @@ function pick_strategy(
         return :bump
     end
 
-    # Full-coverage guard (ehaj.5 v3): sample coverage ≈ 1 means the residual
+    # Full-coverage guard (v3): sample coverage ≈ 1 means the residual
     # energy is already inside the window, so the structure is resolvable by
-    # degree escalation — never split. Calibrated on the ehaj.3 traces: at
+    # degree escalation — never split. Calibrated on the A/B traces: at
     # θ_coverage_full = 0.99 this suppresses 87/116 of levy_3d's harmful
     # splits (and 4/4 of levy_2d's) while touching zero split decisions on
     # ackley/griewank/fhn3d. Disabled by default (Inf) pending DR-FLIP
-    # (8f4p.5.3).
+    #.
     if !isnan(spec.window_coverage_sample) && spec.window_coverage_sample >= θ_coverage_full
         return :bump
     end
 
     # Stagnation gate: residual invisible in the window AND the leaf is still
     # far from converged. Reads the Parseval-true sample-based coverage
-    # (bead 4vtd.2) — a real energy fraction in [0,1], so θ_coverage is
+    # — a real energy fraction in [0,1], so θ_coverage is
     # interpretable and grid-independent. NaN coverage (empty spectrum, or a
     # hand-built spec without a reference) — skip the gate.
     # NaN rel_l2 means the caller can't supply it — conjunct treated satisfied.
@@ -180,7 +179,7 @@ function pick_strategy(
     end
 
     # Bump signal: shell decay OR concentration says the residual is
-    # bump-catchable. Decay is the parity-stratified rate (4vtd.1) — finite on
+    # bump-catchable. Decay is the parity-stratified rate — finite on
     # single-parity residuals where the fixed-shell scalar NaN'd, +Inf on a
     # decayed-away residual, NaN only when neither parity has ≥ 2 populated
     # shells (`NaN > θ` is false, so an unfittable rate never claims bump).

@@ -159,12 +159,12 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_model_registry.jl") do
     include("test_model_registry.jl")
 end
 
-# Thermodynamic phase-stability fixture: Margules TPD registry entry (bead 3ztw.1)
+# Thermodynamic phase-stability fixture: Margules TPD registry entry
 with_timeout(TIMEOUT_TESTFILE, label = "test_margules_tpd.jl") do
     include("test_margules_tpd.jl")
 end
 
-# Cap-aware leaf decision + the predicate -> cut-axis channel (bead 8f4p.5.4)
+# Cap-aware leaf decision + the predicate -> cut-axis channel
 with_timeout(TIMEOUT_TESTFILE, label = "test_cap_aware_decide.jl") do
     include("test_cap_aware_decide.jl")
 end
@@ -173,23 +173,23 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_predicate_cut_dim.jl") do
     include("test_predicate_cut_dim.jl")
 end
 
-# Approximation quality vs degree / GN / domain size (bead kidt)
+# Approximation quality vs degree / GN / domain size
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_approx_quality_l6.jl") do
     include("test_approx_quality_l6.jl")
 end
 
-# Full chain f -> grid -> poly -> HC -> refine -> classify -> dedup (bead h0vk)
+# Full chain f -> grid -> poly -> HC -> refine -> classify -> dedup
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_pipeline_integration_l8.jl") do
     include("test_pipeline_integration_l8.jl")
 end
 
 # ODE-objective quality: FD noise floor, Hessian reliability, penalty regions,
-# and the pipeline on an integration-defined objective (bead q9zc)
+# and the pipeline on an integration-defined objective
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_ode_objective_quality_l9.jl") do
     include("test_ode_objective_quality_l9.jl")
 end
 
-# HC completeness against analytically known critical-point counts (bead mooi)
+# HC completeness against analytically known critical-point counts
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_hc_completeness_l7.jl") do
     include("test_hc_completeness_l7.jl")
 end
@@ -292,8 +292,8 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_eval_count.jl") do
     include("test_subdivision_eval_count.jl")
 end
 
-with_timeout(TIMEOUT_TESTFILE, label = "test_y0j_integration.jl") do
-    include("test_y0j_integration.jl")
+with_timeout(TIMEOUT_TESTFILE, label = "test_sample_reuse_integration.jl") do
+    include("test_sample_reuse_integration.jl")
 end
 
 with_timeout(TIMEOUT_TESTFILE, label = "test_zero_polynomial_guard.jl") do

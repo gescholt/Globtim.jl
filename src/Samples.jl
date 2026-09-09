@@ -1,5 +1,4 @@
 # ======================================================= Functions =======================================================
-# using IterTools
 
 """
     chebyshev_nodes_exact(n::Int, ::Type{T}) where T
@@ -301,7 +300,7 @@ grid). Pass the result to `Constructor(T, degree; grid=..., grid_mode=:nontensor
 sample_measure=measure)`.
 
 This is the sampling front-end that decouples the sample count from the tensor grid
-(bead 4hs0): a tensor grid needs `(degree+1)^n` points, this needs only a small multiple of
+— a tensor grid needs `(degree+1)^n` points, this needs only a small multiple of
 the basis size `binom(degree+n, n)`.
 
 # Measures

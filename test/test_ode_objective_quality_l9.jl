@@ -1,5 +1,5 @@
 """
-Level-9 ODE objective quality tests (bead q9zc).
+Level-9 ODE objective quality tests.
 
 L0–L8 validated the pipeline on analytic objectives, where a critical point is
 recovered to machine precision. L9 asks what changes when the objective is
@@ -26,7 +26,7 @@ Self-contained: RK4 is 8 lines here rather than a dependency, which keeps globti
 test environment unchanged (pre-push Layers 0.6/0.7) and makes the integrator's
 accuracy an explicit, tunable parameter of the test rather than a hidden one.
 
-SCOPE. The bead names PMPTrajectoryObjective, which lives in Opt_Traj — a private
+SCOPE. PMPTrajectoryObjective lives in Opt_Traj — a private
 package with a heavy ODE stack. Validating that specific objective belongs in
 Opt_Traj's own suite. What is tested here is the property the ladder cares about:
 how globtim's pipeline behaves when the objective carries integration noise.
@@ -104,7 +104,7 @@ function _fd_hess(J, p, h)
     return Symmetric(H)
 end
 
-@testset "L9 ODE Objective Quality (q9zc)" begin
+@testset "L9 ODE Objective Quality" begin
 
     # ========================================================================
     # 9a — the fixture has the ground truth it claims

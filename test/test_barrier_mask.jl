@@ -1,7 +1,7 @@
 using Test
 using Globtim
 
-# Bead yhta: penalty/flat-barrier leaf masking in adaptive_subdivision.
+# penalty/flat-barrier leaf masking in adaptive_subdivision.
 #
 # An objective that returns a finite penalty PLATEAU over part of the domain
 # (e.g. an ODE-shooting objective on unstable-integration corners) creates a
@@ -16,7 +16,7 @@ const _PV = 5.0  # finite penalty sentinel (a "barrier" value)
 
 # Smooth bowl with an interior minimum at (-0.5, -0.5); a DIAGONAL barrier covers
 # the half-plane x+y > 0.3 with the flat sentinel _PV. The diagonal edge defeats
-# axis-aligned cut isolation, reproducing the runaway the bead describes.
+# axis-aligned cut isolation, reproducing the runaway described above.
 function diag_barrier_obj(x)
     (x[1] + x[2] > 0.3) && return _PV
     return (x[1] + 0.5)^2 + (x[2] + 0.5)^2
@@ -41,7 +41,7 @@ function _leaf_containing(tree, p)
     return nothing
 end
 
-@testset "barrier masking (yhta)" begin
+@testset "barrier masking" begin
 
     @testset "penalty_barrier_detector unit behavior" begin
         det = penalty_barrier_detector(_PV)               # frac = 0.5 default
@@ -126,7 +126,7 @@ end
     end
 
     @testset "masking holds under p-refinement (the timeout trigger)" begin
-        # With enable_p_refinement the bead's runaway is worst (degree bumps on a
+        # With enable_p_refinement the runaway is worst (degree bumps on a
         # step). The detector must still bound the tree and mask the plateau.
         det = penalty_barrier_detector(_PV)
         tree = Globtim.adaptive_refine(

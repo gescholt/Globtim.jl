@@ -1,4 +1,4 @@
-# Tier-1 unit tests for y0j parent→child sample reuse pure helpers.
+# Tier-1 unit tests for the parent→child sample-reuse pure helpers.
 # Builds synthetic `Subdomain` values — does not run `adaptive_refine`.
 
 using Test

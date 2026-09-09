@@ -1,19 +1,18 @@
 # per_axis_cut_selection.jl
-# Per-axis spectrum-based cut-dim selector (bead 4vtd.5,
-# Phase 1 GREEN). Companion to per_cut_predicate.jl's `pick_strategy_per_axis`
-# / `decide_action`: both consume the same per-axis-restricted mode spectrum,
-# but this file's `pick_cut_dim_spectrum` answers a different question — once
+# Per-axis spectrum-based cut-dim selector. Companion to per_cut_predicate.jl's
+# `pick_strategy_per_axis` / `decide_action`: both consume the same
+# per-axis-restricted mode spectrum, but this file's `pick_cut_dim_spectrum` answers a different question — once
 # the leaf has been decided "split", which axis carries the most resistance
 # to bumping?
 #
-# Hypothesis (bead 4vtd.5): the slowest-decay axis is the best cut. Variance
-# in residuals (the current `select_cut_dimension` heuristic at
+# Hypothesis: the slowest-decay axis is the best cut. Variance in residuals
+# (the current `select_cut_dimension` heuristic at
 # adaptive_subdivision.jl:413-482) is a 2nd moment; it doesn't see where
 # the residual energy lives in frequency. The spectrum does.
 #
-# The cluster aggregation in bead 4vtd.3 (28/28 cut-dim disagreements on
-# fhn3d at population scale where the variance scorer and spectrum scorer
-# diverge entirely) is the field-scale signal that motivated this bead.
+# At population scale on fhn3d the variance scorer and the spectrum scorer
+# disagree on the cut dimension in 28/28 cases — they diverge entirely. That
+# field-scale signal is what motivated this selector.
 
 """
     pick_cut_dim_spectrum(subdomain::Subdomain;
@@ -36,7 +35,7 @@ axis, scores each axis by *resistance to bumping*:
   bump won't capture it; that axis needs the split.
 
 Returns `argmax(scores)` with the documented tie-break: **lowest index**.
-This matches `decide_action`'s convention from bead 4vtd.3 so the two
+This matches `decide_action`'s convention so the two
 predicates compose deterministically — if `decide_action` says split along
 axis k as a tie-break, `pick_cut_dim_spectrum` won't pick a different axis
 for an indistinguishable reason.
@@ -76,8 +75,7 @@ end
 
 Spectrum-accepting method: same axis scoring, operating on a precomputed
 `compute_mode_spectrum` / `subdomain_mode_spectrum` result. The per-axis
-restriction is shared with `pick_strategy_per_axis` via `axis_shell_stats`
-(bead 8f4p.5.1 DR-INSTR).
+restriction is shared with `pick_strategy_per_axis` via `axis_shell_stats`.
 """
 function pick_cut_dim_spectrum(spec::NamedTuple; axis_mass_floor::Real = 1e-12)
     n_dim = size(spec.modes, 2)
@@ -99,7 +97,7 @@ function pick_cut_dim_spectrum(spec::NamedTuple; axis_mass_floor::Real = 1e-12)
     # argmax with an EXPLICIT lowest-index tie-break that is robust to FP noise.
     # For isotropic inputs the per-axis scores are equal only up to rounding, so a
     # bare `argmax` can flip the winning index across platforms (aarch64 CI vs
-    # local x86 — bead 4vtd.5). Return the lowest index whose score is within a
+    # local x86). Return the lowest index whose score is within a
     # relative tolerance of the maximum.
     best = maximum(scores)
     tol = 1e-9 * max(abs(best), 1.0)

@@ -1,5 +1,5 @@
 """
-Level-6 polynomial approximation quality tests (bead kidt).
+Level-6 polynomial approximation quality tests.
 
 L7 asked whether HC finds every critical point of the polynomial system, and
 deliberately used fixtures where the approximation is EXACT so that solver
@@ -20,7 +20,7 @@ Two fixtures, chosen so each isolates one behaviour:
   represents it, so its L2 error decays geometrically instead of collapsing, which
   is what makes a convergence RATE measurable.
 
-`normalized = false` throughout, per the 7vug fix.
+`normalized = false` throughout, the coefficient-preserving convention.
 
 Self-contained by design: no include of the ground-truth tables in
 globtimpostprocessing/test. globtim ships to the public mirror and its tests must
@@ -71,7 +71,7 @@ function _capture(f, n::Int, d::Int; GN::Int = 20)
     )
 end
 
-@testset "L6 Approximation Quality (kidt)" begin
+@testset "L6 Approximation Quality" begin
 
     # ========================================================================
     # 6a — L2 error convergence with degree
@@ -131,7 +131,7 @@ end
     end
 
     @testset "minimum capturing degree equals the representable degree" begin
-        # The quantity the bead asks for, computed rather than asserted from a
+        # The quantity of interest, computed rather than asserted from a
         # constant: sweep upward and take the first degree with full recall.
         min_deg = nothing
         for d in 2:6

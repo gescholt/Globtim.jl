@@ -338,7 +338,7 @@ The enhanced DataFrame includes these additional columns:
 - `steps`: Number of BFGS optimization steps taken
 - `converged`: Boolean indicating if BFGS optimization converged
 
-!!! warning "`minimizers` is NOT a subset of the `:minimum` rows of `df` (bead qc9c)"
+!!! warning "`minimizers` is NOT a subset of the `:minimum` rows of `df`"
     The two returned tables answer different questions, and conflating them
     overstates what the polynomial approximation achieved:
 

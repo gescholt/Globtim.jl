@@ -172,7 +172,7 @@ end
         @test sd0.samples ≈ sdI.samples
     end
 
-    @testset "skip_if_ambiguous: no half-installed rotation (jl9z.7 Stage 2)" begin
+    @testset "skip_if_ambiguous: no half-installed rotation (Stage 2)" begin
         # A geometric sloppy ramp: gradient scales decay by a uniform decade per
         # axis, so every eigen log-gap is equal — no decisive rank, `ambiguous`.
         ramp(x) = x[1]^2 + 1e-2 * x[2]^2 + 1e-4 * x[3]^2 + 1e-6 * x[4]^2

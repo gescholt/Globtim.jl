@@ -42,7 +42,7 @@ function Globtim._solve_hc(
     hc_result = solve(sys, start_system = actual_start, show_progress = false)
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
 
-    # Out-channel for solve statistics (bead iirm): how many paths the chosen
+    # Out-channel for solve statistics: how many paths the chosen
     # start system actually tracked, vs solutions found. Filled only when the
     # caller passes a Ref — the return contract is unchanged.
     if path_stats_ref !== nothing

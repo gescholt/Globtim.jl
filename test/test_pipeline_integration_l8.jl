@@ -1,5 +1,5 @@
 """
-Level-8 full-pipeline integration tests (bead h0vk).
+Level-8 full-pipeline integration tests.
 
 The whole chain against ground truth:
 
@@ -25,7 +25,7 @@ so the Hessian diag(q''(x₁), q''(x₂)) gives
 with minimum value 2·q(1/√2) = -0.5 exactly. Nine points, three types, one known
 value — enough to audit every stage.
 
-`normalized = false` per the 7vug fix. Self-contained: no cross-package includes,
+`normalized = false`, the coefficient-preserving convention. Self-contained: no cross-package includes,
 since globtim ships to the mirror (pre-push Layers 0.6/0.7).
 """
 
@@ -70,7 +70,7 @@ end
 
 _match(pt, target; tol = 1e-6) = norm(pt .- target) < tol
 
-@testset "L8 Pipeline Integration (h0vk)" begin
+@testset "L8 Pipeline Integration" begin
 
     # ========================================================================
     # 8a — single-degree capture rate, end to end
@@ -201,7 +201,7 @@ _match(pt, target; tol = 1e-6) = norm(pt .- target) < tol
     # 8f — critical-point mode vs minimum mode
     # ========================================================================
 
-    # NOTE (bead qc9c): the subset relation asserted here holds BECAUSE this
+    # NOTE: the subset relation asserted here holds BECAUSE this
     # fixture is exactly representable at degree 4, so every polynomial root sits
     # on a true critical point and BFGS descent has nowhere else to go. It is NOT
     # a general property. `minimizers` is populated from BFGS descent endpoints,

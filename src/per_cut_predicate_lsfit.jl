@@ -8,9 +8,7 @@
 # Bernstein-ellipse radius per axis that audit drivers can log per leaf.
 #
 # This file is opt-in (research probe). The default predicate threading
-# remains `pick_strategy_per_axis`. See:
-#   /home/georgy/.claude/plans/quizzical-knitting-cake.md  (E2 in tier 2)
-#   experiments/sandbox/run_e2_synthetic_3d.jl             (validation driver)
+# remains `pick_strategy_per_axis`.
 
 """
     LSFitAxisResult
@@ -108,8 +106,7 @@ end
 
 Spectrum-accepting method: same LS-slope rule, operating on a precomputed
 `compute_mode_spectrum` / `subdomain_mode_spectrum` result. The offender-mode
-restriction is shared with `pick_strategy_per_axis` via `axis_shell_stats`
-(bead 8f4p.5.1 DR-INSTR).
+restriction is shared with `pick_strategy_per_axis` via `axis_shell_stats`.
 """
 function pick_strategy_per_axis_lsfit(
     spec::NamedTuple;
@@ -210,7 +207,7 @@ end
 Same combination rule as `decide_action`: any `:split` wins, lowest-indexed
 ties win. Operates on the `.verdict` slice of an `LSFitAxisResult` vector.
 
-Cap-aware mirror of the spectrum-based `decide_action` (bead 8f4p.5.4). Same
+Cap-aware mirror of the spectrum-based `decide_action`. Same
 reasoning: at `degree == max_degree` a `:bump` cannot bump, so `adaptive_refine`
 splits anyway and chooses the axis via `select_cut_dimension`, discarding these
 per-axis results. Returning an explicit axis puts the predicate's evidence back
@@ -273,8 +270,8 @@ end
         extended_degree::Int = 0,
         kwargs...) -> Vector{Int}
 
-jl9z.7 — data-driven anisotropic per-axis degree from the per-axis Bernstein
-radius ρ_k (the E2 LS-slope estimator, bead jaw4). For each axis the analytic
+Data-driven anisotropic per-axis degree from the per-axis Bernstein
+radius ρ_k (the E2 LS-slope estimator). For each axis the analytic
 geometric-decay model says the coefficient mass on axis `k` decays like ρ_k^{-d},
 so the degree needed to hit a fixed accuracy is
 
@@ -288,7 +285,7 @@ lx_z≈0.18 — `[6,6,1,1,1]` degrades (3.34e-2) while `[6,6,2,2,2]` does not
 (1.60e-2). So `floor_degree` defaults to 2, never 0/1.
 
 Axes with no usable signal (`ρ_k` is `NaN`, ≤ 1, or non-finite) are split into
-two cases (rho_k_crossval_probe.jl, jl9z.7):
+two cases (rho_k_crossval_probe.jl):
 
 - **converged-blind** — no fittable shells AND `axis_mass < axis_mass_floor`:
   the residual has already decayed below the floor on this axis. Measured on
@@ -319,7 +316,7 @@ Same computation as [`choose_per_dim_degree_lsfit`](@ref), additionally reportin
 per axis whether the ρ_k estimate carried usable signal (`isfinite(ρ) && ρ > 1`).
 An axis without signal gets `max_degree` in `degrees` — indistinguishable there
 from a genuinely rough axis (ρ near 1), which is exactly why the mask exists:
-the Stage-2 active-subspace fallback (jl9z.7) triggers only when NO axis has
+the Stage-2 active-subspace fallback triggers only when NO axis has
 signal, i.e. the whole LS spectrum was blind, not merely pessimistic.
 """
 function choose_per_dim_degree_lsfit_with_signal(

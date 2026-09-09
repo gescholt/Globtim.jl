@@ -23,7 +23,7 @@
 """
     DegeneracyDiagnostics
 
-Per-leaf verdict + the raw signals it was derived from (bead: degeneracy detector).
+Per-leaf verdict + the raw signals it was derived from.
 
 # Fields
 - `verdict::Symbol`: one of `:sloppy_valley`, `:positive_dim_argmin`,

@@ -52,7 +52,7 @@ Contains the critical points in original domain coordinates (same format as
   identical to a previously-solved variant or the full polynomial. In that
   case `critical_points` and `solve_time` are copied from the reused solve;
   downstream reporters should ignore `solve_time` for "speedup vs full"
-  computations on cached-hit variants (see bead oasi).
+  computations on cached-hit variants.
 """
 struct SparsifiedVariant
     threshold::Float64
@@ -192,7 +192,7 @@ function run_sparsification_experiment(;
 
         # Sparsified variants
         #
-        # Polynomial-equality short-circuit (bead oasi): when sparsify_polynomial
+        # Polynomial-equality short-circuit: when sparsify_polynomial
         # zeros nothing (threshold below all coefficient magnitudes), the
         # resulting polynomial is byte-identical to `pol`. Running HC on it
         # would measure start-system cache reuse, not sparsification benefit —

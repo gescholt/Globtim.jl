@@ -6,12 +6,11 @@
 # resolvers (anisotropic degree, active-subspace projection, oblique cuts,
 # regularize-to-Morse) can act on the verdict.
 #
-# The active-subspace + fold-coherence math is lifted from
-# experiments/sandbox/fold_indicator_probe.jl (the probe that proved the CR3BP L4
-# box is effectively 2-D). The Hessian n_zero rule mirrors
-# globtimpostprocessing/src/CriticalPointClassification.jl `_classify_eigenvalues_sub`
-# EXACTLY (intentional duplication: globtim must not depend on postprocessing —
-# the one-way rule — and the cheap test is just ForwardDiff on the polynomial).
+# The active-subspace + fold-coherence math comes from the probe that showed the
+# CR3BP L4 box is effectively 2-D. The Hessian n_zero rule mirrors
+# GlobtimPostProcessing's eigenvalue classification EXACTLY (intentional
+# duplication: globtim must not depend on postprocessing — the one-way rule —
+# and the cheap test is just ForwardDiff on the polynomial).
 #
 # Default gradient source is the FITTED POLYNOMIAL (AD on `p` at the cached
 # samples) ⇒ ZERO extra objective evaluations. An opt-in `:objective` source uses
@@ -152,7 +151,7 @@ end
 # diagonal box scaling is a congruence, so by Sylvester's law it preserves the
 # eigenvalue inertia — n_pos/n_neg/n_zero — that the verdict relies on). Computed
 # by central finite differences on the fitted polynomial. The n_zero rule mirrors
-# _classify_eigenvalues_sub for cross-package parity.
+# GlobtimPostProcessing's eigenvalue classification for cross-package parity.
 function _poly_hessian_signature(
     poly::ApproxPoly,
     cp::AbstractVector{<:Real};

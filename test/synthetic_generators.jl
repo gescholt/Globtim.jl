@@ -1,12 +1,12 @@
-# synthetic_generators.jl — DR-ORACLE (bead 8f4p.5.2)
+# synthetic_generators.jl — DR-ORACLE
 #
 # Planted-decay separable test functions with EXACT per-axis Chebyshev decay
 # and a closed-form per-(subdomain, degree) decision oracle. This is the
 # ground truth the DECISION-RULE epic calibrates against: it generalizes the
-# hand-built T₂+T₂₀ RED constructions (4vtd.3/.5) into a family with a
+# hand-built T₂+T₂₀ RED constructions into a family with a
 # tunable per-axis knob ρᵢ.
 #
-# Lives under test/ (bead spec) but is dependency-free pure math, included by
+# Lives under test/ but is dependency-free pure math, included by
 # unit tests AND by experiment drivers:
 #     include(joinpath(<repo>, "pkg/globtim/test/synthetic_generators.jl"))
 #     using .SyntheticGenerators
@@ -45,8 +45,8 @@
 #     ρ_eff = u + √(u² - 1),   u = (x_p - c)/h  > 1
 #
 # Bisection strictly increases ρ_eff on the cut axis (u ↦ 2u ∓ 1 for the two
-# children, both > u since u > 1) — the domain-rescaling mechanics jw9g.4
-# estimates empirically, here in closed form. The local coefficient tail of a
+# children, both > u since u > 1) — the domain-rescaling mechanics that were
+# previously estimated empirically, here in closed form. The local coefficient tail of a
 # degree-d fit is, per axis, the geometric tail
 #
 #     ε_i(d) = ρ_eff,i^{-(d+1)} / √(1 - ρ_eff,i^{-2})     (η² tail summed, √)

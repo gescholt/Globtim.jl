@@ -1,5 +1,5 @@
 """
-Tests for solve_tree_leaves per-leaf status observability (bead bacg).
+Tests for solve_tree_leaves per-leaf status observability.
 
 Regression guards:
 - solve_tree_leaves returns a NamedTuple (; critical_points, leaf_status).
@@ -55,7 +55,7 @@ Base.showerror(io::IO, ::_TestHCMissingErr) = print(
         @test all(v == :ran for v in values(r.leaf_status))
     end
 
-    @testset "path_stats recorded per :ran leaf (bead iirm)" begin
+    @testset "path_stats recorded per :ran leaf" begin
         f(x) = (x[1] - 0.3)^2 + (x[2] - 0.1)^2
         bounds = [(-1.0, 1.0), (-1.0, 1.0)]
         tree = Globtim.adaptive_refine(

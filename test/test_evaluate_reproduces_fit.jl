@@ -1,4 +1,4 @@
-# Regression test for bug 7vug.
+# Regression test: `evaluate` must reproduce the fitted values.
 #
 # `lambda_vandermonde` fits the Chebyshev Vandermonde in the PLAIN T_n basis (no √(2/π)
 # weights), so a Chebyshev fit's stored `coeffs` are plain-T_n coefficients. But `evaluate`,
@@ -9,7 +9,7 @@
 # (`_stored_normalized`), so every reconstruction path uses the same plain basis the
 # coefficients live in.
 #
-# Bug fp0b (Legendre mirror). The Legendre Vandermonde ALWAYS normalizes (orthonormal Legendre),
+# Legendre mirror. The Legendre Vandermonde ALWAYS normalizes (orthonormal Legendre),
 # so a Legendre fit's coeffs are normalized-Legendre and must be reconstructed with normalized=true.
 # Pre-fix, a default (normalized=false) Legendre fit stored `false` ⇒ evaluate/solve reconstructed
 # the wrong polynomial (critical points shifted ~0.09, silently). Fix: `_stored_normalized(basis)`
@@ -18,7 +18,7 @@ using Test
 using Globtim
 using LinearAlgebra
 
-@testset "evaluate reproduces the fitted approximant (7vug)" begin
+@testset "evaluate reproduces the fitted approximant" begin
     n = 2
     f = x -> exp(0.4 * x[1]) * sin(1.7 * x[2]) + 0.25 * x[1]^2 - 0.1 * x[2]
     TR = TestInput(f, dim = n, center = [0.15, -0.05], GN = 45, sample_range = 0.7)
@@ -51,7 +51,7 @@ using LinearAlgebra
         end
     end
 
-    # Legendre (bug fp0b): the Vandermonde ALWAYS normalizes, so a Legendre fit's stored flag must
+    # Legendre: the Vandermonde ALWAYS normalizes, so a Legendre fit's stored flag must
     # be `true` regardless of the request — else `evaluate`/solve reconstruct the wrong polynomial.
     # Test the previously-buggy default (normalized=false) AND explicit true; both must reproduce.
     for nrm_req in (true, false)

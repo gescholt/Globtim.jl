@@ -6,7 +6,7 @@ using LinearAlgebra
 # binds `Random` in every env (Globtim always loads Random); use it qualified (`Random.seed!`).
 import Globtim.Random
 
-# Bead jl9z.7: anisotropic per-dimension degree must SURVIVE the subdivision loop.
+# anisotropic per-dimension degree must SURVIVE the subdivision loop.
 #
 # The fit / grid / HC layers already accept a per-dim spec `(:one_d_per_dim, [d…])`
 # (SupportGen, lambda_vandermonde_anisotropic, the gnua HC fix). The blocker was
@@ -32,7 +32,7 @@ function _holdout_relL2(pol, f, pts)
     return norm(p .- fv) / norm(fv)
 end
 
-@testset "anisotropic per-dim degree (jl9z.7)" begin
+@testset "anisotropic per-dim degree" begin
 
     @testset "leaf_degree_spec accessor" begin
         iso = Subdomain(_B2; degree = 5)
@@ -171,7 +171,7 @@ end
     end
 
     @testset "anisotropic_degree opt-in retargets isotropic leaves through the loop" begin
-        # jl9z.7 Stage 1: the shipped ρ_k chooser is now wired into adaptive_refine
+        # Stage 1: the shipped ρ_k chooser is now wired into adaptive_refine
         # via the `anisotropic_degree` opt-in. On a non-converged ISOTROPIC leaf the
         # base fit is used as the E2 probe and the leaf is refit at a ρ_k-driven
         # per-dim degree — the "17.6× fewer shoots" mechanism, now through the loop.

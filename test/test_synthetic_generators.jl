@@ -10,14 +10,14 @@ include(joinpath(@__DIR__, "synthetic_generators.jl"))
 using .SyntheticGenerators:
     PlantedDecay, make_planted, effective_rho, planted_tail, right_decision
 
-# Tests for the planted-decay generator + closed-form decision oracle
-# (bead 8f4p.5.2 DR-ORACLE). Acceptance criteria pinned here:
+# Tests for the planted-decay generator + closed-form decision oracle.
+# Acceptance criteria pinned here:
 #   (1) measured per-axis decay on the fit grid is monotone in planted ρᵢ,
 #   (2) the oracle flags argmin ρᵢ as the cut axis on anisotropic instances,
 #   (3) the oracle says :bump when all ρᵢ are large relative to the degree
 #       budget (reachable) and :done when the tail already clears tolerance.
 
-@testset "planted-decay generator + oracle (8f4p.5.2)" begin
+@testset "planted-decay generator + oracle" begin
 
     @testset "generating-function identity: coefficients are exactly ρ^{-k}" begin
         # f (1D, untilted at xstar=0 ⇒ tilt λ = g'(0) subtracted back) must

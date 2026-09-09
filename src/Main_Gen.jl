@@ -93,7 +93,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     # Check if d is a grid (Matrix format)
     grid_provided = isa(d, Matrix)
     # Non-tensor (sparse/least-squares) mode: caller supplies BOTH an arbitrary point set and
-    # the target total degree, decoupling degree from point count (bead 4hs0). Without this,
+    # the target total degree, decoupling degree from point count. Without this,
     # the tensor inference below silently lowers the degree to round(N^(1/n)) - 1.
     nontensor = grid_provided && grid_degree !== nothing
 
@@ -109,7 +109,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         if nontensor
             # Degree is authoritative; the point set only needs to overdetermine the
             # basis. A tuple grid_degree (any DegreeSpec, e.g. anisotropic simplex)
-            # sets the support directly; a bare Int means total degree (bead 4hs0).
+            # sets the support directly; a bare Int means total degree.
             degree_spec =
                 grid_degree isa Tuple ? grid_degree : (:one_d_for_all, grid_degree)
             degree_est = grid_degree isa Tuple ? maximum(grid_degree[2]) : grid_degree
@@ -338,7 +338,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         # Least squares directly on the rectangular Vandermonde (pivoted QR):
         # conditioning is κ(V), where the former VᵀV + LU normal equations
         # squared it to κ(V)² — the path behind the silent zero-vector LAPACK
-        # failure at Deuflhard 2D deg 12 (bead xosc). Same solve the
+        # failure at Deuflhard 2D deg 12. Same solve the
         # subdivision path uses (construct_polynomial_on_subdomain).
         sol = (u = VL \ F,)
     end
@@ -348,7 +348,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
 
     # Guard: all-zero coefficients indicate the LS solve failed silently
     # (historically: cluster LAPACK returning a zero vector on the old
-    # normal-equations path, bead xosc). Without this guard the zero polynomial
+    # normal-equations path). Without this guard the zero polynomial
     # cascades into HC.System with a cryptic 'reducing over an empty
     # collection' ArgumentError.
     if maximum(abs, sol.u) == 0
@@ -395,7 +395,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
         F,
         basis,
         precision,
-        _stored_normalized(basis),  # 7vug/fp0b: basis-determined (Cheb plain-T_n, Legendre normalized)
+        _stored_normalized(basis),  # Basis-determined (Cheb plain-T_n, Legendre normalized)
         power_of_two_denom,
         cond_vandermonde,
     )
@@ -466,7 +466,7 @@ grid_aniso = generate_anisotropic_grid([10, 5], basis=:chebyshev)
 grid_matrix = convert_to_matrix_grid(vec(grid_aniso))
 pol_aniso = Constructor(TR, 0, grid=grid_matrix)  # degree ignored when grid provided (grid_mode=:tensor)
 
-# Sparse least-squares fit: degree 8 from ~2·binom(8+3,3) points instead of 9^3 (bead 4hs0)
+# Sparse least-squares fit: degree 8 from ~2·binom(8+3,3) points instead of 9^3
 S = generate_sparse_samples(3, 8; oversample=2.0, measure=:chebyshev)
 pol_sparse = Constructor(TR, 8, grid=S, grid_mode=:nontensor, sample_measure=:chebyshev)
 ```
@@ -518,7 +518,7 @@ TimerOutputs.@timeit _TO function Constructor(
             power_of_two_denom = power_of_two_denom,
             thread_evals = thread_evals,
             # :nontensor — the positional degree is authoritative for the fit; the point set
-            # only needs to overdetermine the basis (sparse/LS front-end, bead 4hs0).
+            # only needs to overdetermine the basis (sparse/LS front-end).
             grid_degree = grid_mode === :nontensor ? degree : nothing,
             sample_measure = sample_measure,
         )

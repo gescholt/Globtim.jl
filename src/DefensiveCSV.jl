@@ -3,9 +3,6 @@ DefensiveCSV Module
 
 Provides defensive CSV loading functionality with comprehensive error boundaries
 for production HPC deployment and dashboard integration.
-
-Author: GlobTim Project
-Date: September 26, 2025
 """
 
 module DefensiveCSV

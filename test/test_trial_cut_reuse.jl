@@ -8,7 +8,7 @@ mutable struct CallCounter
 end
 (c::CallCounter)(x) = (c.n += 1; c.f(x))
 
-@testset "Trial-cut reuse (eqk)" begin
+@testset "Trial-cut reuse" begin
     f_quad = x -> sum(x .^ 2)
 
     @testset "estimate_subdomain_error uses cache on repeat call" begin

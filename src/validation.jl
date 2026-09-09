@@ -13,9 +13,6 @@ This module replaces and consolidates:
 - PipelineDefenseIntegration.jl (454 LOC)
 
 Total consolidation: 1,594 LOC → ~800 LOC (50% reduction)
-
-Author: GlobTim Project
-Date: February 2026
 """
 
 using DataFrames

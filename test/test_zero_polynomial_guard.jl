@@ -1,8 +1,8 @@
 using Test
 using Globtim
 
-@testset "Constructor zero-polynomial guard (xosc)" begin
-    # Regression test for bead xosc: on some platforms (observed on cluster
+@testset "Constructor zero-polynomial guard" begin
+    # Regression test for on some platforms (observed on cluster
     # LAPACK at Deuflhard 2D deg 12) LinearSolve.LUFactorization silently
     # returns a zero-vector solution. Without the guard in Main_Gen.jl this
     # zero polynomial would flow into HC.System(grad) and raise a cryptic

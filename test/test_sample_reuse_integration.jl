@@ -9,7 +9,7 @@ mutable struct EvalCounter
 end
 (c::EvalCounter)(x) = (c.n += 1; c.f(x))
 
-@testset "y0j integration: estimate_subdomain_error inherit_from" begin
+@testset "Sample reuse: estimate_subdomain_error inherit_from" begin
     # A smooth objective so the fit is stable at modest degree.
     f_quad = x -> sum(x .^ 2) + x[1] * x[2]
 
@@ -109,7 +109,7 @@ end
     end
 end
 
-@testset "y0j integration: process_subdomain wires parent into inherit_from" begin
+@testset "Sample reuse: process_subdomain wires parent into inherit_from" begin
     f = x -> sum(x .^ 2)
 
     tree = Globtim.SubdivisionTree([(-1.0, 1.0), (-1.0, 1.0)]; degree = 4)
@@ -162,7 +162,7 @@ end
     @test counter_off.n == 81
 end
 
-@testset "y0j reuse_tol_frac: exact-tol is a no-op, tolerance saves evaluations" begin
+@testset "Sample reuse: exact-tol reuse_tol_frac is a no-op, tolerance saves evaluations" begin
     f = x -> sin(3x[1]) * cos(3x[2]) + 0.1 * sum(abs2, x)
     bounds = [(-1.0, 1.0), (-1.0, 1.0)]
     calls = Ref(0)

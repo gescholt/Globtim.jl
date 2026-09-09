@@ -47,7 +47,7 @@ function solve_tree_leaves(
     all_cps = Vector{Float64}[]
     all_leaf_tags = Int[]
     leaf_status = Dict{Int,Symbol}()
-    # Per-leaf HC solve statistics (bead iirm): tracked-path counts must be
+    # Per-leaf HC solve statistics: tracked-path counts must be
     # recorded, not inferred from the start-system's nominal bound. :hc only;
     # msolve leaves no entry.
     path_stats = Dict{Int,NamedTuple}()
@@ -88,8 +88,8 @@ function solve_tree_leaves(
     keep_idx = _dedup_point_indices(all_cps, dedup_tol)
     return (;
         critical_points = all_cps[keep_idx],
-        # CP→leaf provenance, aligned with critical_points (bead 4iy5.2 step 0:
-        # yield-vs-observables analysis needs to know which leaf produced each CP).
+        # CP→leaf provenance, aligned with critical_points: yield-vs-observables
+        # analysis needs to know which leaf produced each CP.
         cp_leaf_ids = all_leaf_tags[keep_idx],
         leaf_status = leaf_status,
         path_stats = path_stats,

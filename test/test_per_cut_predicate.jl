@@ -2,7 +2,7 @@ using Test
 using Globtim
 using Globtim: Subdomain, estimate_subdomain_error, pick_strategy
 
-# Tests for bead 4vtd.3 — per-cut-direction bump-vs-split
+# Tests for per-cut-direction bump-vs-split
 # predicate. The current `pick_strategy` returns one global verdict per leaf;
 # this file exercises the new per-axis API: `pick_strategy_per_axis` (returns
 # a Vector{Symbol} of length n_dim) and `decide_action` (combines into an
@@ -28,7 +28,7 @@ function cheb_T(n::Int, t::Real)
     return Tn
 end
 
-@testset "pick_strategy_per_axis + decide_action (4vtd.3)" begin
+@testset "pick_strategy_per_axis + decide_action" begin
 
     @testset "Test 1: anisotropic slow-y → split along y" begin
         # f = T_2(x) + T_12(y). Fit at degree 6 (so GN=12, T_12 doesn't alias
@@ -91,7 +91,7 @@ end
         @test cut_dim === nothing
     end
 
-    @testset "Test 6: spectrum-accepting methods match Subdomain methods (8f4p.5.1)" begin
+    @testset "Test 6: spectrum-accepting methods match Subdomain methods" begin
         # DR-INSTR contract: computing the spectrum once via
         # subdomain_mode_spectrum and passing it to the spec-accepting methods
         # must reproduce the Subdomain methods exactly — the audit drivers

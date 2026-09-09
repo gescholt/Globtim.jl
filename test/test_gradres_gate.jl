@@ -1,4 +1,4 @@
-# test_gradres_gate.jl — GRADRES-GATE recovered-minimizer convergence gate (bead jw9g.1).
+# test_gradres_gate.jl — GRADRES-GATE recovered-minimizer convergence gate.
 # Verifies `_recovered_minimizer_plateaued`: stop the degree sweep once the recovered
 # global minimizer stops moving, regardless of the still-falling L2 error (finding F9).
 # The helper is field-duck-typed (reads .status/.degree/.best_estimate), so NamedTuple

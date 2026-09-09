@@ -6,8 +6,6 @@ Parses TOML config files into `ExperimentPipelineConfig` for use with
 
 This module lives in Globtim with no external dependencies.
 Domain-specific orchestration is handled by downstream packages.
-
-Created: 2026-02-09
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -31,9 +29,9 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
 - `[solver]`: solver overrides (optional)
 - `[refinement]`: post-processing refinement (optional)
 - `[analysis]`: Newton CP refinement and classification (optional)
-- `[subdivision]`: adaptive-subdivision strategy defaults (optional, svdr)
-- `[grid_scoring]`: interestingness scoring thresholds + catalogue list (optional, 0thk)
-- `[screening]`: screen_and_probe parameters + model factory (optional, 20p7)
+- `[subdivision]`: adaptive-subdivision strategy defaults (optional)
+- `[grid_scoring]`: interestingness scoring thresholds + catalogue list (optional)
+- `[screening]`: screen_and_probe parameters + model factory (optional)
 - `[visualization]`: level set / landscape visualization parameters (optional)
 - `[output]`: output_dir (optional)
 """
@@ -65,7 +63,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     truncation_threshold::Union{Nothing,Float64} = nothing  # opt-in coefficient truncation
     truncation_mode::Symbol = :relative                      # :relative or :absolute
 
-    # [polynomial] — cluster timeout protection (dljm)
+    # [polynomial] — cluster timeout protection
     degree_timeout_seconds::Union{Nothing,Float64} = nothing  # per-degree wall-clock limit
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing  # per-msolve-call process limit
 
@@ -105,7 +103,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     analysis_valley_walking::Bool = false
     analysis_deep_diagnostics::Bool = false
 
-    # [subdivision] — optional adaptive-subdivision defaults (svdr)
+    # [subdivision] — optional adaptive-subdivision defaults
     # Strategies use Globtim symbol names for stability; see KNOWN_SUBDIVISION_STRATEGIES.
     subdivision_strategy::Union{Nothing,String} = nothing
     subdivision_degree::Union{Nothing,Int} = nothing
@@ -115,9 +113,9 @@ Base.@kwdef struct ExperimentPipelineConfig
     subdivision_max_leaves::Union{Nothing,Int} = nothing
     subdivision_basis::Union{Nothing,Symbol} = nothing
 
-    # [grid_scoring] — optional grid-based interestingness scoring defaults (0thk)
-    # Used by experiments/sandbox/run_grid_scoring.jl when the script is given a
-    # TOML config; otherwise the script falls back to its hardcoded list + thresholds.
+    # [grid_scoring] — optional grid-based interestingness scoring defaults
+    # Used by grid-scoring drivers when they are given a TOML config; otherwise
+    # the driver falls back to its own hardcoded list + thresholds.
     grid_scoring_points_per_dim::Union{Nothing,Int} = nothing
     grid_scoring_numpoints::Union{Nothing,Int} = nothing
     grid_scoring_interestingness_threshold::Union{Nothing,Float64} = nothing
@@ -125,7 +123,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     grid_scoring_min_local_minima::Union{Nothing,Int} = nothing
     grid_scoring_catalogue_files::Union{Nothing,Vector{String}} = nothing
 
-    # [screening] — optional screen_and_probe parameters (20p7)
+    # [screening] — optional screen_and_probe parameters
     # Drives the `pkg/DynamicObjectives/scripts/run_screening.jl` entry point;
     # `model_factory` must resolve through DynamicObjectives.MODEL_REGISTRY.
     screening_model_factory::Union{Nothing,String} = nothing
@@ -187,8 +185,8 @@ const KNOWN_REFINEMENT_METHODS = Set(["NelderMead", "BFGS", "LBFGS"])
 
 const KNOWN_GRADIENT_METHODS = Set(["forwarddiff", "finitediff"])
 
-# Globtim canonical strategy symbols, kept aligned with experiments/sandbox/
-# adaptive_subdivision_experiment.jl::run_strategy_comparison.
+# Globtim canonical strategy symbols, kept aligned with the strategy-comparison
+# drivers.
 const KNOWN_SUBDIVISION_STRATEGIES = Set([
     "baseline",
     "B_iso",
@@ -201,7 +199,7 @@ const KNOWN_SUBDIVISION_STRATEGIES = Set([
 
 const KNOWN_SUBDIVISION_BASES = Set(["chebyshev", "legendre"])
 
-# Screening rankings (20p7). Only `dynamic_range` exists today; field is
+# Screening rankings. Only `dynamic_range` exists today; field is
 # forward-looking so future strategies (variance, basin_count, etc.) can land
 # without changing the TOML schema.
 const KNOWN_SCREENING_RANKING_STRATEGIES = Set(["dynamic_range"])
@@ -917,7 +915,7 @@ function load_experiment_config(path::String)
         nothing
     truncation_mode = Symbol(get(poly, "truncation_mode", "relative"))
 
-    # Parse timeout protection (dljm)
+    # Parse timeout protection
     degree_timeout_seconds =
         haskey(poly, "degree_timeout_seconds") ? Float64(poly["degree_timeout_seconds"]) :
         nothing
@@ -1063,7 +1061,7 @@ function load_experiment_config(path::String)
     subdivision_max_leaves = haskey(sub, "max_leaves") ? Int(sub["max_leaves"]) : nothing
     subdivision_basis = haskey(sub, "basis") ? Symbol(sub["basis"]) : nothing
 
-    # Parse grid_scoring (optional, 0thk)
+    # Parse grid_scoring (optional)
     gs = get(d, "grid_scoring", Dict())
     grid_scoring_points_per_dim =
         haskey(gs, "points_per_dim") ? Int(gs["points_per_dim"]) : nothing
@@ -1082,7 +1080,7 @@ function load_experiment_config(path::String)
         nothing
     end
 
-    # Parse screening (optional, 20p7)
+    # Parse screening (optional)
     scr = get(d, "screening", Dict())
     screening_model_factory =
         haskey(scr, "model_factory") ? String(scr["model_factory"]) : nothing

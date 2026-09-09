@@ -134,7 +134,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
             path_stats_ref,
         )
         # Enrich the solve stats with the truncation facts known at this level
-        # (bead iirm): support size before/after sparsification.
+        #: support size before/after sparsification.
         if path_stats_ref !== nothing && path_stats_ref[] !== nothing
             path_stats_ref[] = merge(
                 path_stats_ref[],

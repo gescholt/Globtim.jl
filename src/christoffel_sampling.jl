@@ -2,9 +2,7 @@
 #
 # E1 — Christoffel-preconditioned random sampling + weighted LS for the
 # Cohen-Migliorati 2017 stability regime. Opt-in alternative to the default
-# tensor-grid + unweighted LS path. See:
-#   experiments/sandbox/e1_k_measurement.md
-#   /home/georgy/.claude/plans/quizzical-knitting-cake.md
+# tensor-grid + unweighted LS path.
 #
 # The Vandermonde used downstream (and the coefficient basis HC consumes)
 # is the *unnormalized* tensor-Chebyshev:  V[i,α] = ∏_k T_{α_k}(x_{i,k}).
@@ -34,7 +32,7 @@ function christoffel_kernel_chebyshev(
     max_deg = maximum(Λdata)
     # Per-axis Chebyshev table:  T_tab[k+1, i] = T_k(x_i)   (Julia 1-indexed).
     # Eltype follows the input — the old `Float64(x[i])` silently truncated
-    # Dual/BigFloat inputs inside a generic signature (audit P2, bead 0pld).
+    # Dual/BigFloat inputs inside a generic signature (audit P2).
     TT = promote_type(Float64, eltype(x))
     T_tab = Matrix{TT}(undef, max_deg + 1, n)
     @inbounds for i in 1:n

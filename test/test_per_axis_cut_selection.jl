@@ -2,13 +2,13 @@ using Test
 using Globtim
 using Globtim: Subdomain, estimate_subdomain_error, select_cut_dimension
 
-# Tests for bead 4vtd.5 — per-axis spectrum-based cut selection.
+# Tests for per-axis spectrum-based cut selection.
 # Phase 0 RED: `pick_cut_dim_spectrum` is not implemented yet, so every test
 # below must fail with UndefVarError (or `LoadError` wrapping one). Phase 1
 # GREEN will land the implementation in pkg/globtim/src/per_axis_cut_selection.jl
 # and turn these green.
 #
-# Hypothesis (per bead 4vtd.5): on anisotropic problems, picking the cut
+# Hypothesis  : on anisotropic problems, picking the cut
 # dimension by **slowest mode-spectrum decay along each axis** identifies the
 # offender axis more reliably than the current per-axis residual-variance
 # heuristic in `select_cut_dimension` (adaptive_subdivision.jl:413-482). The
@@ -31,7 +31,7 @@ function cheb_T(n::Int, t::Real)
     return Tn
 end
 
-@testset "pick_cut_dim_spectrum (4vtd.5)" begin
+@testset "pick_cut_dim_spectrum" begin
 
     @testset "Test 1: anisotropic slow-y → cut along y" begin
         # f = T_2(x) + T_12(y), fit deg 6. The x-direction is captured
@@ -75,7 +75,7 @@ end
     @testset "Test 4: isotropic high-shell → lowest-index tie-break" begin
         # Both axes have a T_12 contribution. Axis_total and (degenerate)
         # decay are equal across axes. The documented tie-break is lowest
-        # index — matching `decide_action`'s convention from bead 4vtd.3 so
+        # index — matching `decide_action`'s convention from so
         # the two predicates compose deterministically. Test pins the rule.
         f(x) = cheb_T(12, x[1]) + cheb_T(12, x[2])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])

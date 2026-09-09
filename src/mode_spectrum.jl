@@ -1,5 +1,5 @@
 # mode_spectrum.jl
-# Per-Chebyshev-mode residual decomposition for adaptive subdivision (bead dksx.0).
+# Per-Chebyshev-mode residual decomposition for adaptive subdivision.
 #
 # For a degree-d Chebyshev fit p of f on a leaf, the residual r = f - p has L2
 # norm decomposable mode-wise: ‖r‖² = Σ_α |c_α(f)|² over multi-indices α with
@@ -7,7 +7,7 @@
 # coefficients — a scalar. Keeping the per-mode vector preserves the same total
 # energy AND tells us *where* the error sits in mode space.
 #
-# Empirically (see bead `dksx` epic), ODE-error landscapes cluster near the same
+# Empirically, ODE-error landscapes cluster near the same
 # scalar fingerprint L2(d=6)/L2(d=4) ≈ 0.62 regardless of family or radius —
 # the scalar is uninformative within that cluster. The mode spectrum gives the
 # missing discriminative power: bump-friendly fits concentrate residual mass at
@@ -52,7 +52,7 @@ A `NamedTuple` with fields:
   modes with `|α|_∞ ∈ {base_degree+1, base_degree+2}`. HIGH (≥ θ) suggests
   the residual lives just above the cutoff — a degree bump should catch it.
   LOW (< θ) suggests the residual is spread across many shells in the visible
-  window. NOTE (dksx.0a finding): this metric alone is NOT a reliable
+  window. NOTE: this metric alone is NOT a reliable
   bump-vs-split discriminator — see `shell_decay` and `window_coverage`.
 - `shell_mass::Dict{Int,Float64}`: keys are `|α|_∞` shell indices in
   `(base_degree, extended_degree]`, values are summed η²-mass per shell.
@@ -63,7 +63,7 @@ A `NamedTuple` with fields:
   `NaN` if either shell is empty (e.g. functions with even-only symmetry
   produce `m(d+1) = m(d+3) = 0` — `shell_decay` between d+2 and d+4 stays
   defined, but `m(d+1)/m(d+2)` would not).
-  DEPRECATED (bead 4vtd.1): comparing two fixed shells NaNs or reads roundoff
+  DEPRECATED: comparing two fixed shells NaNs or reads roundoff
   garbage on single-parity residuals; prefer [`shell_decay_parity`](@ref),
   which `pick_strategy` now consumes. Kept for one release cycle.
 - `window_coverage::Float64`: `Σ η_α² / rel_l2_squared` if `rel_l2_squared`
@@ -75,9 +75,9 @@ A `NamedTuple` with fields:
   one), so this ratio is a relative comparison across leaves rather than a
   strict orthonormal energy fraction. Concretely it under-counts each mode's
   sample energy by `2^(#zero components of α)` — a dimension- and sparsity-
-  dependent factor. DEPRECATED (bead 4vtd.2): prefer `window_coverage_sample`.
-- `window_coverage_sample::Float64`: Parseval-true in-window energy fraction
-  (bead 4vtd.2), computed from the residual AT THE CACHED SAMPLES with no
+  dependent factor. DEPRECATED: prefer `window_coverage_sample`.
+- `window_coverage_sample::Float64`: Parseval-true in-window energy fraction,
+  computed from the residual AT THE CACHED SAMPLES with no
   unit mixing: `1 - ‖f - p_ext‖² / ‖f - p‖²` (Euclidean over the sample
   grid), where `p` is the existing base fit and `p_ext` the extended-window
   LS re-fit. Base span ⊆ extended span makes this exact Pythagoras, so the
@@ -215,7 +215,7 @@ function compute_mode_spectrum(
         total_mass_sq / Float64(rel_l2_squared)
     end
 
-    # Sample-based (Parseval-true) window coverage (bead 4vtd.2): the fraction
+    # Sample-based (Parseval-true) window coverage: the fraction
     # of the base-fit residual's SAMPLE energy that the extended-window re-fit
     # absorbs. Both fits are LS projections onto nested spans, so Pythagoras
     # ‖f-p‖² = ‖f-p_ext‖² + ‖p_ext-p‖² holds exactly in the Euclidean sample
@@ -275,7 +275,7 @@ their legacy all-`:bump` fallbacks, so calling any spectrum-accepting
 predicate on this result matches calling its `Subdomain` method directly.
 
 This is the single-compute entry point for callers that consult several
-predicates per leaf (bead 8f4p.5.1 DR-INSTR): compute once here, then pass
+predicates per leaf: compute once here, then pass
 the result to `pick_strategy`, `pick_strategy_per_axis`,
 `pick_strategy_per_axis_lsfit`, and `axis_shell_stats`.
 """
@@ -297,7 +297,7 @@ end
                        rtol_shell::Real = 1e-9, atol_total::Real = 1e-12)
     shell_decay_parity(spec::NamedTuple; ...)
 
-Parity-stratified shell-decay rate (bead 4vtd.1): fit `m(s) ∝ λ^s` by least
+Parity-stratified shell-decay rate: fit `m(s) ∝ λ^s` by least
 squares on `log m(s)` vs `s` SEPARATELY over the even and the odd shells, so
 single-parity residuals (even-symmetric functions like Ackley/Griewank
 populate even shells only) get a finite rate instead of the NaN / roundoff
@@ -406,7 +406,7 @@ Returns a length-`n_dim` vector of NamedTuples with fields:
 - `shell_mass::Dict{Int,Float64}` — η²-mass per shell `s = |α|_∞` on axis k
 - `total::Float64` — total restricted η²-mass (the `axis_mass_floor` gate input)
 - `concentration::Float64` — `(m(d+1) + m(d+2)) / total`, `NaN` when `total == 0`
-- `decay::Float64` — 2-pt `0.5·log(m(d+2)/m(d+4))` with the 4vtd.3 noise-floor
+- `decay::Float64` — 2-pt `0.5·log(m(d+2)/m(d+4))` with the noise-floor
   guard (shells d+2, d+4 must jointly carry ≥ 1e-3 of the axis mass); `NaN`
   when undefined
 

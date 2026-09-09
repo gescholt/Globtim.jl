@@ -4,7 +4,7 @@ using Globtim:
     Subdomain, estimate_subdomain_error, compute_mode_spectrum, shell_decay_parity,
     pick_strategy
 
-# Tests for parity-stratified shell decay (bead 4vtd.1).
+# Tests for parity-stratified shell decay.
 #
 # The single-ratio `shell_decay = 0.5·log(m(d+2)/m(d+4))` compares two FIXED
 # shells, so it NaNs (shell absent) or returns roundoff garbage (shell present
@@ -16,7 +16,7 @@ using Globtim:
 # by arithmetic mean in log-rate space (= geometric mean of the multiplicative
 # per-shell factors λ).
 
-@testset "shell_decay_parity (4vtd.1)" begin
+@testset "shell_decay_parity" begin
 
     # ---------------------------------------------------------------------
     # Closed-form unit tests on synthetic shell_mass dictionaries: exact
@@ -85,7 +85,7 @@ using Globtim:
     end
 
     @testset "empty residual (perfect fit): sentinel is +Inf, not NaN" begin
-        # SENTINEL SPEC (bead 4vtd.1 test 4): all-zero shell mass means the
+        # SENTINEL SPEC: all-zero shell mass means the
         # residual has already decayed away — "no signal" is encoded as
         # decay = +Inf (comparison-safe: any θ_decay threshold reads it as
         # maximally bump-friendly, which is vacuously right on a converged
@@ -106,7 +106,7 @@ using Globtim:
     end
 
     # ---------------------------------------------------------------------
-    # Real fits: the failure mode this bead exists for, end to end.
+    # Real fits: the failure mode this metric exists for, end to end.
     # ---------------------------------------------------------------------
 
     @testset "even-symmetric residual: old scalar NaN, parity fit finite" begin
@@ -134,7 +134,7 @@ using Globtim:
         # Both parities planted at the SAME ratio-100 rate (base 4, window
         # (4,8]): T₅+0.1T₇ (odd) + 0.5T₆+0.05T₈ (even). The old scalar reads
         # the even pair; combined averages two equal rates ⇒ must agree with
-        # the old scalar within 10% (bead sanity condition).
+        # the old scalar within 10% (sanity condition).
         T5(t) = 16t^5 - 20t^3 + 5t
         T6(t) = 32t^6 - 48t^4 + 18t^2 - 1
         T7(t) = 64t^7 - 112t^5 + 56t^3 - 7t
@@ -189,7 +189,7 @@ using Globtim:
             shell_mass = Dict(6 => 0.5, 8 => 0.01),
             shell_decay = NaN,                     # what the old scalar said
             window_coverage = 0.15,
-            window_coverage_sample = 0.85,         # gate quiet (4vtd.2)
+            window_coverage_sample = 0.85,         # gate quiet
             base_degree = 4,
             extended_degree = 8,
         )
@@ -211,7 +211,7 @@ using Globtim:
             shell_mass = Dict(6 => 0.1, 8 => 0.5),
             shell_decay = NaN,
             window_coverage = 0.15,
-            window_coverage_sample = 0.85,         # gate quiet (4vtd.2)
+            window_coverage_sample = 0.85,         # gate quiet
             base_degree = 4,
             extended_degree = 8,
         )

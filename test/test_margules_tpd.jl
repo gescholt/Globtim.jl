@@ -1,4 +1,4 @@
-# MargulesTPD — closed-form thermodynamic phase-stability fixture (bead 3ztw.1)
+# MargulesTPD — closed-form thermodynamic phase-stability fixture
 #
 # Two-suffix Margules binary TPD in the logit chart. This is Globtim's
 # Clapeyron-free stand-in for the TPD problem family: three known stationary

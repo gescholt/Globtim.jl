@@ -53,7 +53,7 @@ struct ExperimentParams
     truncation_threshold::Union{Nothing,Float64}
     truncation_mode::Symbol
 
-    # Cluster timeout protection (dljm)
+    # Cluster timeout protection
     degree_timeout_seconds::Union{Nothing,Float64}  # per-degree wall-clock limit
     msolve_timeout_seconds::Union{Nothing,Float64}  # per-msolve-call process limit
 

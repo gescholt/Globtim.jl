@@ -1,6 +1,6 @@
 """
 Test suite for the cap-aware `decide_action` / `decide_action_lsfit` methods
-(bead 8f4p.5.4).
+
 
 The rule under test: at `degree == max_degree` a `:bump` verdict cannot bump —
 `adaptive_refine` falls through to the split path and chooses the axis with
@@ -19,7 +19,7 @@ using Globtim: decide_action, decide_action_lsfit, LSFitAxisResult
 _stat(total, decay) =
     (shell_mass = Dict{Int,Float64}(), total = total, concentration = NaN, decay = decay)
 
-@testset "cap-aware decide_action (8f4p.5.4)" begin
+@testset "cap-aware decide_action" begin
     @testset "below the cap — identical to the verdicts-only method" begin
         for verdicts in ([:bump, :bump, :bump], [:bump, :split, :bump], [:split, :split])
             stats = [_stat(1.0, 0.5) for _ in verdicts]

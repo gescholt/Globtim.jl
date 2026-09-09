@@ -1,4 +1,4 @@
-# Sparse/least-squares sampling front-end (bead 4hs0): degree decoupled from the tensor
+# Sparse/least-squares sampling front-end: degree decoupled from the tensor
 # grid. A total-degree-d fit from ~oversample·binom(d+n,n) scattered points instead of
 # (d+1)^n tensor points, routed through lambda_vandermonde_original and Monte-Carlo
 # quadrature for nrm.

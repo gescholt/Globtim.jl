@@ -1,4 +1,4 @@
-# Tests for the [grid_scoring] (bead 0thk) and [screening] (bead 20p7) TOML
+# Tests for the [grid_scoring] and [screening] TOML
 # sections added to ExperimentPipelineConfig. Pure config-loader tests — no
 # heavy dependencies, no precompilation cost beyond the parser.
 
@@ -24,7 +24,7 @@ function _write_tmp(toml_body::String)
     return path
 end
 
-@testset "[grid_scoring] section (bead 0thk)" begin
+@testset "[grid_scoring] section" begin
     @testset "all fields parse" begin
         body = _MIN_TOML * """
         [grid_scoring]
@@ -94,7 +94,7 @@ end
     end
 end
 
-@testset "[screening] section (bead 20p7)" begin
+@testset "[screening] section" begin
     @testset "all fields parse" begin
         body = _MIN_TOML * """
         [screening]

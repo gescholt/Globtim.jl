@@ -210,15 +210,15 @@ end
 Correct value for an `ApproxPoly`'s `normalized` field, determined ENTIRELY by `basis`. The
 Vandermonde's normalization depends only on `basis` (`lambda_vandermonde` takes no `normalized`
 argument), so the caller's `normalized` request never affects which basis the fitted coefficients
-live in — coupling the stored flag to that request is precisely what bugs 7vug/fp0b were.
+live in — coupling the stored flag to that request is precisely what the two bugs below were.
 
-**Bug 7vug (Chebyshev).** `lambda_vandermonde` builds the Chebyshev Vandermonde in the *plain* `T_n`
+**Chebyshev.** `lambda_vandermonde` builds the Chebyshev Vandermonde in the *plain* `T_n`
 basis (`T_0=1, T_1=x, T_n=2xT_{n-1}-T_{n-2}` — no `√(2/π)` weights), so a Chebyshev fit's stored
 `coeffs` are **plain-`T_n` coefficients** (`p = Σ cⱼ Tⱼ`). But `evaluate`, the HC solve
 (`solve_polynomial_system` → `symbolic_chebyshev(normalized)`), and `to_exact_monomial_basis` apply
 the `√(2/π)` weights when `normalized=true` — reconstructing a *different* polynomial. ⇒ store `false`.
 
-**Bug fp0b (Legendre).** The Legendre Vandermonde ALWAYS normalizes (orthonormal Legendre), so a
+**Legendre.** The Legendre Vandermonde ALWAYS normalizes (orthonormal Legendre), so a
 Legendre fit's `coeffs` are **normalized-Legendre** and every reconstruction path must use
 `normalized=true`. Previously this field passed the caller's request through, so a default
 `Constructor(...; basis=:legendre)` (`normalized=false`) stored an inconsistent flag and every solve

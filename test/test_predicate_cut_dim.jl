@@ -1,6 +1,6 @@
 """
 Test suite for the predicate → cut-axis channel in `adaptive_refine`
-(bead 8f4p.5.4).
+
 
 Before this, a predicate could only return an action Symbol; the split axis was
 always chosen by `select_cut_dimension`, which never sees per-axis evidence. So
@@ -15,7 +15,7 @@ both the new behaviour and the backward compatibility of the Symbol contract.
 using Test
 using Globtim
 
-@testset "predicate cut-dim channel (8f4p.5.4)" begin
+@testset "predicate cut-dim channel" begin
 
     # Anisotropic Runge-type function. It must NOT be polynomial: a degree-4 fit
     # of a low-order polynomial is near-exact, the leaf converges on the L2 gate

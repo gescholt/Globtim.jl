@@ -8,9 +8,9 @@ using Globtim:
     adaptive_refine,
     SubdivisionTree
 
-# Tests for the bump-vs-split predicate API (bead ehaj.1).
+# Tests for the bump-vs-split predicate API.
 
-@testset "pick_strategy + default_bump (ehaj.1)" begin
+@testset "pick_strategy + default_bump" begin
     @testset "default_bump always returns :bump" begin
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         @test default_bump(sd) === :bump
@@ -45,7 +45,7 @@ using Globtim:
     end
 
     @testset "Stagnant T_6+T_8 → :split (m(d+4) > m(d+2), low conc.)" begin
-        # Bead dksx.0a "ackley pattern": shell_decay < 0 even with both shells
+        # The "ackley pattern": shell_decay < 0 even with both shells
         # populated. Concentration is m(d+2)/(m(d+2)+m(d+4)) = 0.25/1.25 = 0.2,
         # below θ=0.5. Both signals say :split.
         T6(t) = 32t^6 - 48t^4 + 18t^2 - 1
@@ -56,7 +56,7 @@ using Globtim:
         @test pick_strategy(sd) === :split
     end
 
-    @testset "Full-coverage guard (ehaj.5 v3): cov≈1 flips :split to :bump" begin
+    @testset "Full-coverage guard (v3): cov≈1 flips :split to :bump" begin
         # T_8 leaf: both bump signals say :split (see the T_8 testset above),
         # but its residual energy sits entirely inside the extended window, so
         # window_coverage_sample ≈ 1. With the guard armed at 0.99 the leaf
@@ -76,7 +76,7 @@ using Globtim:
     @testset "Coverage gate: low coverage forces :split (griewank pattern)" begin
         # Force the coverage axis to dominate by setting θ_coverage above the
         # leaf's measured window_coverage. Even with concentration=1, the
-        # coverage gate fires first → :split. This is the dksx.0a "griewank
+        # coverage gate fires first → :split. This is the "griewank
         # pattern" — high concentration but residual tail outside window.
         T5(t) = 16t^5 - 20t^3 + 5t
         f(x) = T5(x[1])
@@ -110,8 +110,8 @@ using Globtim:
         @test pick_strategy(sd) === :bump
     end
 
-    @testset "v2 stagnation conjunct (ehaj.6): gate needs rel_l2 far from tol" begin
-        # Hand-built spectrum reproducing the ehaj.2 deuflhard misfire: low
+    @testset "v2 stagnation conjunct: gate needs rel_l2 far from tol" begin
+        # Hand-built spectrum reproducing the deuflhard misfire: low
         # window_coverage with a strongly bump-positive spectrum. The gate must
         # fire only when the leaf is genuinely far from converged.
         spec = (
@@ -134,7 +134,7 @@ using Globtim:
         @test pick_strategy(spec) === :split
     end
 
-    @testset "v2 thresholds separate stagnant from bump-friendly (ehaj.2 traces)" begin
+    @testset "v2 thresholds separate stagnant from bump-friendly (A/B traces)" begin
         base = (
             spectrum = [1.0],
             modes = [5 0],
