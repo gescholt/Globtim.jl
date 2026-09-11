@@ -6,7 +6,7 @@
 [![version](https://juliahub.com/docs/General/Globtim/stable/version.svg)](https://juliahub.com/ui/Packages/General/Globtim)
 [![pkgeval](https://juliahub.com/docs/General/Globtim/stable/pkgeval.svg)](https://juliahub.com/ui/Packages/General/Globtim)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![DOI](https://img.shields.io/badge/DOI-10.1007%2Fs00498--026--00441--3-blue.svg)](https://doi.org/10.1007/s00498-026-00441-3)
 
 Finding all local minima of a continuous function over a bounded domain is fundamentally hard. Standard optimization algorithms (gradient descent, BFGS, etc.) find *one* local minimum from a given starting point — but how do you know there isn't a better one elsewhere?
@@ -207,4 +207,4 @@ Globtim.jl/
 
 ## License
 
-GPL-3.0
+MIT
