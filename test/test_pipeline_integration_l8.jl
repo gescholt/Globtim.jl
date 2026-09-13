@@ -241,12 +241,16 @@ _match(pt, target; tol = 1e-6) = norm(pt .- target) < tol
         fine = _pipeline(_EXACT_DEGREE; tol_dist = 0.025)
         @test nrow(fine.minimizers) == 4
 
-        # The four minima sit at (±1/√2, ±1/√2), so their nearest-neighbour
-        # separation is 2/√2 = 1.414. Measured: tol_dist 1.0 still resolves all
-        # four, tol_dist 2.0 collapses them to one — the boundary falls exactly
-        # where the geometry says it should. Asserted as equalities rather than a
-        # weak `<=`, which would pass even if dedup did nothing.
+        # The four minima sit at (±1/√2, ±1/√2), so the two distinct pairwise
+        # separations are 2/√2 = 1.414 (adjacent) and exactly 2.0 (diagonal).
+        # tol_dist 1.0 is strictly below both and resolves all four; 2.5 is
+        # strictly above both and collapses them to one. Do NOT assert at
+        # tol_dist = 2.0: that is the diagonal separation exactly, so the
+        # comparison is a floating-point tie on coordinates recovered from a
+        # solve, and it lands differently per platform — it merged on Linux and
+        # left 2 clusters on macOS. Asserted as equalities rather than a weak
+        # `<=`, which would pass even if dedup did nothing.
         @test nrow(_pipeline(_EXACT_DEGREE; tol_dist = 1.0).minimizers) == 4
-        @test nrow(_pipeline(_EXACT_DEGREE; tol_dist = 2.0).minimizers) == 1
+        @test nrow(_pipeline(_EXACT_DEGREE; tol_dist = 2.5).minimizers) == 1
     end
 end
