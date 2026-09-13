@@ -1,7 +1,7 @@
 # Globtim.jl Documentation
 
 [![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/gescholt/Globtim.jl/blob/main/LICENSE)
 
 **Global optimization of continuous functions via polynomial approximation**
 
