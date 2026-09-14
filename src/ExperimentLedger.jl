@@ -33,7 +33,14 @@ Walk up from `start` to the enclosing git repository root, or `nothing`.
 function find_repo_root(start::AbstractString)
     dir = abspath(start)
     while true
-        isdir(joinpath(dir, ".git")) && return dir
+        # `ispath`, not `isdir`: in a git WORKTREE (and in a submodule) `.git` is a
+        # FILE containing "gitdir: ...", not a directory. Testing isdir walked
+        # straight past a worktree root, so find_repo_root returned nothing and
+        # _git_state fell back to code_sha "unknown" — silently stripping the
+        # commit from every ledger record emitted from a worktree, which is the
+        # isolation pattern this repo recommends for cluster and agent runs. Cost
+        # two real cluster records (GLV tier B/C, 2026-09-14) their citability.
+        ispath(joinpath(dir, ".git")) && return dir
         parent = dirname(dir)
         parent == dir && return nothing
         dir = parent

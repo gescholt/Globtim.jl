@@ -85,3 +85,31 @@ end
         )
     end
 end
+
+@testset "find_repo_root accepts a worktree/submodule .git FILE" begin
+    # In a git worktree (and a submodule) `.git` is a FILE containing
+    # "gitdir: ...", not a directory. An isdir test walked past such a root and
+    # find_repo_root returned nothing, so _git_state fell back to code_sha
+    # "unknown" — silently stripping the commit from every ledger record emitted
+    # from a worktree, which is how cluster and agent runs are isolated here.
+    mktempdir() do root
+        nested = joinpath(root, "a", "b")
+        mkpath(nested)
+
+        # no .git anywhere above: genuinely not a repo
+        @test Globtim.ExperimentLedger.find_repo_root(nested) === nothing
+
+        # .git as a FILE (worktree/submodule layout) must be recognised
+        write(joinpath(root, ".git"), "gitdir: /somewhere/.git/worktrees/wt\n")
+        @test Globtim.ExperimentLedger.find_repo_root(nested) in (abspath(root), realpath(root))
+        @test Globtim.ExperimentLedger.find_repo_root(root) in (abspath(root), realpath(root))
+    end
+
+    # .git as a DIRECTORY (ordinary clone) keeps working
+    mktempdir() do root
+        nested = joinpath(root, "x")
+        mkpath(nested)
+        mkpath(joinpath(root, ".git"))
+        @test Globtim.ExperimentLedger.find_repo_root(nested) in (abspath(root), realpath(root))
+    end
+end
