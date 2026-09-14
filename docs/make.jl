@@ -46,6 +46,16 @@ makedocs(
         "Exact Conversion" => "exact_conversion.md",
         "Grid Formats" => "grid_formats.md",
         "Precision" => "precision_parameters.md",
+        # Ported from the DynamicObjectives.jl docs so the ODE parameter-estimation
+        # story lives next to the algorithm it constrains. Prose only -- no @docs or
+        # @example blocks -- so the docs environment stays Globtim-only and this
+        # section still builds on the public Globtim.jl mirror. DynamicObjectives'
+        # docstring-level API reference stays on its own site.
+        "ODE Parameter Estimation" => [
+            "ode_parameter_estimation.md",
+            "model_catalog.md",
+            "glued_objectives.md",
+        ],
         "API Reference" => "api_reference.md",
     ],
     checkdocs = :none,

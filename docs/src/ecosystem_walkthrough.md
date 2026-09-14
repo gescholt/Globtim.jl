@@ -51,6 +51,9 @@ my_objective(x) = (x[1]^2 - 1)^2 + (x[2]^2 - 1)^2 + 0.1 * sin(10 * x[1] * x[2])
     [DynamicObjectives.jl](https://github.com/gescholt/DynamicObjectives.jl) supplies a
     catalogue of ODE-based objective functions — parameter-estimation landscapes from
     dynamical-systems models — that drop into the workflow below in place of `my_objective`.
+    Those 29 models are documented here under
+    [ODE Parameter Estimation](ode_parameter_estimation.md), with the full
+    [Model Catalog](model_catalog.md).
 
 ## Step 2 — globtim finds the critical points
 

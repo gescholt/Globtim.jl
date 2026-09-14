@@ -68,7 +68,7 @@ Globtim is the core of a family of packages spanning objective generation, optim
 | Package | Role | Documentation |
 |:--------|:-----|:--------------|
 | **Globtim** | Core: polynomial approximation + all-critical-point finding | you are here — [repo](https://github.com/gescholt/Globtim.jl) |
-| **[DynamicObjectives](https://github.com/gescholt/DynamicObjectives.jl)** | ODE-based objective functions + model catalogue (inputs to Globtim) | [repo & docs](https://github.com/gescholt/DynamicObjectives.jl) |
+| **[DynamicObjectives](https://github.com/gescholt/DynamicObjectives.jl)** | ODE-based objective functions + model catalogue (inputs to Globtim) | [ODE Parameter Estimation](ode_parameter_estimation.md) (here) · [repo](https://github.com/gescholt/DynamicObjectives.jl) |
 | **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery, campaign analysis | [repo & docs](https://github.com/gescholt/GlobtimPostProcessing.jl) |
 | **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie / GLMakie / WGLMakie) | [repo & docs](https://github.com/gescholt/GlobtimPlots.jl) |
 
@@ -76,7 +76,7 @@ Globtim is the core of a family of packages spanning objective generation, optim
 DynamicObjectives (objectives) --> Globtim (optimize) --> GlobtimPostProcessing (analyze) --> GlobtimPlots (visualize)
 ```
 
-See the [Ecosystem Walkthrough](ecosystem_walkthrough.md) for one objective carried end-to-end across the family. GlobtimPostProcessing is registered; GlobtimPlots and DynamicObjectives install from their repositories until they are:
+See the [Ecosystem Walkthrough](ecosystem_walkthrough.md) for one objective carried end-to-end across the family, and [ODE Parameter Estimation](ode_parameter_estimation.md) for the DynamicObjectives model catalogue documented in full here. GlobtimPostProcessing is registered; GlobtimPlots and DynamicObjectives install from their repositories until they are:
 ```julia
 pkg> add GlobtimPostProcessing
 pkg> add https://github.com/gescholt/GlobtimPlots.jl
