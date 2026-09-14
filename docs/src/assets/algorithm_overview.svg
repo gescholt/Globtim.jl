@@ -101,6 +101,6 @@
     over leaves of an adaptive partition, then aggregate Phase 2/3 results across all leaves.
   </text>
   <text x="540" y="332" class="data" text-anchor="middle">
-    See docs/SUBDIVISION_STRATEGIES.md for partition-level extensions.
+    See docs/howto/subdivision.md for partition-level extensions.
   </text>
 </svg>
