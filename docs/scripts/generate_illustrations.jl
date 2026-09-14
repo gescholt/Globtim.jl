@@ -38,10 +38,26 @@ const OUTPUT_DIR = joinpath(@__DIR__, "..", "src", "assets", "plots")
 mkpath(OUTPUT_DIR)
 
 """
+    save_figure(stem, fig; px_per_unit = 2)
+
+Write `fig` to `OUTPUT_DIR/<stem>.pdf` and `OUTPUT_DIR/<stem>.png`, returning the PDF
+path. Both formats are required: the PDF is what the paper includes, the PNG is what
+Markdown renders — `docs/src/examples.md`, the docs front door and the public README
+all embed PNGs, and a PDF-only figure silently leaves them with a dead image.
+"""
+function save_figure(stem::AbstractString, fig; px_per_unit = 2)
+    pdf_path = joinpath(OUTPUT_DIR, stem * ".pdf")
+    png_path = joinpath(OUTPUT_DIR, stem * ".png")
+    save(pdf_path, fig)
+    save(png_path, fig; px_per_unit = px_per_unit)
+    return pdf_path
+end
+
+"""
     generate_grid_comparison()
 
 Generate side-by-side comparison of isotropic vs anisotropic grids.
-Saves to: docs/src/assets/plots/grid_comparison.pdf
+Saves to: docs/src/assets/plots/grid_comparison.{pdf,png}
 """
 function generate_grid_comparison()
     fig = Figure(size = (900, 400), fontsize = 14)
@@ -75,8 +91,7 @@ function generate_grid_comparison()
     ys_aniso = [y for _ in nodes_x for y in nodes_y]
     scatter!(ax2, xs_aniso, ys_aniso, markersize = 8, color = :coral)
 
-    outpath = joinpath(OUTPUT_DIR, "grid_comparison.pdf")
-    save(outpath, fig)
+    outpath = save_figure("grid_comparison", fig)
     @info "Saved grid comparison" path = outpath
     return fig
 end
@@ -86,7 +101,7 @@ end
 
 Generate heatmap showing a multiscale function that benefits from anisotropic grids.
 Shows why x-direction needs more points than y-direction.
-Saves to: docs/src/assets/plots/multiscale_function.pdf
+Saves to: docs/src/assets/plots/multiscale_function.{pdf,png}
 """
 function generate_multiscale_heatmap()
     fig = Figure(size = (700, 500), fontsize = 14)
@@ -120,8 +135,7 @@ function generate_multiscale_heatmap()
         align = (:left, :bottom),
     )
 
-    outpath = joinpath(OUTPUT_DIR, "multiscale_function.pdf")
-    save(outpath, fig)
+    outpath = save_figure("multiscale_function", fig)
     @info "Saved multiscale heatmap" path = outpath
     return fig
 end
@@ -130,7 +144,7 @@ end
     generate_critical_point_example()
 
 Generate example showing critical points on a 2D function surface.
-Saves to: docs/src/assets/plots/critical_points_example.pdf
+Saves to: docs/src/assets/plots/critical_points_example.{pdf,png}
 """
 function generate_critical_point_example()
     fig = Figure(size = (800, 400), fontsize = 14)
@@ -197,8 +211,7 @@ function generate_critical_point_example()
 
     surface!(ax2, xs, ys, zs, colormap = :viridis, alpha = 0.8, rasterize = 5)
 
-    outpath = joinpath(OUTPUT_DIR, "critical_points_example.pdf")
-    save(outpath, fig)
+    outpath = save_figure("critical_points_example", fig)
     @info "Saved critical points example" path = outpath
     return fig
 end
@@ -216,7 +229,7 @@ end
     generate_hero_step1()
 
 Generate Step 1 of hero illustration: Sample the original function.
-Saves to: docs/src/assets/plots/hero_step1_sample.pdf
+Saves to: docs/src/assets/plots/hero_step1_sample.{pdf,png}
 """
 function generate_hero_step1()
     xs, ys, zs = _hero_data()
@@ -240,8 +253,7 @@ function generate_hero_step1()
         color = :white,
     )
 
-    outpath = joinpath(OUTPUT_DIR, "hero_step1_sample.pdf")
-    save(outpath, fig)
+    outpath = save_figure("hero_step1_sample", fig)
     @info "Saved hero step 1" path = outpath
     return fig
 end
@@ -250,7 +262,7 @@ end
     generate_hero_step2()
 
 Generate Step 2 of hero illustration: Polynomial approximation with sampling grid.
-Saves to: docs/src/assets/plots/hero_step2_polynomial.pdf
+Saves to: docs/src/assets/plots/hero_step2_polynomial.{pdf,png}
 """
 function generate_hero_step2()
     xs, ys, zs = _hero_data()
@@ -281,8 +293,7 @@ function generate_hero_step2()
         color = :white,
     )
 
-    outpath = joinpath(OUTPUT_DIR, "hero_step2_polynomial.pdf")
-    save(outpath, fig)
+    outpath = save_figure("hero_step2_polynomial", fig)
     @info "Saved hero step 2" path = outpath
     return fig
 end
@@ -291,7 +302,7 @@ end
     generate_hero_step3()
 
 Generate Step 3 of hero illustration: Find all critical points/minima.
-Saves to: docs/src/assets/plots/hero_step3_minima.pdf
+Saves to: docs/src/assets/plots/hero_step3_minima.{pdf,png}
 """
 function generate_hero_step3()
     xs, ys, zs = _hero_data()
@@ -334,8 +345,7 @@ function generate_hero_step3()
         color = :black,
     )
 
-    outpath = joinpath(OUTPUT_DIR, "hero_step3_minima.pdf")
-    save(outpath, fig)
+    outpath = save_figure("hero_step3_minima", fig)
     @info "Saved hero step 3" path = outpath n_critical_points = nrow(df)
     return fig
 end
@@ -345,7 +355,7 @@ end
 
 Generate Deuflhard function illustration (level sets + 3D surface).
 Uses actual Globtim Deuflhard function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/deuflhard.pdf
+Saves to: docs/src/assets/plots/deuflhard.{pdf,png}
 """
 function generate_deuflhard()
     fig = Figure(size = (1000, 450), fontsize = 14)
@@ -400,8 +410,7 @@ function generate_deuflhard()
 
     surface!(ax2, xs, ys, zs, colormap = :viridis, rasterize = 5)
 
-    outpath = joinpath(OUTPUT_DIR, "deuflhard.pdf")
-    save(outpath, fig)
+    outpath = save_figure("deuflhard", fig)
     @info "Saved Deuflhard illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
@@ -411,7 +420,7 @@ end
 
 Generate Holder Table function illustration (level sets + 3D surface).
 Uses actual Globtim HolderTable function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/holder_table.pdf
+Saves to: docs/src/assets/plots/holder_table.{pdf,png}
 """
 function generate_holder_table()
     fig = Figure(size = (1000, 450), fontsize = 14)
@@ -466,8 +475,7 @@ function generate_holder_table()
 
     surface!(ax2, xs, ys, zs, colormap = :viridis, rasterize = 5)
 
-    outpath = joinpath(OUTPUT_DIR, "holder_table.pdf")
-    save(outpath, fig)
+    outpath = save_figure("holder_table", fig)
     @info "Saved Holder Table illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
@@ -477,7 +485,7 @@ end
 
 Generate Beale function illustration (level sets + 3D surface).
 Uses actual Globtim Beale function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/beale.pdf
+Saves to: docs/src/assets/plots/beale.{pdf,png}
 """
 function generate_beale()
     fig = Figure(size = (1000, 450), fontsize = 14)
@@ -532,8 +540,7 @@ function generate_beale()
 
     surface!(ax2, xs, ys, log10.(zs .+ 1), colormap = :viridis, rasterize = 5)
 
-    outpath = joinpath(OUTPUT_DIR, "beale.pdf")
-    save(outpath, fig)
+    outpath = save_figure("beale", fig)
     @info "Saved Beale illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
@@ -543,7 +550,7 @@ end
 
 Generate Branin function illustration (level sets + 3D surface).
 Uses actual Globtim Branin function and runs Globtim to find critical points.
-Saves to: docs/src/assets/plots/branin.pdf
+Saves to: docs/src/assets/plots/branin.{pdf,png}
 """
 function generate_branin()
     fig = Figure(size = (1000, 450), fontsize = 14)
@@ -602,8 +609,7 @@ function generate_branin()
 
     surface!(ax2, xs, ys, zs, colormap = :viridis, rasterize = 5)
 
-    outpath = joinpath(OUTPUT_DIR, "branin.pdf")
-    save(outpath, fig)
+    outpath = save_figure("branin", fig)
     @info "Saved Branin illustration" path = outpath n_critical_points = nrow(df)
     return fig
 end
