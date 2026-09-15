@@ -43,6 +43,7 @@ Examples/**/*.pdf
 !docs/src/assets/*.png
 !docs/src/assets/*.svg
 !docs/src/assets/plots/*.png
+!docs/src/assets/showcase/*.png
 
 # Data outputs
 data/figures/
