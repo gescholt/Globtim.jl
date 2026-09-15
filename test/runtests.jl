@@ -288,6 +288,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_per_axis_cut_selection.jl") do
     include("test_per_axis_cut_selection.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_cut_selection_scattered.jl") do
+    include("test_cut_selection_scattered.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_eval_count.jl") do
     include("test_subdivision_eval_count.jl")
 end

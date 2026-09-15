@@ -568,6 +568,9 @@ function select_cut_dimension(subdomain::Subdomain)
     # Score: mean variance of residuals along dimension d (keeping other dims fixed)
     # High variance = function varies unpredictably in that direction = good cut candidate
     dim_scores = zeros(n_dim)
+    # Whether any 1-D slice (points sharing every other coordinate) had two or more
+    # points. Only a tensor design has such slices; see the scattered branch below.
+    saw_slice = false
 
     for d in 1:n_dim
         # Get unique coordinates in dimension d
@@ -587,6 +590,7 @@ function select_cut_dimension(subdomain::Subdomain)
                 mask = isapprox.(subdomain.samples[:, other_d], other_val)
                 if sum(mask) > 1  # Need at least 2 points for variance
                     push!(vars, var(residuals[mask]))
+                    saw_slice = true
                 end
             end
             dim_scores[d] = isempty(vars) ? 0.0 : mean(vars)
@@ -612,10 +616,38 @@ function select_cut_dimension(subdomain::Subdomain)
             for indices in values(groups)
                 if length(indices) > 1
                     push!(vars, var(residuals[indices]))
+                    saw_slice = true
                 end
             end
             dim_scores[d] = isempty(vars) ? 0.0 : mean(vars)
         end
+    end
+
+    # SCATTERED DESIGNS (christoffel sampling, or any non-tensor sample set): no two
+    # points share their other coordinates, so every group above is a singleton, every
+    # score is 0.0 and `argmax` returns axis 1 unconditionally. A tree then bisects
+    # axis 1 at every level and its leaf error never falls: korok 975743 (bead 0lhz.3)
+    # ended with 512 depth-9 leaves of half-widths (0.0016, 0.9, 0.8, 0.9), all at the
+    # root box's error, while the same sampler on cubic boxes converges like the tensor
+    # grid does. The scattered analogue of "variance of the residual along d with the
+    # other coordinates fixed" is the variance of the residual's bin means along d: a
+    # residual that varies systematically along d changes its mean from bin to bin; one
+    # that varies only along other axes averages out within every bin. Tensor designs
+    # never reach this branch, so their cut choices are unchanged.
+    if !saw_slice
+        n = length(residuals)
+        nb = clamp(n ÷ 8, 2, 16)
+        for d in 1:n_dim
+            order = sortperm(view(subdomain.samples, :, d))
+            means = Float64[]
+            for b in 1:nb
+                lo = (b - 1) * n ÷ nb + 1
+                hi = b * n ÷ nb
+                hi >= lo && push!(means, mean(residuals[order[lo:hi]]))
+            end
+            dim_scores[d] = length(means) > 1 ? var(means) : 0.0
+        end
+        @debug "select_cut_dimension: scattered design, binned directional scores" nb dim_scores
     end
 
     # Return dimension with highest score
