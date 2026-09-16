@@ -70,7 +70,7 @@ Globtim is the core of a family of packages spanning objective generation, optim
 | **Globtim** | Core: polynomial approximation + all-critical-point finding | you are here — [repo](https://github.com/gescholt/Globtim.jl) |
 | **[DynamicObjectives](https://github.com/gescholt/DynamicObjectives.jl)** | ODE-based objective functions + model catalogue (inputs to Globtim) | [ODE Parameter Estimation](ode_parameter_estimation.md) (here) · [repo](https://github.com/gescholt/DynamicObjectives.jl) |
 | **[GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl)** | Refinement, validation, parameter recovery, campaign analysis | [repo & docs](https://github.com/gescholt/GlobtimPostProcessing.jl) |
-| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie / GLMakie / WGLMakie) | [repo & docs](https://github.com/gescholt/GlobtimPlots.jl) |
+| **[GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl)** | Visualization (CairoMakie / GLMakie / WGLMakie) | [docs](https://gescholt.github.io/GlobtimPlots.jl/dev/) · [repo](https://github.com/gescholt/GlobtimPlots.jl) |
 
 ```
 DynamicObjectives (objectives) --> Globtim (optimize) --> GlobtimPostProcessing (analyze) --> GlobtimPlots (visualize)

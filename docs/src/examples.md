@@ -103,7 +103,7 @@ See `high_dimensional_demo.jl` for a worked 3D/4D scaling example.
 
 ## Visualization
 
-Plotting the polynomial level set with critical points overlaid lives in the [GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) package. Load a Makie backend (`CairoMakie` for static files, `GLMakie` for interactive windows) **before** calling any plot function:
+Plotting the polynomial level set with critical points overlaid lives in the [GlobtimPlots](https://gescholt.github.io/GlobtimPlots.jl/dev/) package. Load a Makie backend (`CairoMakie` for static files, `GLMakie` for interactive windows) **before** calling any plot function:
 
 ```julia
 using GlobtimPlots, CairoMakie
@@ -114,7 +114,7 @@ fig  = cairo_plot_polyapprox_levelset(apol, ainp, df_enhanced, df_min)
 CairoMakie.save("levelset.png", fig)
 ```
 
-See the [GlobtimPlots repository](https://github.com/gescholt/GlobtimPlots.jl) for the full set of plot types (Morse spectra, subdivision partitions, convergence sweeps).
+See the [GlobtimPlots documentation](https://gescholt.github.io/GlobtimPlots.jl/dev/) for the full set of plot types (Morse spectra, subdivision partitions, convergence sweeps) — its [tutorial](https://gescholt.github.io/GlobtimPlots.jl/dev/tutorial/) carries this pipeline end to end with rendered figures.
 
 ## Statistical analysis and tables
 

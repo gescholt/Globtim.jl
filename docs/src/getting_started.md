@@ -132,5 +132,5 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 - [Critical Point Analysis](critical_point_analysis.md) - Advanced refinement
 - [Sparsification](sparsification.md) - Polynomial complexity reduction
 - [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl) - Refine critical points to high accuracy, campaign analysis
-- [GlobtimPlots](https://github.com/gescholt/GlobtimPlots.jl) - Visualize experiments and results
+- [GlobtimPlots](https://gescholt.github.io/GlobtimPlots.jl/dev/) - Visualize experiments and results ([repo](https://github.com/gescholt/GlobtimPlots.jl))
 - [API Reference](api_reference.md) - Complete function documentation
