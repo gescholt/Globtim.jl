@@ -96,6 +96,10 @@ mutable struct Subdomain
     # non-finite evaluation (Inf → 10·max|finite|), not a real f-value. Children must
     # not inherit these rows — inheriting a penalty as data poisons the child fit.
     penalized_rows::Vector{Int}
+    # Wall seconds of this node's last fit (sampling + least squares), NaN until fitted.
+    # Set by process_subdomain; with `parallel = true` nodes are fitted concurrently,
+    # so these are per-node walls under contention, not additive CPU cost.
+    fit_wall_s::Float64
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -133,6 +137,7 @@ function Subdomain(
         degeneracy,         # Stage 0: degeneracy verdict (nothing until detected)
         transform,          # Stage 2: frame rotation Q (nothing ⇒ axis-aligned)
         Int[],              # penalized_rows (no penalty substitutions yet)
+        NaN,                # fit_wall_s (not fitted yet)
     )
 end
 
@@ -792,6 +797,9 @@ function estimate_subdomain_error(
     compute_cond::Bool = true,
 )
     n_dim = dimension(subdomain)
+    # Wall of this fit (sampling + least squares); stamped on subdomain.fit_wall_s at
+    # every return that performed a fit, never on a cache hit.
+    t_fit = time()
 
     # ── Christoffel-sampled branch (E1 Phase 2, opt-in) ────────────────────
     # Bypasses tensor-grid + inheritance + unweighted-LS path entirely.
@@ -830,6 +838,7 @@ function estimate_subdomain_error(
             subdomain.samples = chr_result.samples
             subdomain.f_values = chr_result.f_values
             subdomain.infeasible = true
+            subdomain.fit_wall_s = time() - t_fit
             return Inf
         end
         # Build the ApproxPoly with the christoffel coefficients in the same
@@ -856,6 +865,7 @@ function estimate_subdomain_error(
         subdomain.polynomial = pol
         subdomain.samples = chr_result.samples
         subdomain.f_values = chr_result.f_values
+        subdomain.fit_wall_s = time() - t_fit
         return chr_result.l2_error
     end
 
@@ -1018,6 +1028,7 @@ function estimate_subdomain_error(
         subdomain.f_values = f_values
         subdomain.infeasible = true
         subdomain.penalized_rows = collect(1:n_total)
+        subdomain.fit_wall_s = time() - t_fit
         return Inf
     elseif n_inf > 0
         # Partial failures: replace Inf with a large penalty value so the polynomial
@@ -1083,6 +1094,7 @@ function estimate_subdomain_error(
 
     @debug "estimate_subdomain_error" l2_error rel_l2 norm_f degree = per_dim_degrees n_total
 
+    subdomain.fit_wall_s = time() - t_fit
     return l2_error
 end
 
