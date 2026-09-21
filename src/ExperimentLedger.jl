@@ -129,6 +129,11 @@ the in-dir record; `ledger_collect.jl` picks it up after results sync).
   export `GLOBTIM_LEDGER_APPEND=0` so the tracked ledger.jsonl never gets
   dirtied on the clone (which would block its ff-only pulls); their in-dir
   records reach the ledger through ledger_collect.jl after results sync.
+- `overwrite`: an existing `<outdir>/ledger_record.json` with a different
+  `run_id` is refused with an error (it is the provenance of the run that
+  produced the directory). Pass `true` to replace it deliberately; a run that
+  consumes another run's artifacts should instead write to its own `outdir`
+  and name the source in `supersedes`.
 """
 function emit_ledger_record(;
     slug::AbstractString,
@@ -142,6 +147,7 @@ function emit_ledger_record(;
     job_id = get(ENV, "SLURM_JOB_ID", nothing),
     manual::Bool = false,
     append_to_ledger::Bool = get(ENV, "GLOBTIM_LEDGER_APPEND", "1") != "0",
+    overwrite::Bool = false,
 )
     isdir(outdir) || error("emit_ledger_record: outdir does not exist: $outdir")
     slug_s = _sanitize_slug(slug)
@@ -151,6 +157,28 @@ function emit_ledger_record(;
 
     stamp = Dates.format(Dates.now(), "yyyymmddTHHMMSS")
     run_id = job_id === nothing ? "$(stamp)_$(slug_s)" : "$(stamp)_$(slug_s)_job$(job_id)"
+
+    # Guard (bead q9w1): a directory's ledger_record.json is the provenance of
+    # the run that produced the directory. A driver that consumes a stored
+    # run's artifacts and passes that run's directory as `outdir` would replace
+    # it silently — this happened three times in two days. Refuse unless the
+    # caller says so explicitly.
+    record_path = joinpath(outdir, "ledger_record.json")
+    if isfile(record_path) && !overwrite
+        existing_id = try
+            String(JSON3.read(read(record_path, String))["run_id"])
+        catch
+            "<unreadable>"
+        end
+        if existing_id != run_id
+            error(
+                "emit_ledger_record: $record_path already records run $existing_id; " *
+                "refusing to replace it with $run_id. A run that reads another run's " *
+                "artifacts writes to its own outdir and names the source in `supersedes`; " *
+                "pass overwrite=true only to replace this directory's record deliberately.",
+            )
+        end
+    end
 
     if artifacts === nothing
         artifacts = sort(
@@ -196,7 +224,7 @@ function emit_ledger_record(;
         record["config_sha256"] = sha256_file(config_path)
     end
 
-    open(joinpath(outdir, "ledger_record.json"), "w") do io
+    open(record_path, "w") do io
         JSON3.pretty(io, record)
     end
 

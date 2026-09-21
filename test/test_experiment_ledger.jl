@@ -86,6 +86,58 @@ end
     end
 end
 
+@testset "emit_ledger_record refuses to clobber another run's record (q9w1)" begin
+    mktempdir() do dir
+        write(joinpath(dir, "results_summary.json"), "{\"ok\": true}")
+        first_id = Globtim.emit_ledger_record(;
+            slug = "producer",
+            outdir = dir,
+            job_id = nothing,
+            append_to_ledger = false,
+        )
+        # A second run writing into the producer's directory is refused, and the
+        # error names the record it would have destroyed.
+        err = try
+            Globtim.emit_ledger_record(;
+                slug = "consumer",
+                outdir = dir,
+                job_id = nothing,
+                append_to_ledger = false,
+            )
+            nothing
+        catch e
+            e
+        end
+        @test err isa ErrorException
+        @test occursin(first_id, sprint(showerror, err))
+        @test occursin("supersedes", sprint(showerror, err))
+        rec = JSON3.read(read(joinpath(dir, "ledger_record.json"), String))
+        @test rec["run_id"] == first_id
+        @test rec["slug"] == "producer"
+
+        # Explicit overwrite replaces it.
+        second_id = Globtim.emit_ledger_record(;
+            slug = "consumer",
+            outdir = dir,
+            job_id = nothing,
+            append_to_ledger = false,
+            overwrite = true,
+        )
+        rec = JSON3.read(read(joinpath(dir, "ledger_record.json"), String))
+        @test rec["run_id"] == second_id
+        @test rec["slug"] == "consumer"
+
+        # An unreadable existing record is protected too.
+        write(joinpath(dir, "ledger_record.json"), "not json")
+        @test_throws ErrorException Globtim.emit_ledger_record(;
+            slug = "consumer",
+            outdir = dir,
+            job_id = nothing,
+            append_to_ledger = false,
+        )
+    end
+end
+
 @testset "find_repo_root accepts a worktree/submodule .git FILE" begin
     # In a git worktree (and a submodule) `.git` is a FILE containing
     # "gitdir: ...", not a directory. An isdir test walked past such a root and
