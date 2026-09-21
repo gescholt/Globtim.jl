@@ -308,6 +308,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_experiment_ledger.jl") do
     include("test_experiment_ledger.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_power_of_two_denom.jl") do
+    include("test_power_of_two_denom.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
     include("test_tree_solve_observability.jl")
 end

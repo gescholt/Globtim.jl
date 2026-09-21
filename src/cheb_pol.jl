@@ -183,12 +183,12 @@ end
 Convert rational coefficients in a polynomial to have power-of-2 denominators.
 """
 function _convert_to_power_of_two_denom(poly)
-    if !(poly isa Polynomial)
-        if poly isa Rational
-            return closest_pow2denom_rational(poly)
-        end
-        return poly
-    end
+    # `Polynomial` is exported by both DynamicPolynomials and
+    # MultivariatePolynomials, so the bare name is ambiguous inside Globtim and
+    # threw UndefVarError the first time this branch ran (bead acqq). Test on
+    # the MultivariatePolynomials abstraction instead.
+    poly isa Rational && return closest_pow2denom_rational(poly)
+    poly isa MultivariatePolynomials.AbstractPolynomialLike || return poly
 
     terms_array = terms(poly)
     new_terms = map(terms_array) do term
@@ -205,16 +205,19 @@ function _convert_to_power_of_two_denom(poly)
 end
 
 """
-    closest_pow2denom_rational(r::Rational{BigInt})::Rational{BigInt}
+    closest_pow2denom_rational(r::Rational{T}) where {T<:Integer} -> Rational{T}
 
-Convert a rational number to one with a power-of-2 denominator.
+Round `r` to the nearest rational whose denominator is the smallest power of
+two not below `denominator(r)`; a dyadic input is returned unchanged. The
+rounding is exact integer arithmetic (no floating-point division), so it is
+correct for the 2^100-size denominators that reach msolve.
 """
-function closest_pow2denom_rational(r::Rational{BigInt})::Rational{BigInt}
-    num = numerator(r)
-    den = denominator(r)
+function closest_pow2denom_rational(r::Rational{T}) where {T<:Integer}
+    den = BigInt(denominator(r))
+    ispow2(den) && return r
     new_den = BigInt(2)^ceil(Int, log2(den))
-    new_num = round(BigInt, num * new_den / den)
-    return new_num // new_den
+    new_num = round(BigInt, (BigInt(numerator(r)) * new_den) // den)
+    return Rational{T}(new_num, new_den)
 end
 
 """
