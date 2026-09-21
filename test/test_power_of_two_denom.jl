@@ -5,8 +5,9 @@
 
 using Test
 using Globtim
-using DynamicPolynomials: @polyvar
-using MultivariatePolynomials: coefficients, terms, coefficient, monomial
+# DynamicPolynomials re-exports the MultivariatePolynomials API; the test
+# environment declares only DynamicPolynomials.
+using DynamicPolynomials: @polyvar, coefficients, terms, coefficient, monomial
 
 _pow2(q::Rational) = ispow2(denominator(q))
 # The helper rounds to the nearest numerator over the smallest power of two
