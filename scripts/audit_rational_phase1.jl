@@ -85,14 +85,28 @@ function f_margules_y(y)
     return y1 * (log(y1) + A * y2^2 - d1) + y2 * (log(y2) + A * y1^2 - d2)
 end
 
+"""
+    Objective(key, name, f, dim, center, range; ad = :forwarddiff, gradtol = 1e-6)
+
+An objective for the audit. `range` is the half-width (scalar or per-coordinate
+vector). `ad` selects the derivatives used by the refinement on f: `:forwarddiff`
+for closed-form objectives, `:finitediff` (central differences) for objectives that
+do not accept dual numbers (ODE shooting). `gradtol` is the |∇f| threshold below
+which a refined point counts as verified; with finite differences on an ODE
+objective integrated at 1e-10 it cannot be 1e-6.
+"""
 struct Objective
     key::String
     name::String
     f::Function
     dim::Int
     center::Vector{Float64}
-    range::Float64
+    range::Union{Float64,Vector{Float64}}
+    ad::Symbol
+    gradtol::Float64
 end
+Objective(key, name, f, dim, center, range; ad::Symbol = :forwarddiff, gradtol::Real = 1e-6) =
+    Objective(key, name, f, dim, center, range, ad, Float64(gradtol))
 
 const OBJECTIVES = Dict(
     "A" => Objective("A", "pole pair 2-D", f_pole, 2, [0.0, 0.0], 1.0),
@@ -107,9 +121,9 @@ const OBJECTIVES = Dict(
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
-function parse_args(argv)
+function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "B", "C", "D"])
     cfg = Dict{String,Any}(
-        "objectives" => ["A", "B", "C", "D"],
+        "objectives" => default_objectives,
         "supersedes" => String[],
         "rational" => [(4, 2), (6, 3), (8, 4), (10, 5), (12, 6)],
         "polynomial" => [6, 8, 10, 12, 14, 16, 20],
@@ -154,7 +168,7 @@ function parse_args(argv)
         stamp = Dates.format(now(), "yyyymmddTHHMMSS")
         cfg["outdir"] = joinpath(
             "globtim_results",
-            "rational_phase1",
+            root,
             stamp * (cfg["smoke"] ? "_smoke" : ""),
         )
     end
@@ -164,14 +178,45 @@ end
 # ── refinement on the true objective ────────────────────────────────────────
 
 """
-Newton on ∇f = 0 from `x0` (original coordinates), ForwardDiff derivatives, steps
-clipped to 0.1·halfwidth, at most `maxit` iterations, must stay within the box
-enlarged by `margin`. Returns (x, gradnorm, index, converged, displacement).
+Central-difference gradient and Hessian for objectives that do not take dual
+numbers. Steps are relative to the box half-width `hw` (1e-4 for the gradient,
+1e-3 for the Hessian, which differences the FD gradient).
 """
-function refine_on_f(f, x0, lo, hi; maxit = 100, tol = 1e-10, margin = 0.05)
-    g(x) = ForwardDiff.gradient(f, x)
-    H(x) = ForwardDiff.hessian(f, x)
+function fd_gradient(f, x, hw)
+    n = length(x)
+    g = zeros(n)
+    for i in 1:n
+        h = 1e-4 * hw[i]
+        e = zeros(n)
+        e[i] = h
+        g[i] = (f(x + e) - f(x - e)) / (2h)
+    end
+    return g
+end
+
+function fd_hessian(f, x, hw)
+    n = length(x)
+    H = zeros(n, n)
+    for i in 1:n
+        h = 1e-3 * hw[i]
+        e = zeros(n)
+        e[i] = h
+        H[:, i] = (fd_gradient(f, x + e, hw) - fd_gradient(f, x - e, hw)) / (2h)
+    end
+    return (H + H') / 2
+end
+
+"""
+Newton on ∇f = 0 from `x0` (original coordinates), ForwardDiff or central-difference
+derivatives (`ad`), steps clipped to 0.1·halfwidth, at most `maxit` iterations, must
+stay within the box enlarged by `margin`. Returns (x, gradnorm, index, converged,
+displacement).
+"""
+function refine_on_f(f, x0, lo, hi; ad = :forwarddiff, maxit = 100, tol = 1e-10, margin = 0.05)
     hw = (hi .- lo) ./ 2
+    ad in (:forwarddiff, :finitediff) || error("ad must be :forwarddiff or :finitediff, got $ad")
+    g(x) = ad == :forwarddiff ? ForwardDiff.gradient(f, x) : fd_gradient(f, x, hw)
+    H(x) = ad == :forwarddiff ? ForwardDiff.hessian(f, x) : fd_hessian(f, x, hw)
     x = copy(x0)
     converged = false
     for _ in 1:maxit
@@ -180,7 +225,14 @@ function refine_on_f(f, x0, lo, hi; maxit = 100, tol = 1e-10, margin = 0.05)
             converged = true
             break
         end
-        dx = H(x) \ gx
+        # a singular (finite-difference) Hessian at an iterate ends the refinement
+        # of this point as "not converged"; it is reported per point, not fatal
+        dx = try
+            H(x) \ gx
+        catch e
+            e isa LinearAlgebra.SingularException || rethrow()
+            break
+        end
         cap = 0.1 * norm(hw)
         nd = norm(dx)
         nd > cap && (dx .*= cap / nd)
@@ -218,7 +270,7 @@ function run_rational(o::Objective, TR, M, N)
     t_cert = @elapsed cert = certify_positive_denominator(R)
     t_refine = @elapsed rows = map(zip(res.points, res.values, res.index)) do (x, y, idx)
         xo = to_original_coordinates(R, x)
-        r = refine_on_f(o.f, xo, lo, hi)
+        r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = max(1e-10, 1e-2 * o.gradtol))
         (;
             x_surrogate = x,
             x_original = xo,
@@ -253,7 +305,8 @@ function run_rational(o::Objective, TR, M, N)
         n_outside = res.n_outside,
         n_rejected_q = res.n_rejected_q,
         n_inconsistent_y = res.n_inconsistent_y,
-        n_verified = count(r -> r.converged && r.gradnorm < 1e-6, rows),
+        n_verified = count(r -> r.converged && r.gradnorm < o.gradtol, rows),
+        gradtol = o.gradtol,
         ph_sum = ph,
         t_fit = t_fit,
         t_convert = t_convert,
@@ -275,7 +328,7 @@ function failed_cell(kind, label, M, N, msg)
         kind = kind, label = label, M = M, N_requested = N, N = -1, dof = -1, GN = -1,
         nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
-        n_rejected_q = -1, n_inconsistent_y = -1, n_verified = -1, ph_sum = 0,
+        n_rejected_q = -1, n_inconsistent_y = -1, n_verified = -1, gradtol = NaN, ph_sum = 0,
         t_fit = NaN, t_convert = NaN, t_solve = NaN, t_solve_warm = NaN, t_cert = NaN, t_refine = NaN,
         rows = NamedTuple[], error = msg,
     )
@@ -308,7 +361,7 @@ function run_polynomial(o::Objective, TR, D)
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
     t_refine = @elapsed rows = map(pts) do xs
         xo = to_original_coordinates(xs, TR.sample_range, TR.center)
-        r = refine_on_f(o.f, xo, lo, hi)
+        r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = max(1e-10, 1e-2 * o.gradtol))
         (;
             x_surrogate = xs,
             x_original = xo,
@@ -331,7 +384,7 @@ function run_polynomial(o::Objective, TR, D)
         dof = binomial(n + D, D),
         GN = TR.GN,
         nrm = pol.nrm,
-        rms = sqrt(sum(abs2, Globtim.evaluate(pol, pol.grid .* TR.sample_range .+ TR.center') .- pol.z) / length(pol.z)),
+        rms = sqrt(sum(abs2, Globtim.evaluate(pol, pol.grid .* (TR.sample_range isa Number ? TR.sample_range : TR.sample_range') .+ TR.center') .- pol.z) / length(pol.z)),
         sigma_ratio = NaN,
         qmin_grid = NaN,
         qmin = NaN,
@@ -343,7 +396,8 @@ function run_polynomial(o::Objective, TR, D)
         n_outside = length(raw) - length(pts),
         n_rejected_q = 0,
         n_inconsistent_y = 0,
-        n_verified = count(r -> r.converged && r.gradnorm < 1e-6, rows),
+        n_verified = count(r -> r.converged && r.gradnorm < o.gradtol, rows),
+        gradtol = o.gradtol,
         ph_sum = ph,
         t_fit = t_fit,
         t_convert = 0.0,
@@ -366,8 +420,8 @@ function dedup(points; tol = 1e-6)
     return out
 end
 
-# distinct verified critical points (refined to |∇f| < 1e-6 inside the box)
-refined_set(c) = dedup([r.x_refined for r in c.rows if r.converged && r.gradnorm < 1e-6])
+# distinct verified critical points (refined to |∇f| < gradtol inside the box)
+refined_set(c) = dedup([r.x_refined for r in c.rows if r.converged && r.gradnorm < c.gradtol])
 
 function match_counts(A, B; tol = 1e-3)
     a_in_b = count(a -> any(norm(a - b) < tol for b in B), A)
@@ -400,7 +454,7 @@ function gate_verdict(cells; dof_frac = 0.5)
     # refine are the polynomial's spurious points and are reported, not penalised
     all_ver = Rstar.n_points == Rstar.n_verified
     nothing_missed = m.b_in_a == length(SP)
-    push!(checks, ("2. all R* points refine to |∇f|<1e-6, and every distinct verified P* point is matched by R* within 1e-3", all_ver && nothing_missed,
+    push!(checks, ("2. all R* points refine to |∇f|<$(Rstar.gradtol), and every distinct verified P* point is matched by R* within 1e-3", all_ver && nothing_missed,
         "rational $(Rstar.n_points) pts / $(Rstar.n_verified) verified / $(length(SR)) distinct; polynomial $(Pstar.n_points) pts / $(Pstar.n_verified) verified / $(length(SP)) distinct ($(Pstar.n_points - Pstar.n_verified) spurious); matched $(m.b_in_a) of $(length(SP)) polynomial and $(m.a_in_b) of $(length(SR)) rational"))
     push!(checks, ("3. certify_positive_denominator(R*).ok", Rstar.q_ok, @sprintf("qmin = %.4f", Rstar.qmin)))
     # evaluated on the WARM (second-solve) times: the first solve of a new HC
@@ -429,19 +483,23 @@ function cell_table(io, cells)
     end
 end
 
-function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, elapsed)
+function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, elapsed; objectives = OBJECTIVES)
     open(path, "w") do io
         println(io, "# Rational surrogates, Phase 1 audit\n")
         println(io, "Generated ", now(), " by pkg/globtim/scripts/audit_rational_phase1.jl",
             cfg["smoke"] ? " (SMOKE)" : "", "; GN = ", cfg["gn"], "; elapsed ", @sprintf("%.0f", elapsed), " s.\n")
         println(io, "Brief: docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md. nrm is the quadrature-weighted L2 norm ",
             "of the residual on [-1,1]^n for both surrogate kinds (nonlinear residual p/q − f for the rational). ",
-            "\"verified\" = refined on f by Newton to |∇f| < 1e-6 inside the box. PH = Σ(−1)^index over verified points.\n")
+            "\"verified\" = refined on f by Newton to |∇f| < gradtol inside the box (gradtol = 1e-6 for closed-form ",
+            "objectives with ForwardDiff derivatives; per-objective for finite-difference ones, stated in the objective's section). ",
+            "PH = Σ(−1)^index over verified points.\n")
         for key in cfg["objectives"]
-            o = OBJECTIVES[key]
+            o = objectives[key]
             cells = results[key]
             v = verdicts[key]
             println(io, "## ", key, ". ", o.name, "\n")
+            println(io, "dim ", o.dim, ", center ", o.center, ", half-width ", o.range,
+                "; refinement derivatives: ", o.ad, ", verified at |∇f| < ", o.gradtol, ".\n")
             cell_table(io, cells)
             println(io)
             if v.evaluated
@@ -463,9 +521,9 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
                 end
                 println(io)
             end
-            if key == "B" && haskey(results, "B_extended")
-                println(io, "Extended sweep for the σ-collapse (GN = ", cfg["gn_extended"], "; the LJ slice is a rational function of type (24,24)):\n")
-                cell_table(io, results["B_extended"])
+            if haskey(results, key * "_extended")
+                println(io, "Extended rational sweep (GN = ", cfg["gn_extended"], "):\n")
+                cell_table(io, results[key*"_extended"])
                 println(io)
             end
             r84 = findfirst(c -> c.kind == "rational" && c.label == "(8,4)", cells)
@@ -496,8 +554,23 @@ end
 
 # ── main ────────────────────────────────────────────────────────────────────
 
-function main(argv)
-    cfg = parse_args(argv)
+"""
+    main(argv; objectives, root, slug, extended_keys, brief) -> Bool
+
+Run the audit over `objectives` (a `Dict{String,Objective}`; the default table is
+the brief's A–D). A campaign script `include`s this file and calls `main` with its
+own table, results root under `globtim_results/`, ledger slug and the keys that get
+the extended (M,N) sweep.
+"""
+function main(
+    argv;
+    objectives = OBJECTIVES,
+    root = "rational_phase1",
+    slug = "rational_phase1_audit",
+    extended_keys = ["B"],
+    brief = "docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md",
+)
+    cfg = parse_args(argv; root = root, default_objectives = sort(collect(keys(objectives))))
     outdir = normpath(cfg["outdir"])
     mkpath(outdir)
     t0 = time()
@@ -505,7 +578,7 @@ function main(argv)
 
     # Warm-up: compile every code path once on a tiny configuration so the wall
     # times below (gate check 4) measure the solves, not first-call compilation.
-    let o = OBJECTIVES["A"]
+    let o = objectives[first(cfg["objectives"])]
         TRw = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = 8)
         t_w = @elapsed begin
             run_rational(o, TRw, 3, 2)
@@ -518,7 +591,7 @@ function main(argv)
     verdicts = Dict{String,Any}()
     verdicts_unconstrained = Dict{String,Any}()
     for key in cfg["objectives"]
-        o = OBJECTIVES[key]
+        o = objectives[key]
         println("\n== ", key, ". ", o.name)
         TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
         cells = NamedTuple[]
@@ -566,7 +639,7 @@ function main(argv)
         # Objective B is a genuine rational function of type (24,24) (two atoms,
         # (d²+δ)^6 each), beyond the (12,6) sweep: extend the search for the
         # σ-collapse of W on a grid large enough to determine degree 24.
-        if key == "B"
+        if key in extended_keys
             TRx = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn_extended"])
             ext = NamedTuple[]
             for (M, N) in cfg["rational_extended"]
@@ -584,7 +657,7 @@ function main(argv)
                     println("FAILED: ", first(c.error, 200))
                 end
             end
-            results["B_extended"] = ext
+            results[key*"_extended"] = ext
         end
     end
     elapsed = time() - t0
@@ -625,13 +698,13 @@ function main(argv)
         elapsed_seconds = elapsed,
         user_metadata = Dict{String,Any}(
             "package" => "Globtim", "script" => "pkg/globtim/scripts/audit_rational_phase1.jl",
-            "brief" => "docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md", "bead" => "B3",
-            "objectives" => Dict(k => Dict("name" => o.name, "dim" => o.dim, "center" => o.center, "range" => o.range) for (k, o) in OBJECTIVES if k in cfg["objectives"]),
+            "brief" => brief, "bead" => "B3",
+            "objectives" => Dict(k => Dict("name" => o.name, "dim" => o.dim, "center" => o.center, "range" => o.range) for (k, o) in objectives if k in cfg["objectives"]),
             "gn" => cfg["gn"], "basis" => "chebyshev", "solver" => "hc (lifted, polyhedral) / hc (polynomial, :auto)",
             "refinement" => "Newton on ∇f with ForwardDiff, |∇f| < 1e-6 verified, box + 5% margin",
             "smoke" => cfg["smoke"],
         ))
-    summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed)
+    summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed; objectives = objectives)
 
     if cfg["ledger"]
         headline = Dict{String,Any}(
@@ -654,7 +727,7 @@ function main(argv)
         all_pass = all(verdicts[k].evaluated && verdicts[k].pass for k in cfg["objectives"])
         try
             rec = Globtim.emit_ledger_record(;
-                slug = "rational_phase1_audit" * (cfg["smoke"] ? "_smoke" : ""),
+                slug = slug * (cfg["smoke"] ? "_smoke" : ""),
                 outdir = outdir, headline = headline,
                 artifacts = ["audit_table.csv", "critical_points.csv", "audit_full.jld2", "summary.md"],
                 supersedes = cfg["supersedes"],
