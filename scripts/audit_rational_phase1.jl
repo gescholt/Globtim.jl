@@ -73,6 +73,18 @@ end
 
 f_margules(x) = MargulesTPD(x)          # accepts a scalar or a length-1 vector
 
+# Same two-suffix Margules TPD (A = 3, feed z = (0.4, 0.6)) as MargulesTPD, but in
+# the mole-fraction coordinate y₁ instead of the logit w = ln(y₁/y₂).
+function f_margules_y(y)
+    y1 = y isa AbstractVector ? y[1] : y
+    A = 3.0
+    z1, z2 = 0.4, 0.6
+    d1 = log(z1) + A * z2^2
+    d2 = log(z2) + A * z1^2
+    y2 = 1 - y1
+    return y1 * (log(y1) + A * y2^2 - d1) + y2 * (log(y2) + A * y1^2 - d2)
+end
+
 struct Objective
     key::String
     name::String
@@ -86,13 +98,19 @@ const OBJECTIVES = Dict(
     "A" => Objective("A", "pole pair 2-D", f_pole, 2, [0.0, 0.0], 1.0),
     "B" => Objective("B", "Lennard-Jones slice 2-D", f_lj, 2, [0.0, 0.0], 1.0),
     "C" => Objective("C", "Margules TPD 1-D (logit chart)", f_margules, 1, [0.0], 5.0),
+    # The same TPD in the MOLE-FRACTION chart y₁ ∈ [0.01, 0.99]: the y ln y edge
+    # singularities sit just outside the box, so polynomial coefficients decay
+    # only algebraically — the case the brief's objective C is meant to decide
+    # (pkg/ThermoObjectives, which has the Clapeyron models, is not in profiles/dev).
+    "D" => Objective("D", "Margules TPD 1-D (mole-fraction chart)", f_margules_y, 1, [0.5], 0.49),
 )
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 function parse_args(argv)
     cfg = Dict{String,Any}(
-        "objectives" => ["A", "B", "C"],
+        "objectives" => ["A", "B", "C", "D"],
+        "supersedes" => String[],
         "rational" => [(4, 2), (6, 3), (8, 4), (10, 5), (12, 6)],
         "polynomial" => [6, 8, 10, 12, 14, 16, 20],
         "gn" => 24,
@@ -123,6 +141,9 @@ function parse_args(argv)
             i += 1
         elseif a == "--outdir"
             cfg["outdir"] = argv[i+1]
+            i += 1
+        elseif a == "--supersedes"
+            cfg["supersedes"] = String.(split(argv[i+1], ","))
             i += 1
         else
             error("unknown argument $a")
@@ -188,6 +209,11 @@ function run_rational(o::Objective, TR, M, N)
     t_convert = @elapsed rational_critical_system(R)
     t_solve = @elapsed res = solve_rational_critical_points(R)
     t_solve -= t_convert
+    # second solve of the same system: HC compiles a straight-line program per
+    # new System, so the first call is JIT-dominated at these sizes; the warm
+    # time is the path-tracking cost
+    t_solve_warm = @elapsed solve_rational_critical_points(R)
+    t_solve_warm -= t_convert
     stats = res.stats
     t_cert = @elapsed cert = certify_positive_denominator(R)
     t_refine = @elapsed rows = map(zip(res.points, res.values, res.index)) do (x, y, idx)
@@ -232,6 +258,7 @@ function run_rational(o::Objective, TR, M, N)
         t_fit = t_fit,
         t_convert = t_convert,
         t_solve = t_solve,
+        t_solve_warm = t_solve_warm,
         t_cert = t_cert,
         t_refine = t_refine,
         rows = rows,
@@ -249,7 +276,7 @@ function failed_cell(kind, label, M, N, msg)
         nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
         n_rejected_q = -1, n_inconsistent_y = -1, n_verified = -1, ph_sum = 0,
-        t_fit = NaN, t_convert = NaN, t_solve = NaN, t_cert = NaN, t_refine = NaN,
+        t_fit = NaN, t_convert = NaN, t_solve = NaN, t_solve_warm = NaN, t_cert = NaN, t_refine = NaN,
         rows = NamedTuple[], error = msg,
     )
 end
@@ -270,6 +297,14 @@ function run_polynomial(o::Objective, TR, D)
         path_stats_ref = stats_ref,
     )
     st = stats_ref[]
+    t_solve_warm = @elapsed solve_polynomial_system(
+        x,
+        n,
+        D,
+        pol.coeffs;
+        basis = pol.basis,
+        normalized = pol.normalized,
+    )
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
     t_refine = @elapsed rows = map(pts) do xs
         xo = to_original_coordinates(xs, TR.sample_range, TR.center)
@@ -313,6 +348,7 @@ function run_polynomial(o::Objective, TR, D)
         t_fit = t_fit,
         t_convert = 0.0,
         t_solve = t_solve,
+        t_solve_warm = t_solve_warm,
         t_cert = 0.0,
         t_refine = t_refine,
         rows = rows,
@@ -367,26 +403,29 @@ function gate_verdict(cells; dof_frac = 0.5)
     push!(checks, ("2. all R* points refine to |∇f|<1e-6, and every distinct verified P* point is matched by R* within 1e-3", all_ver && nothing_missed,
         "rational $(Rstar.n_points) pts / $(Rstar.n_verified) verified / $(length(SR)) distinct; polynomial $(Pstar.n_points) pts / $(Pstar.n_verified) verified / $(length(SP)) distinct ($(Pstar.n_points - Pstar.n_verified) spurious); matched $(m.b_in_a) of $(length(SP)) polynomial and $(m.a_in_b) of $(length(SR)) rational"))
     push!(checks, ("3. certify_positive_denominator(R*).ok", Rstar.q_ok, @sprintf("qmin = %.4f", Rstar.qmin)))
-    push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*)", Rstar.t_solve <= Pstar.t_solve, @sprintf("%.2fs vs %.2fs", Rstar.t_solve, Pstar.t_solve)))
+    # evaluated on the WARM (second-solve) times: the first solve of a new HC
+    # System is dominated by compiling its straight-line program at these sizes
+    push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*) (warm; cold in parentheses)", Rstar.t_solve_warm <= Pstar.t_solve_warm,
+        @sprintf("%.2fs vs %.2fs (cold %.2fs vs %.2fs)", Rstar.t_solve_warm, Pstar.t_solve_warm, Rstar.t_solve, Pstar.t_solve)))
     return (; evaluated = true, pass = all(c[2] for c in checks), checks = checks, Pstar = Pstar, Rstar = Rstar)
 end
 
 # ── reporting ───────────────────────────────────────────────────────────────
 
 function cell_table(io, cells)
-    println(io, "| config | dof | N | nrm | σmin/σmax | qmin (cert) | paths | sing | pts | verified | PH | t_fit | t_conv | t_HC | t_refine |")
-    println(io, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    println(io, "| config | dof | N | nrm | σmin/σmax | qmin (cert) | paths | sing | pts | verified | PH | t_fit | t_conv | t_HC cold | t_HC warm | t_refine |")
+    println(io, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for c in cells
         if !isempty(c.error)
-            println(io, "| ", c.label, " | – | – | FAILED: ", replace(first(c.error, 160), "|" => "/"), " | | | | | | | | | | | |")
+            println(io, "| ", c.label, " | – | – | FAILED: ", replace(first(c.error, 160), "|" => "/"), " | | | | | | | | | | | | |")
             continue
         end
-        @printf(io, "| %s | %d | %d | %.2e | %s | %s | %d | %d | %d | %d | %d | %.2f | %.2f | %.2f | %.2f |\n",
+        @printf(io, "| %s | %d | %d | %.2e | %s | %s | %d | %d | %d | %d | %d | %.2f | %.2f | %.2f | %.2f | %.2f |\n",
             c.label, c.dof, c.N, c.nrm,
             isnan(c.sigma_ratio) ? "–" : @sprintf("%.1e", c.sigma_ratio),
-            isnan(c.qmin) ? "–" : @sprintf("%.3f%s", c.qmin, c.q_ok ? "" : " ✗"),
+            isnan(c.qmin) ? "–" : @sprintf("%.2e%s", c.qmin, c.q_ok ? "" : " ✗"),
             c.n_paths, c.n_singular, c.n_points, c.n_verified, c.ph_sum,
-            c.t_fit, c.t_convert, c.t_solve, c.t_refine)
+            c.t_fit, c.t_convert, c.t_solve, c.t_solve_warm, c.t_refine)
     end
 end
 
@@ -432,8 +471,8 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
             r84 = findfirst(c -> c.kind == "rational" && c.label == "(8,4)", cells)
             if r84 !== nothing
                 c = cells[r84]
-                @printf(io, "Wall-time split at (8,4): fit %.2f s, convert %.2f s, HC %.2f s, certificate %.2f s, refine %.2f s.\n\n",
-                    c.t_fit, c.t_convert, c.t_solve, c.t_cert, c.t_refine)
+                @printf(io, "Wall-time split at (8,4): fit %.2f s, convert %.2f s, HC %.2f s cold / %.2f s warm, certificate %.2f s, refine %.2f s.\n\n",
+                    c.t_fit, c.t_convert, c.t_solve, c.t_solve_warm, c.t_cert, c.t_refine)
             end
             println(io, "Refined critical points of R* and P* (original coordinates):\n")
             for c in (v.evaluated ? (v.Rstar, v.Pstar) : ())
@@ -559,8 +598,8 @@ function main(argv)
             qmin = c.qmin, q_ok = c.q_ok, n_paths = c.n_paths, n_singular = c.n_singular, n_real = c.n_real,
             n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q,
             n_inconsistent_y = c.n_inconsistent_y, n_verified = c.n_verified, ph_sum = c.ph_sum,
-            t_fit = c.t_fit, t_convert = c.t_convert, t_solve = c.t_solve, t_cert = c.t_cert, t_refine = c.t_refine,
-            error = c.error); promote = true)
+            t_fit = c.t_fit, t_convert = c.t_convert, t_solve = c.t_solve, t_solve_warm = c.t_solve_warm,
+            t_cert = c.t_cert, t_refine = c.t_refine, error = c.error); promote = true)
         for (k, r) in enumerate(c.rows)
             push!(cps, (; objective = key, kind = c.kind, config = c.label, point = k,
                 x_surrogate = join(string.(r.x_surrogate), ";"), x_original = join(string.(r.x_original), ";"),
@@ -618,6 +657,7 @@ function main(argv)
                 slug = "rational_phase1_audit" * (cfg["smoke"] ? "_smoke" : ""),
                 outdir = outdir, headline = headline,
                 artifacts = ["audit_table.csv", "critical_points.csv", "audit_full.jld2", "summary.md"],
+                supersedes = cfg["supersedes"],
                 status = all_pass ? "completed" : "completed_gate_failed")
             println("ledger record: ", rec)
         catch e
