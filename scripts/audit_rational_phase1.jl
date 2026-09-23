@@ -748,5 +748,8 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     ok = main(ARGS)
-    exit(ok ? 0 : 1)
+    # the gate verdict is a result (summary.md, ledger status), not a job
+    # failure: a completed run exits 0 so Slurm does not report it as FAILED
+    println("gate verdict over all objectives: ", ok ? "PASS" : "FAIL")
+    exit(0)
 end
