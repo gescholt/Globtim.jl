@@ -159,6 +159,12 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         elseif a == "--supersedes"
             cfg["supersedes"] = String.(split(argv[i+1], ","))
             i += 1
+        elseif a == "--rational"            # e.g. --rational 12:7,14:6,20:10
+            cfg["rational"] = [(parse(Int, split(s, ":")[1]), parse(Int, split(s, ":")[2])) for s in split(argv[i+1], ",")]
+            i += 1
+        elseif a == "--polynomial"          # e.g. --polynomial 20,24
+            cfg["polynomial"] = parse.(Int, split(argv[i+1], ","))
+            i += 1
         else
             error("unknown argument $a")
         end
