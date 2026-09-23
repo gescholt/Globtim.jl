@@ -143,6 +143,17 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
             for x in res.points
                 @test rational_hessian_index(R, x) == fd_index(R, x)
             end
+            # 5b. the index does not depend on the sign of q: (−p)/(−q) is the same
+            # function, H_r = (q·H_p − p·H_q)/q² with q² > 0 (a reflection for q < 0
+            # used to flip it)
+            Rneg = ApproxRational((
+                f === :a ? -R.a : f === :b ? -R.b : getfield(R, f) for f in fieldnames(ApproxRational)
+            )...)
+            for x in res.points
+                @test rational_denominator(Rneg, x) < 0
+                @test Rneg(x) ≈ R(x)
+                @test rational_hessian_index(Rneg, x) == rational_hessian_index(R, x)
+            end
             # motivation: the degree-16 polynomial surrogate (153 dof vs 59)
             # reports more in-box critical points, several far from any true one
             pol = Constructor(TRp, 16)

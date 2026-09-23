@@ -115,8 +115,9 @@ end
         -> (; eigvals, n_neg, n_zero, n_pos)
 
 Inertia of `q·H_p − p·H_q` at `x` (surrogate coordinates). At a critical point of
-`r = p/q`, `H_r = (q·H_p − p·H_q)/q²`, so when `q(x) > 0` this inertia is the inertia of
-the Hessian of `r` without any division by `q²`. Second derivatives come from
+`r = p/q`, `H_r = (q·H_p − p·H_q)/q²`, and `q² > 0` wherever `q ≠ 0`, so this inertia is
+the inertia of the Hessian of `r`, whatever the sign of `q`, without any division
+by `q²`. Second derivatives come from
 ForwardDiff on the orthogonal-basis evaluators (exact for polynomials up to
 rounding). Eigenvalues with `|λ| ≤ tol · max|λ|` are counted as zero.
 """
@@ -140,12 +141,11 @@ end
     rational_hessian_index(R::ApproxRational, x; tol = 1e-10) -> Int
 
 Morse index of `r = p/q` at the critical point `x` (surrogate coordinates): the number
-of negative eigenvalues of `q·H_p − p·H_q`, valid when `q(x) > 0`. If `q(x) < 0` the
-inertia is reflected, so the index is `n_pos` instead.
+of negative eigenvalues of `q·H_p − p·H_q`. `H_r = (q·H_p − p·H_q)/q²` there and `q² > 0`,
+so the sign of `q` does not enter: `(−p)/(−q)` is the same function with the same index.
 """
 function rational_hessian_index(R::ApproxRational, x::AbstractVector; tol::Real = 1e-10)
-    I = rational_hessian_inertia(R, x; tol = tol)
-    return rational_denominator(R, Vector{Float64}(x)) >= 0 ? I.n_neg : I.n_pos
+    return rational_hessian_inertia(R, x; tol = tol).n_neg
 end
 
 # ── the solve ──────────────────────────────────────────────────────────────────

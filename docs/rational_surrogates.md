@@ -100,7 +100,8 @@ extra variable does it implicitly, and `y* = r(x*)` comes out for free. Since
 `process_crit_pts`), drops `|q| ≤ q_tol`, checks `y*` against `p/q`, and
 classifies each point with `rational_hessian_index`: at a critical point
 `H_r = (q·H_p − p·H_q)/q²`, so the Morse index is the inertia of `q·H_p − p·H_q`
-with no division (`rational_hessian_inertia` returns the eigenvalues).
+with no division, whatever the sign of `q` (`rational_hessian_inertia` returns the
+eigenvalues).
 
 ## The `q > 0` requirement
 
