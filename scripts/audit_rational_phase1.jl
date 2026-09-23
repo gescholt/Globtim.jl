@@ -287,6 +287,7 @@ function run_rational(o::Objective, TR, M, N)
             index_refined = r.index,
             converged = r.converged,
             displacement = r.displacement,
+            f_refined = o.f(r.x),        # the objective at the refined point (hit test for miss²)
         )
     end
     ph = isempty(rows) ? 0 : sum((-1)^r.index_refined for r in rows if r.converged; init = 0)
@@ -378,6 +379,7 @@ function run_polynomial(o::Objective, TR, D)
             index_refined = r.index,
             converged = r.converged,
             displacement = r.displacement,
+            f_refined = o.f(r.x),        # the objective at the refined point (hit test for miss²)
         )
     end
     ph = isempty(rows) ? 0 : sum((-1)^r.index_refined for r in rows if r.converged; init = 0)
@@ -684,7 +686,7 @@ function main(
                 x_surrogate = join(string.(r.x_surrogate), ";"), x_original = join(string.(r.x_original), ";"),
                 x_refined = join(string.(r.x_refined), ";"), y = r.y, index_surrogate = r.index_surrogate,
                 index_refined = r.index_refined, gradnorm = r.gradnorm, displacement = r.displacement,
-                converged = r.converged); promote = true)
+                converged = r.converged, f_refined = r.f_refined); promote = true)
         end
     end
     CSV.write(joinpath(outdir, "audit_table.csv"), table)
