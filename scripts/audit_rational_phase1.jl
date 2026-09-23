@@ -16,18 +16,29 @@
 #
 # Configurations: rational (M,N) ∈ {(4,2),(6,3),(8,4),(10,5),(12,6)},
 # polynomial D ∈ {6,8,10,12,14,16,20}, one grid for all (GN = 24 → 25 nodes per
-# dimension). Every surrogate critical point is refined on the TRUE objective by
-# Newton with ForwardDiff derivatives ("standard refinement"), classified by the
-# Hessian index of f at the refined point, and the Poincaré–Hopf sum is recorded.
+# dimension). Every in-box surrogate critical point is refined on the TRUE
+# objective by Newton ("standard refinement", `refine_on_f`) and classified by
+# the Hessian index of f at the refined point.
+#
+# Census (`census`, the measure of a configuration): the verified rows are
+# deduplicated into DISTINCT critical points of f (max-norm in box units, 1e-3);
+# a distinct point is a TIGHT capture when some candidate reaching it started
+# within 0.05 of it in box units, otherwise Newton on f carried a distant
+# candidate there (transported). Every candidate that is not the tight seed of
+# its own distinct point is spurious. PH = Σ(−1)^index over distinct points.
+# With `truth = :multistart` an independent critical set of f is computed by
+# Newton from a lattice of starts, and the census reports recall against it.
+# A rational fit whose denominator is not certified positive on the box is
+# INADMISSIBLE (pkg/globtim/docs/rational_surrogates.md): its census is
+# reported and flagged, never selected by the gate.
 #
 # Gate (brief §3), per objective, with P* the best-nrm polynomial degree and R*
-# the best-nrm rational configuration with dof ≤ dof(P*)/2:
+# the best-nrm CERTIFIED rational configuration with dof ≤ dof(P*)/2:
 #   1. nrm(R*) ≤ nrm(P*);
-#   2. every R* critical point refines to |∇f| < 1e-6, and the refined R* and P*
-#      point sets agree within 1e-3 (no polynomial-only spurious points and no
-#      rational-only ones);
-#   3. certify_positive_denominator(R*).ok;
-#   4. lifted HC wall time at R* ≤ polynomial HC wall time at P*.
+#   2. the R* census is clean (no spurious candidate; with a truth set, every
+#      truth point tightly captured) and covers every distinct P* point;
+#   3. a certified rational configuration exists at dof ≤ dof(P*)/2;
+#   4. lifted HC wall time at R* ≤ polynomial HC wall time at P* (warm).
 #
 # Outputs (one timestamped directory): audit_full.jld2 (everything, with
 # user_metadata), critical_points.csv, audit_table.csv, summary.md, and a
@@ -86,14 +97,21 @@ function f_margules_y(y)
 end
 
 """
-    Objective(key, name, f, dim, center, range; ad = :forwarddiff, gradtol = 1e-6)
+    Objective(key, name, f, dim, center, range; ad = :forwarddiff, gradtol, truth = :none, truth_starts = 0)
 
 An objective for the audit. `range` is the half-width (scalar or per-coordinate
 vector). `ad` selects the derivatives used by the refinement on f: `:forwarddiff`
 for closed-form objectives, `:finitediff` (central differences) for objectives that
-do not accept dual numbers (ODE shooting). `gradtol` is the |∇f| threshold below
-which a refined point counts as verified; with finite differences on an ODE
-objective integrated at 1e-10 it cannot be 1e-6.
+do not accept dual numbers (ODE shooting).
+
+`gradtol` is the |∇f| the Newton refinement must REACH inside the box for a point
+to count as verified — the threshold applied, not a looser reporting one. Default
+1e-8 with ForwardDiff (the census standard); 1e-6 with central differences, where
+difference noise on an ODE objective sets the floor.
+
+`truth = :multistart` computes an independent critical set of f on the box
+(`truth_by_multistart`, Newton from a `truth_starts`^dim lattice), against which
+every census reports recall; `:none` for objectives too expensive to scan.
 """
 struct Objective
     key::String
@@ -104,19 +122,39 @@ struct Objective
     range::Union{Float64,Vector{Float64}}
     ad::Symbol
     gradtol::Float64
+    truth::Symbol
+    truth_starts::Int
 end
-Objective(key, name, f, dim, center, range; ad::Symbol = :forwarddiff, gradtol::Real = 1e-6) =
-    Objective(key, name, f, dim, center, range, ad, Float64(gradtol))
+function Objective(
+    key,
+    name,
+    f,
+    dim,
+    center,
+    range;
+    ad::Symbol = :forwarddiff,
+    gradtol::Real = (ad == :forwarddiff ? 1e-8 : 1e-6),
+    truth::Symbol = :none,
+    truth_starts::Integer = 0,
+)
+    ad in (:forwarddiff, :finitediff) || error("$key: ad must be :forwarddiff or :finitediff, got $ad")
+    truth in (:none, :multistart) || error("$key: truth must be :none or :multistart, got $truth")
+    truth == :multistart && truth_starts < 2 &&
+        error("$key: truth = :multistart needs truth_starts ≥ 2 starts per dimension")
+    return Objective(key, name, f, dim, Vector{Float64}(center), range, ad, Float64(gradtol), truth, Int(truth_starts))
+end
+
+box(o::Objective) = (o.center .- o.range, o.center .+ o.range)
 
 const OBJECTIVES = Dict(
-    "A" => Objective("A", "pole pair 2-D", f_pole, 2, [0.0, 0.0], 1.0),
-    "B" => Objective("B", "Lennard-Jones slice 2-D", f_lj, 2, [0.0, 0.0], 1.0),
-    "C" => Objective("C", "Margules TPD 1-D (logit chart)", f_margules, 1, [0.0], 5.0),
+    "A" => Objective("A", "pole pair 2-D", f_pole, 2, [0.0, 0.0], 1.0; truth = :multistart, truth_starts = 61),
+    "B" => Objective("B", "Lennard-Jones slice 2-D", f_lj, 2, [0.0, 0.0], 1.0; truth = :multistart, truth_starts = 61),
+    "C" => Objective("C", "Margules TPD 1-D (logit chart)", f_margules, 1, [0.0], 5.0; truth = :multistart, truth_starts = 401),
     # The same TPD in the MOLE-FRACTION chart y₁ ∈ [0.01, 0.99]: the y ln y edge
     # singularities sit just outside the box, so polynomial coefficients decay
     # only algebraically — the case the brief's objective C is meant to decide
     # (pkg/ThermoObjectives, which has the Clapeyron models, is not in profiles/dev).
-    "D" => Objective("D", "Margules TPD 1-D (mole-fraction chart)", f_margules_y, 1, [0.5], 0.49),
+    "D" => Objective("D", "Margules TPD 1-D (mole-fraction chart)", f_margules_y, 1, [0.5], 0.49; truth = :multistart, truth_starts = 401),
 )
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
@@ -135,6 +173,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         "outdir" => nothing,
         "ledger" => true,
         "smoke" => false,
+        # census, both in box units (max-norm of (x − c) ./ hw)
+        "dedup_tol" => 1e-3,        # verified rows closer than this are one critical point
+        "capture_radius" => 0.05,   # a candidate this close to its point captured it
     )
     i = 1
     while i <= length(argv)
@@ -165,6 +206,12 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         elseif a == "--polynomial"          # e.g. --polynomial 20,24
             cfg["polynomial"] = parse.(Int, split(argv[i+1], ","))
             i += 1
+        elseif a == "--dedup-tol"
+            cfg["dedup_tol"] = parse(Float64, argv[i+1])
+            i += 1
+        elseif a == "--capture-radius"
+            cfg["capture_radius"] = parse(Float64, argv[i+1])
+            i += 1
         else
             error("unknown argument $a")
         end
@@ -172,10 +219,13 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
     end
     if cfg["outdir"] === nothing
         stamp = Dates.format(now(), "yyyymmddTHHMMSS")
+        # two jobs started in the same second must not share a directory (korok
+        # 1035874/1035875 did, and one overwrote the other's artifacts)
+        suffix = haskey(ENV, "SLURM_JOB_ID") ? "_job" * ENV["SLURM_JOB_ID"] : "_pid" * string(getpid())
         cfg["outdir"] = joinpath(
             "globtim_results",
             root,
-            stamp * (cfg["smoke"] ? "_smoke" : ""),
+            stamp * suffix * (cfg["smoke"] ? "_smoke" : ""),
         )
     end
     return cfg
@@ -212,55 +262,289 @@ function fd_hessian(f, x, hw)
     return (H + H') / 2
 end
 
+# F(x), or `nothing` when F throws a DomainError there (a chart coordinate outside
+# its domain, e.g. the log of a negative mole fraction one Newton step past a face)
+function _eval_or_nothing(F, x)
+    try
+        return F(x)
+    catch e
+        e isa DomainError || rethrow()
+        return nothing
+    end
+end
+
 """
-Newton on ∇f = 0 from `x0` (original coordinates), ForwardDiff or central-difference
-derivatives (`ad`), steps clipped to 0.1·halfwidth, at most `maxit` iterations, must
-stay within the box enlarged by `margin`. Returns (x, gradnorm, index, converged,
-displacement).
+    refine_on_f(f, x0, lo, hi; ad, tol, maxit = 100, margin = 0.05)
+
+Newton on ∇f = 0 from `x0` (original coordinates) with ForwardDiff (`ad =
+:forwarddiff`) or central-difference (`:finitediff`) derivatives, each step clipped
+to 0.1 of the half-width in every coordinate. The iteration ends with `status`
+
+- `:converged` — |∇f| < `tol` at an iterate;
+- `:left_box`  — an iterate left the box enlarged by `margin` (f is not evaluated there);
+- `:domain` / `:nonfinite` — f threw a DomainError, or f or a derivative was
+  non-finite (a failed ODE solve returns Inf, whose ForwardDiff gradient is 0);
+- `:singular`  — the Hessian was exactly singular;
+- `:maxit`     — `maxit` steps without reaching `tol`.
+
+`converged` is `status == :converged` with the final point inside the closed box:
+only such points are verified critical points of f. Also returned, at the final
+point: the Morse index and the smallest |eigenvalue| of the Hessian, `newton_step`
+(max-norm in box units of H⁻¹∇f, the location error of the point), and the
+displacement from `x0`, Euclidean in original coordinates (`displacement`) and
+max-norm in box units (`disp_norm`).
 """
-function refine_on_f(f, x0, lo, hi; ad = :forwarddiff, maxit = 100, tol = 1e-10, margin = 0.05)
+function refine_on_f(f, x0, lo, hi; ad::Symbol, tol::Real, maxit::Int = 100, margin::Real = 0.05)
     hw = (hi .- lo) ./ 2
     ad in (:forwarddiff, :finitediff) || error("ad must be :forwarddiff or :finitediff, got $ad")
     g(x) = ad == :forwarddiff ? ForwardDiff.gradient(f, x) : fd_gradient(f, x, hw)
     H(x) = ad == :forwarddiff ? ForwardDiff.hessian(f, x) : fd_hessian(f, x, hw)
-    x = copy(x0)
-    converged = false
+    outside_margin(x) = any(x .< lo .- margin .* hw) || any(x .> hi .+ margin .* hw)
+    x = Vector{Float64}(x0)
+    status = :maxit
     for _ in 1:maxit
-        gx = g(x)
-        if norm(gx) < tol
-            converged = true
+        fx = _eval_or_nothing(f, x)
+        gx = fx === nothing ? nothing : _eval_or_nothing(g, x)
+        if gx === nothing
+            status = :domain
             break
         end
-        # a singular (finite-difference) Hessian at an iterate ends the refinement
-        # of this point as "not converged"; it is reported per point, not fatal
+        if !(isfinite(fx) && all(isfinite, gx))
+            status = :nonfinite
+            break
+        end
+        if norm(gx) < tol
+            status = :converged
+            break
+        end
+        Hx = _eval_or_nothing(H, x)
+        if Hx === nothing
+            status = :domain
+            break
+        end
+        if !all(isfinite, Hx)
+            status = :nonfinite
+            break
+        end
         dx = try
-            H(x) \ gx
+            Hx \ gx
         catch e
             e isa LinearAlgebra.SingularException || rethrow()
+            status = :singular
             break
         end
-        cap = 0.1 * norm(hw)
-        nd = norm(dx)
-        nd > cap && (dx .*= cap / nd)
+        s = maximum(abs.(dx ./ hw))
+        s > 0.1 && (dx .*= 0.1 / s)
         x = x - dx
-        any(x .< lo .- margin .* hw) || any(x .> hi .+ margin .* hw) && break
+        if outside_margin(x)
+            status = :left_box
+            break
+        end
     end
-    gn = norm(g(x))
-    idx = count(<(0), eigvals(Symmetric(H(x))))
     inside = all(lo .<= x .<= hi)
+    disp = norm(x .- x0)
+    disp_norm = maximum(abs.((x .- x0) ./ hw))
+    # f is not evaluated where the iteration left the margin or failed to evaluate
+    gx = status in (:left_box, :domain, :nonfinite) ? nothing : _eval_or_nothing(g, x)
+    Hx = gx === nothing ? nothing : _eval_or_nothing(H, x)
+    if gx === nothing || Hx === nothing || !all(isfinite, gx) || !all(isfinite, Hx)
+        return (; x = x, status = status, converged = false, inside = inside, gradnorm = NaN, index = -1,
+            min_abs_eig = NaN, newton_step = NaN, displacement = disp, disp_norm = disp_norm)
+    end
+    ev = eigvals(Symmetric(Hx))
+    step = try
+        maximum(abs.((Hx \ gx) ./ hw))
+    catch e
+        e isa LinearAlgebra.SingularException || rethrow()
+        Inf
+    end
     return (;
         x = x,
-        gradnorm = gn,
-        index = idx,
-        converged = converged && inside,
-        displacement = norm(x - x0),
+        status = status,
+        converged = status == :converged && inside,
+        inside = inside,
+        gradnorm = norm(gx),
+        index = count(<(0), ev),
+        min_abs_eig = minimum(abs, ev),
+        newton_step = step,
+        displacement = disp,
+        disp_norm = disp_norm,
+    )
+end
+
+"""
+    truth_by_multistart(o::Objective; dedup_tol = 1e-3) -> (; points, index, n_starts, n_converged)
+
+An independent critical set of f on the box of `o`, taken from no surrogate: the
+audit's own verifier (`refine_on_f`) from every node of an `o.truth_starts`^dim
+lattice spanning the closed box, converged points deduplicated at `dedup_tol` (box
+units). It misses critical points whose Newton basin falls between lattice nodes; a
+census point verified outside this set is reported as `truth_extra`, a statement
+about the oracle, not about the surrogate.
+"""
+function truth_by_multistart(o::Objective; dedup_tol::Real = 1e-3)
+    o.truth == :multistart || error("$(o.key): truth_by_multistart needs truth = :multistart")
+    lo, hi = box(o)
+    c = (lo .+ hi) ./ 2
+    hw = (hi .- lo) ./ 2
+    lat = range(-1.0, 1.0; length = o.truth_starts)
+    pts = Vector{Vector{Float64}}()
+    idx = Int[]
+    n_starts = 0
+    n_conv = 0
+    for tup in Iterators.product((lat for _ in 1:o.dim)...)
+        n_starts += 1
+        r = refine_on_f(o.f, c .+ hw .* collect(tup), lo, hi; ad = o.ad, tol = o.gradtol)
+        r.converged || continue
+        n_conv += 1
+        any(p -> maximum(abs.((p .- r.x) ./ hw)) < dedup_tol, pts) && continue
+        push!(pts, r.x)
+        push!(idx, r.index)
+    end
+    return (; points = pts, index = idx, n_starts = n_starts, n_converged = n_conv)
+end
+
+"""
+    census(rows, lo, hi; dedup_tol = 1e-3, capture_radius = 0.05, truth = nothing)
+
+The verified critical-point census of one configuration. Distances are max-norm in
+box units, u = (x − c) ./ hw; `rows` are the in-box surrogate critical points, each
+refined by `refine_on_f`.
+
+- `n_inbox`: candidates (rows); `n_verified_rows`: rows that converged inside the box.
+- `points`: the DISTINCT verified critical points of f (verified rows merged at
+  `dedup_tol`), each with its index at the seed row, `index_stable` (all rows
+  reaching it agree), `n_rows`, `seed_dist` (smallest `disp_norm` of a row reaching
+  it), `tight` (`seed_dist ≤ capture_radius`: the surrogate located it), `typed` (the
+  seed's surrogate index equals the index of f) and `face_dist`.
+- `n_tight` / `n_transported`: distinct points located by the surrogate / reached
+  only by Newton on f from a candidate farther than `capture_radius`.
+- `n_spurious = n_inbox − n_tight`: candidates that are not the tight seed of their
+  own point, i.e. `n_unverified + n_redundant + n_transported`.
+- `n_mistyped`: tight seeds whose surrogate index is not the index of f.
+- `ph_distinct`: Σ(−1)^index over the distinct points.
+- `truth` (with a truth set): `n_truth`, `n_found`, `n_found_tight`, and `n_extra`
+  (distinct points missing from the truth set).
+- `clean`: no spurious candidate and, with a truth set, every truth point tightly
+  captured.
+
+`cp_id[k]` is the point row k verified to (0: not verified); `tight_seed[k]` marks
+the row that captured its point.
+"""
+function census(rows, lo, hi; dedup_tol::Real = 1e-3, capture_radius::Real = 0.05, truth = nothing)
+    c = (lo .+ hi) ./ 2
+    hw = (hi .- lo) ./ 2
+    dist(a, b) = maximum(abs.((a .- b) ./ hw))
+    reps = Vector{Vector{Float64}}()
+    members = Vector{Vector{Int}}()
+    cp_id = zeros(Int, length(rows))
+    for (k, r) in enumerate(rows)
+        r.converged || continue
+        j = findfirst(p -> dist(p, r.x_refined) < dedup_tol, reps)
+        if j === nothing
+            push!(reps, r.x_refined)
+            push!(members, [k])
+            cp_id[k] = length(reps)
+        else
+            push!(members[j], k)
+            cp_id[k] = j
+        end
+    end
+    tight_seed = fill(false, length(rows))
+    points = NamedTuple[]
+    for (j, ks) in enumerate(members)
+        dn = [rows[k].disp_norm for k in ks]
+        kseed = ks[argmin(dn)]
+        tight = minimum(dn) <= capture_radius
+        tight && (tight_seed[kseed] = true)
+        idxs = [rows[k].index_refined for k in ks]
+        push!(points, (;
+            x = reps[j],
+            u = (reps[j] .- c) ./ hw,
+            index = rows[kseed].index_refined,
+            index_stable = allequal(idxs),
+            n_rows = length(ks),
+            seed_dist = minimum(dn),
+            tight = tight,
+            typed = rows[kseed].index_surrogate == rows[kseed].index_refined,
+            face_dist = minimum(1 .- abs.((reps[j] .- c) ./ hw)),
+        ))
+    end
+    n_inbox = length(rows)
+    n_ver = count(r -> r.converged, rows)
+    n_distinct = length(points)
+    n_tight = count(p -> p.tight, points)
+    tr = nothing
+    if truth !== nothing
+        found = [any(p -> dist(p.x, t) < dedup_tol, points) for t in truth]
+        found_tight = [any(p -> p.tight && dist(p.x, t) < dedup_tol, points) for t in truth]
+        tr = (;
+            n_truth = length(truth),
+            n_found = count(found),
+            n_found_tight = count(found_tight),
+            n_extra = count(p -> !any(t -> dist(p.x, t) < dedup_tol, truth), points),
+        )
+    end
+    n_spurious = n_inbox - n_tight
+    return (;
+        n_inbox = n_inbox,
+        n_verified_rows = n_ver,
+        n_distinct = n_distinct,
+        n_tight = n_tight,
+        n_transported = n_distinct - n_tight,
+        n_unverified = n_inbox - n_ver,
+        n_redundant = n_ver - n_distinct,
+        n_spurious = n_spurious,
+        n_mistyped = count(p -> p.tight && !p.typed, points),
+        n_index_unstable = count(p -> !p.index_stable, points),
+        ph_distinct = sum((-1)^p.index for p in points; init = 0),
+        max_seed_dist = isempty(points) ? NaN : maximum(p.seed_dist for p in points),
+        clean = n_spurious == 0 && (tr === nothing || tr.n_found_tight == tr.n_truth),
+        truth = tr,
+        points = points,
+        cp_id = cp_id,
+        tight_seed = tight_seed,
+        dedup_tol = Float64(dedup_tol),
+        capture_radius = Float64(capture_radius),
     )
 end
 
 # ── one configuration ───────────────────────────────────────────────────────
 
-function run_rational(o::Objective, TR, M, N)
-    lo, hi = o.center .- o.range, o.center .+ o.range
+# one refined row per in-box surrogate critical point (the CSV row)
+function refined_row(o::Objective, lo, hi, xs, xo, y, idx_s)
+    r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = o.gradtol)
+    return (;
+        x_surrogate = xs,
+        x_original = xo,
+        y = y,
+        index_surrogate = idx_s,
+        x_refined = r.x,
+        status = r.status,
+        inside = r.inside,
+        gradnorm = r.gradnorm,
+        index_refined = r.index,
+        min_abs_eig = r.min_abs_eig,
+        newton_step = r.newton_step,
+        converged = r.converged,
+        displacement = r.displacement,
+        disp_norm = r.disp_norm,
+        # the objective at the refined point (hit test for miss²); not evaluated
+        # where the refinement left the box or failed to evaluate
+        f_refined = r.status in (:left_box, :domain, :nonfinite) ? NaN : o.f(r.x),
+    )
+end
+
+"""
+    run_rational(o, TR, M, N; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+
+One rational configuration: fit, lifted HC solve (cold and warm), denominator
+certificate, refinement of every in-box candidate on f, and the `census` (keywords
+passed through). `admissible` is the certificate: a fit whose q is not certified
+positive on the box is reported, never used as the gate's R*.
+"""
+function run_rational(o::Objective, TR, M, N; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+    lo, hi = box(o)
     t_fit = @elapsed R = RationalConstructor(TR, M, N)
     # the conversion is repeated inside solve_rational_critical_points; it is
     # timed separately here because it is cheap and the brief asks for the split
@@ -274,23 +558,9 @@ function run_rational(o::Objective, TR, M, N)
     t_solve_warm -= t_convert
     stats = res.stats
     t_cert = @elapsed cert = certify_positive_denominator(R)
-    t_refine = @elapsed rows = map(zip(res.points, res.values, res.index)) do (x, y, idx)
-        xo = to_original_coordinates(R, x)
-        r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = max(1e-10, 1e-2 * o.gradtol))
-        (;
-            x_surrogate = x,
-            x_original = xo,
-            y = y,
-            index_surrogate = idx,
-            x_refined = r.x,
-            gradnorm = r.gradnorm,
-            index_refined = r.index,
-            converged = r.converged,
-            displacement = r.displacement,
-            f_refined = o.f(r.x),        # the objective at the refined point (hit test for miss²)
-        )
-    end
-    ph = isempty(rows) ? 0 : sum((-1)^r.index_refined for r in rows if r.converged; init = 0)
+    t_refine = @elapsed rows = [refined_row(o, lo, hi, x, to_original_coordinates(R, x), y, idx)
+                                for (x, y, idx) in zip(res.points, res.values, res.index)]
+    cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "rational",
         label = "($M,$N)",
@@ -305,6 +575,7 @@ function run_rational(o::Objective, TR, M, N)
         qmin_grid = R.qmin_grid,
         qmin = cert.qmin,
         q_ok = cert.ok,
+        admissible = cert.ok,
         n_paths = stats.n_paths,
         n_singular = stats.n_singular,
         n_real = stats.n_real,
@@ -312,9 +583,8 @@ function run_rational(o::Objective, TR, M, N)
         n_outside = res.n_outside,
         n_rejected_q = res.n_rejected_q,
         n_inconsistent_y = res.n_inconsistent_y,
-        n_verified = count(r -> r.converged && r.gradnorm < o.gradtol, rows),
         gradtol = o.gradtol,
-        ph_sum = ph,
+        census = cz,
         t_fit = t_fit,
         t_convert = t_convert,
         t_solve = t_solve,
@@ -327,22 +597,31 @@ function run_rational(o::Objective, TR, M, N)
 end
 
 """
-A cell that raised: every numeric field NaN / -1, no rows, the message in `error`,
-so one failing configuration is reported instead of aborting the audit.
+A cell that raised: every numeric field NaN / -1, no rows, an empty census, the
+message in `error`, so one failing configuration is reported instead of aborting
+the audit. A failed cell is never admissible.
 """
-function failed_cell(kind, label, M, N, msg)
+function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing)
+    lo, hi = box(o)
     return (;
         kind = kind, label = label, M = M, N_requested = N, N = -1, dof = -1, GN = -1,
-        nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false,
+        nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, admissible = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
-        n_rejected_q = -1, n_inconsistent_y = -1, n_verified = -1, gradtol = NaN, ph_sum = 0,
+        n_rejected_q = -1, n_inconsistent_y = -1, gradtol = NaN,
+        census = census(NamedTuple[], lo, hi; truth = truth),
         t_fit = NaN, t_convert = NaN, t_solve = NaN, t_solve_warm = NaN, t_cert = NaN, t_refine = NaN,
         rows = NamedTuple[], error = msg,
     )
 end
 
-function run_polynomial(o::Objective, TR, D)
-    lo, hi = o.center .- o.range, o.center .+ o.range
+"""
+    run_polynomial(o, TR, D; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+
+One polynomial degree: `Constructor`, `solve_polynomial_system` (cold and warm),
+refinement of every in-box candidate on f, and the `census`. Always admissible.
+"""
+function run_polynomial(o::Objective, TR, D; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+    lo, hi = box(o)
     n = o.dim
     t_fit = @elapsed pol = Constructor(TR, D)
     x, _ = Globtim._rational_polyvars(n)
@@ -368,21 +647,10 @@ function run_polynomial(o::Objective, TR, D)
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
     t_refine = @elapsed rows = map(pts) do xs
         xo = to_original_coordinates(xs, TR.sample_range, TR.center)
-        r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = max(1e-10, 1e-2 * o.gradtol))
-        (;
-            x_surrogate = xs,
-            x_original = xo,
-            y = Globtim.evaluate(pol, xo),
-            index_surrogate = count(<(0), eigvals(Symmetric(ForwardDiff.hessian(u -> Globtim.evaluate(pol, u), xo)))),
-            x_refined = r.x,
-            gradnorm = r.gradnorm,
-            index_refined = r.index,
-            converged = r.converged,
-            displacement = r.displacement,
-            f_refined = o.f(r.x),        # the objective at the refined point (hit test for miss²)
-        )
+        refined_row(o, lo, hi, xs, xo, Globtim.evaluate(pol, xo),
+            count(<(0), eigvals(Symmetric(ForwardDiff.hessian(u -> Globtim.evaluate(pol, u), xo)))))
     end
-    ph = isempty(rows) ? 0 : sum((-1)^r.index_refined for r in rows if r.converged; init = 0)
+    cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "polynomial",
         label = "D=$D",
@@ -397,6 +665,7 @@ function run_polynomial(o::Objective, TR, D)
         qmin_grid = NaN,
         qmin = NaN,
         q_ok = true,
+        admissible = true,
         n_paths = st === nothing ? -1 : st.paths_tracked,
         n_singular = st === nothing ? -1 : st.n_singular,
         n_real = length(raw),
@@ -404,9 +673,8 @@ function run_polynomial(o::Objective, TR, D)
         n_outside = length(raw) - length(pts),
         n_rejected_q = 0,
         n_inconsistent_y = 0,
-        n_verified = count(r -> r.converged && r.gradnorm < o.gradtol, rows),
         gradtol = o.gradtol,
-        ph_sum = ph,
+        census = cz,
         t_fit = t_fit,
         t_convert = 0.0,
         t_solve = t_solve,
@@ -420,27 +688,19 @@ end
 
 # ── gate ────────────────────────────────────────────────────────────────────
 
-function dedup(points; tol = 1e-6)
-    out = Vector{Vector{Float64}}()
-    for p in points
-        any(norm(p - q) < tol for q in out) || push!(out, p)
-    end
-    return out
-end
-
-# distinct verified critical points (refined to |∇f| < gradtol inside the box)
-refined_set(c) = dedup([r.x_refined for r in c.rows if r.converged && r.gradnorm < c.gradtol])
-
-function match_counts(A, B; tol = 1e-3)
-    a_in_b = count(a -> any(norm(a - b) < tol for b in B), A)
-    b_in_a = count(b -> any(norm(a - b) < tol for a in A), B)
-    return (; a_in_b = a_in_b, b_in_a = b_in_a)
+# one-line census: candidates → distinct / tight, spurious, and recall when a truth set exists
+function census_line(cz)
+    s = @sprintf("%d cand → %d distinct, %d tight, %d spurious", cz.n_inbox, cz.n_distinct, cz.n_tight, cz.n_spurious)
+    cz.truth === nothing && return s
+    return s * @sprintf(" (truth: %d/%d tight, %d found, %d extra)", cz.truth.n_found_tight, cz.truth.n_truth, cz.truth.n_found, cz.truth.n_extra)
 end
 
 """
-Gate of brief §3. `dof_frac = 0.5` is the official gate (R* restricted to
-dof ≤ ½ dof(P*)); `dof_frac = Inf` is the informational unconstrained comparison
-(best rational configuration of any size against the best polynomial).
+Gate of brief §3 on the census. `dof_frac = 0.5` is the official gate (R*
+restricted to dof ≤ ½ dof(P*)); `dof_frac = Inf` is the informational
+unconstrained comparison (best certified rational of any size against the best
+polynomial). R* is chosen among ADMISSIBLE (q-certified) fits only; with none at
+the dof bound, check 3 fails and R* is `nothing`.
 """
 function gate_verdict(cells; dof_frac = 0.5)
     polys = [c for c in cells if c.kind == "polynomial" && isfinite(c.nrm)]
@@ -451,56 +711,97 @@ function gate_verdict(cells; dof_frac = 0.5)
     if isempty(cands)
         return (; evaluated = false, pass = false, checks = [("no rational configuration at ≤ $(dof_frac)·dof($(Pstar.label)) = $(floor(Int, Pstar.dof * dof_frac))", false, "")], Pstar = Pstar, Rstar = nothing)
     end
-    Rstar = cands[argmin([c.nrm for c in cands])]
-    SR = refined_set(Rstar)
-    SP = refined_set(Pstar)
-    m = match_counts(SR, SP)
+    certified = [c for c in cands if c.admissible]
+    if isempty(certified)
+        detail = "q changes sign on the box in " * join((c.label for c in cands), ", ")
+        return (; evaluated = true, pass = false,
+            checks = [("3. a q-certified rational configuration exists at dof ≤ $(dof_frac)·dof(P*)", false, detail)],
+            Pstar = Pstar, Rstar = nothing)
+    end
+    Rstar = certified[argmin([c.nrm for c in certified])]
+    CR, CP = Rstar.census, Pstar.census
+    near(a, b) = maximum(abs.(a.u .- b.u)) < CR.dedup_tol
+    covered = count(p -> any(r -> near(r, p), CR.points), CP.points)
     checks = Tuple{String,Bool,String}[]
     push!(checks, ("1. nrm(R*) ≤ nrm(P*)", Rstar.nrm <= Pstar.nrm, @sprintf("%.3e vs %.3e", Rstar.nrm, Pstar.nrm)))
-    # every rational point is a true critical point, and nothing the polynomial
-    # verifies is missed by the rational; polynomial-only points that do NOT
-    # refine are the polynomial's spurious points and are reported, not penalised
-    all_ver = Rstar.n_points == Rstar.n_verified
-    nothing_missed = m.b_in_a == length(SP)
-    push!(checks, ("2. all R* points refine to |∇f|<$(Rstar.gradtol), and every distinct verified P* point is matched by R* within 1e-3", all_ver && nothing_missed,
-        "rational $(Rstar.n_points) pts / $(Rstar.n_verified) verified / $(length(SR)) distinct; polynomial $(Pstar.n_points) pts / $(Pstar.n_verified) verified / $(length(SP)) distinct ($(Pstar.n_points - Pstar.n_verified) spurious); matched $(m.b_in_a) of $(length(SP)) polynomial and $(m.a_in_b) of $(length(SR)) rational"))
-    push!(checks, ("3. certify_positive_denominator(R*).ok", Rstar.q_ok, @sprintf("qmin = %.4f", Rstar.qmin)))
+    # the rational must locate every critical point it reports (no spurious,
+    # redundant or transported candidate) and every truth point, and must not miss
+    # a point the polynomial's refinement verifies
+    push!(checks, ("2. R* census clean, and every distinct P* point found by R*", CR.clean && covered == length(CP.points),
+        "R*: " * census_line(CR) * "; P*: " * census_line(CP) * "; R* has $covered of $(length(CP.points)) P* points"))
+    push!(checks, ("3. a q-certified rational configuration exists at dof ≤ $(dof_frac)·dof(P*)", true, @sprintf("R* qmin = %.3e", Rstar.qmin)))
     # evaluated on the WARM (second-solve) times: the first solve of a new HC
     # System is dominated by compiling its straight-line program at these sizes
-    push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*) (warm; cold in parentheses)", Rstar.t_solve_warm <= Pstar.t_solve_warm,
-        @sprintf("%.2fs vs %.2fs (cold %.2fs vs %.2fs)", Rstar.t_solve_warm, Pstar.t_solve_warm, Rstar.t_solve, Pstar.t_solve)))
+    push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*) (warm)", Rstar.t_solve_warm <= Pstar.t_solve_warm,
+        @sprintf("%.2fs vs %.2fs; cold %.2fs vs %.2fs; R* certificate %.2fs", Rstar.t_solve_warm, Pstar.t_solve_warm, Rstar.t_solve, Pstar.t_solve, Rstar.t_cert)))
     return (; evaluated = true, pass = all(c[2] for c in checks), checks = checks, Pstar = Pstar, Rstar = Rstar)
 end
 
 # ── reporting ───────────────────────────────────────────────────────────────
 
+# NamedTuples (cells, rows, census, truth sets) as nested Dicts for JLD2
+todict(nt::NamedTuple) = Dict{String,Any}(String(k) => todict(v) for (k, v) in pairs(nt))
+todict(v::AbstractVector) = [todict(x) for x in v]
+todict(s::Symbol) = String(s)
+todict(x) = x
+
 function cell_table(io, cells)
-    println(io, "| config | dof | N | nrm | σmin/σmax | qmin (cert) | paths | sing | pts | verified | PH | t_fit | t_conv | t_HC cold | t_HC warm | t_refine |")
-    println(io, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    println(io, "| config | dof | N | nrm | σmin/σmax | qmin (cert) | paths | sing | in box | t_fit | t_conv | t_HC cold | t_HC warm | t_cert | t_refine |")
+    println(io, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for c in cells
         if !isempty(c.error)
-            println(io, "| ", c.label, " | – | – | FAILED: ", replace(first(c.error, 160), "|" => "/"), " | | | | | | | | | | | | |")
+            println(io, "| ", c.label, " | – | – | FAILED: ", replace(first(c.error, 160), "|" => "/"), " | | | | | | | | | | | |")
             continue
         end
-        @printf(io, "| %s | %d | %d | %.2e | %s | %s | %d | %d | %d | %d | %d | %.2f | %.2f | %.2f | %.2f | %.2f |\n",
+        @printf(io, "| %s | %d | %d | %.2e | %s | %s | %d | %d | %d | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f |\n",
             c.label, c.dof, c.N, c.nrm,
             isnan(c.sigma_ratio) ? "–" : @sprintf("%.1e", c.sigma_ratio),
             isnan(c.qmin) ? "–" : @sprintf("%.2e%s", c.qmin, c.q_ok ? "" : " ✗"),
-            c.n_paths, c.n_singular, c.n_points, c.n_verified, c.ph_sum,
-            c.t_fit, c.t_convert, c.t_solve, c.t_solve_warm, c.t_refine)
+            c.n_paths, c.n_singular, c.n_points,
+            c.t_fit, c.t_convert, c.t_solve, c.t_solve_warm, c.t_cert, c.t_refine)
     end
 end
 
-function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, elapsed; objectives = OBJECTIVES)
+function census_table(io, cells)
+    println(io, "| config | admissible | cand | verified rows | distinct | tight | transported | unverified | redundant | **spurious** | mistyped | index-unstable | PH | max seed dist | truth: tight / found / extra of n | clean |")
+    println(io, "|---|:-:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|:-:|")
+    for c in cells
+        isempty(c.error) || continue
+        z = c.census
+        tr = z.truth === nothing ? "–" : @sprintf("%d / %d / %d of %d", z.truth.n_found_tight, z.truth.n_found, z.truth.n_extra, z.truth.n_truth)
+        @printf(io, "| %s | %s | %d | %d | %d | %d | %d | %d | %d | **%d** | %d | %d | %d | %s | %s | %s |\n",
+            c.label, c.admissible ? "yes" : "✗ (q not certified)", z.n_inbox, z.n_verified_rows, z.n_distinct,
+            z.n_tight, z.n_transported, z.n_unverified, z.n_redundant, z.n_spurious, z.n_mistyped,
+            z.n_index_unstable, z.ph_distinct, isnan(z.max_seed_dist) ? "–" : @sprintf("%.1e", z.max_seed_dist),
+            tr, z.clean ? "yes" : "no")
+    end
+end
+
+fmt_point(x) = "[" * join((@sprintf("%.6f", t) for t in x), ", ") * "]"
+
+function verdict_lines(io, v)
+    for (name, ok, detail) in v.checks
+        println(io, "- [", ok ? "PASS" : "FAIL", "] ", name, " — ", detail)
+    end
+end
+
+function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, elapsed; objectives = OBJECTIVES, truths = Dict())
     open(path, "w") do io
         println(io, "# Rational surrogates, Phase 1 audit\n")
         println(io, "Generated ", now(), " by pkg/globtim/scripts/audit_rational_phase1.jl",
             cfg["smoke"] ? " (SMOKE)" : "", "; GN = ", cfg["gn"], "; elapsed ", @sprintf("%.0f", elapsed), " s.\n")
         println(io, "Brief: docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md. nrm is the quadrature-weighted L2 norm ",
-            "of the residual on [-1,1]^n for both surrogate kinds (nonlinear residual p/q − f for the rational). ",
-            "\"verified\" = refined on f by Newton to |∇f| < gradtol inside the box (gradtol = 1e-6 for closed-form ",
-            "objectives with ForwardDiff derivatives; per-objective for finite-difference ones, stated in the objective's section). ",
-            "PH = Σ(−1)^index over verified points.\n")
+            "of the residual on [-1,1]^n for both surrogate kinds (nonlinear residual p/q − f for the rational).\n")
+        @printf(io, "**Census** (the measure of a configuration). Every in-box surrogate critical point (a candidate) is ")
+        @printf(io, "refined on f by Newton; it is *verified* when the refinement reaches |∇f| < gradtol inside the box ")
+        @printf(io, "(gradtol per objective, stated in its section; it is the threshold applied). Verified points closer than ")
+        @printf(io, "%.0e in box units (max-norm of (x − c)./hw) are one *distinct* critical point. A distinct point is ", cfg["dedup_tol"])
+        @printf(io, "*tight* when a candidate reaching it started within %.2g box units of it (the surrogate located it), ", cfg["capture_radius"])
+        @printf(io, "*transported* otherwise (Newton on f carried a distant candidate there). *Spurious* = candidates that are ")
+        @printf(io, "not the tight seed of their own point = unverified + redundant + transported. *Mistyped* = tight seeds ")
+        @printf(io, "whose surrogate index differs from the index of f. PH = Σ(−1)^index over distinct points. ")
+        @printf(io, "*Clean* = no spurious candidate and, with a truth set, every truth point tight. A rational fit whose q ")
+        @printf(io, "is not certified positive on the box is not admissible: its census is shown, the gate never selects it.\n\n")
         for key in cfg["objectives"]
             o = objectives[key]
             cells = results[key]
@@ -508,45 +809,55 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
             println(io, "## ", key, ". ", o.name, "\n")
             println(io, "dim ", o.dim, ", center ", o.center, ", half-width ", o.range,
                 "; refinement derivatives: ", o.ad, ", verified at |∇f| < ", o.gradtol, ".\n")
+            if haskey(truths, key)
+                t = truths[key]
+                println(io, "Truth set (Newton on f from a ", o.truth_starts, "^", o.dim, " lattice of starts, ",
+                    t.n_converged, " of ", t.n_starts, " converged inside the box): ", length(t.points), " critical points\n")
+                for (x, idx) in zip(t.points, t.index)
+                    println(io, "- ", fmt_point(x), ", index ", idx)
+                end
+                println(io)
+            else
+                println(io, "No truth set for this objective: recall is not measured, only the census.\n")
+            end
+            println(io, "Fits and solves:\n")
             cell_table(io, cells)
+            println(io, "\nCensus:\n")
+            census_table(io, cells)
             println(io)
             if v.evaluated
-                println(io, "Gate: P* = ", v.Pstar.label, " (dof ", v.Pstar.dof, "), R* = ", v.Rstar.label,
-                    " (dof ", v.Rstar.dof, ", post-reduction N = ", v.Rstar.N, ") → **", v.pass ? "PASS" : "FAIL", "**\n")
+                println(io, "Gate: P* = ", v.Pstar.label, " (dof ", v.Pstar.dof, "), R* = ",
+                    v.Rstar === nothing ? "none (no certified rational at the dof bound)" :
+                    "$(v.Rstar.label) (dof $(v.Rstar.dof), post-reduction N = $(v.Rstar.N))",
+                    " → **", v.pass ? "PASS" : "FAIL", "**\n")
             else
                 println(io, "Gate: not evaluated\n")
             end
-            for (name, ok, detail) in v.checks
-                println(io, "- [", ok ? "PASS" : "FAIL", "] ", name, " — ", detail)
-            end
+            verdict_lines(io, v)
             println(io)
             vu = verdicts_unconstrained[key]
             if vu.evaluated
-                println(io, "Unconstrained comparison (informational, any dof): R* = ", vu.Rstar.label,
-                    " (dof ", vu.Rstar.dof, ") vs P* = ", vu.Pstar.label, " (dof ", vu.Pstar.dof, ") → ", vu.pass ? "PASS" : "FAIL", "\n")
-                for (name, ok, detail) in vu.checks
-                    println(io, "- [", ok ? "PASS" : "FAIL", "] ", name, " — ", detail)
-                end
+                println(io, "Unconstrained comparison (informational, any dof): R* = ",
+                    vu.Rstar === nothing ? "none" : "$(vu.Rstar.label) (dof $(vu.Rstar.dof))",
+                    " vs P* = ", vu.Pstar.label, " (dof ", vu.Pstar.dof, ") → ", vu.pass ? "PASS" : "FAIL", "\n")
+                verdict_lines(io, vu)
                 println(io)
             end
             if haskey(results, key * "_extended")
                 println(io, "Extended rational sweep (GN = ", cfg["gn_extended"], "):\n")
                 cell_table(io, results[key*"_extended"])
                 println(io)
+                census_table(io, results[key*"_extended"])
+                println(io)
             end
-            r84 = findfirst(c -> c.kind == "rational" && c.label == "(8,4)", cells)
-            if r84 !== nothing
-                c = cells[r84]
-                @printf(io, "Wall-time split at (8,4): fit %.2f s, convert %.2f s, HC %.2f s cold / %.2f s warm, certificate %.2f s, refine %.2f s.\n\n",
-                    c.t_fit, c.t_convert, c.t_solve, c.t_solve_warm, c.t_cert, c.t_refine)
-            end
-            println(io, "Refined critical points of R* and P* (original coordinates):\n")
-            for c in (v.evaluated ? (v.Rstar, v.Pstar) : ())
+            println(io, "Candidates of R* and P* (original coordinates; cp = distinct point reached, 0 = not verified):\n")
+            for c in (v.evaluated ? filter(!isnothing, [v.Rstar, v.Pstar]) : [])
                 println(io, "- ", c.label, ":")
-                for r in c.rows
-                    @printf(io, "  - x = %s, index %d, |∇f| = %.1e, moved %.1e%s\n",
-                        "[" * join((@sprintf("%.6f", t) for t in r.x_refined), ", ") * "]",
-                        r.index_refined, r.gradnorm, r.displacement, r.converged ? "" : " (NOT converged)")
+                for (k, r) in enumerate(c.rows)
+                    @printf(io, "  - cp %d%s: from %s → %s, index %d → %d, |∇f| = %.1e, moved %.1e box units, %s\n",
+                        c.census.cp_id[k], c.census.tight_seed[k] ? " (tight seed)" : "",
+                        fmt_point(r.x_original), fmt_point(r.x_refined), r.index_surrogate, r.index_refined,
+                        r.gradnorm, r.disp_norm, r.converged ? "verified" : "NOT verified ($(r.status), inside = $(r.inside))")
                 end
             end
             println(io)
@@ -560,15 +871,69 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
     return path
 end
 
+# ── ladder report (campaigns that put one objective family on a dial) ───────
+
+# one census cell: tight captures / truth points (or distinct tight points without
+# a truth set), +spurious candidates, ✗ when the rational fit is not admissible;
+# bold when the census is clean and admissible
+function ladder_cell(c)
+    isempty(c.error) || return "failed"
+    z = c.census
+    s = (z.truth === nothing ? string(z.n_tight) : "$(z.truth.n_found_tight)/$(z.truth.n_truth)") * " +$(z.n_spurious)"
+    c.admissible || return s * " ✗"
+    return z.clean ? "**" * s * "**" : s
+end
+
+"""
+    ladder_report(path, cfg, results; axis_name, axis, order) -> path
+
+One row per objective of a ladder, in `order`, with the value `axis[key]` of the
+dial (`axis_name`), the first clean admissible configuration of each kind, and the
+census of every configuration in one cell (`ladder_cell`). Written by campaign
+scripts through `main`'s `extra_report`.
+"""
+function ladder_report(path, cfg, results; axis_name::AbstractString, axis::AbstractDict, order)
+    labels = vcat(["($M,$N)" for (M, N) in cfg["rational"]], ["D=$D" for D in cfg["polynomial"]])
+    dof = Dict{String,Int}()
+    for key in order, c in results[key]
+        isempty(c.error) && (dof[c.label] = c.dof)
+    end
+    first_clean(cells, kind) = begin
+        ok = [c for c in cells if c.kind == kind && isempty(c.error) && c.admissible && c.census.clean]
+        isempty(ok) ? "none" : (c = ok[argmin([c.dof for c in ok])]; "$(c.label) ($(c.dof) dof)")
+    end
+    open(path, "w") do io
+        println(io, "# Ladder census\n")
+        println(io, "Cell: tight captures / truth points (distinct tight points when the objective has no truth set), ",
+            "then +spurious candidates; ✗ = rational fit not admissible (q not certified positive); **bold** = clean. ",
+            "Census definitions: summary.md.\n")
+        println(io, "| key | ", axis_name, " | truth | first clean rational | first clean polynomial | ",
+            join(("$l ($(get(dof, l, -1)))" for l in labels), " | "), " |")
+        println(io, "|---|---:|---:|---|---|", join(("---" for _ in labels), "|"), "|")
+        for key in order
+            cells = results[key]
+            byl = Dict(c.label => c for c in cells)
+            z1 = first(cells).census
+            ntruth = z1.truth === nothing ? "–" : string(z1.truth.n_truth)
+            println(io, "| ", key, " | ", @sprintf("%.3f", axis[key]), " | ", ntruth, " | ",
+                first_clean(cells, "rational"), " | ", first_clean(cells, "polynomial"), " | ",
+                join((haskey(byl, l) ? ladder_cell(byl[l]) : "–" for l in labels), " | "), " |")
+        end
+    end
+    return path
+end
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 """
-    main(argv; objectives, root, slug, extended_keys, brief) -> Bool
+    main(argv; objectives, root, slug, extended_keys, brief, extra_report) -> Bool
 
 Run the audit over `objectives` (a `Dict{String,Objective}`; the default table is
 the brief's A–D). A campaign script `include`s this file and calls `main` with its
 own table, results root under `globtim_results/`, ledger slug and the keys that get
-the extended (M,N) sweep.
+the extended (M,N) sweep. `extra_report(cfg, results, outdir)`, if given, writes
+further artifacts into `outdir` and returns their file names (hashed into the
+ledger record with the rest).
 """
 function main(
     argv;
@@ -577,6 +942,7 @@ function main(
     slug = "rational_phase1_audit",
     extended_keys = ["B"],
     brief = "docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md",
+    extra_report = nothing,
 )
     cfg = parse_args(argv; root = root, default_objectives = sort(collect(keys(objectives))))
     outdir = normpath(cfg["outdir"])
@@ -598,22 +964,31 @@ function main(
     results = Dict{String,Vector{NamedTuple}}()
     verdicts = Dict{String,Any}()
     verdicts_unconstrained = Dict{String,Any}()
+    truths = Dict{String,Any}()
     for key in cfg["objectives"]
         o = objectives[key]
         println("\n== ", key, ". ", o.name)
+        truth_pts = nothing
+        if o.truth == :multistart
+            t_truth = @elapsed truths[key] = truth_by_multistart(o; dedup_tol = cfg["dedup_tol"])
+            truth_pts = truths[key].points
+            @printf("  truth: %d critical points (%d of %d starts converged, %.1f s)\n",
+                length(truth_pts), truths[key].n_converged, truths[key].n_starts, t_truth)
+        end
+        ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"])
         TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
         cells = NamedTuple[]
         for (M, N) in cfg["rational"]
             @printf("  rational (%2d,%2d) ... ", M, N)
             c = try
-                run_rational(o, TR, M, N)
+                run_rational(o, TR, M, N; ckw...)
             catch e
-                failed_cell("rational", "($M,$N)", M, N, sprint(showerror, e))
+                failed_cell(o, "rational", "($M,$N)", M, N, sprint(showerror, e); truth = truth_pts)
             end
             push!(cells, c)
             if isempty(c.error)
-                @printf("N→%d nrm=%.2e σ=%.1e qmin=%.3f%s pts=%d/%d PH=%d HC=%.2fs\n",
-                    c.N, c.nrm, c.sigma_ratio, c.qmin, c.q_ok ? "" : "(neg)", c.n_verified, c.n_points, c.ph_sum, c.t_solve)
+                @printf("N→%d nrm=%.2e σ=%.1e qmin=%.3f%s %s HC=%.2fs\n",
+                    c.N, c.nrm, c.sigma_ratio, c.qmin, c.q_ok ? "" : "(neg)", census_line(c.census), c.t_solve)
             else
                 println("FAILED: ", first(c.error, 200))
             end
@@ -621,13 +996,13 @@ function main(
         for D in cfg["polynomial"]
             @printf("  polynomial D=%2d  ... ", D)
             c = try
-                run_polynomial(o, TR, D)
+                run_polynomial(o, TR, D; ckw...)
             catch e
-                failed_cell("polynomial", "D=$D", D, 0, sprint(showerror, e))
+                failed_cell(o, "polynomial", "D=$D", D, 0, sprint(showerror, e); truth = truth_pts)
             end
             push!(cells, c)
             if isempty(c.error)
-                @printf("nrm=%.2e pts=%d/%d PH=%d HC=%.2fs\n", c.nrm, c.n_verified, c.n_points, c.ph_sum, c.t_solve)
+                @printf("nrm=%.2e %s HC=%.2fs\n", c.nrm, census_line(c.census), c.t_solve)
             else
                 println("FAILED: ", first(c.error, 200))
             end
@@ -642,7 +1017,8 @@ function main(
         vu = gate_verdict(cells; dof_frac = Inf)
         verdicts_unconstrained[key] = vu
         if vu.evaluated
-            println("  unconstrained (informational): R* = ", vu.Rstar.label, " vs P* = ", vu.Pstar.label, " → ", vu.pass ? "PASS" : "FAIL")
+            println("  unconstrained (informational): R* = ", vu.Rstar === nothing ? "none certified" : vu.Rstar.label,
+                " vs P* = ", vu.Pstar.label, " → ", vu.pass ? "PASS" : "FAIL")
         end
         # Objective B is a genuine rational function of type (24,24) (two atoms,
         # (d²+δ)^6 each), beyond the (12,6) sweep: extend the search for the
@@ -653,14 +1029,14 @@ function main(
             for (M, N) in cfg["rational_extended"]
                 @printf("  extended rational (%2d,%2d) GN=%d ... ", M, N, cfg["gn_extended"])
                 c = try
-                    run_rational(o, TRx, M, N)
+                    run_rational(o, TRx, M, N; ckw...)
                 catch e
-                    failed_cell("rational", "($M,$N)", M, N, sprint(showerror, e))
+                    failed_cell(o, "rational", "($M,$N)", M, N, sprint(showerror, e); truth = truth_pts)
                 end
                 push!(ext, c)
                 if isempty(c.error)
-                    @printf("N→%d nrm=%.2e σ=%.1e qmin=%.3f%s pts=%d/%d PH=%d HC=%.2fs\n",
-                        c.N, c.nrm, c.sigma_ratio, c.qmin, c.q_ok ? "" : "(neg)", c.n_verified, c.n_points, c.ph_sum, c.t_solve)
+                    @printf("N→%d nrm=%.2e σ=%.1e qmin=%.3f%s %s HC=%.2fs\n",
+                        c.N, c.nrm, c.sigma_ratio, c.qmin, c.q_ok ? "" : "(neg)", census_line(c.census), c.t_solve)
                 else
                     println("FAILED: ", first(c.error, 200))
                 end
@@ -674,19 +1050,29 @@ function main(
     table = DataFrame()
     cps = DataFrame()
     for key in sort(collect(keys(results))), c in results[key]
+        z = c.census
+        t = z.truth
         push!(table, (; objective = key, kind = c.kind, config = c.label, M = c.M, N_requested = c.N_requested, N = c.N,
             dof = c.dof, GN = c.GN, nrm = c.nrm, rms = c.rms, sigma_ratio = c.sigma_ratio, qmin_grid = c.qmin_grid,
-            qmin = c.qmin, q_ok = c.q_ok, n_paths = c.n_paths, n_singular = c.n_singular, n_real = c.n_real,
-            n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q,
-            n_inconsistent_y = c.n_inconsistent_y, n_verified = c.n_verified, ph_sum = c.ph_sum,
+            qmin = c.qmin, q_ok = c.q_ok, admissible = c.admissible, n_paths = c.n_paths, n_singular = c.n_singular,
+            n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q,
+            n_inconsistent_y = c.n_inconsistent_y, gradtol = c.gradtol,
+            n_verified_rows = z.n_verified_rows, n_distinct = z.n_distinct, n_tight = z.n_tight,
+            n_transported = z.n_transported, n_unverified = z.n_unverified, n_redundant = z.n_redundant,
+            n_spurious = z.n_spurious, n_mistyped = z.n_mistyped, n_index_unstable = z.n_index_unstable,
+            ph_distinct = z.ph_distinct, max_seed_dist = z.max_seed_dist, clean = z.clean,
+            n_truth = t === nothing ? -1 : t.n_truth, truth_found = t === nothing ? -1 : t.n_found,
+            truth_found_tight = t === nothing ? -1 : t.n_found_tight, truth_extra = t === nothing ? -1 : t.n_extra,
             t_fit = c.t_fit, t_convert = c.t_convert, t_solve = c.t_solve, t_solve_warm = c.t_solve_warm,
             t_cert = c.t_cert, t_refine = c.t_refine, error = c.error); promote = true)
         for (k, r) in enumerate(c.rows)
             push!(cps, (; objective = key, kind = c.kind, config = c.label, point = k,
                 x_surrogate = join(string.(r.x_surrogate), ";"), x_original = join(string.(r.x_original), ";"),
                 x_refined = join(string.(r.x_refined), ";"), y = r.y, index_surrogate = r.index_surrogate,
-                index_refined = r.index_refined, gradnorm = r.gradnorm, displacement = r.displacement,
-                converged = r.converged, f_refined = r.f_refined); promote = true)
+                index_refined = r.index_refined, status = String(r.status), inside = r.inside,
+                gradnorm = r.gradnorm, min_abs_eig = r.min_abs_eig, newton_step = r.newton_step,
+                displacement = r.displacement, disp_norm = r.disp_norm, converged = r.converged,
+                cp_id = z.cp_id[k], tight_seed = z.tight_seed[k], f_refined = r.f_refined); promote = true)
         end
     end
     CSV.write(joinpath(outdir, "audit_table.csv"), table)
@@ -694,7 +1080,8 @@ function main(
 
     JLD2.jldsave(joinpath(outdir, "audit_full.jld2");
         config = Dict(k => (v isa Vector{Tuple{Int,Int}} ? [collect(t) for t in v] : v) for (k, v) in cfg),
-        results = Dict(k => [Dict(String(f) => (f == :rows ? [Dict(String(g) => getfield(r, g) for g in keys(r)) for r in c.rows] : getfield(c, f)) for f in keys(c)) for c in v] for (k, v) in results),
+        results = Dict(k => [todict(c) for c in v] for (k, v) in results),
+        truths = Dict(k => todict(t) for (k, t) in truths),
         verdicts = Dict(k => Dict("evaluated" => v.evaluated, "pass" => v.pass,
             "checks" => [Dict("name" => n, "pass" => p, "detail" => d) for (n, p, d) in v.checks],
             "Pstar" => v.Pstar === nothing ? nothing : v.Pstar.label,
@@ -707,12 +1094,18 @@ function main(
         user_metadata = Dict{String,Any}(
             "package" => "Globtim", "script" => "pkg/globtim/scripts/audit_rational_phase1.jl",
             "brief" => brief, "bead" => "B3",
-            "objectives" => Dict(k => Dict("name" => o.name, "dim" => o.dim, "center" => o.center, "range" => o.range) for (k, o) in objectives if k in cfg["objectives"]),
+            "objectives" => Dict(k => Dict("name" => o.name, "dim" => o.dim, "center" => o.center, "range" => o.range,
+                "ad" => String(o.ad), "gradtol" => o.gradtol, "truth" => String(o.truth), "truth_starts" => o.truth_starts)
+                                 for (k, o) in objectives if k in cfg["objectives"]),
             "gn" => cfg["gn"], "basis" => "chebyshev", "solver" => "hc (lifted, polyhedral) / hc (polynomial, :auto)",
-            "refinement" => "Newton on ∇f with ForwardDiff, |∇f| < 1e-6 verified, box + 5% margin",
+            "refinement" => "Newton on ∇f (ForwardDiff or central differences per objective), verified when |∇f| < gradtol is reached inside the box; steps ≤ 0.1 half-width per coordinate; box + 5% margin",
+            "census" => "distinct verified points at dedup_tol, tight when a candidate started within capture_radius (box units, max-norm)",
+            "dedup_tol" => cfg["dedup_tol"], "capture_radius" => cfg["capture_radius"],
             "smoke" => cfg["smoke"],
         ))
-    summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed; objectives = objectives)
+    summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed;
+        objectives = objectives, truths = truths)
+    extra_artifacts = extra_report === nothing ? String[] : String.(extra_report(cfg, results, outdir))
 
     if cfg["ledger"]
         headline = Dict{String,Any}(
@@ -723,13 +1116,16 @@ function main(
         for key in cfg["objectives"]
             v = verdicts[key]
             headline["gate_$key"] = v.evaluated ? (v.pass ? "pass" : "fail") : "not_evaluated"
-            if v.evaluated
-                headline["Rstar_$key"] = v.Rstar.label
-                headline["Pstar_$key"] = v.Pstar.label
-                headline["nrm_Rstar_$key"] = v.Rstar.nrm
-                headline["nrm_Pstar_$key"] = v.Pstar.nrm
-                headline["n_points_Rstar_$key"] = v.Rstar.n_points
-                headline["n_points_Pstar_$key"] = v.Pstar.n_points
+            haskey(truths, key) && (headline["n_truth_$key"] = length(truths[key].points))
+            for (tag, c) in (("Rstar", v.Rstar), ("Pstar", v.Pstar))
+                c === nothing && continue
+                headline["$(tag)_$key"] = c.label
+                headline["nrm_$(tag)_$key"] = c.nrm
+                headline["n_points_$(tag)_$key"] = c.n_points
+                headline["n_distinct_$(tag)_$key"] = c.census.n_distinct
+                headline["n_tight_$(tag)_$key"] = c.census.n_tight
+                headline["n_spurious_$(tag)_$key"] = c.census.n_spurious
+                c.census.truth === nothing || (headline["truth_found_tight_$(tag)_$key"] = c.census.truth.n_found_tight)
             end
         end
         all_pass = all(verdicts[k].evaluated && verdicts[k].pass for k in cfg["objectives"])
@@ -737,7 +1133,7 @@ function main(
             rec = Globtim.emit_ledger_record(;
                 slug = slug * (cfg["smoke"] ? "_smoke" : ""),
                 outdir = outdir, headline = headline,
-                artifacts = ["audit_table.csv", "critical_points.csv", "audit_full.jld2", "summary.md"],
+                artifacts = vcat(["audit_table.csv", "critical_points.csv", "audit_full.jld2", "summary.md"], extra_artifacts),
                 supersedes = cfg["supersedes"],
                 status = all_pass ? "completed" : "completed_gate_failed")
             println("ledger record: ", rec)

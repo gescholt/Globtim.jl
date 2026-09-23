@@ -123,8 +123,16 @@ part is a stand-in: Phase 2 recurses Globtim on the faces. A fit with
   oracle on `f`, the 3-D case, the product-form failure mode, the certificate.
   Everything HC-dependent is `@test_skip`ped loudly if the extension is
   missing; a missing extension is never "0 critical points".
-- `scripts/audit_rational_phase1.jl` — the three-objective comparison at
-  matched degrees of freedom with the gate of the brief §3.
+- `scripts/audit_rational_phase1.jl` — the comparison at matched degrees of
+  freedom with the gate of the brief §3, scored by the verified critical-point
+  census: every in-box candidate refined on `f` by Newton (verified when
+  `|∇f| < gradtol` is reached inside the box), verified points merged into
+  distinct critical points (1e-3 in box units), each distinct point *tight* when
+  a candidate started within 0.05 box units of it and *transported* otherwise,
+  and every candidate that is not the tight seed of its own point counted as
+  spurious. Closed-form objectives also get an independent truth set (Newton
+  from a lattice of starts) and report recall. A fit with `cert.ok == false` is
+  reported but never selected as the gate's R*.
 
 ## Phase 2
 
