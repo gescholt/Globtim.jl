@@ -339,3 +339,14 @@ end
 with_timeout(TIMEOUT_SOLVE, label = "test_warmstart_solve.jl") do
     include("test_warmstart_solve.jl")
 end
+
+# Rational surrogates r = p/q (docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md). The
+# solver file runs several lifted HC solves (one in 3-D) plus Newton oracles,
+# so it gets the HC-completeness budget rather than TIMEOUT_TESTFILE.
+with_timeout(TIMEOUT_TESTFILE, label = "test_rational_approx.jl") do
+    include("test_rational_approx.jl")
+end
+
+with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_rational_solver.jl") do
+    include("test_rational_solver.jl")
+end

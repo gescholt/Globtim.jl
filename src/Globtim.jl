@@ -315,6 +315,25 @@ include("validation.jl") #Unified validation framework (consolidates ValidationB
 # safe_wrappers.jl removed — fallback/retry mechanisms are forbidden (see AGENTS.md)
 include("EnhancedMetrics.jl") #Enhanced statistics collection
 
+# Rational surrogates r = p/q (docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md): the
+# Austin et al. (2021) linear-algebra fit and the lifted critical-point system
+# p - y q = 0, ∇p - y ∇q = 0 solved by HC (the ext adds _solve_rational_hc).
+include("rational_approx.jl")
+include("rational_solver.jl")
+export ApproxRational,
+    RationalConstructor,
+    rational_ls_fit,
+    rational_dof,
+    rational_numerator,
+    rational_denominator,
+    to_original_coordinates,
+    to_surrogate_coordinates,
+    rational_critical_system,
+    solve_rational_critical_points,
+    certify_positive_denominator,
+    rational_hessian_index,
+    rational_hessian_inertia
+
 # Export non-plotting functions that are always available
 export points_in_hypercube, points_in_range
 

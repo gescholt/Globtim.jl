@@ -62,6 +62,27 @@ function Globtim._solve_hc(
     end
 end
 
+# Lifted rational critical-point system (rational_solver.jl): a square system
+# in the n+1 variables vcat(x, [y]), passed in explicitly. New method, leaves
+# _solve_hc untouched (docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md, B2).
+function Globtim._solve_rational_hc(
+    eqs::AbstractVector,
+    vars::AbstractVector;
+    start_system::Symbol = :polyhedral,
+)
+    sys = System(eqs; variables = vars)
+    hc_result = solve(sys; start_system = start_system, show_progress = false)
+    rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
+    stats = (;
+        start_system = start_system,
+        n_paths = ntracked(hc_result),
+        n_solutions = nsolutions(hc_result),
+        n_singular = nsingular(hc_result),
+        n_real = length(rl_sol),
+    )
+    return rl_sol, stats
+end
+
 function Globtim._solve_hc_parametric(
     support::AbstractMatrix,
     n::Int,
