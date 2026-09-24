@@ -32,6 +32,13 @@
 # INADMISSIBLE (pkg/globtim/docs/rational_surrogates.md): its census is
 # reported and flagged, never selected by the gate.
 #
+# Sampling arms (--sampling grid,christoffel:<s> --replicates <r>): besides the
+# grid, every configuration can be fitted on ⌈s · #unknowns⌉ Christoffel samples
+# (RationalConstructor(...; sampling = :christoffel); the polynomial control
+# uses the same sampler), one arm per seed 1..r. Each arm records its objective
+# evaluations and its residual on the grid (--no-validate skips that for
+# expensive objectives); the gate ranks grid fits only.
+#
 # Gate (brief §3), per objective, with P* the best-nrm polynomial degree and R*
 # the best-nrm CERTIFIED rational configuration with dof ≤ dof(P*)/2:
 #   1. nrm(R*) ≤ nrm(P*);
@@ -59,6 +66,7 @@ using ForwardDiff
 using LinearAlgebra
 using Printf
 using Dates
+using Random: Xoshiro
 using JLD2
 using CSV
 using DataFrames
@@ -159,6 +167,32 @@ const OBJECTIVES = Dict(
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
+# "grid" or "christoffel:<samples per unknown>"
+function parse_sampling_spec(s)
+    s == "grid" && return (; sampling = :grid, per_dof = NaN)
+    parts = split(s, ":")
+    (length(parts) == 2 && parts[1] == "christoffel") ||
+        error("sampling spec must be grid or christoffel:<samples per unknown>, got $s")
+    per_dof = parse(Float64, parts[2])
+    per_dof >= 1 || error("christoffel:$per_dof: at least one sample per unknown is needed")
+    return (; sampling = :christoffel, per_dof = per_dof)
+end
+
+# every fitting arm of a configuration: the grid once, each Christoffel spec once per replicate seed
+const GRID_ARM = (; sampling = :grid, per_dof = NaN, seed = -1)
+function sampling_arms(cfg)
+    arms = NamedTuple[]
+    for spec in cfg["sampling"]
+        if spec.sampling == :grid
+            push!(arms, GRID_ARM)
+        else
+            append!(arms, [(; sampling = spec.sampling, per_dof = spec.per_dof, seed = r) for r in 1:cfg["replicates"]])
+        end
+    end
+    return arms
+end
+arm_tag(arm) = arm.sampling == :grid ? "" : @sprintf(" %gm #%d", arm.per_dof, arm.seed)
+
 function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "B", "C", "D"])
     cfg = Dict{String,Any}(
         "objectives" => default_objectives,
@@ -176,6 +210,13 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # census, both in box units (max-norm of (x − c) ./ hw)
         "dedup_tol" => 1e-3,        # verified rows closer than this are one critical point
         "capture_radius" => 0.05,   # a candidate this close to its point captured it
+        # how each configuration is fitted: the tensor grid, and/or Christoffel
+        # samples at `per_dof` samples per unknown (one arm per replicate seed)
+        "sampling" => [(; sampling = :grid, per_dof = NaN)],
+        "replicates" => 1,
+        # residual of every sampled fit on the grid (costs (gn+1)^n evaluations of f
+        # per objective; --no-validate for expensive objectives)
+        "validate" => true,
     )
     i = 1
     while i <= length(argv)
@@ -212,6 +253,15 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         elseif a == "--capture-radius"
             cfg["capture_radius"] = parse(Float64, argv[i+1])
             i += 1
+        elseif a == "--sampling"            # e.g. --sampling grid,christoffel:3,christoffel:6
+            cfg["sampling"] = [parse_sampling_spec(s) for s in split(argv[i+1], ",")]
+            i += 1
+        elseif a == "--replicates"
+            cfg["replicates"] = parse(Int, argv[i+1])
+            cfg["replicates"] >= 1 || error("--replicates must be ≥ 1")
+            i += 1
+        elseif a == "--no-validate"
+            cfg["validate"] = false
         else
             error("unknown argument $a")
         end
@@ -536,16 +586,47 @@ function refined_row(o::Objective, lo, hi, xs, xo, y, idx_s)
 end
 
 """
-    run_rational(o, TR, M, N; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+    validation_grid(o, GN) -> (; S, z, w)
+
+The audit's tensor Chebyshev grid on the box of `o` (surrogate coordinates), the
+objective on it, and the quadrature weights of `ApproxPoly.nrm`: the common set on
+which fits from different sample sets are compared.
+"""
+function validation_grid(o::Objective, GN::Int)
+    S = Globtim._grid_matrix(o.dim, GN, :chebyshev)
+    z = Globtim._evaluate_objective_rows(o.f, S, o.range, o.center)
+    all(isfinite, z) || error("$(o.key): objective not finite on the validation grid")
+    return (; S = S, z = z, w = Globtim.compute_quadrature_weights(:chebyshev, GN, o.dim))
+end
+
+# L2 norm on [-1,1]^n (Lebesgue, the ApproxPoly.nrm convention) of s − f on the
+# validation grid; s takes surrogate coordinates. NaN without a validation grid.
+function validation_nrm(s, validation)
+    validation === nothing && return NaN
+    S, z, w = validation.S, validation.z, validation.w
+    return sqrt(sum(w[i] * (s(S[i, :]) - z[i])^2 for i in 1:size(S, 1)))
+end
+
+"""
+    run_rational(o, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
 
 One rational configuration: fit, lifted HC solve (cold and warm), denominator
 certificate, refinement of every in-box candidate on f, and the `census` (keywords
 passed through). `admissible` is the certificate: a fit whose q is not certified
-positive on the box is reported, never used as the gate's R*.
+positive on the box is reported, never used as the gate's R*. `arm` selects the
+sample set: the grid of `TR`, or `per_dof · (α(M) + α(N))` Christoffel samples drawn
+with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
+`nrm_grid` is its residual on `validation` (the grid fit's own `nrm` for the grid).
 """
-function run_rational(o::Objective, TR, M, N; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
+        dedup_tol = 1e-3, capture_radius = 0.05)
     lo, hi = box(o)
-    t_fit = @elapsed R = RationalConstructor(TR, M, N)
+    t_fit = @elapsed R = if arm.sampling == :grid
+        RationalConstructor(TR, M, N)
+    else
+        RationalConstructor(TR, M, N; sampling = arm.sampling, rng = Xoshiro(arm.seed),
+            n_samples = ceil(Int, arm.per_dof * (binomial(o.dim + M, M) + binomial(o.dim + N, N))))
+    end
     # the conversion is repeated inside solve_rational_critical_points; it is
     # timed separately here because it is cheap and the brief asks for the split
     t_convert = @elapsed rational_critical_system(R)
@@ -563,7 +644,13 @@ function run_rational(o::Objective, TR, M, N; truth = nothing, dedup_tol = 1e-3,
     cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "rational",
-        label = "($M,$N)",
+        label = "($M,$N)" * arm_tag(arm),
+        base_label = "($M,$N)",
+        sampling = String(arm.sampling),
+        per_dof = arm.per_dof,
+        seed = arm.seed,
+        n_evals = size(R.grid, 1),
+        nrm_grid = arm.sampling == :grid ? R.nrm : validation_nrm(u -> R(u), validation),
         M = M,
         N_requested = N,
         N = R.N,
@@ -601,10 +688,12 @@ A cell that raised: every numeric field NaN / -1, no rows, an empty census, the
 message in `error`, so one failing configuration is reported instead of aborting
 the audit. A failed cell is never admissible.
 """
-function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing)
+function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing, arm = GRID_ARM)
     lo, hi = box(o)
     return (;
-        kind = kind, label = label, M = M, N_requested = N, N = -1, dof = -1, GN = -1,
+        kind = kind, label = label, base_label = kind == "rational" ? "($M,$N)" : "D=$M",
+        sampling = String(arm.sampling), per_dof = arm.per_dof, seed = arm.seed, n_evals = -1, nrm_grid = NaN,
+        M = M, N_requested = N, N = -1, dof = -1, GN = -1,
         nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, admissible = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
         n_rejected_q = -1, n_inconsistent_y = -1, gradtol = NaN,
@@ -615,24 +704,62 @@ function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing)
 end
 
 """
-    run_polynomial(o, TR, D; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+    christoffel_polynomial_fit(o, Λ, K, rng) -> (; coeffs, nrm, rms)
 
-One polynomial degree: `Constructor`, `solve_polynomial_system` (cold and warm),
-refinement of every in-box candidate on f, and the `census`. Always admissible.
+The polynomial control arm of a scattered-sample rational: least squares on `K`
+arcsine samples of the box of `o`, weighted with the Christoffel weights of `Λ` —
+the sampler and weights of `RationalConstructor(...; sampling = :christoffel)`,
+solved by QR. Coefficients are in the plain Chebyshev basis of `Λ` (what
+`solve_polynomial_system` takes with `normalized = false`); `nrm` is the in-sample
+Monte Carlo L2 residual on the box, `rms` the plain one.
 """
-function run_polynomial(o::Objective, TR, D; truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+function christoffel_polynomial_fit(o::Objective, Λ, K::Int, rng)
+    n = o.dim
+    S, sqrt_w = Globtim.christoffel_random_sample_chebyshev(n, Λ.data, K; rng = rng)
+    z = Globtim._evaluate_objective_rows(o.f, S, o.range, o.center)
+    all(isfinite, z) || error("$(o.key): objective not finite at $(count(!isfinite, z)) of $K samples")
+    V = Globtim.lambda_vandermonde(Λ, S; basis = :chebyshev)
+    coeffs = Vector{Float64}((sqrt_w .* V) \ (sqrt_w .* z))
+    r = V * coeffs .- z
+    mc = [prod(π * sqrt(1 - S[i, k]^2) for k in 1:n) for i in 1:K] ./ K
+    return (; coeffs = coeffs, nrm = sqrt(sum(mc .* abs2.(r))), rms = sqrt(sum(abs2, r) / K))
+end
+
+"""
+    run_polynomial(o, TR, D; arm = GRID_ARM, validation = nothing, truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
+
+One polynomial degree: the fit (`Constructor` on the grid of `TR`, or
+`christoffel_polynomial_fit` on `per_dof · α(D)` samples for a Christoffel arm),
+`solve_polynomial_system` (cold and warm), refinement of every in-box candidate
+on f, and the `census`. Always admissible.
+"""
+function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothing, truth = nothing,
+        dedup_tol = 1e-3, capture_radius = 0.05)
     lo, hi = box(o)
     n = o.dim
-    t_fit = @elapsed pol = Constructor(TR, D)
+    Λ = SupportGen(n, (:one_d_for_all, D))
+    if arm.sampling == :grid
+        t_fit = @elapsed pol = Constructor(TR, D)
+        coeffs, basis, normalized = pol.coeffs, pol.basis, pol.normalized
+        surrogate = u -> Globtim.evaluate(pol, to_original_coordinates(u, TR.sample_range, TR.center))
+        nrm, n_evals, GN = pol.nrm, length(pol.z), TR.GN
+        rms = sqrt(sum(abs2, Globtim.evaluate(pol, pol.grid .* (TR.sample_range isa Number ? TR.sample_range : TR.sample_range') .+ TR.center') .- pol.z) / length(pol.z))
+    else
+        K = ceil(Int, arm.per_dof * Λ.size[1])
+        t_fit = @elapsed fit = christoffel_polynomial_fit(o, Λ, K, Xoshiro(arm.seed))
+        coeffs, basis, normalized = fit.coeffs, :chebyshev, false
+        surrogate = u -> dot(coeffs, Globtim._tensor_basis_values(Λ, u, :chebyshev, false))
+        nrm, rms, n_evals, GN = fit.nrm, fit.rms, K, -1
+    end
     x, _ = Globtim._rational_polyvars(n)
     stats_ref = Ref{Any}(nothing)
     t_solve = @elapsed raw = solve_polynomial_system(
         x,
         n,
         D,
-        pol.coeffs;
-        basis = pol.basis,
-        normalized = pol.normalized,
+        coeffs;
+        basis = basis,
+        normalized = normalized,
         path_stats_ref = stats_ref,
     )
     st = stats_ref[]
@@ -640,27 +767,35 @@ function run_polynomial(o::Objective, TR, D; truth = nothing, dedup_tol = 1e-3, 
         x,
         n,
         D,
-        pol.coeffs;
-        basis = pol.basis,
-        normalized = pol.normalized,
+        coeffs;
+        basis = basis,
+        normalized = normalized,
     )
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
+    # the surrogate's Morse index in surrogate coordinates: the affine map to the
+    # box scales by positive factors, which leaves the inertia unchanged
     t_refine = @elapsed rows = map(pts) do xs
         xo = to_original_coordinates(xs, TR.sample_range, TR.center)
-        refined_row(o, lo, hi, xs, xo, Globtim.evaluate(pol, xo),
-            count(<(0), eigvals(Symmetric(ForwardDiff.hessian(u -> Globtim.evaluate(pol, u), xo)))))
+        refined_row(o, lo, hi, xs, xo, surrogate(xs),
+            count(<(0), eigvals(Symmetric(ForwardDiff.hessian(surrogate, xs)))))
     end
     cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "polynomial",
-        label = "D=$D",
+        label = "D=$D" * arm_tag(arm),
+        base_label = "D=$D",
+        sampling = String(arm.sampling),
+        per_dof = arm.per_dof,
+        seed = arm.seed,
+        n_evals = n_evals,
+        nrm_grid = arm.sampling == :grid ? nrm : validation_nrm(surrogate, validation),
         M = D,
         N_requested = 0,
         N = 0,
         dof = binomial(n + D, D),
-        GN = TR.GN,
-        nrm = pol.nrm,
-        rms = sqrt(sum(abs2, Globtim.evaluate(pol, pol.grid .* (TR.sample_range isa Number ? TR.sample_range : TR.sample_range') .+ TR.center') .- pol.z) / length(pol.z)),
+        GN = GN,
+        nrm = nrm,
+        rms = rms,
         sigma_ratio = NaN,
         qmin_grid = NaN,
         qmin = NaN,
@@ -703,8 +838,10 @@ polynomial). R* is chosen among ADMISSIBLE (q-certified) fits only; with none at
 the dof bound, check 3 fails and R* is `nothing`.
 """
 function gate_verdict(cells; dof_frac = 0.5)
-    polys = [c for c in cells if c.kind == "polynomial" && isfinite(c.nrm)]
-    rats = [c for c in cells if c.kind == "rational" && isfinite(c.nrm)]
+    # the gate compares grid fits (nrm is one estimator there); sampled arms are
+    # reported next to them, not ranked into P* / R*
+    polys = [c for c in cells if c.kind == "polynomial" && c.sampling == "grid" && isfinite(c.nrm)]
+    rats = [c for c in cells if c.kind == "rational" && c.sampling == "grid" && isfinite(c.nrm)]
     (isempty(polys) || isempty(rats)) && return (; evaluated = false, pass = false, checks = [], Pstar = nothing, Rstar = nothing)
     Pstar = polys[argmin([c.nrm for c in polys])]
     cands = [c for c in rats if c.dof <= Pstar.dof * dof_frac]
@@ -746,20 +883,57 @@ todict(s::Symbol) = String(s)
 todict(x) = x
 
 function cell_table(io, cells)
-    println(io, "| config | dof | N | nrm | σmin/σmax | qmin (cert) | paths | sing | in box | t_fit | t_conv | t_HC cold | t_HC warm | t_cert | t_refine |")
-    println(io, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    println(io, "| config | dof | N | evals | nrm | nrm (grid) | σmin/σmax | qmin (cert) | paths | sing | in box | t_fit | t_conv | t_HC cold | t_HC warm | t_cert | t_refine |")
+    println(io, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for c in cells
         if !isempty(c.error)
-            println(io, "| ", c.label, " | – | – | FAILED: ", replace(first(c.error, 160), "|" => "/"), " | | | | | | | | | | | |")
+            println(io, "| ", c.label, " | – | – | – | FAILED: ", replace(first(c.error, 160), "|" => "/"), " | | | | | | | | | | | | |")
             continue
         end
-        @printf(io, "| %s | %d | %d | %.2e | %s | %s | %d | %d | %d | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f |\n",
-            c.label, c.dof, c.N, c.nrm,
+        @printf(io, "| %s | %d | %d | %d | %.2e | %s | %s | %s | %d | %d | %d | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f |\n",
+            c.label, c.dof, c.N, c.n_evals, c.nrm, isnan(c.nrm_grid) ? "–" : @sprintf("%.2e", c.nrm_grid),
             isnan(c.sigma_ratio) ? "–" : @sprintf("%.1e", c.sigma_ratio),
             isnan(c.qmin) ? "–" : @sprintf("%.2e%s", c.qmin, c.q_ok ? "" : " ✗"),
             c.n_paths, c.n_singular, c.n_points,
             c.t_fit, c.t_convert, c.t_solve, c.t_solve_warm, c.t_cert, c.t_refine)
     end
+end
+
+"""
+    sampling_table(io, cells)
+
+The sampled arms against the grid, one row per (configuration, sampling spec),
+Christoffel replicates aggregated: objective evaluations of the fit, how many
+replicates certify q > 0 and give a clean census, the tight captures and spurious
+candidates of each replicate, and the residual on the common grid.
+"""
+function sampling_table(io, cells)
+    any(c -> c.sampling != "grid", cells) || return
+    keys_ = Tuple[]
+    groups = Dict{Tuple,Vector}()
+    for c in cells
+        k = (c.kind, c.base_label, c.sampling, c.per_dof)
+        haskey(groups, k) || (push!(keys_, k); groups[k] = [])
+        push!(groups[k], c)
+    end
+    println(io, "| config | sampling | evals | replicates | certified | clean | tight / truth per replicate | spurious per replicate | nrm on the grid: median (min – max) |")
+    println(io, "|---|---|---:|---:|---:|---:|---|---|---|")
+    for k in keys_
+        cs = groups[k]
+        ok = [c for c in cs if isempty(c.error)]
+        tt = join((c.census.truth === nothing ? string(c.census.n_tight) :
+                   "$(c.census.truth.n_found_tight)/$(c.census.truth.n_truth)" for c in ok), ", ")
+        sp = join((string(c.census.n_spurious) for c in ok), ", ")
+        g = sort([c.nrm_grid for c in ok if isfinite(c.nrm_grid)])
+        gs = isempty(g) ? "–" : @sprintf("%.2e (%.2e – %.2e)", g[cld(length(g), 2)], g[1], g[end])
+        ev = isempty(ok) ? "–" : string(first(ok).n_evals)
+        @printf(io, "| %s | %s | %s | %d | %d | %d | %s | %s | %s |\n",
+            k[2], k[3] == "grid" ? "grid" : @sprintf("christoffel %gm", k[4]), ev, length(cs),
+            count(c -> c.admissible, ok), count(c -> c.admissible && c.census.clean, ok),
+            isempty(tt) ? "–" : tt, isempty(sp) ? "–" : sp, gs)
+    end
+    failed = length(cells) - count(c -> isempty(c.error), cells)
+    failed > 0 && println(io, "\n", failed, " cell(s) failed; see the fit table.")
 end
 
 function census_table(io, cells)
@@ -802,6 +976,13 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
         @printf(io, "whose surrogate index differs from the index of f. PH = Σ(−1)^index over distinct points. ")
         @printf(io, "*Clean* = no spurious candidate and, with a truth set, every truth point tight. A rational fit whose q ")
         @printf(io, "is not certified positive on the box is not admissible: its census is shown, the gate never selects it.\n\n")
+        if any(a -> a.sampling != :grid, sampling_arms(cfg))
+            @printf(io, "**Sampling.** A Christoffel arm `(M,N) Km #r` fits on ⌈K · (α(M) + α(N))⌉ points (⌈K · α(D)⌉ for ")
+            @printf(io, "`D=d Km #r`) drawn from the product arcsine measure with seed r, weighted least squares with the ")
+            @printf(io, "Christoffel weights of the total-degree-max(M,N) Chebyshev space. Its nrm is the in-sample Monte ")
+            @printf(io, "Carlo L2 residual; nrm (grid) is the residual on the audit grid, the common yardstick. The gate ranks ")
+            @printf(io, "grid fits only.\n\n")
+        end
         for key in cfg["objectives"]
             o = objectives[key]
             cells = results[key]
@@ -825,6 +1006,12 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
             println(io, "\nCensus:\n")
             census_table(io, cells)
             println(io)
+            if any(c -> c.sampling != "grid", cells)
+                println(io, "Sampling arms (evals = objective evaluations of the fit; the grid residual is on the ",
+                    "audit's GN = ", cfg["gn"], " grid, ", cfg["validate"] ? "computed for every arm" : "not computed (--no-validate)", "):\n")
+                sampling_table(io, cells)
+                println(io)
+            end
             if v.evaluated
                 println(io, "Gate: P* = ", v.Pstar.label, " (dof ", v.Pstar.dof, "), R* = ",
                     v.Rstar === nothing ? "none (no certified rational at the dof bound)" :
@@ -977,32 +1164,37 @@ function main(
         end
         ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"])
         TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
+        arms = sampling_arms(cfg)
+        validation = cfg["validate"] && any(a -> a.sampling != :grid, arms) ? validation_grid(o, cfg["gn"]) : nothing
+        validation === nothing || @printf("  validation grid: %d evaluations (GN = %d)\n", length(validation.z), cfg["gn"])
         cells = NamedTuple[]
-        for (M, N) in cfg["rational"]
-            @printf("  rational (%2d,%2d) ... ", M, N)
+        for (M, N) in cfg["rational"], arm in arms
+            label = "($M,$N)" * arm_tag(arm)
+            @printf("  rational %-16s ... ", label)
             c = try
-                run_rational(o, TR, M, N; ckw...)
+                run_rational(o, TR, M, N; arm = arm, validation = validation, ckw...)
             catch e
-                failed_cell(o, "rational", "($M,$N)", M, N, sprint(showerror, e); truth = truth_pts)
+                failed_cell(o, "rational", label, M, N, sprint(showerror, e); truth = truth_pts, arm = arm)
             end
             push!(cells, c)
             if isempty(c.error)
-                @printf("N→%d nrm=%.2e σ=%.1e qmin=%.3f%s %s HC=%.2fs\n",
-                    c.N, c.nrm, c.sigma_ratio, c.qmin, c.q_ok ? "" : "(neg)", census_line(c.census), c.t_solve)
+                @printf("evals=%d N→%d nrm=%.2e (grid %.2e) σ=%.1e qmin=%.3f%s %s HC=%.2fs\n",
+                    c.n_evals, c.N, c.nrm, c.nrm_grid, c.sigma_ratio, c.qmin, c.q_ok ? "" : "(neg)", census_line(c.census), c.t_solve)
             else
                 println("FAILED: ", first(c.error, 200))
             end
         end
-        for D in cfg["polynomial"]
-            @printf("  polynomial D=%2d  ... ", D)
+        for D in cfg["polynomial"], arm in arms
+            label = "D=$D" * arm_tag(arm)
+            @printf("  polynomial %-14s ... ", label)
             c = try
-                run_polynomial(o, TR, D; ckw...)
+                run_polynomial(o, TR, D; arm = arm, validation = validation, ckw...)
             catch e
-                failed_cell(o, "polynomial", "D=$D", D, 0, sprint(showerror, e); truth = truth_pts)
+                failed_cell(o, "polynomial", label, D, 0, sprint(showerror, e); truth = truth_pts, arm = arm)
             end
             push!(cells, c)
             if isempty(c.error)
-                @printf("nrm=%.2e %s HC=%.2fs\n", c.nrm, census_line(c.census), c.t_solve)
+                @printf("evals=%d nrm=%.2e (grid %.2e) %s HC=%.2fs\n", c.n_evals, c.nrm, c.nrm_grid, census_line(c.census), c.t_solve)
             else
                 println("FAILED: ", first(c.error, 200))
             end
@@ -1052,8 +1244,10 @@ function main(
     for key in sort(collect(keys(results))), c in results[key]
         z = c.census
         t = z.truth
-        push!(table, (; objective = key, kind = c.kind, config = c.label, M = c.M, N_requested = c.N_requested, N = c.N,
-            dof = c.dof, GN = c.GN, nrm = c.nrm, rms = c.rms, sigma_ratio = c.sigma_ratio, qmin_grid = c.qmin_grid,
+        push!(table, (; objective = key, kind = c.kind, config = c.label, base_config = c.base_label,
+            sampling = c.sampling, per_dof = c.per_dof, seed = c.seed, n_evals = c.n_evals,
+            M = c.M, N_requested = c.N_requested, N = c.N,
+            dof = c.dof, GN = c.GN, nrm = c.nrm, nrm_grid = c.nrm_grid, rms = c.rms, sigma_ratio = c.sigma_ratio, qmin_grid = c.qmin_grid,
             qmin = c.qmin, q_ok = c.q_ok, admissible = c.admissible, n_paths = c.n_paths, n_singular = c.n_singular,
             n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q,
             n_inconsistent_y = c.n_inconsistent_y, gradtol = c.gradtol,
@@ -1079,7 +1273,7 @@ function main(
     CSV.write(joinpath(outdir, "critical_points.csv"), cps)
 
     JLD2.jldsave(joinpath(outdir, "audit_full.jld2");
-        config = Dict(k => (v isa Vector{Tuple{Int,Int}} ? [collect(t) for t in v] : v) for (k, v) in cfg),
+        config = Dict(k => (v isa Vector{Tuple{Int,Int}} ? [collect(t) for t in v] : todict(v)) for (k, v) in cfg),
         results = Dict(k => [todict(c) for c in v] for (k, v) in results),
         truths = Dict(k => todict(t) for (k, t) in truths),
         verdicts = Dict(k => Dict("evaluated" => v.evaluated, "pass" => v.pass,
@@ -1101,6 +1295,8 @@ function main(
             "refinement" => "Newton on ∇f (ForwardDiff or central differences per objective), verified when |∇f| < gradtol is reached inside the box; steps ≤ 0.1 half-width per coordinate; box + 5% margin",
             "census" => "distinct verified points at dedup_tol, tight when a candidate started within capture_radius (box units, max-norm)",
             "dedup_tol" => cfg["dedup_tol"], "capture_radius" => cfg["capture_radius"],
+            "sampling" => [a.sampling == :grid ? "grid" : "christoffel:$(a.per_dof)" for a in cfg["sampling"]],
+            "replicates" => cfg["replicates"], "validate" => cfg["validate"],
             "smoke" => cfg["smoke"],
         ))
     summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed;
@@ -1111,6 +1307,8 @@ function main(
         headline = Dict{String,Any}(
             "objectives" => join(cfg["objectives"], ","),
             "gn" => cfg["gn"],
+            "sampling" => join((a.sampling == :grid ? "grid" : "christoffel:$(a.per_dof)" for a in cfg["sampling"]), ","),
+            "replicates" => cfg["replicates"],
             "n_cells" => sum(length(v) for v in values(results)),
         )
         for key in cfg["objectives"]

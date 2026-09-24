@@ -36,6 +36,45 @@ size precedence: the `GN` keyword, then `TR.GN`, then the smallest grid with
 orthonormal Legendre), and passing a contradicting `normalized` keyword is an
 error rather than a silent reinterpretation.
 
+## Scattered samples instead of the grid
+
+The grid costs `(GN+1)^n` evaluations of `f`, and `GN` must be at least
+`max(M, N)`, so in 4-D a type-(8,4) fit needs 9⁴ = 6561 evaluations while it has
+only α(8) + α(4) = 565 unknowns. On an ODE objective that is the cost that
+matters. The fit itself is a least-squares problem on any point set, so it can
+use scattered samples instead:
+
+```julia
+using Random: Xoshiro
+R = RationalConstructor(TR, 8, 4; sampling = :christoffel, n_samples = 3 * 60, rng = Xoshiro(1))
+```
+
+The `n_samples` points are drawn i.i.d. from the product arcsine (Chebyshev)
+measure on `[-1,1]^n`. The least squares is weighted with the Christoffel
+weights `m / K_Λ(x)` of the total-degree-`max(M, N)` Chebyshev space, using the
+same sampler as `christoffel_fit_chebyshev` (`rational_ls_fit(...; sqrt_w)`).
+The normalisation of `q` stays unweighted, so both paths scale `q` alike.
+
+`n_samples` and `rng` are required: the sample set must be replayable, and there
+is no default generator. Only the Chebyshev basis is supported, and `GN` must
+not be given. `R.sampling`, `R.sample_weights` and `R.grid` (now the samples)
+record what was used.
+
+`R.nrm` is the Monte Carlo estimate `(1/K) Σ rᵢ² ∏ₖ π√(1 − xᵢₖ²)` of the same
+Lebesgue L2 integral the grid path computes by quadrature. It is in-sample and
+optimistic when there are few samples per unknown, so compare fits from
+different sample sets on a common grid. The audit reports that residual as
+`nrm (grid)`.
+
+How many samples are enough is an empirical question. The stability theory
+(Cohen–Migliorati) covers polynomial least squares with `O(m log m)` samples.
+The `F·V_N` block of the rational problem is not a polynomial space. On the 2-D
+pole pair at (8,4), 3 samples per unknown (180 points, against 625 on the grid)
+already match the grid fit's residual, and q stays certified. Below that the
+fit becomes seed-dependent. `experiments/sandbox/rational_sparse/` measures it
+in 2-D, 3-D and 4-D with the census (`--sampling grid,christoffel:<s>
+--replicates <r>`).
+
 ## The fit
 
 Austin, Krishnamoorthy, Leyffer, Mrenna, Müller, Schulz, *CPC* 261 (2021)
@@ -132,7 +171,10 @@ part is a stand-in: Phase 2 recurses Globtim on the faces. A fit with
   and every candidate that is not the tight seed of its own point counted as
   spurious. Closed-form objectives also get an independent truth set (Newton
   from a lattice of starts) and report recall. A fit with `cert.ok == false` is
-  reported but never selected as the gate's R*.
+  reported but never selected as the gate's R*. `--sampling grid,christoffel:<s>
+  --replicates <r>` adds scattered-sample arms (and Christoffel polynomial
+  controls) to every configuration. Each arm records its evaluation count and
+  its residual on the common grid. The gate ranks grid fits only.
 
 ## Phase 2
 
