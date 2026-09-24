@@ -217,6 +217,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # residual of every sampled fit on the grid (costs (gn+1)^n evaluations of f
         # per objective; --no-validate for expensive objectives)
         "validate" => true,
+        # re-solve every system for the warm HC time of gate check 4; a sampling
+        # campaign whose solves dominate the wall time can skip it (--no-warm)
+        "warm" => true,
     )
     i = 1
     while i <= length(argv)
@@ -260,6 +263,8 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["replicates"] = parse(Int, argv[i+1])
             cfg["replicates"] >= 1 || error("--replicates must be ≥ 1")
             i += 1
+        elseif a == "--no-warm"
+            cfg["warm"] = false
         elseif a == "--no-validate"
             cfg["validate"] = false
         else
@@ -619,7 +624,7 @@ with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
 `nrm_grid` is its residual on `validation` (the grid fit's own `nrm` for the grid).
 """
 function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
-        dedup_tol = 1e-3, capture_radius = 0.05)
+        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true)
     lo, hi = box(o)
     t_fit = @elapsed R = if arm.sampling == :grid
         RationalConstructor(TR, M, N)
@@ -635,8 +640,7 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     # second solve of the same system: HC compiles a straight-line program per
     # new System, so the first call is JIT-dominated at these sizes; the warm
     # time is the path-tracking cost
-    t_solve_warm = @elapsed solve_rational_critical_points(R)
-    t_solve_warm -= t_convert
+    t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R)) - t_convert : NaN
     stats = res.stats
     t_cert = @elapsed cert = certify_positive_denominator(R)
     t_refine = @elapsed rows = [refined_row(o, lo, hi, x, to_original_coordinates(R, x), y, idx)
@@ -734,7 +738,7 @@ One polynomial degree: the fit (`Constructor` on the grid of `TR`, or
 on f, and the `census`. Always admissible.
 """
 function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothing, truth = nothing,
-        dedup_tol = 1e-3, capture_radius = 0.05)
+        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true)
     lo, hi = box(o)
     n = o.dim
     Λ = SupportGen(n, (:one_d_for_all, D))
@@ -763,14 +767,7 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         path_stats_ref = stats_ref,
     )
     st = stats_ref[]
-    t_solve_warm = @elapsed solve_polynomial_system(
-        x,
-        n,
-        D,
-        coeffs;
-        basis = basis,
-        normalized = normalized,
-    )
+    t_solve_warm = warm ? (@elapsed solve_polynomial_system(x, n, D, coeffs; basis = basis, normalized = normalized)) : NaN
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
     # the surrogate's Morse index in surrogate coordinates: the affine map to the
     # box scales by positive factors, which leaves the inertia unchanged
@@ -869,8 +866,15 @@ function gate_verdict(cells; dof_frac = 0.5)
     push!(checks, ("3. a q-certified rational configuration exists at dof ≤ $(dof_frac)·dof(P*)", true, @sprintf("R* qmin = %.3e", Rstar.qmin)))
     # evaluated on the WARM (second-solve) times: the first solve of a new HC
     # System is dominated by compiling its straight-line program at these sizes
-    push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*) (warm)", Rstar.t_solve_warm <= Pstar.t_solve_warm,
-        @sprintf("%.2fs vs %.2fs; cold %.2fs vs %.2fs; R* certificate %.2fs", Rstar.t_solve_warm, Pstar.t_solve_warm, Rstar.t_solve, Pstar.t_solve, Rstar.t_cert)))
+    # warm (second-solve) times when measured; without them (--no-warm) the
+    # cold times, compilation included, and the check says so
+    if isnan(Rstar.t_solve_warm) || isnan(Pstar.t_solve_warm)
+        push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*) (cold; warm not measured)", Rstar.t_solve <= Pstar.t_solve,
+            @sprintf("%.2fs vs %.2fs; R* certificate %.2fs", Rstar.t_solve, Pstar.t_solve, Rstar.t_cert)))
+    else
+        push!(checks, ("4. HC wall lifted(R*) ≤ polynomial(P*) (warm)", Rstar.t_solve_warm <= Pstar.t_solve_warm,
+            @sprintf("%.2fs vs %.2fs; cold %.2fs vs %.2fs; R* certificate %.2fs", Rstar.t_solve_warm, Pstar.t_solve_warm, Rstar.t_solve, Pstar.t_solve, Rstar.t_cert)))
+    end
     return (; evaluated = true, pass = all(c[2] for c in checks), checks = checks, Pstar = Pstar, Rstar = Rstar)
 end
 
@@ -1162,7 +1166,7 @@ function main(
             @printf("  truth: %d critical points (%d of %d starts converged, %.1f s)\n",
                 length(truth_pts), truths[key].n_converged, truths[key].n_starts, t_truth)
         end
-        ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"])
+        ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"], warm = cfg["warm"])
         TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
         arms = sampling_arms(cfg)
         validation = cfg["validate"] && any(a -> a.sampling != :grid, arms) ? validation_grid(o, cfg["gn"]) : nothing
