@@ -165,7 +165,9 @@ function rational_ls_fit(
     )
     if sqrt_w !== nothing
         length(sqrt_w) == K || throw(
-            ArgumentError("rational_ls_fit: sqrt_w has length $(length(sqrt_w)), expected one weight per point ($K)"),
+            ArgumentError(
+                "rational_ls_fit: sqrt_w has length $(length(sqrt_w)), expected one weight per point ($K)",
+            ),
         )
         all(w -> isfinite(w) && w > 0, sqrt_w) ||
             throw(ArgumentError("rational_ls_fit: sqrt_w must be positive and finite"))
@@ -331,21 +333,37 @@ function RationalConstructor(
         throw(ArgumentError("sampling must be :grid or :christoffel, got $sampling"))
     if sampling == :christoffel
         basis == :chebyshev || throw(
-            ArgumentError("sampling = :christoffel needs basis = :chebyshev (the Christoffel kernel is Chebyshev), got $basis"),
+            ArgumentError(
+                "sampling = :christoffel needs basis = :chebyshev (the Christoffel kernel is Chebyshev), got $basis",
+            ),
         )
-        GN === nothing || throw(ArgumentError("GN = $GN has no meaning with sampling = :christoffel; pass n_samples"))
-        n_samples === nothing && throw(ArgumentError("sampling = :christoffel needs n_samples"))
+        GN === nothing || throw(
+            ArgumentError(
+                "GN = $GN has no meaning with sampling = :christoffel; pass n_samples",
+            ),
+        )
+        n_samples === nothing &&
+            throw(ArgumentError("sampling = :christoffel needs n_samples"))
         rng === nothing && throw(
-            ArgumentError("sampling = :christoffel needs an explicit rng (the sample set must be replayable)"),
+            ArgumentError(
+                "sampling = :christoffel needs an explicit rng (the sample set must be replayable)",
+            ),
         )
         need = binomial(TR.dim + M, M) + binomial(TR.dim + N, N)
         n_samples >= need || throw(
-            ArgumentError("n_samples = $n_samples cannot determine α(M) + α(N) = $need coefficients"),
+            ArgumentError(
+                "n_samples = $n_samples cannot determine α(M) + α(N) = $need coefficients",
+            ),
         )
     else
-        n_samples === nothing ||
-            throw(ArgumentError("n_samples is for sampling = :christoffel; the grid is set by GN"))
-        rng === nothing || throw(ArgumentError("rng is for sampling = :christoffel; the grid is deterministic"))
+        n_samples === nothing || throw(
+            ArgumentError(
+                "n_samples is for sampling = :christoffel; the grid is set by GN",
+            ),
+        )
+        rng === nothing || throw(
+            ArgumentError("rng is for sampling = :christoffel; the grid is deterministic"),
+        )
     end
     M >= 0 || throw(ArgumentError("numerator degree M must be ≥ 0, got $M"))
     N >= 0 || throw(ArgumentError("denominator degree N must be ≥ 0, got $N"))
@@ -396,11 +414,13 @@ function RationalConstructor(
         # TR.GN, if set, belongs to the grid path and is not used here
         actual_GN = -1
         Lambda_w = SupportGen(n, (:one_d_for_all, dmax))
-        S, sqrt_w = christoffel_random_sample_chebyshev(n, Lambda_w.data, n_samples; rng = rng)
+        S, sqrt_w =
+            christoffel_random_sample_chebyshev(n, Lambda_w.data, n_samples; rng = rng)
     end
     K = size(S, 1)
     verbose >= 1 && @info "RationalConstructor: n=$n (M,N)=($M,$N) sampling=$sampling " *
-          (sampling == :grid ? "GN=$actual_GN " : "") * "($K points)"
+          (sampling == :grid ? "GN=$actual_GN " : "") *
+          "($K points)"
     z = _evaluate_objective_rows(TR.objective, S, scale_factor, center)
     all(isfinite, z) || error(
         "RationalConstructor: objective is not finite at the fit's points " *
