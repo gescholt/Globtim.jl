@@ -10,6 +10,7 @@ using Test
 using Globtim
 using LinearAlgebra
 using ForwardDiff
+using Random: Xoshiro
 
 # f is a genuine rational function of type (2,2): the fit must be exact.
 f_rat(x) = (1 + x[1] + x[2]^2) / (2 + x[1]^2 + x[2]^2)
@@ -177,6 +178,57 @@ f_pole(x) = 1 / ((x[1] - 1.15)^2 + (x[2] - 0.30)^2 + 0.04) + sin(3x[1]) * cos(2x
         @test R.normalized == true
         @test R.nrm < 1e-10
         @test R([0.3, -0.7]) ≈ f_rat([0.3, -0.7]) atol = 1e-10
+    end
+
+    @testset "scattered samples (sampling = :christoffel)" begin
+        # the (2,2) rational is recovered exactly from 3 samples per unknown
+        R = RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36, rng = Xoshiro(1))
+        @test R.sampling == :christoffel
+        @test R.GN == -1
+        @test size(R.grid) == (36, 2)
+        @test length(R.sample_weights) == 36 && all(>(0), R.sample_weights)
+        @test R.nrm < 1e-10
+        @test R.sigma_ratio < 1e-10
+        for x in ([0.3, -0.7], [-0.95, 0.1])
+            @test R(x) ≈ f_rat(x) atol = 1e-10
+        end
+        # replayable: the same generator state gives the same points and coefficients
+        R2 = RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36, rng = Xoshiro(1))
+        @test R2.grid == R.grid && R2.a == R.a && R2.b == R.b
+        @test RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36, rng = Xoshiro(2)).grid != R.grid
+        # the grid path is unchanged and says so
+        Rg = RationalConstructor(TR, 2, 2)
+        @test Rg.sampling == :grid && all(==(1.0), Rg.sample_weights)
+
+        # pole pair at 4 samples per unknown (240 points, 38 % of the 25² grid): the
+        # residual on the grid matches the grid fit's, and q stays positive there
+        TRp = TestInput(f_pole; dim = 2, center = [0.0, 0.0], sample_range = 1.0, GN = 24)
+        Rp = RationalConstructor(TRp, 8, 4)
+        Rc = RationalConstructor(TRp, 8, 4; sampling = :christoffel, n_samples = 240, rng = Xoshiro(1))
+        S = Rp.grid
+        w = Globtim.compute_quadrature_weights(:chebyshev, 24, 2)
+        grid_nrm = sqrt(sum(w[i] * (Rc(S[i, :]) - f_pole(S[i, :]))^2 for i in 1:size(S, 1)))
+        @test grid_nrm < 2 * Rp.nrm
+        @test minimum(rational_denominator(Rc, S[i, :]) for i in 1:size(S, 1)) > 0
+
+        # weights of one are the unweighted fit
+        xs = collect(range(-1, 1; length = 30))
+        V_M = hcat(ones(30), xs, xs .^ 2)
+        V_N = hcat(ones(30), xs)
+        zz = (1 .+ xs) ./ (2 .+ xs)
+        f0 = rational_ls_fit(V_M, V_N, zz)
+        f1 = rational_ls_fit(V_M, V_N, zz; sqrt_w = ones(30))
+        @test f0.a ≈ f1.a && f0.b ≈ f1.b
+
+        # everything the scattered path needs is explicit
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36)
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; sampling = :christoffel, rng = Xoshiro(1))
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 11, rng = Xoshiro(1))
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36, rng = Xoshiro(1), GN = 10)
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36, rng = Xoshiro(1), basis = :legendre)
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; sampling = :sparse)
+        @test_throws ArgumentError RationalConstructor(TR, 2, 2; n_samples = 36)
+        @test_throws ArgumentError rational_ls_fit(V_M, V_N, zz; sqrt_w = zeros(30))
     end
 
     @testset "1-D objective (MargulesTPD, scalar call convention)" begin
