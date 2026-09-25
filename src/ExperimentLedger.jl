@@ -74,6 +74,46 @@ end
 
 _sanitize_slug(s::AbstractString) = replace(s, r"[^A-Za-z0-9_.-]" => "-")
 
+# The code SHA pins this repo's source but not the resolved dependencies: the
+# manifest is untracked, and one commit has run on HomotopyContinuation 2.17.1
+# (workspace profiles) and 2.22.4 (a fresh Pkg.test or scratch environment).
+# A record therefore also carries the Julia version, the versions of the
+# packages that decide a surrogate's numbers, and the hash of the manifest the
+# loader resolved against (which pins everything else).
+const VERSIONED_PACKAGES = (
+    "Globtim",
+    "HomotopyContinuation",
+    "DynamicPolynomials",
+    "MultivariatePolynomials",
+    "ForwardDiff",
+    "LinearSolve",
+)
+
+"""
+Versions of the packages in `VERSIONED_PACKAGES` that are loaded in this
+session (a package that is not loaded is absent from the result).
+"""
+function loaded_package_versions()
+    out = Dict{String,Any}()
+    for (pkgid, mod) in Base.loaded_modules
+        pkgid.name in VERSIONED_PACKAGES || continue
+        v = pkgversion(mod)
+        out[pkgid.name] = v === nothing ? nothing : string(v)
+    end
+    return out
+end
+
+"""
+The manifest the code loader resolves the active project against (for a
+workspace member, the workspace root's), or `nothing` when the active project
+has no project file or no manifest.
+"""
+function active_manifest_path()
+    proj = Base.active_project()
+    (proj === nothing || !isfile(proj)) && return nothing
+    return Base.project_file_manifest_path(proj)
+end
+
 """
     prior_run_ids(slug; start = pwd()) -> Vector{String}
 
@@ -134,6 +174,10 @@ the in-dir record; `ledger_collect.jl` picks it up after results sync).
   produced the directory). Pass `true` to replace it deliberately; a run that
   consumes another run's artifacts should instead write to its own `outdir`
   and name the source in `supersedes`.
+
+Every record also carries `julia_version`, `package_versions` (the loaded
+packages among `VERSIONED_PACKAGES`) and `manifest_path` / `manifest_sha256`
+(the manifest the loader resolved against, `nothing` when there is none).
 """
 function emit_ledger_record(;
     slug::AbstractString,
@@ -200,6 +244,7 @@ function emit_ledger_record(;
     )
 
     rel_outdir = _rel_to_root(outdir, repo_root)
+    manifest = active_manifest_path()
 
     record = Dict{String,Any}(
         "run_id" => run_id,
@@ -216,6 +261,10 @@ function emit_ledger_record(;
         "headline" => headline_safe,
         "supersedes" => supersedes,
         "issue_id" => issue_id,
+        "julia_version" => string(VERSION),
+        "package_versions" => loaded_package_versions(),
+        "manifest_path" => manifest === nothing ? nothing : _rel_to_root(manifest, repo_root),
+        "manifest_sha256" => manifest === nothing ? nothing : sha256_file(manifest),
     )
     if config_path !== nothing
         isfile(config_path) ||

@@ -70,6 +70,16 @@ end
         @test rec["artifacts"][1]["path"] == "results_summary.json"
         @test length(rec["artifacts"][1]["sha256"]) == 64
         @test rec["manual"] == false
+        @test rec["issue_id"] == "ISSUE-123"
+        # Resolved environment: the code SHA alone does not pin dependency versions.
+        @test rec["julia_version"] == string(VERSION)
+        @test rec["package_versions"]["Globtim"] == string(pkgversion(Globtim))
+        manifest = Globtim.ExperimentLedger.active_manifest_path()
+        if manifest === nothing
+            @test rec["manifest_sha256"] === nothing
+        else
+            @test rec["manifest_sha256"] == Globtim.ExperimentLedger.sha256_file(manifest)
+        end
     end
 
     # Missing outdir and missing artifact fail loudly (no silent fallbacks).
