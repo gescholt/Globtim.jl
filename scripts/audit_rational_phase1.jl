@@ -458,11 +458,16 @@ function truth_by_multistart(o::Objective; dedup_tol::Real = 1e-3)
     lat = range(-1.0, 1.0; length = o.truth_starts)
     pts = Vector{Vector{Float64}}()
     idx = Int[]
-    n_starts = 0
+    # the starts are independent: refine them on all threads, then deduplicate in
+    # lattice order (the same result as the serial loop)
+    x0s = [c .+ hw .* collect(tup) for tup in Iterators.product((lat for _ in 1:o.dim)...)][:]
+    res = Vector{Any}(undef, length(x0s))
+    Threads.@threads for k in eachindex(x0s)
+        res[k] = refine_on_f(o.f, x0s[k], lo, hi; ad = o.ad, tol = o.gradtol)
+    end
+    n_starts = length(x0s)
     n_conv = 0
-    for tup in Iterators.product((lat for _ in 1:o.dim)...)
-        n_starts += 1
-        r = refine_on_f(o.f, c .+ hw .* collect(tup), lo, hi; ad = o.ad, tol = o.gradtol)
+    for r in res
         r.converged || continue
         n_conv += 1
         any(p -> maximum(abs.((p .- r.x) ./ hw)) < dedup_tol, pts) && continue
@@ -1199,6 +1204,7 @@ function main(
             truth_pts = truths[key].points
             @printf("  truth: %d critical points (%d of %d starts converged, %.1f s)\n",
                 length(truth_pts), truths[key].n_converged, truths[key].n_starts, t_truth)
+            flush(stdout)
         end
         ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"], warm = cfg["warm"])
         fs = cfg["face_samples"] === nothing ? face_samples_for(o.dim) : cfg["face_samples"]
@@ -1225,6 +1231,7 @@ function main(
             else
                 println("FAILED: ", first(c.error, 200))
             end
+            flush(stdout)          # progress is visible in a Slurm log (stdout to a file is block-buffered)
         end
         for D in cfg["polynomial"], arm in arms
             label = "D=$D" * arm_tag(arm)
@@ -1240,6 +1247,7 @@ function main(
             else
                 println("FAILED: ", first(c.error, 200))
             end
+            flush(stdout)
         end
         results[key] = cells
         v = gate_verdict(cells)
