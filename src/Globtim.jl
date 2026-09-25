@@ -323,6 +323,7 @@ include("rational_solver.jl")
 export ApproxRational,
     RationalConstructor,
     rational_ls_fit,
+    rational_lm_refit,
     rational_dof,
     rational_numerator,
     rational_denominator,

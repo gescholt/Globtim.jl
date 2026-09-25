@@ -497,6 +497,113 @@ function RationalConstructor(
     )
 end
 
+# ── nonlinear refit on the true residual ─────────────────────────────────────
+
+"""
+    rational_lm_refit(R::ApproxRational; iters = 60, delta = 1e-3) -> ApproxRational
+
+Refit `R` on its own points (`R.grid`, `R.z`, weights `R.sample_weights`) by
+Levenberg–Marquardt on the true weighted residual √w · (p/q − y), with the degrees
+and supports of `R` (after any degree reduction). The start is the weighted LS
+polynomial of degree M with q ≡ 1; the constant Chebyshev coefficient of q is held
+fixed as the scale, and a step is accepted only if it lowers the residual and keeps
+q > `delta` · mean(q) at every point. The result is normalised to mean(q) = 1 on the
+points.
+
+The linearised fit of `RationalConstructor` minimises ‖√w (p − y q)‖, which lets q
+vanish where f is hard to fit: on a target with no pole in or near the box it places
+q's zero set across the box (spurious poles, and candidate critical points on them).
+This fit minimises the residual of r itself and cannot cross q = 0 at a point, so it
+removes those poles at the points; positivity between points is still for
+`certify_positive_denominator` to decide. `sigma_ratio` and `singular_values` of the
+result are NaN / empty (no SVD is involved).
+"""
+function rational_lm_refit(R::ApproxRational; iters::Int = 60, delta::Real = 1e-3)
+    iters >= 1 || throw(ArgumentError("iters must be ≥ 1, got $iters"))
+    delta > 0 || throw(ArgumentError("delta must be positive, got $delta"))
+    S = R.grid
+    y = R.z
+    K, n = size(S)
+    sqrt_w = sqrt.(R.sample_weights)
+    length(sqrt_w) == K ||
+        error("rational_lm_refit: $(length(sqrt_w)) sample weights for $K points")
+    V_M = lambda_vandermonde(R.Lambda_M, S; basis = R.basis)
+    V_N = lambda_vandermonde(R.Lambda_N, S; basis = R.basis)
+    na = size(V_M, 2)
+    a = (sqrt_w .* V_M) \ (sqrt_w .* y)
+    b = zeros(size(V_N, 2))
+    b[1] = 1.0
+    resid(a, b) = sqrt_w .* (V_M * a ./ (V_N * b) .- y)
+    r = resid(a, b)
+    cost = sum(abs2, r)
+    lambda = 1e-3
+    for _ in 1:iters
+        size(V_N, 2) == 1 && break          # N = 0: the LS polynomial is the fit
+        q = V_N * b
+        p = V_M * a
+        J = hcat(sqrt_w .* V_M ./ q, -(sqrt_w .* p ./ q .^ 2) .* V_N[:, 2:end])
+        g = J' * r
+        H = J' * J
+        dH = diag(H) .+ 1e-12
+        improved = false
+        for _ in 1:12
+            step = -(H + lambda * Diagonal(dH)) \ g
+            a2 = a .+ step[1:na]
+            b2 = copy(b)
+            b2[2:end] .+= step[na+1:end]
+            q2 = V_N * b2
+            if minimum(q2) > delta * sum(q2) / K
+                r2 = resid(a2, b2)
+                c2 = sum(abs2, r2)
+                if c2 < cost
+                    a, b, r, cost = a2, b2, r2, c2
+                    lambda = max(lambda / 3, 1e-10)
+                    improved = true
+                    break
+                end
+            end
+            lambda *= 4
+        end
+        improved || break
+    end
+    qv = V_N * b
+    scale = sum(qv) / K
+    a ./= scale
+    b ./= scale
+    qv ./= scale
+    res = V_M * a ./ qv .- y
+    weights = if R.sampling == :grid
+        compute_quadrature_weights(R.basis, R.GN, n)
+    else
+        [prod(π * sqrt(1 - S[i, k]^2) for k in 1:n) for i in 1:K] ./ K
+    end
+    return ApproxRational{Float64,typeof(R.scale_factor)}(
+        Vector{Float64}(a),
+        Vector{Float64}(b),
+        R.Lambda_M,
+        R.Lambda_N,
+        R.M,
+        R.N,
+        R.basis,
+        R.normalized,
+        R.precision,
+        R.scale_factor,
+        R.center,
+        R.GN,
+        S,
+        y,
+        sqrt(sum(weights .* abs2.(res))),
+        sqrt(sum(abs2, res) / K),
+        NaN,
+        Float64[],
+        minimum(qv),
+        R.n_reductions,
+        :mean,
+        R.sampling,
+        R.sample_weights,
+    )
+end
+
 # ── evaluation in surrogate coordinates (ForwardDiff-compatible) ──────────────
 
 """

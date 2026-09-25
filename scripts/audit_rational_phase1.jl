@@ -220,6 +220,12 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # re-solve every system for the warm HC time of gate check 4; a sampling
         # campaign whose solves dominate the wall time can skip it (--no-warm)
         "warm" => true,
+        # lattice points per face coordinate of the denominator certificate
+        # (certify_positive_denominator); nothing = face_samples_for(dim)
+        "face_samples" => nothing,
+        # how the rational is fitted: "lin" (RationalConstructor's linearised LS) and/or
+        # "lm" (rational_lm_refit on the same points), one cell per fit
+        "rational_fit" => ["lin"],
     )
     i = 1
     while i <= length(argv)
@@ -267,6 +273,13 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["warm"] = false
         elseif a == "--no-validate"
             cfg["validate"] = false
+        elseif a == "--rational-fit"        # e.g. --rational-fit lin,lm
+            cfg["rational_fit"] = String.(split(argv[i+1], ","))
+            all(in(("lin", "lm")), cfg["rational_fit"]) || error("--rational-fit takes lin and/or lm")
+            i += 1
+        elseif a == "--face-samples"        # e.g. --face-samples 11
+            cfg["face_samples"] = parse(Int, argv[i+1])
+            i += 1
         else
             error("unknown argument $a")
         end
@@ -613,6 +626,16 @@ function validation_nrm(s, validation)
 end
 
 """
+    face_samples_for(n) -> Int
+
+Lattice points per face coordinate for the denominator certificate: the face
+sampling costs 2n · face_samples^(n−1) evaluations of q, so the default 41 is
+kept while that stays under 2·10⁶ (n ≤ 4) and reduced to fit that budget above
+(n = 5: 21, n = 6: 11, n = 7: 7). A coarser lattice is a weaker certificate.
+"""
+face_samples_for(n::Int) = n == 1 ? 41 : min(41, max(3, floor(Int, (2e6 / (2n))^(1 / (n - 1)))))
+
+"""
     run_rational(o, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing, dedup_tol = 1e-3, capture_radius = 0.05)
 
 One rational configuration: fit, lifted HC solve (cold and warm), denominator
@@ -624,14 +647,21 @@ with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
 `nrm_grid` is its residual on `validation` (the grid fit's own `nrm` for the grid).
 """
 function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
-        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true)
+        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, face_samples::Int = face_samples_for(o.dim),
+        fit::String = "lin")
     lo, hi = box(o)
-    t_fit = @elapsed R = if arm.sampling == :grid
-        RationalConstructor(TR, M, N)
-    else
-        RationalConstructor(TR, M, N; sampling = arm.sampling, rng = Xoshiro(arm.seed),
-            n_samples = ceil(Int, arm.per_dof * (binomial(o.dim + M, M) + binomial(o.dim + N, N))))
+    fit in ("lin", "lm") || error("rational fit must be lin or lm, got $fit")
+    t_fit = @elapsed begin
+        R = if arm.sampling == :grid
+            RationalConstructor(TR, M, N)
+        else
+            RationalConstructor(TR, M, N; sampling = arm.sampling, rng = Xoshiro(arm.seed),
+                n_samples = ceil(Int, arm.per_dof * (binomial(o.dim + M, M) + binomial(o.dim + N, N))))
+        end
+        # lm: refit on the same points by LM on the true residual (Globtim.rational_lm_refit)
+        fit == "lm" && (R = rational_lm_refit(R))
     end
+    ftag = fit == "lm" ? "lm" : ""
     # the conversion is repeated inside solve_rational_critical_points; it is
     # timed separately here because it is cheap and the brief asks for the split
     t_convert = @elapsed rational_critical_system(R)
@@ -642,14 +672,14 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     # time is the path-tracking cost
     t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R)) - t_convert : NaN
     stats = res.stats
-    t_cert = @elapsed cert = certify_positive_denominator(R)
+    t_cert = @elapsed cert = certify_positive_denominator(R; face_samples = face_samples)
     t_refine = @elapsed rows = [refined_row(o, lo, hi, x, to_original_coordinates(R, x), y, idx)
                                 for (x, y, idx) in zip(res.points, res.values, res.index)]
     cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "rational",
-        label = "($M,$N)" * arm_tag(arm),
-        base_label = "($M,$N)",
+        label = "($M,$N)" * ftag * arm_tag(arm),
+        base_label = "($M,$N)" * ftag,
         sampling = String(arm.sampling),
         per_dof = arm.per_dof,
         seed = arm.seed,
@@ -692,10 +722,10 @@ A cell that raised: every numeric field NaN / -1, no rows, an empty census, the
 message in `error`, so one failing configuration is reported instead of aborting
 the audit. A failed cell is never admissible.
 """
-function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing, arm = GRID_ARM)
+function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing, arm = GRID_ARM, base_label = nothing)
     lo, hi = box(o)
     return (;
-        kind = kind, label = label, base_label = kind == "rational" ? "($M,$N)" : "D=$M",
+        kind = kind, label = label, base_label = base_label !== nothing ? base_label : kind == "rational" ? "($M,$N)" : "D=$M",
         sampling = String(arm.sampling), per_dof = arm.per_dof, seed = arm.seed, n_evals = -1, nrm_grid = NaN,
         M = M, N_requested = N, N = -1, dof = -1, GN = -1,
         nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, admissible = false,
@@ -1146,8 +1176,12 @@ function main(
     let o = objectives[first(cfg["objectives"])]
         TRw = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = 8)
         t_w = @elapsed begin
-            run_rational(o, TRw, 3, 2)
-            run_polynomial(o, TRw, 4)
+            # without a grid arm (high dimension: (GN+1)^n evaluations of f are
+            # what the Christoffel arms avoid), compile on a Christoffel arm
+            warm_arm = any(a -> a.sampling == :grid, cfg["sampling"]) ? GRID_ARM :
+                       (; sampling = :christoffel, per_dof = 2.0, seed = 0)
+            run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3)
+            run_polynomial(o, TRw, 4; arm = warm_arm)
         end
         @printf("warm-up (compilation): %.1f s\n", t_w)
     end
@@ -1167,18 +1201,22 @@ function main(
                 length(truth_pts), truths[key].n_converged, truths[key].n_starts, t_truth)
         end
         ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"], warm = cfg["warm"])
+        fs = cfg["face_samples"] === nothing ? face_samples_for(o.dim) : cfg["face_samples"]
+        @printf("  denominator certificate: %d lattice points per face coordinate\n", fs)
         TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
         arms = sampling_arms(cfg)
         validation = cfg["validate"] && any(a -> a.sampling != :grid, arms) ? validation_grid(o, cfg["gn"]) : nothing
         validation === nothing || @printf("  validation grid: %d evaluations (GN = %d)\n", length(validation.z), cfg["gn"])
         cells = NamedTuple[]
-        for (M, N) in cfg["rational"], arm in arms
-            label = "($M,$N)" * arm_tag(arm)
+        for (M, N) in cfg["rational"], fit in cfg["rational_fit"], arm in arms
+            ftag = fit == "lm" ? "lm" : ""
+            label = "($M,$N)" * ftag * arm_tag(arm)
             @printf("  rational %-16s ... ", label)
             c = try
-                run_rational(o, TR, M, N; arm = arm, validation = validation, ckw...)
+                run_rational(o, TR, M, N; arm = arm, validation = validation, face_samples = fs, fit = fit, ckw...)
             catch e
-                failed_cell(o, "rational", label, M, N, sprint(showerror, e); truth = truth_pts, arm = arm)
+                failed_cell(o, "rational", label, M, N, sprint(showerror, e); truth = truth_pts, arm = arm,
+                    base_label = "($M,$N)" * ftag)
             end
             push!(cells, c)
             if isempty(c.error)
@@ -1225,7 +1263,7 @@ function main(
             for (M, N) in cfg["rational_extended"]
                 @printf("  extended rational (%2d,%2d) GN=%d ... ", M, N, cfg["gn_extended"])
                 c = try
-                    run_rational(o, TRx, M, N; ckw...)
+                    run_rational(o, TRx, M, N; face_samples = fs, ckw...)
                 catch e
                     failed_cell(o, "rational", "($M,$N)", M, N, sprint(showerror, e); truth = truth_pts)
                 end
@@ -1301,6 +1339,8 @@ function main(
             "dedup_tol" => cfg["dedup_tol"], "capture_radius" => cfg["capture_radius"],
             "sampling" => [a.sampling == :grid ? "grid" : "christoffel:$(a.per_dof)" for a in cfg["sampling"]],
             "replicates" => cfg["replicates"], "validate" => cfg["validate"],
+            "face_samples" => cfg["face_samples"] === nothing ? "auto (face_samples_for(dim))" : cfg["face_samples"],
+            "rational_fit" => cfg["rational_fit"],
             "smoke" => cfg["smoke"],
         ))
     summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed;

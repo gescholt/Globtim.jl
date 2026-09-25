@@ -231,6 +231,34 @@ f_pole(x) = 1 / ((x[1] - 1.15)^2 + (x[2] - 0.30)^2 + 0.04) + sin(3x[1]) * cos(2x
         @test_throws ArgumentError rational_ls_fit(V_M, V_N, zz; sqrt_w = zeros(30))
     end
 
+    @testset "rational_lm_refit (LM on the true residual)" begin
+        # an exact (2,2) rational stays exact
+        R = RationalConstructor(TR, 2, 2; sampling = :christoffel, n_samples = 36, rng = Xoshiro(1))
+        L = rational_lm_refit(R)
+        @test L.nrm < 1e-10
+        @test L.M == 2 && L.N == 2 && L.grid == R.grid && L.sample_weights == R.sample_weights
+        @test L.qmin_grid > 0
+        # a pole-free target: the linearised Christoffel fit makes q change sign on the
+        # box (spurious poles, error O(1) off the points); the LM refit keeps q > 0 on a
+        # 41² lattice and is accurate there (2026-09-25: 4 of 4 seeds)
+        g(x) = exp(x[1]) * cos(2x[2]) + x[1]^2 * x[2] + 0.3sin(4x[1] * x[2])
+        TRg = TestInput(g; dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+        xs = [[x, y] for x in range(-1, 1; length = 41) for y in range(-1, 1; length = 41)]
+        err(F) = sqrt(sum(abs2, F(x) - g(x) for x in xs) / length(xs))
+        for seed in 1:2
+            Rg = RationalConstructor(TRg, 6, 3; sampling = :christoffel,
+                n_samples = 3 * rational_dof(2, 6, 3), rng = Xoshiro(seed))
+            Lg = rational_lm_refit(Rg)
+            @test minimum(rational_denominator(Rg, x) for x in xs) < 0
+            @test minimum(rational_denominator(Lg, x) for x in xs) > 0
+            @test err(Lg) < 0.2
+            @test err(Lg) < err(Rg) / 5
+            @test Lg.nrm < Rg.nrm
+        end
+        @test_throws ArgumentError rational_lm_refit(R; iters = 0)
+        @test_throws ArgumentError rational_lm_refit(R; delta = 0)
+    end
+
     @testset "1-D objective (MargulesTPD, scalar call convention)" begin
         TR1 = TestInput(MargulesTPD; dim = 1, center = [0.0], sample_range = 5.0, GN = 40)
         R = RationalConstructor(TR1, 8, 4)
