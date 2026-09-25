@@ -70,8 +70,9 @@ How many samples are enough is an empirical question. The stability theory
 (Cohen–Migliorati) covers polynomial least squares with `O(m log m)` samples.
 The `F·V_N` block of the rational problem is not a polynomial space. On the 2-D
 pole pair at (8,4), 3 samples per unknown (180 points, against 625 on the grid)
-already match the grid fit's residual, and q stays certified. Below that the
-fit becomes seed-dependent. `experiments/sandbox/rational_sparse/` measures it
+already match the grid fit's residual, and q stays certified; below that the
+fit becomes seed-dependent (a development run without a ledger record, so not
+citable). `experiments/sandbox/rational_sparse/` measures it
 in 2-D, 3-D and 4-D with the census (`--sampling grid,christoffel:<s>
 --replicates <r>`).
 
