@@ -263,7 +263,8 @@ function emit_ledger_record(;
         "issue_id" => issue_id,
         "julia_version" => string(VERSION),
         "package_versions" => loaded_package_versions(),
-        "manifest_path" => manifest === nothing ? nothing : _rel_to_root(manifest, repo_root),
+        "manifest_path" =>
+            manifest === nothing ? nothing : _rel_to_root(manifest, repo_root),
         "manifest_sha256" => manifest === nothing ? nothing : sha256_file(manifest),
     )
     if config_path !== nothing
