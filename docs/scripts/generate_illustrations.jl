@@ -2,16 +2,18 @@
 """
 Generate illustrations for Globtim.jl documentation.
 
-Run from the Globtim directory:
-    julia --project=. docs/scripts/generate_illustrations.jl
+Run from the repo root (needs Globtim, GlobtimPlots and HomotopyContinuation, which
+only profiles/dev has together):
+    julia --project=profiles/dev pkg/globtim/docs/scripts/generate_illustrations.jl
 
 Or run specific functions:
-    julia --project=. -e 'include("docs/scripts/generate_illustrations.jl"); generate_deuflhard()'
+    julia --project=profiles/dev -e 'include("pkg/globtim/docs/scripts/generate_illustrations.jl"); generate_deuflhard()'
 """
 
 using Globtim
 using GlobtimPlots
 using DynamicPolynomials
+using HomotopyContinuation   # loads GlobtimHomotopyContinuationExt, the default solver=:hc
 using DataFrames: nrow
 CairoMakie.activate!()
 
@@ -48,8 +50,9 @@ all embed PNGs, and a PDF-only figure silently leaves them with a dead image.
 function save_figure(stem::AbstractString, fig; px_per_unit = 2)
     pdf_path = joinpath(OUTPUT_DIR, stem * ".pdf")
     png_path = joinpath(OUTPUT_DIR, stem * ".png")
-    save(pdf_path, fig)
-    save(png_path, fig; px_per_unit = px_per_unit)
+    # qualified: HomotopyContinuation also exports a `save`
+    CairoMakie.save(pdf_path, fig)
+    CairoMakie.save(png_path, fig; px_per_unit = px_per_unit)
     return pdf_path
 end
 
