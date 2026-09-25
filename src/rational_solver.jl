@@ -328,17 +328,23 @@ function _denominator_quadratic_form(R::ApproxRational)
     end
     for i in 1:n, j in (i+1):n
         v = zeros(n)
-        v[i] = 1.0; v[j] = 1.0; a = qf(v)
-        v[j] = -1.0; b = qf(v)
-        v[i] = -1.0; d = qf(v)
-        v[j] = 1.0; e = qf(v)
+        v[i] = 1.0
+        v[j] = 1.0
+        a = qf(v)
+        v[j] = -1.0
+        b = qf(v)
+        v[i] = -1.0
+        d = qf(v)
+        v[j] = 1.0
+        e = qf(v)
         H[i, j] = H[j, i] = (a - b - e + d) / 4
     end
     rng = Random.Xoshiro(0)
     for _ in 1:5
         x = 2 .* rand(rng, n) .- 1
         v = qf(x)
-        abs(v - (c + dot(g, x) + dot(x, H * x) / 2)) <= 1e-9 * max(1.0, abs(c), norm(g), opnorm(H)) || error(
+        abs(v - (c + dot(g, x) + dot(x, H * x) / 2)) <=
+        1e-9 * max(1.0, abs(c), norm(g), opnorm(H)) || error(
             "_denominator_quadratic_form: q of degree N = $(R.N) is not reproduced by its quadratic form",
         )
     end
@@ -355,7 +361,8 @@ reaches a lower face, which carries the same value).
 """
 function _box_min_quadratic(c::Real, g::AbstractVector, H::AbstractMatrix)
     n = length(g)
-    n <= 16 || throw(ArgumentError("face recursion enumerates 3^n faces; n = $n is too large"))
+    n <= 16 ||
+        throw(ArgumentError("face recursion enumerates 3^n faces; n = $n is too large"))
     quad(x) = c + dot(g, x) + dot(x, H * x) / 2
     qmin = Inf
     argmin = fill(NaN, n)
@@ -438,7 +445,12 @@ function _certify_face_recursion(R::ApproxRational, tau::Real)
             any(iszero, eqs) && continue
             # a nonzero constant equation: no stationary point on this face
             any(e -> maxdegree(e) == 0, eqs) && continue
-            sols, st = _solve_rational_hc(eqs, xv[free]; start_system = :total_degree, compile = false)
+            sols, st = _solve_rational_hc(
+                eqs,
+                xv[free];
+                start_system = :total_degree,
+                compile = false,
+            )
             st.n_singular > 0 && (n_singular_faces += 1)
             for s in sols
                 y = Vector{Float64}(real.(s))
@@ -472,7 +484,12 @@ function _certify_face_recursion(R::ApproxRational, tau::Real)
 end
 
 # the Phase-1 stand-in: interior stationary points plus a facet lattice
-function _certify_sampling(R::ApproxRational, tau::Real, face_samples::Int, start_system::Symbol)
+function _certify_sampling(
+    R::ApproxRational,
+    tau::Real,
+    face_samples::Int,
+    start_system::Symbol,
+)
     n = size(R.grid, 2)
     face_samples >= 2 || throw(ArgumentError("face_samples must be ≥ 2"))
     qfun(x) = rational_denominator(R, x)
