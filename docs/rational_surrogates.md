@@ -117,7 +117,7 @@ the only extra solutions `(p·s, q·s)` have `deg s = 0`.
 | `res.n_rejected_q` | real solutions of the lifted system inside the box with `\|q(x*)\| ≤ q_tol` (near-Froissart). They are kept in `res.raw` with status `:q_zero` so an audit can count them, but not returned as critical points. |
 | `res.n_inconsistent_y` | solutions whose `y*` disagrees with `p(x*)/q(x*)` beyond `y_tol`; kept in `res.raw` as `:y_mismatch`. |
 | `res.n_outside`, `res.n_singular`, `res.n_paths` | real solutions outside `[-1,1]^n`, HC singular endpoints, paths tracked. A nonzero `n_singular` on the lifted system deserves a look. |
-| `cert.qmin`, `cert.argmin`, `cert.ok` | minimum of `q` over its interior critical points and the sampled faces, where it is attained, and `qmin > tau`. |
+| `cert.qmin`, `cert.argmin`, `cert.ok` | minimum of `q` over the closed box (exact for `method = :recursion`), where it is attained, and `qmin > tau`. `cert.method` names the method. |
 
 ## Why the lifted system
 
@@ -146,14 +146,24 @@ eigenvalues).
 ## The `q > 0` requirement
 
 Poincaré–Hopf holds for `r` on the box only if `q` has no zero on the closed
-box. `certify_positive_denominator(R; tau = 0.0)` reuses the polynomial path
-on `q` itself — `solve_polynomial_system(x, n, R.N, R.b; …)`, since `R.b` is
-already a degree-`N` coefficient vector in the orthogonal basis — for the
-interior candidates, and in Phase 1 samples the `2n` faces on a lattice with
-`face_samples = 41` points per face dimension for the boundary. The boundary
-part is a stand-in: Phase 2 recurses Globtim on the faces. A fit with
-`cert.ok == false` (for example `(6,3)` on the pole-pair objective, where
-`min q ≈ −0.05` inside the box) must not be used for a census.
+box. `certify_positive_denominator(R; tau = 0.0)` computes the minimum of `q`
+over the closed box exactly (`method = :recursion`, the default). The minimiser
+is a stationary point of `q` relative to the face of the box whose relative
+interior contains it, so every one of the `3^n` faces (each coordinate fixed at
+−1 or +1, or free) contributes its stationary points:
+
+- `N ≤ 2`: `q` is quadratic, and each face is one linear solve (531,441 faces at
+  n = 12 take seconds);
+- `N ≥ 3`, `n ≤ 8`: one small HomotopyContinuation solve of `∇_F q = 0` per face
+  (0.5 s for `(8,4)` in 4-D, 13 s for `(6,3)` in 7-D). A face whose solve reports
+  singular endpoints makes the result `exact = false`, and then `ok = false`.
+
+`method = :bernstein` proves `q > tau` when `bernstein_lower_bound` exceeds it.
+`method = :sampling` is the Phase-1 stand-in: the interior stationary points plus
+`face_samples` lattice points per face coordinate. It is not a proof, because a
+dip of `q` between lattice points goes unseen. A fit with `cert.ok == false`
+(for example `(6,3)` on the pole-pair objective, where `min q ≈ −0.05` inside the
+box) must not be used for a census.
 
 ## Tests and audit
 
@@ -184,4 +194,5 @@ part is a stand-in: Phase 2 recurses Globtim on the faces. A fit with
 - QP-based pole-free fit with `q ≥ 1`, with the certified minimiser in the
   outer-approximation loop.
 - adaptive `(M, N)` from the σ-spectrum of `W`.
-- face recursion for the boundary part of the certificate.
+- ~~face recursion for the boundary part of the certificate~~ (done 2026-09-25:
+  `method = :recursion`).

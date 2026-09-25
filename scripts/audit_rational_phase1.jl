@@ -228,8 +228,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # re-solve every system for the warm HC time of gate check 4; a sampling
         # campaign whose solves dominate the wall time can skip it (--no-warm)
         "warm" => true,
-        # lattice points per face coordinate of the denominator certificate
-        # (certify_positive_denominator); nothing = face_samples_for(dim)
+        # lattice points per face coordinate of the denominator certificate, used
+        # only where face recursion is unaffordable (N ≥ 3 at n > 8; cert_method
+        # "sampling"); nothing = face_samples_for(dim)
         "face_samples" => nothing,
         # how the rational is fitted: "lin" (RationalConstructor's linearised LS) and/or
         # "lm" (rational_lm_refit on the same points), one cell per fit
@@ -715,7 +716,11 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     # time is the path-tracking cost
     t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R; start_system = start_system)) - t_convert : NaN
     stats = res.stats
-    t_cert = @elapsed cert = certify_positive_denominator(R; face_samples = face_samples)
+    # the exact minimum of q on the box (face recursion) wherever it is affordable:
+    # q quadratic at any n, one small HC solve per face for N ≥ 3 up to n = 8.
+    # Beyond that the facet lattice, which is not a proof; cert_method says which.
+    cmethod = (R.N <= 2 || o.dim <= 8) ? :recursion : :sampling
+    t_cert = @elapsed cert = certify_positive_denominator(R; method = cmethod, face_samples = face_samples)
     # candidate filter: a critical point of p/q where q is small against its typical
     # size sits on a (near-)pole surface of the fit, not on a feature of f
     keep = trues(length(res.points))
@@ -746,6 +751,7 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
         qmin_grid = R.qmin_grid,
         qmin = cert.qmin,
         q_ok = cert.ok,
+        cert_method = String(cert.method),
         admissible = cert.ok,
         n_paths = stats.n_paths,
         n_singular = stats.n_singular,
@@ -779,7 +785,8 @@ function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing, arm 
         kind = kind, label = label, base_label = base_label !== nothing ? base_label : kind == "rational" ? "($M,$N)" : "D=$M",
         sampling = String(arm.sampling), per_dof = arm.per_dof, seed = arm.seed, n_evals = -1, nrm_grid = NaN,
         M = M, N_requested = N, N = -1, dof = -1, GN = -1,
-        nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, admissible = false,
+        nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, cert_method = "",
+        admissible = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
         n_rejected_q = -1, n_qfiltered = -1, n_inconsistent_y = -1, gradtol = NaN,
         census = census(NamedTuple[], lo, hi; truth = truth),
@@ -880,6 +887,7 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         qmin_grid = NaN,
         qmin = NaN,
         q_ok = true,
+        cert_method = "",
         admissible = true,
         n_paths = st === nothing ? -1 : st.paths_tracked,
         n_singular = st === nothing ? -1 : st.n_singular,
@@ -1261,7 +1269,8 @@ function main(
         end
         ckw = (; truth = truth_pts, dedup_tol = cfg["dedup_tol"], capture_radius = cfg["capture_radius"], warm = cfg["warm"])
         fs = cfg["face_samples"] === nothing ? face_samples_for(o.dim) : cfg["face_samples"]
-        @printf("  denominator certificate: %d lattice points per face coordinate\n", fs)
+        @printf("  denominator certificate: exact minimum of q by face recursion (3^%d faces)%s\n", o.dim,
+            o.dim > 8 ? @sprintf("; N ≥ 3: facet lattice, %d points per coordinate, not a proof", fs) : "")
         TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
         arms = sampling_arms(cfg)
         validation = cfg["validate"] && any(a -> a.sampling != :grid, arms) ? validation_grid(o, cfg["gn"]) : nothing
@@ -1352,7 +1361,7 @@ function main(
             sampling = c.sampling, per_dof = c.per_dof, seed = c.seed, n_evals = c.n_evals,
             M = c.M, N_requested = c.N_requested, N = c.N,
             dof = c.dof, GN = c.GN, nrm = c.nrm, nrm_grid = c.nrm_grid, rms = c.rms, sigma_ratio = c.sigma_ratio, qmin_grid = c.qmin_grid,
-            qmin = c.qmin, q_ok = c.q_ok, admissible = c.admissible, n_paths = c.n_paths, n_singular = c.n_singular,
+            qmin = c.qmin, q_ok = c.q_ok, cert_method = c.cert_method, admissible = c.admissible, n_paths = c.n_paths, n_singular = c.n_singular,
             n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q, n_qfiltered = c.n_qfiltered,
             n_inconsistent_y = c.n_inconsistent_y, gradtol = c.gradtol,
             n_verified_rows = z.n_verified_rows, n_distinct = z.n_distinct, n_tight = z.n_tight,

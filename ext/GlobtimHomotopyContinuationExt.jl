@@ -69,9 +69,14 @@ function Globtim._solve_rational_hc(
     eqs::AbstractVector,
     vars::AbstractVector;
     start_system::Symbol = :polyhedral,
+    compile::Union{Nothing,Bool,Symbol} = nothing,
 )
     sys = System(eqs; variables = vars)
-    hc_result = solve(sys; start_system = start_system, show_progress = false)
+    # compile = false interprets the system instead of compiling a straight-line
+    # program: the denominator certificate solves one small system per face of
+    # the box, where compilation would dominate; nothing keeps HC's default
+    ckw = compile === nothing ? (;) : (; compile = compile)
+    hc_result = solve(sys; start_system = start_system, show_progress = false, ckw...)
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
     stats = (;
         start_system = start_system,

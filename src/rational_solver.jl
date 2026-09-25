@@ -20,13 +20,14 @@
 # Phase 2.
 
 """
-    _solve_rational_hc(eqs, vars; start_system = :polyhedral) -> (sols, stats)
+    _solve_rational_hc(eqs, vars; start_system = :polyhedral, compile = nothing) -> (sols, stats)
 
 Solve the square polynomial system `eqs` in the variables `vars` (a
 `Vector{<:DynamicPolynomials.Variable}`, the `x` variables followed by `y`) with
 HomotopyContinuation and return the real solutions (as `Vector{Vector{Float64}}`,
 each of length `length(vars)`) together with a `stats` NamedTuple
-`(; start_system, n_paths, n_solutions, n_singular, n_real)`.
+`(; start_system, n_paths, n_solutions, n_singular, n_real)`. `compile` is passed
+to HC's `solve` when given (`false`: interpret the system, for many small solves).
 
 Implemented in GlobtimHomotopyContinuationExt — requires `using HomotopyContinuation`.
 """
@@ -241,29 +242,237 @@ end
 # ── positivity certificate for q ───────────────────────────────────────────────
 
 """
-    certify_positive_denominator(R::ApproxRational; tau = 0.0, face_samples = 41,
-                                 start_system = :auto) -> NamedTuple
+    certify_positive_denominator(R::ApproxRational; tau = 0.0, method = :recursion,
+                                 face_samples = 41, start_system = :auto,
+                                 bernstein_degree = R.N) -> NamedTuple
 
 Decide whether `q > tau` on the closed box `[-1,1]^n`. Poincaré–Hopf holds for
 `r = p/q` on the box only when `q` has no zero there, so this is a requirement of the
 critical-point census, not a nicety.
 
-Interior candidates for the minimum of `q` are its own critical points, obtained by
-**reusing the polynomial path on `q`**: `solve_polynomial_system(x, n, R.N, R.b; …)`
-(the coefficient vector `R.b` is already in the orthogonal basis of degree `N`).
-Boundary candidates are, in Phase 1, a dense lattice on the `2n` faces with
-`face_samples` points per face dimension (a stand-in — Phase 2 recurses Globtim on
-the faces). The minimum of `q` over all candidates is `qmin`.
+`method`:
 
-Returns `(; ok, qmin, argmin, n_interior_candidates, n_boundary_samples, method)`
-with `ok = qmin > tau` and `argmin` in surrogate coordinates.
+- `:recursion` (default) computes the minimum of `q` over the closed box exactly.
+  The minimiser is a stationary point of `q` relative to the face of the box whose
+  relative interior contains it, so the stationary points of `q` restricted to every
+  one of the `3^n` faces (each coordinate fixed at −1 or +1, or free) are candidates.
+  - `N ≤ 2`: `q(x) = c + gᵀx + ½xᵀHx` is read off `q` itself, and each face is one
+    linear solve `H_FF x_F = −(g_F + H_FF̄ x_F̄)`. A face with singular `H_FF` is
+    skipped: there the stationary set is affine and meets the face's boundary, so a
+    lower face carries the same value.
+  - `N ≥ 3` (only for `n ≤ 8`): one HomotopyContinuation solve of `∇_F q = 0` per
+    face, on `q` in monomials (`rational_critical_system`). `exact = false` when a
+    face solve reports singular endpoints (a degenerate or positive-dimensional
+    stationary set, which HC does not enumerate); `ok` then stays `false`.
+- `:bernstein`: `q > tau` proved when `bernstein_lower_bound(R; degree =
+  bernstein_degree)` exceeds `tau`; `qmin` is that lower bound, not the minimum.
+- `:sampling`: the interior stationary points plus a lattice of `face_samples`
+  points per face coordinate on the `2n` facets. Not a proof: a minimum on a face
+  between lattice points is missed (the Phase-1 stand-in).
+
+Returns `(; ok, qmin, argmin, method, exact, n_interior_candidates,
+n_boundary_samples, n_faces, n_singular_faces)` with `ok = exact && qmin > tau` and
+`argmin` in surrogate coordinates (`NaN`s for `:bernstein`).
 """
 function certify_positive_denominator(
     R::ApproxRational;
     tau::Real = 0.0,
+    method::Symbol = :recursion,
     face_samples::Int = 41,
     start_system::Symbol = :auto,
+    bernstein_degree::Int = R.N,
 )
+    n = size(R.grid, 2)
+    if method == :recursion
+        R.N <= 2 && return _certify_quadratic(R, tau)
+        n <= 8 || throw(
+            ArgumentError(
+                "certify_positive_denominator: face recursion for N = $(R.N) solves one " *
+                "HC system per face, 3^$n faces at n = $n; pass method = :bernstein (a " *
+                "proof when its bound is positive) or :sampling (not a proof)",
+            ),
+        )
+        return _certify_face_recursion(R, tau)
+    elseif method == :bernstein
+        lb = bernstein_lower_bound(R; degree = bernstein_degree)
+        return (;
+            ok = lb > tau,
+            qmin = lb,
+            argmin = fill(NaN, n),
+            method = :bernstein,
+            exact = true,
+            n_interior_candidates = 0,
+            n_boundary_samples = 0,
+            n_faces = 0,
+            n_singular_faces = 0,
+        )
+    elseif method == :sampling
+        return _certify_sampling(R, tau, face_samples, start_system)
+    end
+    throw(ArgumentError("method must be :recursion, :bernstein or :sampling, got :$method"))
+end
+
+# q(x) = c + gᵀx + ½ xᵀHx for a q of degree ≤ 2, from values of q at 0, ±eᵢ and
+# ±eᵢ ± eⱼ (identities that are exact for quadratics); checked at random points
+function _denominator_quadratic_form(R::ApproxRational)
+    n = size(R.grid, 2)
+    qf(x) = rational_denominator(R, x)
+    unit(i) = (v = zeros(n); v[i] = 1.0; v)
+    c = qf(zeros(n))
+    g = zeros(n)
+    H = zeros(n, n)
+    for i in 1:n
+        qp, qm = qf(unit(i)), qf(-unit(i))
+        g[i] = (qp - qm) / 2
+        H[i, i] = qp + qm - 2c
+    end
+    for i in 1:n, j in (i+1):n
+        v = zeros(n)
+        v[i] = 1.0; v[j] = 1.0; a = qf(v)
+        v[j] = -1.0; b = qf(v)
+        v[i] = -1.0; d = qf(v)
+        v[j] = 1.0; e = qf(v)
+        H[i, j] = H[j, i] = (a - b - e + d) / 4
+    end
+    rng = Random.Xoshiro(0)
+    for _ in 1:5
+        x = 2 .* rand(rng, n) .- 1
+        v = qf(x)
+        abs(v - (c + dot(g, x) + dot(x, H * x) / 2)) <= 1e-9 * max(1.0, abs(c), norm(g), opnorm(H)) || error(
+            "_denominator_quadratic_form: q of degree N = $(R.N) is not reproduced by its quadratic form",
+        )
+    end
+    return c, g, H
+end
+
+"""
+    _box_min_quadratic(c, g, H) -> (qmin, argmin, n_interior)
+
+Exact minimum of `c + gᵀx + ½xᵀHx` over `[-1,1]^n`: the stationary point relative
+to each of the `3^n` faces (coordinates fixed at ±1 or free), one linear solve per
+face; faces with singular `H_FF` are skipped (their stationary set is affine and
+reaches a lower face, which carries the same value).
+"""
+function _box_min_quadratic(c::Real, g::AbstractVector, H::AbstractMatrix)
+    n = length(g)
+    n <= 16 || throw(ArgumentError("face recursion enumerates 3^n faces; n = $n is too large"))
+    quad(x) = c + dot(g, x) + dot(x, H * x) / 2
+    qmin = Inf
+    argmin = fill(NaN, n)
+    n_interior = 0
+    digits_ = zeros(Int, n)     # per coordinate: 0 free, 1 fixed at −1, 2 fixed at +1
+    x = zeros(n)
+    for code in 0:(3^n-1)
+        k = code
+        for i in 1:n
+            digits_[i] = k % 3
+            k ÷= 3
+        end
+        for i in 1:n
+            x[i] = digits_[i] == 1 ? -1.0 : digits_[i] == 2 ? 1.0 : 0.0
+        end
+        free = findall(==(0), digits_)
+        if !isempty(free)
+            fixed = findall(!=(0), digits_)
+            fac = lu(H[free, free]; check = false)
+            issuccess(fac) || continue
+            y = fac \ (-(g[free] .+ H[free, fixed] * x[fixed]))
+            all(abs.(y) .<= 1 + 1e-12) || continue
+            x[free] .= clamp.(y, -1.0, 1.0)
+            length(free) == n && (n_interior += 1)
+        end
+        v = quad(x)
+        if v < qmin
+            qmin = v
+            argmin = copy(x)
+        end
+    end
+    return qmin, argmin, n_interior
+end
+
+function _certify_quadratic(R::ApproxRational, tau::Real)
+    n = size(R.grid, 2)
+    c, g, H = _denominator_quadratic_form(R)
+    _, argmin, n_interior = _box_min_quadratic(c, g, H)
+    # report the value of q itself at the minimiser, not of its reconstruction
+    qmin = rational_denominator(R, argmin)
+    return (;
+        ok = qmin > tau,
+        qmin = qmin,
+        argmin = argmin,
+        method = :recursion,
+        exact = true,
+        n_interior_candidates = n_interior,
+        n_boundary_samples = 0,
+        n_faces = 3^n,
+        n_singular_faces = 0,
+    )
+end
+
+function _certify_face_recursion(R::ApproxRational, tau::Real)
+    n = size(R.grid, 2)
+    sys = rational_critical_system(R)
+    q, xv = sys.q, sys.x
+    qmin = Inf
+    argmin = fill(NaN, n)
+    n_interior = 0
+    n_singular_faces = 0
+    digits_ = zeros(Int, n)
+    for code in 0:(3^n-1)
+        k = code
+        for i in 1:n
+            digits_[i] = k % 3
+            k ÷= 3
+        end
+        base = [d == 1 ? -1.0 : d == 2 ? 1.0 : 0.0 for d in digits_]
+        free = findall(==(0), digits_)
+        candidates = Vector{Vector{Float64}}()
+        if isempty(free)
+            push!(candidates, base)
+        else
+            fixed = findall(!=(0), digits_)
+            qF = isempty(fixed) ? q : subs(q, (xv[j] => base[j] for j in fixed)...)
+            eqs = [differentiate(qF, xv[i]) for i in free]
+            # a free coordinate q does not depend on: the stationary set is a line
+            # through the face, and a lower face carries its value
+            any(iszero, eqs) && continue
+            # a nonzero constant equation: no stationary point on this face
+            any(e -> maxdegree(e) == 0, eqs) && continue
+            sols, st = _solve_rational_hc(eqs, xv[free]; start_system = :total_degree, compile = false)
+            st.n_singular > 0 && (n_singular_faces += 1)
+            for s in sols
+                y = Vector{Float64}(real.(s))
+                all(abs.(y) .<= 1 + 1e-10) || continue
+                p = copy(base)
+                p[free] .= clamp.(y, -1.0, 1.0)
+                push!(candidates, p)
+                length(free) == n && (n_interior += 1)
+            end
+        end
+        for p in candidates
+            v = rational_denominator(R, p)
+            if v < qmin
+                qmin = v
+                argmin = p
+            end
+        end
+    end
+    exact = n_singular_faces == 0
+    return (;
+        ok = exact && qmin > tau,
+        qmin = qmin,
+        argmin = argmin,
+        method = :recursion,
+        exact = exact,
+        n_interior_candidates = n_interior,
+        n_boundary_samples = 0,
+        n_faces = 3^n,
+        n_singular_faces = n_singular_faces,
+    )
+end
+
+# the Phase-1 stand-in: interior stationary points plus a facet lattice
+function _certify_sampling(R::ApproxRational, tau::Real, face_samples::Int, start_system::Symbol)
     n = size(R.grid, 2)
     face_samples >= 2 || throw(ArgumentError("face_samples must be ≥ 2"))
     qfun(x) = rational_denominator(R, x)
@@ -321,8 +530,11 @@ function certify_positive_denominator(
         ok = qmin > tau,
         qmin = qmin,
         argmin = argmin,
+        method = :sampling,
+        exact = false,
         n_interior_candidates = length(candidates),
         n_boundary_samples = n_boundary,
-        method = :phase1_face_sampling,
+        n_faces = 0,
+        n_singular_faces = 0,
     )
 end

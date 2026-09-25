@@ -209,11 +209,23 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
         @testset "4. certify_positive_denominator" begin
             TRp = TestInput(f_pole; dim = 2, center = [0.0, 0.0], sample_range = 1.0, GN = 24)
             R84 = RationalConstructor(TRp, 8, 4)
+            # face recursion (default; N = 4: one HC solve per face of the square)
             c = certify_positive_denominator(R84)
+            @test c.method == :recursion && c.exact
             @test c.ok
             @test c.qmin > 0
-            @test c.n_boundary_samples == 4 * 41
+            @test c.n_faces == 9
             @test c.qmin <= R84.qmin_grid + 1e-12
+            # the exact minimum lies below every sample and close to a dense lattice's
+            lat = range(-1.0, 1.0; length = 401)
+            qlat = minimum(rational_denominator(R84, [a, b]) for a in lat, b in lat)
+            @test c.qmin <= qlat + 1e-12
+            @test qlat - c.qmin < 1e-3 * qlat
+            # the Phase-1 facet lattice, now opt-in: never below the exact minimum
+            cs = certify_positive_denominator(R84; method = :sampling)
+            @test cs.method == :sampling && !cs.exact
+            @test cs.n_boundary_samples == 4 * 41
+            @test c.qmin <= cs.qmin + 1e-12
             # a deliberately poor fit: (6,3) on f₂ has min q ≈ −0.05 inside the box
             R63 = RationalConstructor(TRp, 6, 3)
             c63 = certify_positive_denominator(R63)
@@ -226,6 +238,60 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
             on_face = any(abs(abs(v) - 1) < 1e-12 for v in c63.argmin)
             grad_q = ForwardDiff.gradient(u -> rational_denominator(R63, u), c63.argmin)
             @test on_face || norm(grad_q) < 1e-6
+            @test_throws ArgumentError certify_positive_denominator(R84; method = :nonsense)
+        end
+
+        @testset "4b. quadratic denominators: exact box minimum by linear solves" begin
+            # hand-made quadratics with the minimum at a known place of the square
+            function qmin_of(c, g, H)
+                qm, am, _ = Globtim._box_min_quadratic(c, g, H)
+                return qm, am
+            end
+            I2 = Matrix(1.0I, 2, 2)
+            # interior: (x − (0.2, −0.3))², shifted by 0.5
+            qm, am = qmin_of(0.5 + 0.13, -2 .* [0.2, -0.3], 2 .* I2)
+            @test qm ≈ 0.5 && am ≈ [0.2, -0.3]
+            # an edge: centre (1.5, 0.3), outside the box: minimum at (1, 0.3)
+            qm, am = qmin_of(0.1 + 1.5^2 + 0.3^2, -2 .* [1.5, 0.3], 2 .* I2)
+            @test am ≈ [1.0, 0.3] && qm ≈ 0.1 + 0.25
+            # a vertex: centre (1.4, −1.6)
+            qm, am = qmin_of(1.4^2 + 1.6^2, -2 .* [1.4, -1.6], 2 .* I2)
+            @test am ≈ [1.0, -1.0] && qm ≈ 0.4^2 + 0.6^2
+            # indefinite H: x₁² − x₂² has its box minimum −1 at x₁ = 0, x₂ = ±1
+            qm, am = qmin_of(0.0, zeros(2), [2.0 0.0; 0.0 -2.0])
+            @test qm ≈ -1 && am[1] ≈ 0 && abs(am[2]) ≈ 1
+            # the case the facet lattice misses: q = (x₁ − 1.03)² + (x₂ − 0.5)² − 0.0109
+            # dips to −0.01 on the face x₁ = 1 between the 3-point lattice's nodes
+            c0 = 1.03^2 + 0.25 - 0.0109
+            qm, am = qmin_of(c0, -2 .* [1.03, 0.5], 2 .* I2)
+            @test qm ≈ -0.01 atol = 1e-12
+            @test am ≈ [1.0, 0.5]
+            qlat3 = minimum(c0 - 2 * (1.03a + 0.5b) + a^2 + b^2 for a in (-1.0, 0.0, 1.0), b in (-1.0, 0.0, 1.0))
+            @test qlat3 > 0
+            # 3-D, random indefinite forms: never above a dense lattice's minimum
+            rng = Random.Xoshiro(3)
+            lat3 = range(-1.0, 1.0; length = 41)
+            for _ in 1:5
+                A = randn(rng, 3, 3)
+                H = A + A'
+                g = randn(rng, 3)
+                qm, _ = qmin_of(0.0, g, H)
+                ql = minimum(dot(g, [a, b, d]) + dot([a, b, d], H * [a, b, d]) / 2 for a in lat3, b in lat3, d in lat3)
+                @test qm <= ql + 1e-12
+                @test ql - qm < 0.05 * max(1.0, abs(ql))
+            end
+            # on a fit: (4,2) in 3-D, q quadratic — exact minimum below a dense lattice's
+            TR3 = TestInput(f_pole3; dim = 3, center = zeros(3), sample_range = 1.0, GN = 10)
+            R42 = RationalConstructor(TR3, 4, 2)
+            if R42.N == 2
+                c42 = certify_positive_denominator(R42)
+                @test c42.method == :recursion && c42.n_faces == 27
+                q41 = minimum(rational_denominator(R42, [a, b, d]) for a in lat3, b in lat3, d in lat3)
+                @test c42.qmin <= q41 + 1e-10
+                @test q41 - c42.qmin < 1e-2 * max(1.0, abs(q41))
+            else
+                @test_skip "RationalConstructor reduced (4,2) to N = $(R42.N)"
+            end
         end
 
         @testset "polynomial special case N = 0 solves like the polynomial path" begin
