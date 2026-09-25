@@ -204,6 +204,11 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # the ledger record's issue_id: the driver's bead, or --bead for a run
         # that belongs to another one
         "bead" => bead,
+        # what the surrogates fit (target_function): f itself, or log / cauchy of
+        # f − shift + eps; refinement, truth sets and the census stay on f
+        "target" => "raw",
+        "target_eps" => 1e-6,
+        "target_shift" => 0.0,
         "supersedes" => String[],
         "rational" => [(4, 2), (6, 3), (8, 4), (10, 5), (12, 6)],
         "polynomial" => [6, 8, 10, 12, 14, 16, 20],
@@ -271,6 +276,17 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         elseif a == "--bead"                # e.g. --bead globopt_merged-8f4p.7.9
             cfg["bead"] = argv[i+1]
             i += 1
+        elseif a == "--target"              # raw | log | cauchy
+            cfg["target"] = argv[i+1]
+            cfg["target"] in ("raw", "log", "cauchy") || error("--target takes raw, log or cauchy")
+            i += 1
+        elseif a == "--target-eps"
+            cfg["target_eps"] = parse(Float64, argv[i+1])
+            cfg["target_eps"] > 0 || error("--target-eps must be > 0")
+            i += 1
+        elseif a == "--target-shift"
+            cfg["target_shift"] = parse(Float64, argv[i+1])
+            i += 1
         elseif a == "--rational"            # e.g. --rational 12:7,14:6,20:10
             cfg["rational"] = [(parse(Int, split(s, ":")[1]), parse(Int, split(s, ":")[2])) for s in split(argv[i+1], ",")]
             i += 1
@@ -333,6 +349,28 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         )
     end
     return cfg
+end
+
+"""
+    target_function(cfg, f) -> g
+
+What the surrogates fit. `--target raw`: f itself. `--target log` / `cauchy`:
+φ(f − s) with φ(u) = log(u + ε) or −1/(u + ε), s = `--target-shift`, ε =
+`--target-eps`. φ is increasing, so φ∘f has exactly the critical points of f,
+with the same Morse indices (at a critical point ∇²(φ∘f) = φ′(f)∇²f); it
+compresses the range of f, so the fit's accuracy is spread over the low values
+where the minima are instead of spent on the large ones. Refinement, truth sets
+and the census stay on f. A sample with f − s + ε ≤ 0 is an error, not clipped.
+"""
+function target_function(cfg, f)
+    t = cfg["target"]
+    t == "raw" && return f
+    s, ε = cfg["target_shift"], cfg["target_eps"]
+    return function (x)
+        u = f(x) - s + ε
+        u > 0 || error("--target $t: f − $s + $ε = $u ≤ 0 at x = $x (raise --target-eps or lower --target-shift)")
+        return t == "log" ? log(u) : -1 / u
+    end
 end
 
 # ── refinement on the true objective ────────────────────────────────────────
@@ -651,9 +689,9 @@ The audit's tensor Chebyshev grid on the box of `o` (surrogate coordinates), the
 objective on it, and the quadrature weights of `ApproxPoly.nrm`: the common set on
 which fits from different sample sets are compared.
 """
-function validation_grid(o::Objective, GN::Int)
+function validation_grid(o::Objective, GN::Int; f = o.f)
     S = Globtim._grid_matrix(o.dim, GN, :chebyshev)
-    z = Globtim._evaluate_objective_rows(o.f, S, o.range, o.center)
+    z = Globtim._evaluate_objective_rows(f, S, o.range, o.center)
     all(isfinite, z) || error("$(o.key): objective not finite on the validation grid")
     return (; S = S, z = z, w = Globtim.compute_quadrature_weights(:chebyshev, GN, o.dim))
 end
@@ -805,10 +843,10 @@ solved by QR. Coefficients are in the plain Chebyshev basis of `Λ` (what
 `solve_polynomial_system` takes with `normalized = false`); `nrm` is the in-sample
 Monte Carlo L2 residual on the box, `rms` the plain one.
 """
-function christoffel_polynomial_fit(o::Objective, Λ, K::Int, rng)
+function christoffel_polynomial_fit(o::Objective, Λ, K::Int, rng; f = o.f)
     n = o.dim
     S, sqrt_w = Globtim.christoffel_random_sample_chebyshev(n, Λ.data, K; rng = rng)
-    z = Globtim._evaluate_objective_rows(o.f, S, o.range, o.center)
+    z = Globtim._evaluate_objective_rows(f, S, o.range, o.center)
     all(isfinite, z) || error("$(o.key): objective not finite at $(count(!isfinite, z)) of $K samples")
     V = Globtim.lambda_vandermonde(Λ, S; basis = :chebyshev)
     coeffs = Vector{Float64}((sqrt_w .* V) \ (sqrt_w .* z))
@@ -838,7 +876,8 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         rms = sqrt(sum(abs2, Globtim.evaluate(pol, pol.grid .* (TR.sample_range isa Number ? TR.sample_range : TR.sample_range') .+ TR.center') .- pol.z) / length(pol.z))
     else
         K = ceil(Int, arm.per_dof * Λ.size[1])
-        t_fit = @elapsed fit = christoffel_polynomial_fit(o, Λ, K, Xoshiro(arm.seed))
+        # TR.objective: what the surrogates fit (f, or its --target transform)
+        t_fit = @elapsed fit = christoffel_polynomial_fit(o, Λ, K, Xoshiro(arm.seed); f = TR.objective)
         coeffs, basis, normalized = fit.coeffs, :chebyshev, false
         surrogate = u -> dot(coeffs, Globtim._tensor_basis_values(Λ, u, :chebyshev, false))
         nrm, rms, n_evals, GN = fit.nrm, fit.rms, K, -1
@@ -1062,6 +1101,8 @@ function write_summary(path, cfg, results, verdicts, verdicts_unconstrained, ela
             cfg["smoke"] ? " (SMOKE)" : "", "; GN = ", cfg["gn"], "; elapsed ", @sprintf("%.0f", elapsed), " s.\n")
         println(io, "Brief: docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md. nrm is the quadrature-weighted L2 norm ",
             "of the residual on [-1,1]^n for both surrogate kinds (nonlinear residual p/q − f for the rational).\n")
+        cfg["target"] == "raw" || @printf(io, "**Fit target:** %s(f − %g + %g), an increasing transform of f (same critical points and indices); nrm, qmin and surrogate values are in its units, refinement and the census are on f.\n\n",
+            cfg["target"], cfg["target_shift"], cfg["target_eps"])
         @printf(io, "**Census** (the measure of a configuration). Every in-box surrogate critical point (a candidate) is ")
         @printf(io, "refined on f by Newton; it is *verified* when the refinement reaches |∇f| < gradtol inside the box ")
         @printf(io, "(gradtol per objective, stated in its section; it is the threshold applied). Verified points closer than ")
@@ -1238,7 +1279,7 @@ function main(
     # Warm-up: compile every code path once on a tiny configuration so the wall
     # times below (gate check 4) measure the solves, not first-call compilation.
     let o = objectives[first(cfg["objectives"])]
-        TRw = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = 8)
+        TRw = TestInput(target_function(cfg, o.f); dim = o.dim, center = o.center, sample_range = o.range, GN = 8)
         t_w = @elapsed begin
             # without a grid arm (high dimension: (GN+1)^n evaluations of f are
             # what the Christoffel arms avoid), compile on a Christoffel arm
@@ -1271,9 +1312,12 @@ function main(
         fs = cfg["face_samples"] === nothing ? face_samples_for(o.dim) : cfg["face_samples"]
         @printf("  denominator certificate: exact minimum of q by face recursion (3^%d faces)%s\n", o.dim,
             o.dim > 8 ? @sprintf("; N ≥ 3: facet lattice, %d points per coordinate, not a proof", fs) : "")
-        TR = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
+        fitf = target_function(cfg, o.f)
+        cfg["target"] == "raw" ||
+            @printf("  fit target: %s(f − %g + %g); refinement and census on f\n", cfg["target"], cfg["target_shift"], cfg["target_eps"])
+        TR = TestInput(fitf; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn"])
         arms = sampling_arms(cfg)
-        validation = cfg["validate"] && any(a -> a.sampling != :grid, arms) ? validation_grid(o, cfg["gn"]) : nothing
+        validation = cfg["validate"] && any(a -> a.sampling != :grid, arms) ? validation_grid(o, cfg["gn"]; f = fitf) : nothing
         validation === nothing || @printf("  validation grid: %d evaluations (GN = %d)\n", length(validation.z), cfg["gn"])
         cells = NamedTuple[]
         for (M, N) in cfg["rational"], fit in cfg["rational_fit"], arm in arms
@@ -1329,7 +1373,7 @@ function main(
         # (d²+δ)^6 each), beyond the (12,6) sweep: extend the search for the
         # σ-collapse of W on a grid large enough to determine degree 24.
         if key in extended_keys
-            TRx = TestInput(o.f; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn_extended"])
+            TRx = TestInput(fitf; dim = o.dim, center = o.center, sample_range = o.range, GN = cfg["gn_extended"])
             ext = NamedTuple[]
             for (M, N) in cfg["rational_extended"]
                 @printf("  extended rational (%2d,%2d) GN=%d ... ", M, N, cfg["gn_extended"])
@@ -1423,6 +1467,7 @@ function main(
             "start_system" => String(cfg["start_system"]),
             "rational_start_system" => String(cfg["rational_start_system"]),
             "smoke" => cfg["smoke"],
+            "target" => cfg["target"], "target_eps" => cfg["target_eps"], "target_shift" => cfg["target_shift"],
         ))
     summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed;
         objectives = objectives, truths = truths)
@@ -1435,6 +1480,7 @@ function main(
             "sampling" => join((a.sampling == :grid ? "grid" : "christoffel:$(a.per_dof)" for a in cfg["sampling"]), ","),
             "replicates" => cfg["replicates"],
             "n_cells" => sum(length(v) for v in values(results)),
+            "target" => cfg["target"],
         )
         for key in cfg["objectives"]
             v = verdicts[key]
