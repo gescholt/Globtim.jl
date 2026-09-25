@@ -47,9 +47,12 @@
 #   3. a certified rational configuration exists at dof ≤ dof(P*)/2;
 #   4. lifted HC wall time at R* ≤ polynomial HC wall time at P* (warm).
 #
-# Outputs (one timestamped directory): audit_full.jld2 (everything, with
-# user_metadata), critical_points.csv, audit_table.csv, summary.md, and a
-# ledger record (Globtim.emit_ledger_record; --no-ledger to skip).
+# Outputs (one timestamped directory): critical_points.csv, audit_table.csv,
+# truth.csv (the multistart truth sets), summary.md, and a ledger record
+# (Globtim.emit_ledger_record, carrying the bead given by the driver or --bead;
+# --no-ledger to skip). audit_full.jld2 (everything, with user_metadata) is also
+# written but is not a ledger artifact: globtim_results/.gitignore keeps it out
+# of git (228 MB across the first 29 runs), so it stays on the machine that ran.
 #
 # Run (smoke, ~1 min):
 #   infra/tools/run_capped.sh -m 16G -- julia --project=profiles/dev \
@@ -194,9 +197,13 @@ function sampling_arms(cfg)
 end
 arm_tag(arm) = arm.sampling == :grid ? "" : @sprintf(" %gm #%d", arm.per_dof, arm.seed)
 
-function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "B", "C", "D"])
+function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "B", "C", "D"],
+    bead = "globopt_merged-8f4p.7")
     cfg = Dict{String,Any}(
         "objectives" => default_objectives,
+        # the ledger record's issue_id: the driver's bead, or --bead for a run
+        # that belongs to another one
+        "bead" => bead,
         "supersedes" => String[],
         "rational" => [(4, 2), (6, 3), (8, 4), (10, 5), (12, 6)],
         "polynomial" => [6, 8, 10, 12, 14, 16, 20],
@@ -259,6 +266,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             i += 1
         elseif a == "--supersedes"
             cfg["supersedes"] = String.(split(argv[i+1], ","))
+            i += 1
+        elseif a == "--bead"                # e.g. --bead globopt_merged-8f4p.7.9
+            cfg["bead"] = argv[i+1]
             i += 1
         elseif a == "--rational"            # e.g. --rational 12:7,14:6,20:10
             cfg["rational"] = [(parse(Int, split(s, ":")[1]), parse(Int, split(s, ":")[2])) for s in split(argv[i+1], ",")]
@@ -1191,25 +1201,27 @@ end
 # ── main ────────────────────────────────────────────────────────────────────
 
 """
-    main(argv; objectives, root, slug, extended_keys, brief, extra_report) -> Bool
+    main(argv; objectives, root, slug, bead, extended_keys, brief, extra_report) -> Bool
 
 Run the audit over `objectives` (a `Dict{String,Objective}`; the default table is
 the brief's A–D). A campaign script `include`s this file and calls `main` with its
-own table, results root under `globtim_results/`, ledger slug and the keys that get
-the extended (M,N) sweep. `extra_report(cfg, results, outdir)`, if given, writes
-further artifacts into `outdir` and returns their file names (hashed into the
-ledger record with the rest).
+own table, results root under `globtim_results/`, ledger slug, bead (the record's
+`issue_id`; `--bead` overrides it per run) and the keys that get the extended
+(M,N) sweep. `extra_report(cfg, results, outdir)`, if given, writes further
+artifacts into `outdir` and returns their file names (hashed into the ledger
+record with the rest).
 """
 function main(
     argv;
     objectives = OBJECTIVES,
     root = "rational_phase1",
     slug = "rational_phase1_audit",
+    bead = "globopt_merged-8f4p.7",
     extended_keys = ["B"],
     brief = "docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md",
     extra_report = nothing,
 )
-    cfg = parse_args(argv; root = root, default_objectives = sort(collect(keys(objectives))))
+    cfg = parse_args(argv; root = root, default_objectives = sort(collect(keys(objectives))), bead = bead)
     outdir = normpath(cfg["outdir"])
     mkpath(outdir)
     t0 = time()
@@ -1363,6 +1375,13 @@ function main(
     end
     CSV.write(joinpath(outdir, "audit_table.csv"), table)
     CSV.write(joinpath(outdir, "critical_points.csv"), cps)
+    # the truth sets, in the tracked outputs: audit_full.jld2 stays local
+    truth_rows = DataFrame(objective = String[], point = Int[], x = String[], index = Int[],
+        n_starts = Int[], n_converged = Int[])
+    for key in sort(collect(keys(truths))), (k, (x, ix)) in enumerate(zip(truths[key].points, truths[key].index))
+        push!(truth_rows, (key, k, join(string.(x), ";"), ix, truths[key].n_starts, truths[key].n_converged))
+    end
+    CSV.write(joinpath(outdir, "truth.csv"), truth_rows)
 
     JLD2.jldsave(joinpath(outdir, "audit_full.jld2");
         config = Dict(k => (v isa Vector{Tuple{Int,Int}} ? [collect(t) for t in v] : todict(v)) for (k, v) in cfg),
@@ -1379,7 +1398,7 @@ function main(
         elapsed_seconds = elapsed,
         user_metadata = Dict{String,Any}(
             "package" => "Globtim", "script" => "pkg/globtim/scripts/audit_rational_phase1.jl",
-            "brief" => brief, "bead" => "B3",
+            "brief" => brief, "bead" => cfg["bead"],
             "objectives" => Dict(k => Dict("name" => o.name, "dim" => o.dim, "center" => o.center, "range" => o.range,
                 "ad" => String(o.ad), "gradtol" => o.gradtol, "truth" => String(o.truth), "truth_starts" => o.truth_starts)
                                  for (k, o) in objectives if k in cfg["objectives"]),
@@ -1424,17 +1443,16 @@ function main(
             end
         end
         all_pass = all(verdicts[k].evaluated && verdicts[k].pass for k in cfg["objectives"])
-        try
-            rec = Globtim.emit_ledger_record(;
-                slug = slug * (cfg["smoke"] ? "_smoke" : ""),
-                outdir = outdir, headline = headline,
-                artifacts = vcat(["audit_table.csv", "critical_points.csv", "audit_full.jld2", "summary.md"], extra_artifacts),
-                supersedes = cfg["supersedes"],
-                status = all_pass ? "completed" : "completed_gate_failed")
-            println("ledger record: ", rec)
-        catch e
-            @warn "ledger record emission failed (results are still written)" exception = e
-        end
+        # no try/catch: a run without its record is not citable, so a failed
+        # emission fails the run (the results above are already on disk)
+        rec = Globtim.emit_ledger_record(;
+            slug = slug * (cfg["smoke"] ? "_smoke" : ""),
+            outdir = outdir, headline = headline,
+            artifacts = vcat(["audit_table.csv", "critical_points.csv", "truth.csv", "summary.md"], extra_artifacts),
+            supersedes = cfg["supersedes"],
+            issue_id = cfg["bead"],
+            status = all_pass ? "completed" : "completed_gate_failed")
+        println("ledger record: ", rec)
     end
 
     @printf("\n%.0f s; wrote %s\n", elapsed, summary_path)
