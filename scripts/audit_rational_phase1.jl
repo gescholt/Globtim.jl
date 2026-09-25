@@ -226,6 +226,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # how the rational is fitted: "lin" (RationalConstructor's linearised LS) and/or
         # "lm" (rational_lm_refit on the same points), one cell per fit
         "rational_fit" => ["lin"],
+        # HC start system of the polynomial arms: :auto (polyhedral for n ≥ 3) or
+        # :total_degree — the polyhedral mixed-cell computation overflows at n = 12, degree 4
+        "start_system" => :auto,
     )
     i = 1
     while i <= length(argv)
@@ -273,6 +276,11 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["warm"] = false
         elseif a == "--no-validate"
             cfg["validate"] = false
+        elseif a == "--start-system"        # auto | polyhedral | total_degree
+            cfg["start_system"] = Symbol(argv[i+1])
+            cfg["start_system"] in (:auto, :polyhedral, :total_degree) ||
+                error("--start-system takes auto, polyhedral or total_degree")
+            i += 1
         elseif a == "--rational-fit"        # e.g. --rational-fit lin,lm
             cfg["rational_fit"] = String.(split(argv[i+1], ","))
             all(in(("lin", "lm")), cfg["rational_fit"]) || error("--rational-fit takes lin and/or lm")
@@ -773,7 +781,7 @@ One polynomial degree: the fit (`Constructor` on the grid of `TR`, or
 on f, and the `census`. Always admissible.
 """
 function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothing, truth = nothing,
-        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true)
+        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, start_system::Symbol = :auto)
     lo, hi = box(o)
     n = o.dim
     Λ = SupportGen(n, (:one_d_for_all, D))
@@ -800,9 +808,11 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         basis = basis,
         normalized = normalized,
         path_stats_ref = stats_ref,
+        start_system = start_system,
     )
     st = stats_ref[]
-    t_solve_warm = warm ? (@elapsed solve_polynomial_system(x, n, D, coeffs; basis = basis, normalized = normalized)) : NaN
+    t_solve_warm = warm ? (@elapsed solve_polynomial_system(x, n, D, coeffs; basis = basis, normalized = normalized,
+        start_system = start_system)) : NaN
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
     # the surrogate's Morse index in surrogate coordinates: the affine map to the
     # box scales by positive factors, which leaves the inertia unchanged
@@ -1186,7 +1196,9 @@ function main(
             warm_arm = any(a -> a.sampling == :grid, cfg["sampling"]) ? GRID_ARM :
                        (; sampling = :christoffel, per_dof = 2.0, seed = 0)
             run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3)
-            run_polynomial(o, TRw, 4; arm = warm_arm)
+            # degree 2 above n = 8: the warm-up only compiles, and a degree-4 polyhedral
+            # start system overflows at n = 12
+            run_polynomial(o, TRw, o.dim > 8 ? 2 : 4; arm = warm_arm, start_system = cfg["start_system"])
         end
         @printf("warm-up (compilation): %.1f s\n", t_w)
     end
@@ -1237,7 +1249,7 @@ function main(
             label = "D=$D" * arm_tag(arm)
             @printf("  polynomial %-14s ... ", label)
             c = try
-                run_polynomial(o, TR, D; arm = arm, validation = validation, ckw...)
+                run_polynomial(o, TR, D; arm = arm, validation = validation, start_system = cfg["start_system"], ckw...)
             catch e
                 failed_cell(o, "polynomial", label, D, 0, sprint(showerror, e); truth = truth_pts, arm = arm)
             end
@@ -1349,6 +1361,7 @@ function main(
             "replicates" => cfg["replicates"], "validate" => cfg["validate"],
             "face_samples" => cfg["face_samples"] === nothing ? "auto (face_samples_for(dim))" : cfg["face_samples"],
             "rational_fit" => cfg["rational_fit"],
+            "start_system" => String(cfg["start_system"]),
             "smoke" => cfg["smoke"],
         ))
     summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed;
