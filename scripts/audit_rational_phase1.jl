@@ -229,6 +229,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # HC start system of the polynomial arms: :auto (polyhedral for n ≥ 3) or
         # :total_degree — the polyhedral mixed-cell computation overflows at n = 12, degree 4
         "start_system" => :auto,
+        # HC start system of the lifted rational solve (solve_rational_critical_points):
+        # :polyhedral (its default) or :total_degree — the mixed cells overflow at n = 12
+        "rational_start_system" => :polyhedral,
     )
     i = 1
     while i <= length(argv)
@@ -257,7 +260,8 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["rational"] = [(parse(Int, split(s, ":")[1]), parse(Int, split(s, ":")[2])) for s in split(argv[i+1], ",")]
             i += 1
         elseif a == "--polynomial"          # e.g. --polynomial 20,24
-            cfg["polynomial"] = parse.(Int, split(argv[i+1], ","))
+            # "none": rational arms only
+            cfg["polynomial"] = argv[i+1] == "none" ? Int[] : parse.(Int, split(argv[i+1], ","))
             i += 1
         elseif a == "--dedup-tol"
             cfg["dedup_tol"] = parse(Float64, argv[i+1])
@@ -276,6 +280,11 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["warm"] = false
         elseif a == "--no-validate"
             cfg["validate"] = false
+        elseif a == "--rational-start-system"   # polyhedral | total_degree
+            cfg["rational_start_system"] = Symbol(argv[i+1])
+            cfg["rational_start_system"] in (:polyhedral, :total_degree) ||
+                error("--rational-start-system takes polyhedral or total_degree")
+            i += 1
         elseif a == "--start-system"        # auto | polyhedral | total_degree
             cfg["start_system"] = Symbol(argv[i+1])
             cfg["start_system"] in (:auto, :polyhedral, :total_degree) ||
@@ -661,7 +670,7 @@ with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
 """
 function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
         dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, face_samples::Int = face_samples_for(o.dim),
-        fit::String = "lin")
+        fit::String = "lin", start_system::Symbol = :polyhedral)
     lo, hi = box(o)
     fit in ("lin", "lm") || error("rational fit must be lin or lm, got $fit")
     t_fit = @elapsed begin
@@ -678,12 +687,12 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     # the conversion is repeated inside solve_rational_critical_points; it is
     # timed separately here because it is cheap and the brief asks for the split
     t_convert = @elapsed rational_critical_system(R)
-    t_solve = @elapsed res = solve_rational_critical_points(R)
+    t_solve = @elapsed res = solve_rational_critical_points(R; start_system = start_system)
     t_solve -= t_convert
     # second solve of the same system: HC compiles a straight-line program per
     # new System, so the first call is JIT-dominated at these sizes; the warm
     # time is the path-tracking cost
-    t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R)) - t_convert : NaN
+    t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R; start_system = start_system)) - t_convert : NaN
     stats = res.stats
     t_cert = @elapsed cert = certify_positive_denominator(R; face_samples = face_samples)
     t_refine = @elapsed rows = [refined_row(o, lo, hi, x, to_original_coordinates(R, x), y, idx)
@@ -1195,7 +1204,7 @@ function main(
             # what the Christoffel arms avoid), compile on a Christoffel arm
             warm_arm = any(a -> a.sampling == :grid, cfg["sampling"]) ? GRID_ARM :
                        (; sampling = :christoffel, per_dof = 2.0, seed = 0)
-            run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3)
+            run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3, start_system = cfg["rational_start_system"])
             # degree 2 above n = 8: the warm-up only compiles, and a degree-4 polyhedral
             # start system overflows at n = 12
             run_polynomial(o, TRw, o.dim > 8 ? 2 : 4; arm = warm_arm, start_system = cfg["start_system"])
@@ -1231,7 +1240,8 @@ function main(
             label = "($M,$N)" * ftag * arm_tag(arm)
             @printf("  rational %-16s ... ", label)
             c = try
-                run_rational(o, TR, M, N; arm = arm, validation = validation, face_samples = fs, fit = fit, ckw...)
+                run_rational(o, TR, M, N; arm = arm, validation = validation, face_samples = fs, fit = fit,
+                    start_system = cfg["rational_start_system"], ckw...)
             catch e
                 failed_cell(o, "rational", label, M, N, sprint(showerror, e); truth = truth_pts, arm = arm,
                     base_label = "($M,$N)" * ftag)
@@ -1362,6 +1372,7 @@ function main(
             "face_samples" => cfg["face_samples"] === nothing ? "auto (face_samples_for(dim))" : cfg["face_samples"],
             "rational_fit" => cfg["rational_fit"],
             "start_system" => String(cfg["start_system"]),
+            "rational_start_system" => String(cfg["rational_start_system"]),
             "smoke" => cfg["smoke"],
         ))
     summary_path = write_summary(joinpath(outdir, "summary.md"), cfg, results, verdicts, verdicts_unconstrained, elapsed;
