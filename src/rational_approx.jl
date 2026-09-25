@@ -303,6 +303,17 @@ Fit a rational surrogate `p/q` of type `(M, N)` to `TR.objective` on the box
   rational fit is an empirical question (measure it with the audit's census).
 - `rng::Union{AbstractRNG,Nothing} = nothing`: required for `:christoffel` (the sample
   set must be replayable; there is no default generator).
+- `denominator::Symbol = :free`: `:free` is the linearised fit above (q normalised by
+  `‖b‖ = 1`, then mean 1). `:points` imposes q ≥ `delta · mean(q)` at the fit points,
+  at box points and at the minimisers of q found by exchange rounds
+  (`rational_ls_fit_points`; none of them costs an evaluation of f; certify afterwards).
+  `:bernstein` imposes it on every tensor Bernstein coefficient of q at
+  `bernstein_degree` per variable (default N): certified by construction, but
+  conservative enough to exclude the true denominator of a pole near the box unless
+  the degree is elevated far (see `rational_bernstein.jl`). Neither applies degree
+  reduction.
+- `delta::Real = 0.01`: the positivity margin, relative to mean(q).
+- `bernstein_degree`: see `denominator`.
 - `verbose::Int = 0`.
 
 `nrm` is the L2 norm on `[-1,1]^n` of the nonlinear residual `p/q − f` at the fit's
@@ -325,8 +336,14 @@ function RationalConstructor(
     sampling::Symbol = :grid,
     n_samples::Union{Int,Nothing} = nothing,
     rng::Union{AbstractRNG,Nothing} = nothing,
+    denominator::Symbol = :free,
+    delta::Real = 0.01,
+    bernstein_degree::Union{Int,Nothing} = nothing,
     verbose::Int = 0,
 )
+    denominator in (:free, :bernstein, :points) || throw(
+        ArgumentError("denominator must be :free, :bernstein or :points, got $denominator"),
+    )
     basis in (:chebyshev, :legendre) ||
         throw(ArgumentError("basis must be :chebyshev or :legendre, got $basis"))
     sampling in (:grid, :christoffel) ||
@@ -436,6 +453,43 @@ function RationalConstructor(
     while true
         Lambda_N = SupportGen(n, (:one_d_for_all, N_cur))
         V_N = lambda_vandermonde(Lambda_N, S; basis = basis)
+        if denominator != :free
+            # q ≥ delta · mean(q) on the box (:bernstein, certified) or at the fit
+            # points, box points and exchanged minimisers of q (:points); no degree
+            # reduction (the constraint removes the Froissart freedom)
+            pf = if denominator == :bernstein
+                rational_ls_fit_positive(
+                    V_M,
+                    V_N,
+                    z,
+                    bernstein_matrix(
+                        Lambda_N,
+                        basis;
+                        degree = bernstein_degree === nothing ? N_cur : bernstein_degree,
+                    );
+                    delta = delta,
+                    sqrt_w = sqrt_w,
+                )
+            else
+                rational_ls_fit_points(
+                    V_M,
+                    V_N,
+                    z,
+                    Lambda_N,
+                    basis;
+                    delta = delta,
+                    sqrt_w = sqrt_w,
+                )
+            end
+            fit = (
+                a = pf.a,
+                b = pf.b,
+                singular_values = pf.singular_values,
+                reduce_N = false,
+                normalization = :mean,
+            )
+            break
+        end
         fit = rational_ls_fit(V_M, V_N, z; eta = eta, sqrt_w = sqrt_w)
         if reduce && fit.reduce_N && N_cur > 0
             verbose >= 1 &&

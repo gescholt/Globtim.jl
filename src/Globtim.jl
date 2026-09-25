@@ -320,10 +320,15 @@ include("EnhancedMetrics.jl") #Enhanced statistics collection
 # p - y q = 0, ∇p - y ∇q = 0 solved by HC (the ext adds _solve_rational_hc).
 include("rational_approx.jl")
 include("rational_solver.jl")
+include("rational_bernstein.jl")
 export ApproxRational,
     RationalConstructor,
     rational_ls_fit,
     rational_lm_refit,
+    rational_ls_fit_positive,
+    rational_ls_fit_points,
+    bernstein_matrix,
+    bernstein_lower_bound,
     rational_dof,
     rational_numerator,
     rational_denominator,

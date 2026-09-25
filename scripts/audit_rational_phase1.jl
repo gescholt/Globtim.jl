@@ -67,6 +67,7 @@ using LinearAlgebra
 using Printf
 using Dates
 using Random: Xoshiro
+using Statistics: median
 using JLD2
 using CSV
 using DataFrames
@@ -226,6 +227,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # how the rational is fitted: "lin" (RationalConstructor's linearised LS) and/or
         # "lm" (rational_lm_refit on the same points), one cell per fit
         "rational_fit" => ["lin"],
+        # drop rational candidates with q(x) < qfilter · median(q at the fit points)
+        # before refinement (0 = keep all); n_qfiltered counts the dropped
+        "qfilter" => 0.0,
         # HC start system of the polynomial arms: :auto (polyhedral for n ≥ 3) or
         # :total_degree — the polyhedral mixed-cell computation overflows at n = 12, degree 4
         "start_system" => :auto,
@@ -292,7 +296,11 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             i += 1
         elseif a == "--rational-fit"        # e.g. --rational-fit lin,lm
             cfg["rational_fit"] = String.(split(argv[i+1], ","))
-            all(in(("lin", "lm")), cfg["rational_fit"]) || error("--rational-fit takes lin and/or lm")
+            all(in(("lin", "lm", "pts")), cfg["rational_fit"]) || error("--rational-fit takes lin, lm and/or pts")
+            i += 1
+        elseif a == "--qfilter"             # e.g. --qfilter 0.1
+            cfg["qfilter"] = parse(Float64, argv[i+1])
+            cfg["qfilter"] >= 0 || error("--qfilter must be ≥ 0")
             i += 1
         elseif a == "--face-samples"        # e.g. --face-samples 11
             cfg["face_samples"] = parse(Int, argv[i+1])
@@ -670,20 +678,23 @@ with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
 """
 function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
         dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, face_samples::Int = face_samples_for(o.dim),
-        fit::String = "lin", start_system::Symbol = :polyhedral)
+        fit::String = "lin", start_system::Symbol = :polyhedral, qfilter::Real = 0.0)
     lo, hi = box(o)
-    fit in ("lin", "lm") || error("rational fit must be lin or lm, got $fit")
+    fit in ("lin", "lm", "pts") || error("rational fit must be lin, lm or pts, got $fit")
+    # pts: q ≥ 0.01 · mean(q) at the fit points, box points and exchanged minimisers
+    # of q (RationalConstructor(...; denominator = :points)); lin / lm: free linearised
+    dkw = fit == "pts" ? (; denominator = :points, delta = 0.01) : (;)
     t_fit = @elapsed begin
         R = if arm.sampling == :grid
-            RationalConstructor(TR, M, N)
+            RationalConstructor(TR, M, N; dkw...)
         else
             RationalConstructor(TR, M, N; sampling = arm.sampling, rng = Xoshiro(arm.seed),
-                n_samples = ceil(Int, arm.per_dof * (binomial(o.dim + M, M) + binomial(o.dim + N, N))))
+                n_samples = ceil(Int, arm.per_dof * (binomial(o.dim + M, M) + binomial(o.dim + N, N))), dkw...)
         end
         # lm: refit on the same points by LM on the true residual (Globtim.rational_lm_refit)
         fit == "lm" && (R = rational_lm_refit(R))
     end
-    ftag = fit == "lm" ? "lm" : ""
+    ftag = fit == "lin" ? "" : fit
     # the conversion is repeated inside solve_rational_critical_points; it is
     # timed separately here because it is cheap and the brief asks for the split
     t_convert = @elapsed rational_critical_system(R)
@@ -695,8 +706,15 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R; start_system = start_system)) - t_convert : NaN
     stats = res.stats
     t_cert = @elapsed cert = certify_positive_denominator(R; face_samples = face_samples)
+    # candidate filter: a critical point of p/q where q is small against its typical
+    # size sits on a (near-)pole surface of the fit, not on a feature of f
+    keep = trues(length(res.points))
+    if qfilter > 0
+        qmed = median([rational_denominator(R, R.grid[i, :]) for i in 1:size(R.grid, 1)])
+        keep = [rational_denominator(R, x) >= qfilter * qmed for x in res.points]
+    end
     t_refine = @elapsed rows = [refined_row(o, lo, hi, x, to_original_coordinates(R, x), y, idx)
-                                for (x, y, idx) in zip(res.points, res.values, res.index)]
+                                for (x, y, idx, k) in zip(res.points, res.values, res.index, keep) if k]
     cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "rational",
@@ -725,6 +743,7 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
         n_points = length(res.points),
         n_outside = res.n_outside,
         n_rejected_q = res.n_rejected_q,
+        n_qfiltered = count(!, keep),
         n_inconsistent_y = res.n_inconsistent_y,
         gradtol = o.gradtol,
         census = cz,
@@ -752,7 +771,7 @@ function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing, arm 
         M = M, N_requested = N, N = -1, dof = -1, GN = -1,
         nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, admissible = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
-        n_rejected_q = -1, n_inconsistent_y = -1, gradtol = NaN,
+        n_rejected_q = -1, n_qfiltered = -1, n_inconsistent_y = -1, gradtol = NaN,
         census = census(NamedTuple[], lo, hi; truth = truth),
         t_fit = NaN, t_convert = NaN, t_solve = NaN, t_solve_warm = NaN, t_cert = NaN, t_refine = NaN,
         rows = NamedTuple[], error = msg,
@@ -858,6 +877,7 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         n_points = length(pts),
         n_outside = length(raw) - length(pts),
         n_rejected_q = 0,
+        n_qfiltered = 0,
         n_inconsistent_y = 0,
         gradtol = o.gradtol,
         census = cz,
@@ -1236,12 +1256,12 @@ function main(
         validation === nothing || @printf("  validation grid: %d evaluations (GN = %d)\n", length(validation.z), cfg["gn"])
         cells = NamedTuple[]
         for (M, N) in cfg["rational"], fit in cfg["rational_fit"], arm in arms
-            ftag = fit == "lm" ? "lm" : ""
+            ftag = fit == "lin" ? "" : fit
             label = "($M,$N)" * ftag * arm_tag(arm)
             @printf("  rational %-16s ... ", label)
             c = try
                 run_rational(o, TR, M, N; arm = arm, validation = validation, face_samples = fs, fit = fit,
-                    start_system = cfg["rational_start_system"], ckw...)
+                    start_system = cfg["rational_start_system"], qfilter = cfg["qfilter"], ckw...)
             catch e
                 failed_cell(o, "rational", label, M, N, sprint(showerror, e); truth = truth_pts, arm = arm,
                     base_label = "($M,$N)" * ftag)
@@ -1321,7 +1341,7 @@ function main(
             M = c.M, N_requested = c.N_requested, N = c.N,
             dof = c.dof, GN = c.GN, nrm = c.nrm, nrm_grid = c.nrm_grid, rms = c.rms, sigma_ratio = c.sigma_ratio, qmin_grid = c.qmin_grid,
             qmin = c.qmin, q_ok = c.q_ok, admissible = c.admissible, n_paths = c.n_paths, n_singular = c.n_singular,
-            n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q,
+            n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q, n_qfiltered = c.n_qfiltered,
             n_inconsistent_y = c.n_inconsistent_y, gradtol = c.gradtol,
             n_verified_rows = z.n_verified_rows, n_distinct = z.n_distinct, n_tight = z.n_tight,
             n_transported = z.n_transported, n_unverified = z.n_unverified, n_redundant = z.n_redundant,
@@ -1371,6 +1391,7 @@ function main(
             "replicates" => cfg["replicates"], "validate" => cfg["validate"],
             "face_samples" => cfg["face_samples"] === nothing ? "auto (face_samples_for(dim))" : cfg["face_samples"],
             "rational_fit" => cfg["rational_fit"],
+            "qfilter" => cfg["qfilter"],
             "start_system" => String(cfg["start_system"]),
             "rational_start_system" => String(cfg["rational_start_system"]),
             "smoke" => cfg["smoke"],
