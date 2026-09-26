@@ -301,7 +301,9 @@ points and the QP re-solved, until nothing found is below delta/2 · mean(q) (or
 from 20,000 probe points missed minima that 50,000 points found (2026-09-25), hence
 the defaults.
 None of these points costs an evaluation of f. Not a certificate: certify the result
-(`certify_positive_denominator`, or `bernstein_lower_bound` when it is positive).
+(`certify_positive_denominator`, or `bernstein_lower_bound` when it is positive), or
+use `rational_refit_certified`, which feeds the certificate's minimiser back as an
+`extra_points` row. `extra_points` (rows in [-1,1]^n) are imposed from the start.
 """
 function rational_ls_fit_points(
     V_M::AbstractMatrix,
@@ -316,10 +318,16 @@ function rational_ls_fit_points(
     n_starts::Int = 32,
     max_exchange::Int = 12,
     rng::AbstractRNG = Xoshiro(0x5eed),
+    extra_points::AbstractMatrix = zeros(0, size(Lambda_N.data, 2)),
 )
     n = size(Lambda_N.data, 2)
+    size(extra_points, 2) == n || throw(
+        ArgumentError(
+            "rational_ls_fit_points: extra_points has $(size(extra_points, 2)) columns, need $n",
+        ),
+    )
     normalized = _stored_normalized(basis)
-    Xc = _box_constraint_points(n, n_constraint, rng)
+    Xc = vcat(_box_constraint_points(n, n_constraint, rng), Matrix{Float64}(extra_points))
     Vc = lambda_vandermonde_original(Lambda_N, Xc; basis = basis)
     Xp = 2 .* rand(rng, n_probe, n) .- 1
     Vp = lambda_vandermonde_original(Lambda_N, Xp; basis = basis)
@@ -364,5 +372,94 @@ function rational_ls_fit_points(
     error(
         "rational_ls_fit_points: q still dips below delta · mean(q) (min found $qmin) after " *
         "$max_exchange exchange rounds; raise max_exchange or n_constraint",
+    )
+end
+
+"""
+    rational_refit_certified(R::ApproxRational; delta = 0.01, max_rounds = 6,
+                             method = :recursion) -> (; R, cert, rounds, witnesses)
+
+Close the gap the exchange of `rational_ls_fit_points` can leave (a dip of q between
+its probe points): certify q > 0 on the box (`certify_positive_denominator(R; method)`,
+face recursion by default, which returns the exact minimiser `argmin`); while it
+fails, add `argmin` as a constraint point and refit on `R`'s own samples and weights.
+Costs no evaluation of f. Stops when the certificate holds, when it is inexact (a
+degenerate face that a constraint cannot repair, `cert.exact == false`), or after
+`max_rounds` refits; `cert` is the last certificate, so the caller decides. `R` must
+come from `RationalConstructor(...; denominator = :points)` or have the same
+structure (Chebyshev basis). N ≥ 3 needs HomotopyContinuation loaded (face solves).
+"""
+function rational_refit_certified(
+    R::ApproxRational;
+    delta::Real = 0.01,
+    max_rounds::Int = 6,
+    method::Symbol = :recursion,
+)
+    max_rounds >= 0 || throw(ArgumentError("max_rounds must be ≥ 0, got $max_rounds"))
+    S = R.grid
+    K, n = size(S)
+    sqrt_w = sqrt.(R.sample_weights)
+    V_M = lambda_vandermonde_original(R.Lambda_M, S; basis = R.basis)
+    V_N = lambda_vandermonde_original(R.Lambda_N, S; basis = R.basis)
+    witnesses = zeros(0, n)
+    cert = certify_positive_denominator(R; method = method)
+    rounds = 0
+    while !cert.ok && cert.exact && all(isfinite, cert.argmin) && rounds < max_rounds
+        witnesses = vcat(witnesses, reshape(Vector{Float64}(cert.argmin), 1, n))
+        pf = rational_ls_fit_points(
+            V_M,
+            V_N,
+            R.z,
+            R.Lambda_N,
+            R.basis;
+            delta = delta,
+            sqrt_w = sqrt_w,
+            extra_points = witnesses,
+        )
+        R = _rational_with_coefficients(R, pf.a, pf.b, pf.singular_values)
+        cert = certify_positive_denominator(R; method = method)
+        rounds += 1
+    end
+    return (; R = R, cert = cert, rounds = rounds, witnesses = witnesses)
+end
+
+# R with new coefficients on the same samples: residual diagnostics recomputed as in
+# RationalConstructor (quadrature weights on a grid, Monte Carlo on arcsine samples)
+function _rational_with_coefficients(R::ApproxRational, a, b, sv)
+    S = R.grid
+    K, n = size(S)
+    V_M = lambda_vandermonde_original(R.Lambda_M, S; basis = R.basis)
+    V_N = lambda_vandermonde_original(R.Lambda_N, S; basis = R.basis)
+    qv = V_N * b
+    res = V_M * a ./ qv .- R.z
+    weights = if R.sampling == :grid
+        compute_quadrature_weights(R.basis, R.GN, n)
+    else
+        [prod(π * sqrt(1 - S[i, k]^2) for k in 1:n) for i in 1:K] ./ K
+    end
+    return ApproxRational{Float64,typeof(R.scale_factor)}(
+        Vector{Float64}(a),
+        Vector{Float64}(b),
+        R.Lambda_M,
+        R.Lambda_N,
+        R.M,
+        R.N,
+        R.basis,
+        R.normalized,
+        R.precision,
+        R.scale_factor,
+        R.center,
+        R.GN,
+        S,
+        R.z,
+        sqrt(sum(weights .* abs2.(res))),
+        sqrt(sum(abs2, res) / K),
+        sv[end] / sv[1],
+        Vector{Float64}(sv),
+        minimum(qv),
+        R.n_reductions,
+        :mean,
+        R.sampling,
+        R.sample_weights,
     )
 end

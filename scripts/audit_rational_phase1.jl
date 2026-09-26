@@ -288,7 +288,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["target_shift"] = parse(Float64, argv[i+1])
             i += 1
         elseif a == "--rational"            # e.g. --rational 12:7,14:6,20:10
-            cfg["rational"] = [(parse(Int, split(s, ":")[1]), parse(Int, split(s, ":")[2])) for s in split(argv[i+1], ",")]
+            # "none": polynomial arms only
+            cfg["rational"] = argv[i+1] == "none" ? Tuple{Int,Int}[] :
+                [(parse(Int, split(s, ":")[1]), parse(Int, split(s, ":")[2])) for s in split(argv[i+1], ",")]
             i += 1
         elseif a == "--polynomial"          # e.g. --polynomial 20,24
             # "none": rational arms only
@@ -742,6 +744,13 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
         end
         # lm: refit on the same points by LM on the true residual (Globtim.rational_lm_refit)
         fit == "lm" && (R = rational_lm_refit(R))
+        # pts: close the exchange's gaps with the certificate's minimiser (no f evaluations)
+        n_cert_rounds = 0
+        if fit == "pts"
+            rc = rational_refit_certified(R; delta = 0.01)
+            R = rc.R
+            n_cert_rounds = rc.rounds
+        end
     end
     ftag = fit == "lin" ? "" : fit
     # the conversion is repeated inside solve_rational_critical_points; it is
@@ -798,6 +807,7 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
         n_outside = res.n_outside,
         n_rejected_q = res.n_rejected_q,
         n_qfiltered = count(!, keep),
+        n_cert_rounds = n_cert_rounds,
         n_inconsistent_y = res.n_inconsistent_y,
         gradtol = o.gradtol,
         census = cz,
@@ -826,7 +836,7 @@ function failed_cell(o::Objective, kind, label, M, N, msg; truth = nothing, arm 
         nrm = NaN, rms = NaN, sigma_ratio = NaN, qmin_grid = NaN, qmin = NaN, q_ok = false, cert_method = "",
         admissible = false,
         n_paths = -1, n_singular = -1, n_real = -1, n_points = -1, n_outside = -1,
-        n_rejected_q = -1, n_qfiltered = -1, n_inconsistent_y = -1, gradtol = NaN,
+        n_rejected_q = -1, n_qfiltered = -1, n_cert_rounds = -1, n_inconsistent_y = -1, gradtol = NaN,
         census = census(NamedTuple[], lo, hi; truth = truth),
         t_fit = NaN, t_convert = NaN, t_solve = NaN, t_solve_warm = NaN, t_cert = NaN, t_refine = NaN,
         rows = NamedTuple[], error = msg,
@@ -935,6 +945,7 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         n_outside = length(raw) - length(pts),
         n_rejected_q = 0,
         n_qfiltered = 0,
+        n_cert_rounds = 0,
         n_inconsistent_y = 0,
         gradtol = o.gradtol,
         census = cz,
@@ -1406,7 +1417,7 @@ function main(
             M = c.M, N_requested = c.N_requested, N = c.N,
             dof = c.dof, GN = c.GN, nrm = c.nrm, nrm_grid = c.nrm_grid, rms = c.rms, sigma_ratio = c.sigma_ratio, qmin_grid = c.qmin_grid,
             qmin = c.qmin, q_ok = c.q_ok, cert_method = c.cert_method, admissible = c.admissible, n_paths = c.n_paths, n_singular = c.n_singular,
-            n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q, n_qfiltered = c.n_qfiltered,
+            n_real = c.n_real, n_points = c.n_points, n_outside = c.n_outside, n_rejected_q = c.n_rejected_q, n_qfiltered = c.n_qfiltered, n_cert_rounds = c.n_cert_rounds,
             n_inconsistent_y = c.n_inconsistent_y, gradtol = c.gradtol,
             n_verified_rows = z.n_verified_rows, n_distinct = z.n_distinct, n_tight = z.n_tight,
             n_transported = z.n_transported, n_unverified = z.n_unverified, n_redundant = z.n_redundant,

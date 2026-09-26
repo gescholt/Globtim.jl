@@ -94,4 +94,19 @@ vand(L, S) = Globtim.lambda_vandermonde_original(L, S; basis = :chebyshev)
         @test minimum(qv) > 0.02 * mean([rational_denominator(Rk, Rk.grid[i, :]) for i in 1:size(Rk.grid, 1)])
         @test_throws ArgumentError RationalConstructor(TR, 8, 4; denominator = :positive)
     end
+
+    @testset "rational_refit_certified closes the certificate (N = 2, no HC)" begin
+        # the free linearised fit of the kink puts a zero of q in the box; the refit
+        # adds the certificate's exact minimiser as a constraint until q > 0 is proved
+        TRk = TestInput(f_kink; dim = 2, center = [0.0, 0.0], sample_range = 1.0)
+        Rf = RationalConstructor(TRk, 4, 2; sampling = :christoffel, n_samples = 60, rng = Xoshiro(4), reduce = false)
+        c0 = certify_positive_denominator(Rf)
+        @test c0.exact
+        rc = rational_refit_certified(Rf; delta = 0.05)
+        @test rc.cert.ok
+        @test rc.cert.qmin > 0
+        @test rc.rounds == (c0.ok ? 0 : size(rc.witnesses, 1))
+        @test rc.R.grid == Rf.grid                      # same samples, no new evaluations of f
+        @test_throws ArgumentError rational_refit_certified(Rf; max_rounds = -1)
+    end
 end
