@@ -261,6 +261,10 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # HC representation of the parametric family: auto (interpreted above 2000
         # parameters) | mixed (compiled) | false (interpreted)
         "rational_compile" => :auto,
+        # critical-point solve of the polynomial arms: :hc (float monomial system) or
+        # :msolve (exact); HC loses roots of univariate fits above degree ~40
+        # (experiments/sandbox/varpro_sinusoids/solver_precision_check.jl)
+        "poly_solver" => :hc,
     )
     i = 1
     while i <= length(argv)
@@ -350,6 +354,10 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["start_system"] = Symbol(argv[i+1])
             cfg["start_system"] in (:auto, :polyhedral, :total_degree) ||
                 error("--start-system takes auto, polyhedral or total_degree")
+            i += 1
+        elseif a == "--poly-solver"         # hc | msolve
+            cfg["poly_solver"] = Symbol(argv[i+1])
+            cfg["poly_solver"] in (:hc, :msolve) || error("--poly-solver takes hc or msolve")
             i += 1
         elseif a == "--rational-fit"        # e.g. --rational-fit lin,lm
             cfg["rational_fit"] = String.(split(argv[i+1], ","))
@@ -919,7 +927,8 @@ One polynomial degree: the fit (`Constructor` on the grid of `TR`, or
 on f, and the `census`. Always admissible.
 """
 function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothing, truth = nothing,
-        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, start_system::Symbol = :auto)
+        dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, start_system::Symbol = :auto,
+        solver::Symbol = :hc)
     lo, hi = box(o)
     n = o.dim
     Λ = SupportGen(n, (:one_d_for_all, D))
@@ -948,10 +957,11 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
         normalized = normalized,
         path_stats_ref = stats_ref,
         start_system = start_system,
+        solver = solver,
     )
     st = stats_ref[]
     t_solve_warm = warm ? (@elapsed solve_polynomial_system(x, n, D, coeffs; basis = basis, normalized = normalized,
-        start_system = start_system)) : NaN
+        start_system = start_system, solver = solver)) : NaN
     pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
     # the surrogate's Morse index in surrogate coordinates: the affine map to the
     # box scales by positive factors, which leaves the inertia unchanged
@@ -1344,7 +1354,8 @@ function main(
             run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3, start_system = rational_solver(cfg), anchor = cfg["rational_anchor"], compile = cfg["rational_compile"])
             # degree 2 above n = 8: the warm-up only compiles, and a degree-4 polyhedral
             # start system overflows at n = 12
-            run_polynomial(o, TRw, o.dim > 8 ? 2 : 4; arm = warm_arm, start_system = cfg["start_system"])
+            run_polynomial(o, TRw, o.dim > 8 ? 2 : 4; arm = warm_arm, start_system = cfg["start_system"],
+                solver = cfg["poly_solver"])
         end
         @printf("warm-up (compilation): %.1f s\n", t_w)
     end
@@ -1400,7 +1411,8 @@ function main(
             label = "D=$D" * arm_tag(arm)
             @printf("  polynomial %-14s ... ", label)
             c = try
-                run_polynomial(o, TR, D; arm = arm, validation = validation, start_system = cfg["start_system"], ckw...)
+                run_polynomial(o, TR, D; arm = arm, validation = validation, start_system = cfg["start_system"],
+                    solver = cfg["poly_solver"], ckw...)
             catch e
                 failed_cell(o, "polynomial", label, D, 0, sprint(showerror, e); truth = truth_pts, arm = arm)
             end
