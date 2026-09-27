@@ -241,7 +241,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # "lm" (rational_lm_refit on the same points), one cell per fit
         "rational_fit" => ["lin"],
         # drop rational candidates with q(x) < qfilter · median(q at the fit points)
-        # before refinement (0 = keep all); n_qfiltered counts the dropped
+        # before refinement, on fits whose q is not certified positive (a certified
+        # fit keeps all: its small q is a real near-pole feature); 0 = keep all;
+        # n_qfiltered counts the dropped
         "qfilter" => 0.0,
         # HC start system of the polynomial arms: :auto (polyhedral for n ≥ 3) or
         # :total_degree — the polyhedral mixed-cell computation overflows at n = 12, degree 4
@@ -768,10 +770,12 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     # Beyond that the facet lattice, which is not a proof; cert_method says which.
     cmethod = (R.N <= 2 || o.dim <= 8) ? :recursion : :sampling
     t_cert = @elapsed cert = certify_positive_denominator(R; method = cmethod, face_samples = face_samples)
-    # candidate filter: a critical point of p/q where q is small against its typical
-    # size sits on a (near-)pole surface of the fit, not on a feature of f
+    # candidate filter: on a fit whose q is NOT certified positive, a critical point
+    # where q is small against its typical size sits on a spurious pole surface. A
+    # certified fit is exempt: there a small q is a real near-pole feature of f, and
+    # the filter deleted the index-2 maximum on P5's peak in every draw (8f4p.7.11)
     keep = trues(length(res.points))
-    if qfilter > 0
+    if qfilter > 0 && !cert.ok
         qmed = median([rational_denominator(R, R.grid[i, :]) for i in 1:size(R.grid, 1)])
         keep = [rational_denominator(R, x) >= qfilter * qmed for x in res.points]
     end
