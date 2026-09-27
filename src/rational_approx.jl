@@ -585,7 +585,9 @@ function rational_fit_on_points(
     V_M = lambda_vandermonde(Lambda_M, Sm; basis = :chebyshev)
     V_N = N == 0 ? ones(K, 1) : lambda_vandermonde(Lambda_N, Sm; basis = :chebyshev)
     K > size(V_M, 2) + size(V_N, 2) || throw(
-        ArgumentError("$K points cannot determine $(size(V_M, 2) + size(V_N, 2)) coefficients of type ($M, $N)"),
+        ArgumentError(
+            "$K points cannot determine $(size(V_M, 2) + size(V_N, 2)) coefficients of type ($M, $N)",
+        ),
     )
     yv = Vector{Float64}(y)
     f = rational_ls_fit(w .* V_M, w .* V_N, yv)
@@ -594,10 +596,29 @@ function rational_fit_on_points(
     rms = sqrt(sum(abs2, r) / K)
     σ = f.singular_values
     R = ApproxRational{Float64,Float64}(
-        Vector{Float64}(f.a), Vector{Float64}(f.b), Lambda_M, Lambda_N, M, N, :chebyshev,
-        _stored_normalized(:chebyshev), RationalPrecision, 1.0, zeros(n), -1, Sm, yv,
-        rms / sqrt(sum(abs2, yv) / K), rms, σ[end] / σ[1], Vector{Float64}(σ), minimum(qv), 0,
-        f.normalization, sqrt_w === nothing ? :points : :christoffel, w .^ 2,
+        Vector{Float64}(f.a),
+        Vector{Float64}(f.b),
+        Lambda_M,
+        Lambda_N,
+        M,
+        N,
+        :chebyshev,
+        _stored_normalized(:chebyshev),
+        RationalPrecision,
+        1.0,
+        zeros(n),
+        -1,
+        Sm,
+        yv,
+        rms / sqrt(sum(abs2, yv) / K),
+        rms,
+        σ[end] / σ[1],
+        Vector{Float64}(σ),
+        minimum(qv),
+        0,
+        f.normalization,
+        sqrt_w === nothing ? :points : :christoffel,
+        w .^ 2,
     )
     return (fit == :lm && N >= 1) ? rational_lm_refit(R) : R
 end

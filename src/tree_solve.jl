@@ -68,17 +68,23 @@ function solve_tree_leaves(
     rational_holdout::Float64 = 0.2,
     rational_seed::Int = 0,
 )
-    rational_weights in (:christoffel, :uniform) ||
-        throw(ArgumentError("rational_weights must be :christoffel or :uniform, got $rational_weights"))
+    rational_weights in (:christoffel, :uniform) || throw(
+        ArgumentError(
+            "rational_weights must be :christoffel or :uniform, got $rational_weights",
+        ),
+    )
     0 < rational_holdout < 1 || throw(ArgumentError("rational_holdout must be in (0, 1)"))
     if !isempty(rational_types)
         for id in vcat(tree.converged_leaves, tree.active_leaves)
             sd = tree.subdomains[id]
             sd.polynomial === nothing && continue
             sd.transform === nothing || throw(
-                ArgumentError("rational_types: leaf $id has a rotated frame (transform); the union is defined for axis-aligned leaves only"),
+                ArgumentError(
+                    "rational_types: leaf $id has a rotated frame (transform); the union is defined for axis-aligned leaves only",
+                ),
             )
-            sd.samples === nothing && throw(ArgumentError("rational_types: leaf $id kept no samples to fit"))
+            sd.samples === nothing &&
+                throw(ArgumentError("rational_types: leaf $id kept no samples to fit"))
         end
     end
     all_cps = Vector{Float64}[]
@@ -131,7 +137,13 @@ function solve_tree_leaves(
         for leaf_id in leaf_ids
             sd = tree.subdomains[leaf_id]
             sd.polynomial === nothing && continue
-            choice, pts = _best_leaf_rational(sd, rational_types, rational_weights, rational_holdout, rational_seed + leaf_id)
+            choice, pts = _best_leaf_rational(
+                sd,
+                rational_types,
+                rational_weights,
+                rational_holdout,
+                rational_seed + leaf_id,
+            )
             rational_choice[leaf_id] = choice
             for u in pts
                 push!(all_cps, sd.center .+ sd.half_widths .* u)
@@ -187,7 +199,8 @@ function _best_leaf_rational(sd, types, weights, holdout, seed)
             e isa ArgumentError || e isa LinearAlgebra.SingularException || rethrow()
             continue
         end
-        h = sqrt(sum(abs2, [R(S[i, :]) for i in ho] .- y[ho]) / nho) / sqrt(sum(abs2, y[ho]) / nho)
+        h =
+            sqrt(sum(abs2, [R(S[i, :]) for i in ho] .- y[ho]) / nho) / sqrt(sum(abs2, y[ho]) / nho)
         (best === nothing || h < best[3]) || continue
         certify_positive_denominator(R).ok || continue
         best = (M, N, h)
