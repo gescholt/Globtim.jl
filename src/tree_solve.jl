@@ -24,6 +24,26 @@ before/after — recorded per leaf for `:hc`; empty for `:msolve`).
 ## Keyword Arguments
 - `solver::Symbol=:hc`: Solver backend (`:hc` or `:msolve`)
 - `msolve_threads::Int=1`: Number of threads for msolve
+- `rational_types::Vector{Tuple{Int,Int}} = []`: union with rational surrogates.
+  When non-empty, each leaf ALSO fits the listed rational types (M, N) to its own
+  stored samples (`rational_fit_on_points`, LM fit, no new evaluations of f). The one
+  with the smallest held-out relative residual among those whose denominator is
+  certified positive on the leaf (`certify_positive_denominator`) is kept, and its
+  in-leaf critical points are added to the leaf's polynomial critical points.
+  Polynomial points come first in the deduplication, so the result is a superset
+  of the polynomial-only result. Measured on 64 random instances (152 paired runs,
+  bead 8f4p.7.9): it never lost a critical point against polynomial leaves and
+  raised recall from 73 % to 89 %, at 1.6–2× the candidates. Types with more
+  unknowns than the leaf's training samples are skipped.
+- `rational_weights::Symbol = :christoffel`: row weights of those fits.
+  `:christoffel` uses √(m / K_Λ(x)) with the leaf degree's kernel, for trees built
+  with `sampling = :christoffel`; `:uniform` is for tensor-grid samples.
+- `rational_holdout::Float64 = 0.2`, `rational_seed::Int = 0`: the held-out
+  fraction and the seed of the split used to choose the type.
+
+Returns, besides the fields above, `cp_sources` (`:polynomial` or `:rational` per
+kept point) and `rational_choice` (leaf id → `(M, N, heldout)` of the kept rational,
+or `nothing` when no type was certified).
 
 ## Notes
 - `:hc_missing` exists as a distinct status because silently succeeding with
@@ -43,8 +63,27 @@ function solve_tree_leaves(
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
+    rational_types::Vector{Tuple{Int,Int}} = Tuple{Int,Int}[],
+    rational_weights::Symbol = :christoffel,
+    rational_holdout::Float64 = 0.2,
+    rational_seed::Int = 0,
 )
+    rational_weights in (:christoffel, :uniform) ||
+        throw(ArgumentError("rational_weights must be :christoffel or :uniform, got $rational_weights"))
+    0 < rational_holdout < 1 || throw(ArgumentError("rational_holdout must be in (0, 1)"))
+    if !isempty(rational_types)
+        for id in vcat(tree.converged_leaves, tree.active_leaves)
+            sd = tree.subdomains[id]
+            sd.polynomial === nothing && continue
+            sd.transform === nothing || throw(
+                ArgumentError("rational_types: leaf $id has a rotated frame (transform); the union is defined for axis-aligned leaves only"),
+            )
+            sd.samples === nothing && throw(ArgumentError("rational_types: leaf $id kept no samples to fit"))
+        end
+    end
     all_cps = Vector{Float64}[]
+    all_sources = Symbol[]
+    rational_choice = Dict{Int,Any}()
     all_leaf_tags = Int[]
     leaf_status = Dict{Int,Symbol}()
     # Per-leaf HC solve statistics: tracked-path counts must be
@@ -77,6 +116,7 @@ function solve_tree_leaves(
             )
             append!(all_cps, cps)
             append!(all_leaf_tags, fill(leaf_id, length(cps)))
+            append!(all_sources, fill(:polynomial, length(cps)))
             leaf_status[leaf_id] = :ran
             stats_ref[] === nothing || (path_stats[leaf_id] = stats_ref[])
         catch e
@@ -85,15 +125,77 @@ function solve_tree_leaves(
         end
     end
 
+    # union with the leaves' best certified rational surrogates (after all polynomial
+    # points, so deduplication keeps the polynomial point when both find one)
+    if !isempty(rational_types)
+        for leaf_id in leaf_ids
+            sd = tree.subdomains[leaf_id]
+            sd.polynomial === nothing && continue
+            choice, pts = _best_leaf_rational(sd, rational_types, rational_weights, rational_holdout, rational_seed + leaf_id)
+            rational_choice[leaf_id] = choice
+            for u in pts
+                push!(all_cps, sd.center .+ sd.half_widths .* u)
+                push!(all_leaf_tags, leaf_id)
+                push!(all_sources, :rational)
+            end
+        end
+    end
+
     keep_idx = _dedup_point_indices(all_cps, dedup_tol)
     return (;
         critical_points = all_cps[keep_idx],
+        cp_sources = all_sources[keep_idx],
+        rational_choice = rational_choice,
         # CP→leaf provenance, aligned with critical_points: yield-vs-observables
         # analysis needs to know which leaf produced each CP.
         cp_leaf_ids = all_leaf_tags[keep_idx],
         leaf_status = leaf_status,
         path_stats = path_stats,
     )
+end
+
+"""
+    _best_leaf_rational(sd, types, weights, holdout, seed) -> (choice, points)
+
+The leaf's best certified rational surrogate among `types`, fitted to its stored
+samples (penalized rows dropped): the smallest held-out relative residual among fits
+whose denominator is certified positive on the leaf; the winner is refit on all
+samples and solved. `points` are its critical points inside the leaf, in leaf
+coordinates [-1, 1]^n; `choice` is `(M, N, heldout)` or `nothing`.
+"""
+function _best_leaf_rational(sd, types, weights, holdout, seed)
+    pen = Set(sd.penalized_rows)
+    keep = [!(i in pen) for i in 1:size(sd.samples, 1)]
+    S = Matrix{Float64}(sd.samples[keep, :])
+    y = Vector{Float64}(sd.f_values[keep])
+    K, n = size(S)
+    w = if weights == :christoffel
+        Λ = SupportGen(n, (:one_d_for_all, sd.degree)).data
+        [sqrt(size(Λ, 1) / christoffel_kernel_chebyshev(Λ, S[i, :])) for i in 1:K]
+    else
+        ones(K)
+    end
+    perm = randperm(Random.Xoshiro(seed), K)
+    nho = max(1, floor(Int, holdout * K))
+    ho, tr = sort(perm[1:nho]), sort(perm[nho+1:end])
+    best = nothing
+    for (M, N) in types
+        binomial(n + M, M) + binomial(n + N, N) < length(tr) || continue
+        R = try
+            rational_fit_on_points(S[tr, :], y[tr], M, N; sqrt_w = w[tr])
+        catch e
+            e isa ArgumentError || e isa LinearAlgebra.SingularException || rethrow()
+            continue
+        end
+        h = sqrt(sum(abs2, [R(S[i, :]) for i in ho] .- y[ho]) / nho) / sqrt(sum(abs2, y[ho]) / nho)
+        (best === nothing || h < best[3]) || continue
+        certify_positive_denominator(R).ok || continue
+        best = (M, N, h)
+    end
+    best === nothing && return nothing, Vector{Float64}[]
+    R = rational_fit_on_points(S, y, best[1], best[2]; sqrt_w = w)
+    res = solve_rational_critical_points(R)
+    return best, [Vector{Float64}(x) for x in res.points if all(abs.(x) .<= 1 + 1e-9)]
 end
 
 """

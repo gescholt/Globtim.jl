@@ -316,6 +316,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
     include("test_tree_solve_observability.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_rational_union.jl") do
+    include("test_tree_solve_rational_union.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_cert_subdiv_tolerance.jl") do
     include("test_cert_subdiv_tolerance.jl")
 end

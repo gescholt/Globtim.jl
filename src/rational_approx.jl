@@ -551,6 +551,57 @@ function RationalConstructor(
     )
 end
 
+# ── fit on given points (tree leaves) ───────────────────────────────────────
+
+"""
+    rational_fit_on_points(S, y, M, N; sqrt_w = nothing, fit = :lm) -> ApproxRational
+
+Rational p/q of type (M, N) fitted to values `y` at the rows of `S` (K × n, points
+in the reference box [-1, 1]^n, Chebyshev basis), e.g. the stored samples of a
+subdivision leaf. `sqrt_w` are least-squares row weights (the square roots of
+Christoffel weights for Christoffel samples; `nothing` for unweighted). `fit = :lin`
+is the linearised fit (`rational_ls_fit`); `fit = :lm` (default) refines it by
+`rational_lm_refit`, which keeps q > 0 at the points. N = 0 gives the weighted LS
+polynomial of degree M. The result evaluates in the reference box (center 0, scale 1).
+"""
+function rational_fit_on_points(
+    S::AbstractMatrix{<:Real},
+    y::AbstractVector{<:Real},
+    M::Int,
+    N::Int;
+    sqrt_w::Union{Nothing,AbstractVector{<:Real}} = nothing,
+    fit::Symbol = :lm,
+)
+    fit in (:lin, :lm) || throw(ArgumentError("fit must be :lin or :lm, got $fit"))
+    M >= 0 && N >= 0 || throw(ArgumentError("degrees must be ≥ 0, got ($M, $N)"))
+    K, n = size(S)
+    length(y) == K || throw(DimensionMismatch("$(length(y)) values for $K points"))
+    all(isfinite, y) || throw(ArgumentError("rational_fit_on_points: non-finite values"))
+    w = sqrt_w === nothing ? ones(K) : Vector{Float64}(sqrt_w)
+    length(w) == K || throw(DimensionMismatch("$(length(w)) weights for $K points"))
+    Lambda_M = SupportGen(n, (:one_d_for_all, M))
+    Lambda_N = SupportGen(n, (:one_d_for_all, N))
+    Sm = Matrix{Float64}(S)
+    V_M = lambda_vandermonde(Lambda_M, Sm; basis = :chebyshev)
+    V_N = N == 0 ? ones(K, 1) : lambda_vandermonde(Lambda_N, Sm; basis = :chebyshev)
+    K > size(V_M, 2) + size(V_N, 2) || throw(
+        ArgumentError("$K points cannot determine $(size(V_M, 2) + size(V_N, 2)) coefficients of type ($M, $N)"),
+    )
+    yv = Vector{Float64}(y)
+    f = rational_ls_fit(w .* V_M, w .* V_N, yv)
+    pv, qv = V_M * f.a, V_N * f.b
+    r = pv ./ qv .- yv
+    rms = sqrt(sum(abs2, r) / K)
+    σ = f.singular_values
+    R = ApproxRational{Float64,Float64}(
+        Vector{Float64}(f.a), Vector{Float64}(f.b), Lambda_M, Lambda_N, M, N, :chebyshev,
+        _stored_normalized(:chebyshev), RationalPrecision, 1.0, zeros(n), -1, Sm, yv,
+        rms / sqrt(sum(abs2, yv) / K), rms, σ[end] / σ[1], Vector{Float64}(σ), minimum(qv), 0,
+        f.normalization, sqrt_w === nothing ? :points : :christoffel, w .^ 2,
+    )
+    return (fit == :lm && N >= 1) ? rational_lm_refit(R) : R
+end
+
 # ── nonlinear refit on the true residual ─────────────────────────────────────
 
 """
