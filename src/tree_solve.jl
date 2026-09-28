@@ -320,12 +320,55 @@ occurrence of each cluster, so callers can subset parallel arrays
 (e.g. per-point leaf provenance) consistently.
 """
 function _dedup_point_indices(points::Vector{Vector{Float64}}, tol::Float64)
+    # Same rule as the plain greedy scan (point i is dropped iff it lies within
+    # `tol` of an already kept point), but kept points are bucketed on a grid of
+    # cells of width 2|tol| over their first min(n, 3) coordinates, so a point
+    # is compared only with the kept points in the 3^k neighbouring cells: a
+    # point within `tol` differs by < 1/2 cell per coordinate, hence by at most
+    # one cell index even after rounding. Bead 8f4p.6: the plain scan was
+    # O(n * n_kept) with an allocation per pair (~4.5e8 on a 2048-leaf tree).
+    t2 = tol^2
+    t2 > 0 || return collect(eachindex(points))  # nothing is within 0 (or NaN) of anything
+    w = 2 * abs(tol)
+    k = isempty(points) ? 0 : min(length(points[1]), 3)
+    offsets = vec(collect(Iterators.product(ntuple(_ -> -1.0:1.0, k)...)))
+    buckets = Dict{NTuple{3,Float64},Vector{Int}}()
+    unbucketed = Int[]  # kept points whose cell index is not finite or not exact
     keep = Int[]
     for (i, pt) in enumerate(points)
-        is_dup = any(keep) do j
-            sum(abs2, pt .- points[j]) < tol^2
+        key = _dedup_cell(pt, w, k)
+        is_dup = if key === nothing
+            any(j -> _sqdist(pt, points[j]) < t2, keep)
+        else
+            any(j -> _sqdist(pt, points[j]) < t2, unbucketed) || any(offsets) do off
+                cell = get(buckets, _dedup_shift(key, off), nothing)
+                cell !== nothing && any(j -> _sqdist(pt, points[j]) < t2, cell)
+            end
         end
-        is_dup || push!(keep, i)
+        is_dup && continue
+        push!(keep, i)
+        key === nothing ? push!(unbucketed, i) : push!(get!(Vector{Int}, buckets, key), i)
     end
     return keep
+end
+
+# cell index of `pt` on its first k coordinates, padded to 3; `nothing` when an
+# index is not finite or too large for its neighbours to be distinct floats
+function _dedup_cell(pt::Vector{Float64}, w::Float64, k::Int)
+    c = ntuple(i -> i <= k ? floor(pt[i] / w) + 0.0 : 0.0, 3)  # + 0.0 folds -0.0 into 0.0
+    all(x -> isfinite(x) && abs(x) < 2.0^50, c) || return nothing
+    return c
+end
+
+_dedup_shift(key::NTuple{3,Float64}, off::Tuple) =
+    ntuple(i -> i <= length(off) ? key[i] + off[i] : key[i], 3)
+
+function _sqdist(a::Vector{Float64}, b::Vector{Float64})
+    length(a) == length(b) ||
+        throw(DimensionMismatch("points of length $(length(a)) and $(length(b))"))
+    s = 0.0
+    @inbounds for i in eachindex(a)
+        s += abs2(a[i] - b[i])
+    end
+    return s
 end

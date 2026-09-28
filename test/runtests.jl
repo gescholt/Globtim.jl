@@ -232,6 +232,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_timer_thread_safety.jl") do
     include("test_timer_thread_safety.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_dedup.jl") do
+    include("test_tree_solve_dedup.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_subdivision_reuse.jl") do
     include("test_subdivision_reuse.jl")
 end
