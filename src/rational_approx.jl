@@ -575,7 +575,8 @@ function rational_fit_on_points(
     sqrt_w::Union{Nothing,AbstractVector{<:Real}} = nothing,
     fit::Symbol = :lm,
 )
-    fit in (:lin, :lm, :pts) || throw(ArgumentError("fit must be :lin, :lm or :pts, got $fit"))
+    fit in (:lin, :lm, :pts) ||
+        throw(ArgumentError("fit must be :lin, :lm or :pts, got $fit"))
     M >= 0 && N >= 0 || throw(ArgumentError("degrees must be ≥ 0, got ($M, $N)"))
     K, n = size(S)
     length(y) == K || throw(DimensionMismatch("$(length(y)) values for $K points"))
@@ -595,7 +596,15 @@ function rational_fit_on_points(
     yv = Vector{Float64}(y)
     f = if fit == :pts && N >= 1
         # q ≥ 0.01 · mean(q) at the points, box points and exchanged minimisers of q
-        pf = rational_ls_fit_points(V_M, V_N, yv, Lambda_N, :chebyshev; delta = 0.01, sqrt_w = w)
+        pf = rational_ls_fit_points(
+            V_M,
+            V_N,
+            yv,
+            Lambda_N,
+            :chebyshev;
+            delta = 0.01,
+            sqrt_w = w,
+        )
         (a = pf.a, b = pf.b, singular_values = pf.singular_values, normalization = :mean)
     else
         rational_ls_fit(w .* V_M, w .* V_N, yv)
