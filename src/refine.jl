@@ -664,7 +664,7 @@ end
 
 # ============================================================================
 
-TimerOutputs.@timeit _TO function analyze_critical_points(
+TimerOutputs.@timeit_debug _TO function analyze_critical_points(
     f::Function,
     df::DataFrame,
     TR::TestInput;

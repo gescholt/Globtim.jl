@@ -305,7 +305,7 @@ struct TestInput
     T = TestInput(loss_function, model=my_model, outputs=measured_data)
     ```
     """
-    TimerOutputs.@timeit _TO function TestInput(
+    TimerOutputs.@timeit_debug _TO function TestInput(
         f;
         dim::Int = 2,
         center::AbstractVector{<:Real} = fill(0.0, dim),

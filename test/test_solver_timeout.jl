@@ -28,8 +28,9 @@ end
     #
     # NOTE: We test at the with_solver_timeout level rather than through
     # run_standard_experiment to avoid a TimerOutputs thread-safety issue: Constructor
-    # calls @timeit on a shared global TimerOutput; concurrent zombie tasks from back-
-    # to-back degree timeouts race on that object and SIGABRT.
+    # timed itself on a shared global TimerOutput, and concurrent zombie tasks from
+    # back-to-back degree timeouts raced on it and SIGABRTed. Since bead 7kdo the timer
+    # is @timeit_debug (off by default), so this holds only with debug timings enabled.
     slow_op = () -> sleep(5.0)
     degree_statuses = String[]
 

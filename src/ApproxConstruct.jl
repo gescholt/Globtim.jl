@@ -133,12 +133,14 @@ function SupportGen(n::Int, d)::NamedTuple
     return (data = lambda_matrix, size = size(lambda_matrix))
 end
 
-# Not wrapped in `@timeit _TO`: the scattered-point fits (christoffel_subdomain_fit) call
-# this from the parallel leaf tasks of adaptive_refine, and the global TimerOutput is not
-# thread-safe — concurrent pushes corrupted it ("Vector can not be resized concurrently",
-# "array must be non-empty"; korok 1203749 / 1203752). Callers time their own blocks
-# (MainGenerate's "vandermonde_construction").
-function lambda_vandermonde_original(Lambda::NamedTuple, S; basis = :chebyshev)
+# @timeit_debug: records nothing unless TimerOutputs.enable_debug_timings(Globtim) is on. The
+# scattered-point fits (christoffel_subdomain_fit) call this from adaptive_refine's parallel leaf
+# tasks, and the global TimerOutput is not thread-safe (korok 948633, 1203749, 1203752).
+TimerOutputs.@timeit_debug _TO function lambda_vandermonde_original(
+    Lambda::NamedTuple,
+    S;
+    basis = :chebyshev,
+)
     T = eltype(S)  # Infer type from input
     m, n_dim = Lambda.size  # m = number of multi-indices, n_dim = number of dimensions  
     n, N = size(S)          # n = number of dimensions, N = number of sample points

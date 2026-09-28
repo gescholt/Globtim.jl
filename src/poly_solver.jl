@@ -90,7 +90,7 @@ crit_pts = solve_polynomial_system(x, 2, 8, coeffs; solver=:msolve)
 crit_pts = solve_polynomial_system(x, 2, 8, coeffs; solver=:msolve, msolve_threads=4)
 ```
 """
-TimerOutputs.@timeit _TO function solve_polynomial_system(
+TimerOutputs.@timeit_debug _TO function solve_polynomial_system(
     x,
     n,
     d,

@@ -24,8 +24,30 @@ using TOML
     AdaptivePrecision      # BigFloat for expansion, Float64 for evaluation
 end
 
-# TimerOutputs for performance tracking
+# TimerOutputs for performance tracking. Every section is `@timeit_debug`, so
+# nothing is recorded unless `TimerOutputs.enable_debug_timings(Globtim)` is
+# called. The timer is one global stack and TimerOutputs is not thread-safe:
+# with `@timeit`, concurrent fits in adaptive_refine(; parallel = true) pushed
+# and popped it from several tasks and crashed (pop! on an empty array, korok
+# job 948633, bead 7kdo). Enable the timings for serial runs only;
+# `_check_timer_thread_safety` refuses the parallel paths while they are on.
 const _TO = TimerOutputs.TimerOutput()
+timeit_debug_enabled() = false
+
+"""
+    _check_timer_thread_safety(context)
+
+Throw when the global `_TO` timings are enabled and `context` is about to run
+timed code on several tasks at once, which would corrupt the timer stack.
+"""
+function _check_timer_thread_safety(context::AbstractString)
+    timeit_debug_enabled() && error(
+        "$context: Globtim debug timings are enabled (TimerOutputs.enable_debug_timings(Globtim)) " *
+        "and the global timer is not thread-safe. Run with parallel = false, or " *
+        "TimerOutputs.disable_debug_timings(Globtim) first.",
+    )
+    return nothing
+end
 
 # Exported functions and variables
 export TestInput,

@@ -266,7 +266,7 @@ grid = generate_grid_small_n(2, 2, T=Rational{BigInt})  # Creates a 3×3 array o
 - This version is optimized for small N (typically N ≤ 4) using compile-time unrolling
 - Type parameter T allows for arbitrary precision arithmetic
 """
-TimerOutputs.@timeit _TO function generate_grid_small_n(
+TimerOutputs.@timeit_debug _TO function generate_grid_small_n(
     N::Int,
     GN::Int;
     basis::Symbol = :chebyshev,

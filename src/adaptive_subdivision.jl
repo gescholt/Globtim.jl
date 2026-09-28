@@ -2119,6 +2119,7 @@ function adaptive_refine(
         )
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
+            _check_timer_thread_safety("adaptive_refine(; parallel = true)")
             # CPU parallel processing
             tasks = map(current_active) do leaf_id
                 Threads.@spawn process_subdomain(
@@ -2481,6 +2482,7 @@ function two_phase_refine(
         current_active = copy(tree.active_leaves)
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
+            _check_timer_thread_safety("two_phase_refine(; parallel = true)")
             tasks = map(current_active) do leaf_id
                 Threads.@spawn process_subdomain(
                     f,
@@ -2615,6 +2617,7 @@ function two_phase_refine(
         current_active = copy(tree.active_leaves)
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
+            _check_timer_thread_safety("two_phase_refine(; parallel = true)")
             tasks = map(current_active) do leaf_id
                 Threads.@spawn process_subdomain(
                     f,

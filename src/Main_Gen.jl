@@ -5,16 +5,27 @@
 
 Print detailed timing breakdown from TimerOutputs for polynomial construction.
 
+The sections are `@timeit_debug`, so nothing is recorded until debug timings are
+enabled; this errors when they are off rather than print an empty table. The
+timer is global and not thread-safe: enable it for serial runs only
+(`adaptive_refine(; parallel = true)` refuses to run while it is on).
+
 # Arguments
 - `reset::Bool=true`: Whether to reset the timer after printing
 
 # Example
 ```julia
+using TimerOutputs
+TimerOutputs.enable_debug_timings(Globtim)
 result = Constructor(TestInput)
 print_timing_breakdown()
 ```
 """
 function print_timing_breakdown(; reset::Bool = true)
+    timeit_debug_enabled() || error(
+        "print_timing_breakdown: no timings were recorded. Call " *
+        "TimerOutputs.enable_debug_timings(Globtim) before the run you want timed.",
+    )
     println("\n" * "="^80)
     println("TIMING BREAKDOWN (MainGenerate)")
     println("="^80)
@@ -71,7 +82,7 @@ Compute the coefficients of a polynomial approximant of degree `d` in the specif
 When `n=1`, the function automatically extracts scalar values from the internal vector representation, 
 allowing natural use of scalar functions like `sin`, `cos`, etc.
 """
-TimerOutputs.@timeit _TO function MainGenerate(
+TimerOutputs.@timeit_debug _TO function MainGenerate(
     f,
     n::Int,
     d::Union{Tuple{Symbol,Int},Tuple{Symbol,Vector{Int}},Matrix{Float64}},
@@ -241,7 +252,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     is_anisotropic = grid_provided && !nontensor && is_grid_anisotropic(matrix_from_grid)
 
     # Call lambda_vandermonde with appropriate flag
-    TimerOutputs.@timeit _TO "vandermonde_construction" begin
+    TimerOutputs.@timeit_debug _TO "vandermonde_construction" begin
         VL = lambda_vandermonde(
             Lambda,
             matrix_from_grid,
@@ -264,7 +275,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     if verbose >= 1
         @info "  🎯 Evaluating objective function on grid ($n_grid_points points)..."
     end
-    TimerOutputs.@timeit _TO "evaluation" begin
+    TimerOutputs.@timeit_debug _TO "evaluation" begin
         # Handle grid format differences
         if grid_provided
             # Grid is already in matrix format, create SVectors for evaluation
@@ -339,7 +350,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     if verbose >= 1
         @info "  📐 Computing condition number..."
     end
-    cond_vandermonde = TimerOutputs.@timeit _TO "condition_number" begin
+    cond_vandermonde = TimerOutputs.@timeit_debug _TO "condition_number" begin
         cond(VL)
     end
     if verbose >= 1
@@ -349,7 +360,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     if verbose >= 1
         @info "  🔧 Solving least-squares system..."
     end
-    TimerOutputs.@timeit _TO "linear_solve_vandermonde" begin
+    TimerOutputs.@timeit_debug _TO "linear_solve_vandermonde" begin
         # Least squares directly on the rectangular Vandermonde (pivoted QR):
         # conditioning is κ(V), where the former VᵀV + LU normal equations
         # squared it to κ(V)² — the path behind the silent zero-vector LAPACK
@@ -398,7 +409,7 @@ TimerOutputs.@timeit _TO function MainGenerate(
     # This ensures monotonic decrease with degree (by containment)
     # Non-tensor point sets get Monte-Carlo weights for their sampling measure instead of
     # tensor quadrature (which needs per-dimension grid structure).
-    TimerOutputs.@timeit _TO "norm_computation" nrm =
+    TimerOutputs.@timeit_debug _TO "norm_computation" nrm =
         nontensor ?
         compute_norm_scattered(scale_factor, VL, sol, F, sample_measure, matrix_from_grid) :
         compute_norm(scale_factor, VL, sol, F, basis, actual_GN, n)
@@ -513,7 +524,7 @@ S = generate_sparse_samples(3, 8; oversample=2.0, measure=:chebyshev)
 pol_sparse = Constructor(TR, 8, grid=S, grid_mode=:nontensor, sample_measure=:chebyshev)
 ```
 """
-TimerOutputs.@timeit _TO function Constructor(
+TimerOutputs.@timeit_debug _TO function Constructor(
     T::TestInput,
     degree;
     verbose = 0,
