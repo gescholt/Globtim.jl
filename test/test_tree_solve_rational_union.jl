@@ -36,4 +36,13 @@ using HomotopyContinuation
     R = rational_fit_on_points(S, [g(S[i, :]) for i in 1:60], 2, 2)
     @test abs(R([0.3, -0.4]) - g([0.3, -0.4])) < 1e-8
     @test_throws ArgumentError rational_fit_on_points(S[1:5, :], zeros(5), 2, 2)
+    # fit = :pts: the positive-denominator fit, certified on the box
+    Rp = rational_fit_on_points(S, [g(S[i, :]) for i in 1:60], 2, 2; fit = :pts)
+    @test certify_positive_denominator(Rp).ok
+    @test abs(Rp([0.3, -0.4]) - g([0.3, -0.4])) < 1e-6
+    @test_throws ArgumentError rational_fit_on_points(S, zeros(60), 2, 2; fit = :foo)
+    # the union with the pts fit is also a superset of the polynomial points
+    r2 = solve_tree_leaves(tree; rational_types = [(3, 1), (4, 2)], rational_fit = :pts)
+    @test count(==(:polynomial), r2.cp_sources) == length(r0.critical_points)
+    @test_throws ArgumentError solve_tree_leaves(tree; rational_types = [(3, 1)], rational_fit = :lin)
 end

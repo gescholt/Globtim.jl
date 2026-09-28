@@ -561,7 +561,10 @@ in the reference box [-1, 1]^n, Chebyshev basis), e.g. the stored samples of a
 subdivision leaf. `sqrt_w` are least-squares row weights (the square roots of
 Christoffel weights for Christoffel samples; `nothing` for unweighted). `fit = :lin`
 is the linearised fit (`rational_ls_fit`); `fit = :lm` (default) refines it by
-`rational_lm_refit`, which keeps q > 0 at the points. N = 0 gives the weighted LS
+`rational_lm_refit`, which keeps q > 0 at the points; `fit = :pts` imposes
+q ≥ 0.01 · mean(q) at the points, box points and exchanged minimisers of q
+(`rational_ls_fit_points`), then refits at the certificate's minimisers of q
+(`rational_refit_certified`); no evaluations of f. N = 0 gives the weighted LS
 polynomial of degree M. The result evaluates in the reference box (center 0, scale 1).
 """
 function rational_fit_on_points(
@@ -572,7 +575,7 @@ function rational_fit_on_points(
     sqrt_w::Union{Nothing,AbstractVector{<:Real}} = nothing,
     fit::Symbol = :lm,
 )
-    fit in (:lin, :lm) || throw(ArgumentError("fit must be :lin or :lm, got $fit"))
+    fit in (:lin, :lm, :pts) || throw(ArgumentError("fit must be :lin, :lm or :pts, got $fit"))
     M >= 0 && N >= 0 || throw(ArgumentError("degrees must be ≥ 0, got ($M, $N)"))
     K, n = size(S)
     length(y) == K || throw(DimensionMismatch("$(length(y)) values for $K points"))
@@ -590,7 +593,13 @@ function rational_fit_on_points(
         ),
     )
     yv = Vector{Float64}(y)
-    f = rational_ls_fit(w .* V_M, w .* V_N, yv)
+    f = if fit == :pts && N >= 1
+        # q ≥ 0.01 · mean(q) at the points, box points and exchanged minimisers of q
+        pf = rational_ls_fit_points(V_M, V_N, yv, Lambda_N, :chebyshev; delta = 0.01, sqrt_w = w)
+        (a = pf.a, b = pf.b, singular_values = pf.singular_values, normalization = :mean)
+    else
+        rational_ls_fit(w .* V_M, w .* V_N, yv)
+    end
     pv, qv = V_M * f.a, V_N * f.b
     r = pv ./ qv .- yv
     rms = sqrt(sum(abs2, r) / K)
@@ -620,7 +629,11 @@ function rational_fit_on_points(
         sqrt_w === nothing ? :points : :christoffel,
         w .^ 2,
     )
-    return (fit == :lm && N >= 1) ? rational_lm_refit(R) : R
+    N >= 1 || return R
+    fit == :lm && return rational_lm_refit(R)
+    # pts: close the exchange's gaps with the certificate's minimisers (no f evaluations)
+    fit == :pts && return rational_refit_certified(R; delta = 0.01).R
+    return R
 end
 
 # ── nonlinear refit on the true residual ─────────────────────────────────────
