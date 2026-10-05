@@ -89,7 +89,11 @@ TimerOutputs.@timeit _TO function MainGenerate(
     thread_evals::Bool = false,
     grid_degree::Union{Int,Tuple,Nothing} = nothing,
     sample_measure::Symbol = :uniform,
+    gradient_weight::Float64 = 0.0,
+    gradient_method::Symbol = :forwarddiff,
 )::ApproxPoly
+    gradient_weight >= 0 ||
+        throw(ArgumentError("gradient_weight must be ≥ 0, got $gradient_weight"))
     # Check if d is a grid (Matrix format)
     grid_provided = isa(d, Matrix)
     # Non-tensor (sparse/least-squares) mode: caller supplies BOTH an arbitrary point set and
@@ -340,7 +344,21 @@ TimerOutputs.@timeit _TO function MainGenerate(
         # squared it to κ(V)² — the path behind the silent zero-vector LAPACK
         # failure at Deuflhard 2D deg 12. Same solve the
         # subdivision path uses (construct_polynomial_on_subdomain).
-        sol = (u = VL \ F,)
+        sol = if gradient_weight > 0
+            # Gradient-enhanced (discrete H¹) least squares, gradient_fit.jl: derivative
+            # rows in box coordinates under the value rows, one ∇f per sample point.
+            _, DL = derivative_vandermonde(Lambda, matrix_from_grid; basis = basis, reference = VL)
+            G = objective_gradients_box(
+                f,
+                matrix_from_grid,
+                scale_factor,
+                collect(center);
+                method = gradient_method,
+            )
+            (u = gradient_enhanced_coefficients(VL, F, DL, G, gradient_weight),)
+        else
+            (u = VL \ F,)
+        end
     end
     if verbose >= 1
         @info "  ✓ Least-squares system solved"
@@ -427,6 +445,14 @@ polynomial of the specified degree.
   point set by least squares (sparse front-end; pair with `generate_sparse_samples`).
 - `sample_measure::Symbol=:uniform`: For `grid_mode=:nontensor`, the measure the points were
   drawn from (`:uniform` or `:chebyshev`) — sets the Monte-Carlo quadrature weights of `nrm`.
+- `gradient_weight::Float64=0.0`: When > 0, fit by gradient-enhanced (discrete H¹) least
+  squares: the derivative Vandermonde rows, weighted by `gradient_weight`, are stacked under
+  the value rows and matched to ∇f at every sample point (derivatives in box coordinates;
+  see `gradient_fit.jl`). Costs one gradient of f per sample point. `0.0` is the value-only
+  fit, unchanged. `nrm` stays the value-residual L2 norm either way; use
+  `relative_gradient_error(pol, f)` for the gradient residual.
+- `gradient_method::Symbol=:forwarddiff`: `:forwarddiff` (AD-compatible objectives) or
+  `:finitediff` (central differences) for the gradients above.
 
 # Returns
 - `ApproxPoly`: Polynomial approximation object containing:
@@ -485,6 +511,8 @@ TimerOutputs.@timeit _TO function Constructor(
     thread_evals::Bool = false,
     stagnation_stop::Bool = false,
     stagnation_threshold::Float64 = 0.01,
+    gradient_weight::Float64 = 0.0,
+    gradient_method::Symbol = :forwarddiff,
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
@@ -517,6 +545,8 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
             thread_evals = thread_evals,
+            gradient_weight = gradient_weight,
+            gradient_method = gradient_method,
             # :nontensor — the positional degree is authoritative for the fit; the point set
             # only needs to overdetermine the basis (sparse/LS front-end).
             grid_degree = grid_mode === :nontensor ? degree : nothing,
@@ -543,6 +573,8 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
             thread_evals = thread_evals,
+            gradient_weight = gradient_weight,
+            gradient_method = gradient_method,
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
@@ -569,6 +601,8 @@ TimerOutputs.@timeit _TO function Constructor(
             normalized = normalized,
             power_of_two_denom = power_of_two_denom,
             thread_evals = thread_evals,
+            gradient_weight = gradient_weight,
+            gradient_method = gradient_method,
         )
         push!(nrm_history, p.nrm)
         if !isnothing(T.tolerance) && p.nrm < T.tolerance

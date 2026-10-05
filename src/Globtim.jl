@@ -278,6 +278,8 @@ include("OrthogonalInterface.jl") #unified orthogonal polynomial interface.
 include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("ApproxPolyEval.jl") #ApproxPoly evaluation and gradient functions.
+include("gradient_fit.jl") #Gradient-enhanced LS fit + relative gradient error (gradient check)
+export derivative_vandermonde, objective_gradients_box, relative_gradient_error
 # msolve_system.jl retired: its msolve_polynomial_system/solve_and_parse
 # hard-coded normalized=true, reconstructing a distorted polynomial for
 # Chebyshev fits. The live msolve path is solve_polynomial_system(solver=:msolve)
@@ -300,6 +302,8 @@ include("anisotropic_grids.jl") #Anisotropic grid generation
 include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
 include("degeneracy_types.jl") #DegeneracyDiagnostics type (parsed before adaptive_subdivision so the Subdomain.degeneracy field can reference it; Stage 0)
 include("adaptive_subdivision.jl") #Adaptive domain subdivision for error-driven refinement
+include("subdomain_gradient_check.jl") #Gradient check on subdivision leaves (adaptive_refine gradient_tolerance)
+export subdomain_gradient_error
 include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition
 include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum
@@ -540,6 +544,15 @@ export PathConfig,
 include("ExperimentLedger.jl")
 using .ExperimentLedger
 export emit_ledger_record
+
+# Relative-L2 degree ladder (pure policy, consumed by run_standard_experiment)
+include("rel_l2_ladder.jl")
+export RelL2Thresholds,
+    classify_rel_l2, RelL2LadderEntry, rel_l2_ladder_step, rel_l2_final_verdict
+
+# Closed Poincaré–Hopf census of a surrogate on the box (face strata; HC via the ext)
+include("box_strata_census.jl")
+export box_strata_census, surrogate_monomial_polynomial
 
 # StandardExperiment - unified experiment template (Phase 2)
 include("StandardExperiment.jl")

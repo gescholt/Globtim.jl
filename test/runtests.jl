@@ -151,6 +151,18 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_gradres_gate.jl") do
     include("test_gradres_gate.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_rel_l2_ladder.jl") do
+    include("test_rel_l2_ladder.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_gradient_fit.jl") do
+    include("test_gradient_fit.jl")
+end
+
+with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_box_strata_census.jl") do
+    include("test_box_strata_census.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_trial_cut_reuse.jl") do
     include("test_trial_cut_reuse.jl")
 end

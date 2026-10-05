@@ -332,6 +332,34 @@ only raw critical points from HomotopyContinuation.
 - `metadata`: Additional metadata for results_summary.json (system_type, params, etc.)
 - `true_params`: Optional true parameters for recovery error calculation
 
+# Degree policy (relative L2)
+- `degree_policy::Symbol = :sweep`: `:sweep` solves every degree of
+  `experiment_config.degree_range` (legacy). `:rel_l2_ladder` (rel_l2_ladder.jl) fits
+  every degree but solves only those with relative L2 ≤ `rel_l2_solve_below`; it stops on
+  a reliable fit (rel-L2 < `rel_l2_thresholds.reliable`) whose recovered minimizer has
+  plateaued (relative move < `gradient_residual_tol` over the last two reliable solves),
+  after `rel_l2_max_reliable_solves` reliable solves, or when rel-L2 stagnates
+  (`stagnation_threshold`). Unsolved degrees appear with status `"skipped_rel_l2"` and do
+  not count against `success_rate`. The verdict and the rel-L2 history are written to
+  `metadata["rel_l2_ladder"]`; `:stagnated_unsolvable` means more degree will not help —
+  subdivide, change chart, or try a rational surrogate. Incompatible with
+  `stagnation_stop` / `gradient_residual_gate`, which it already contains.
+- `rel_l2_thresholds::RelL2Thresholds`: the bands of
+  `globtimpostprocessing/quality_thresholds.toml` (0.03 / 0.05 / 0.10).
+- `rel_l2_solve_below::Float64 = rel_l2_thresholds.structure_visible`.
+- `rel_l2_max_reliable_solves::Int = 4`.
+
+# Gradient information
+- `gradient_weight::Float64 = 0.0`: > 0 fits by gradient-enhanced least squares
+  (`Constructor(...; gradient_weight)`, gradient_fit.jl).
+- `gradient_method::Symbol = :forwarddiff`: or `:finitediff` for non-AD objectives.
+- `gradient_check::Bool = gradient_weight > 0`: record the relative gradient error
+  ‖∇f − ∇p‖/‖∇f‖ of every fitted degree in `metadata["relative_gradient_error"]`.
+- `gradient_check_points::Int = 20·dim`: grid rows used by that check (one ∇f each).
+- `box_census::Bool = false`: run `box_strata_census` on every solved degree's surrogate
+  (3ⁿ HC face solves) and record sum / ok / boundary counts in
+  `metadata["box_strata_census"]`. A sum ≠ 1 means the surrogate census missed points.
+
 # Returns
 Dictionary with:
 - `degree_results`: Vector of DegreeResult structs (containing raw critical points)
@@ -410,6 +438,46 @@ function _recovered_minimizer_plateaued(degree_results, tol::Float64)
     return rel(ms[end], ms[end-1]) < tol && rel(ms[end-1], ms[end-2]) < tol
 end
 
+# Ladder view of the degree results: fitted degrees (solved or deliberately skipped) with a
+# finite relative L2; failed and timed-out degrees carry no fit and are left out.
+function _ladder_history(degree_results)
+    rs = sort(
+        filter(
+            r -> r.status in ("success", "skipped_rel_l2") && isfinite(r.relative_l2_error),
+            degree_results,
+        ),
+        by = r -> r.degree,
+    )
+    return [
+        RelL2LadderEntry(
+            r.degree,
+            r.relative_l2_error,
+            r.status == "success",
+            r.status == "success" ? r.best_estimate : nothing,
+        ) for r in rs
+    ]
+end
+
+function _record_ladder!(metadata, verdict, reason, degree, degree_results, th, solve_below)
+    hist = _ladder_history(degree_results)
+    metadata["rel_l2_ladder"] = Dict{String,Any}(
+        "verdict" => string(verdict),
+        "reason" => reason,
+        "stopped_after_degree" => degree,
+        "solve_below" => solve_below,
+        "thresholds" => Dict(
+            "reliable" => th.reliable,
+            "structure_visible" => th.structure_visible,
+            "unreliable" => th.unreliable,
+        ),
+        "degrees" => [h.degree for h in hist],
+        "relative_l2" => [h.rel_l2 for h in hist],
+        "solved" => [h.solved for h in hist],
+        "band" => [string(classify_rel_l2(h.rel_l2, th)) for h in hist],
+    )
+    return metadata
+end
+
 function run_standard_experiment(;
     objective_function,
     objective_name::String,
@@ -426,7 +494,34 @@ function run_standard_experiment(;
     stagnation_threshold::Float64 = 0.01,
     gradient_residual_gate::Bool = false,
     gradient_residual_tol::Float64 = 1e-3,
+    degree_policy::Symbol = :sweep,
+    rel_l2_thresholds::RelL2Thresholds = RelL2Thresholds(),
+    rel_l2_solve_below::Float64 = rel_l2_thresholds.structure_visible,
+    rel_l2_max_reliable_solves::Int = 4,
+    gradient_weight::Float64 = 0.0,
+    gradient_method::Symbol = :forwarddiff,
+    gradient_check::Bool = gradient_weight > 0,
+    gradient_check_points::Int = 20 * length(bounds),
+    box_census::Bool = false,
 )
+    degree_policy in (:sweep, :rel_l2_ladder) || throw(
+        ArgumentError("degree_policy must be :sweep or :rel_l2_ladder, got :$degree_policy"),
+    )
+    if degree_policy == :rel_l2_ladder && (stagnation_stop || gradient_residual_gate)
+        throw(
+            ArgumentError(
+                "degree_policy = :rel_l2_ladder already contains the relative-L2 stagnation " *
+                "stop and the GRADRES-GATE (restricted to the reliable band); do not also " *
+                "set stagnation_stop / gradient_residual_gate",
+            ),
+        )
+    end
+    ladder = degree_policy == :rel_l2_ladder
+    # Gradient check (gradient_fit.jl): ‖∇f − ∇p‖/‖∇f‖ on the fit grid, per fitted degree,
+    # recorded in metadata["relative_gradient_error"] (degree => value).
+    grad_errors = gradient_check ? Dict{Int,Float64}() : nothing
+    # Closed Poincaré–Hopf census (box_strata_census.jl) of every SOLVED degree's surrogate.
+    census_out = box_census ? Dict{Int,Dict{String,Any}}() : nothing
     mkpath(output_dir)
 
     # Pre-compute domain geometry (invariant across degrees)
@@ -489,6 +584,12 @@ function run_standard_experiment(;
                     start_system = start_system,
                     msolve_threads = msolve_threads,
                     msolve_timeout_seconds = msolve_timeout_seconds,
+                    solve_rel_l2_max = ladder ? rel_l2_solve_below : Inf,
+                    gradient_weight = gradient_weight,
+                    gradient_method = gradient_method,
+                    gradient_errors = grad_errors,
+                    gradient_check_points = gradient_check_points,
+                    census_out = census_out,
                 ),
                 experiment_config.degree_timeout_seconds;
                 label = "degree $degree",
@@ -520,6 +621,35 @@ function run_standard_experiment(;
                     metadata["stopped_stagnation"] = true
                     metadata["stopped_after_degree"] = degree
                     metadata["stagnation_threshold"] = stagnation_threshold
+                    break
+                end
+            end
+
+            # Relative-L2 ladder (degree_policy = :rel_l2_ladder; rel_l2_ladder.jl): degrees
+            # whose fit is above rel_l2_solve_below were fitted but not solved; stop on a
+            # reliable fit with a plateaued minimizer, on the reliable-solve budget, or on
+            # stagnation, and record the verdict in the run metadata.
+            if ladder
+                lstep = rel_l2_ladder_step(
+                    _ladder_history(degree_results);
+                    thresholds = rel_l2_thresholds,
+                    solve_below = rel_l2_solve_below,
+                    minimizer_tol = gradient_residual_tol,
+                    max_reliable_solves = rel_l2_max_reliable_solves,
+                    stagnation_threshold = stagnation_threshold,
+                )
+                if lstep.action == :stop
+                    @info "Stopping degree sweep (rel-L2 ladder): $(lstep.verdict)" degree reason =
+                        lstep.reason
+                    _record_ladder!(
+                        metadata,
+                        lstep.verdict,
+                        lstep.reason,
+                        degree,
+                        degree_results,
+                        rel_l2_thresholds,
+                        rel_l2_solve_below,
+                    )
                     break
                 end
             end
@@ -626,10 +756,41 @@ function run_standard_experiment(;
     # so downstream consumers see results in the expected order.
     sort!(degree_results, by = r -> r.degree)
 
+    if census_out !== nothing
+        metadata["box_strata_census"] =
+            Dict{String,Any}(string(d) => v for (d, v) in sort(collect(census_out)))
+    end
+    if grad_errors !== nothing
+        metadata["relative_gradient_error"] =
+            Dict{String,Any}(string(d) => v for (d, v) in sort(collect(grad_errors)))
+        metadata["gradient_weight"] = gradient_weight
+        metadata["gradient_method"] = string(gradient_method)
+    end
+
+    if ladder && !haskey(metadata, "rel_l2_ladder")
+        fv = rel_l2_final_verdict(
+            _ladder_history(degree_results);
+            thresholds = rel_l2_thresholds,
+            solve_below = rel_l2_solve_below,
+        )
+        last_degree = isempty(degree_results) ? -1 : degree_results[end].degree
+        _record_ladder!(
+            metadata,
+            fv.verdict,
+            fv.reason,
+            last_degree,
+            degree_results,
+            rel_l2_thresholds,
+            rel_l2_solve_below,
+        )
+    end
+
     # Generate results summary
     total_time = sum(r.total_computation_time for r in degree_results)
     success_count = count(r -> r.status == "success", degree_results)
-    success_rate = success_count / length(degree_results)
+    # Degrees the rel-L2 ladder fitted but deliberately did not solve are not failures.
+    attempted = count(r -> r.status != "skipped_rel_l2", degree_results)
+    success_rate = attempted == 0 ? 0.0 : success_count / attempted
 
     # Create experiment summary (Schema v3.0.0)
     experiment_summary = create_experiment_summary(
@@ -706,6 +867,12 @@ function process_single_degree(
     start_system::Symbol = :auto,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    solve_rel_l2_max::Float64 = Inf,
+    gradient_weight::Float64 = 0.0,
+    gradient_method::Symbol = :forwarddiff,
+    gradient_errors::Union{Nothing,Dict{Int,Float64}} = nothing,
+    gradient_check_points::Int = 0,
+    census_out::Union{Nothing,Dict{Int,Dict{String,Any}}} = nothing,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -715,13 +882,65 @@ function process_single_degree(
     # Phase 1: Polynomial Construction (TR is pre-computed, only Constructor is degree-dependent)
     poly_construction_start = time()
 
-    pol =
-        Globtim.Constructor(TR, degree, basis = experiment_config.basis, normalized = false)
+    pol = Globtim.Constructor(
+        TR,
+        degree,
+        basis = experiment_config.basis,
+        normalized = false,
+        gradient_weight = gradient_weight,
+        gradient_method = gradient_method,
+    )
 
     timing["polynomial_construction_time"] = time() - poly_construction_start
     timing["l2_approx_error"] = pol.nrm
     timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
+    if gradient_errors !== nothing
+        gradient_errors[degree] =
+            relative_gradient_error(
+                pol,
+                objective_function;
+                method = gradient_method,
+                n_points = gradient_check_points,
+            )
+    end
+
+    # Relative-L2 ladder: a fit above solve_rel_l2_max is not solved — its critical
+    # points are not yet those of f (quality_thresholds.toml). Recorded, not failed.
+    rel = timing["relative_l2_error"]
+    if !(rel <= solve_rel_l2_max)
+        @debug "Degree $degree fitted, not solved: rel-L2 $(rel) > $(solve_rel_l2_max)"
+        return DegreeResult(
+            degree,
+            "skipped_rel_l2",
+            0,
+            Vector{Vector{Float64}}(),
+            Vector{Float64}(),
+            nothing,
+            nothing,
+            nothing,
+            timing["l2_approx_error"],
+            rel,
+            timing["condition_number"],
+            length(pol.coeffs),
+            count(!iszero, pol.coeffs),
+            nothing,
+            nothing,
+            nothing,
+            timing["polynomial_construction_time"],
+            0.0,
+            0.0,
+            0.0,
+            timing["polynomial_construction_time"],
+            output_dir,
+            Dict{String,Any}(
+                "skip_reason" => "rel_l2_above_solve_threshold",
+                "relative_l2_error" => rel,
+                "solve_rel_l2_max" => solve_rel_l2_max,
+                "rel_l2_band" => string(classify_rel_l2(rel)),
+            ),
+        )
+    end
 
     # Phase 1b: Optional coefficient truncation
     if experiment_config.truncation_threshold !== nothing
@@ -738,6 +957,22 @@ function process_single_degree(
         timing["truncation_original_nnz"] = sparse_result.original_nnz
         timing["truncation_new_nnz"] = sparse_result.new_nnz
         timing["truncation_l2_ratio"] = sparse_result.l2_ratio
+    end
+
+    # Phase 1c: closed Poincaré–Hopf census of the surrogate on the box (opt-in)
+    if census_out !== nothing
+        c = box_strata_census(pol)
+        census_out[degree] = Dict{String,Any}(
+            "sum" => c.sum,
+            "ok" => c.ok,
+            "exact" => c.exact,
+            "n_counted" => c.n_counted,
+            "n_interior" => c.n_interior,
+            "n_boundary_counted" => c.n_boundary_counted,
+            "n_ambiguous" => c.n_ambiguous,
+            "n_singular_faces" => c.n_singular_faces,
+            "n_degenerate_faces" => c.n_degenerate_faces,
+        )
     end
 
     # Phase 2: Critical Point Solving + coordinate transformation

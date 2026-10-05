@@ -100,6 +100,10 @@ mutable struct Subdomain
     # Set by process_subdomain; with `parallel = true` nodes are fitted concurrently,
     # so these are per-node walls under contention, not additive CPU cost.
     fit_wall_s::Float64
+    # Gradient check of the current fit, ‖∇f − ∇p‖/‖∇f‖ in box coordinates
+    # (subdomain_gradient_error). NaN until measured: only computed when
+    # adaptive_refine runs with a finite `gradient_tolerance`.
+    relative_grad_error::Float64
 end
 
 # Constructor for new subdomain (no polynomial yet)
@@ -138,6 +142,7 @@ function Subdomain(
         transform,          # Stage 2: frame rotation Q (nothing ⇒ axis-aligned)
         Int[],              # penalized_rows (no penalty substitutions yet)
         NaN,                # fit_wall_s (not fitted yet)
+        NaN,                # relative_grad_error (not measured yet)
     )
 end
 
@@ -1470,6 +1475,9 @@ function process_subdomain(
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_base_seed::Union{Nothing,Integer} = nothing,
+    gradient_tolerance::Float64 = Inf,
+    gradient_method::Symbol = :forwarddiff,
+    gradient_check_points::Int = 0,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -1569,9 +1577,19 @@ function process_subdomain(
         detect_degeneracy!(subdomain; f = f, degeneracy_opts...)
     end
 
-    # Check convergence using the selected error metric
+    # Check convergence using the selected error metric. With a finite
+    # gradient_tolerance the leaf must ALSO pass the gradient check (gradient_fit.jl):
+    # the reported critical points are zeros of ∇p, which a value-only L2 bound does
+    # not control. A leaf that meets L2 but fails the check falls through to the
+    # bump / split decision below like any other non-converged leaf.
     effective_error = tolerance_mode == :relative ? subdomain.relative_l2_error : l2_error
-    if effective_error <= l2_tolerance
+    if effective_error <= l2_tolerance && _passes_gradient_check!(
+        f,
+        subdomain,
+        gradient_tolerance;
+        method = gradient_method,
+        n_points = gradient_check_points,
+    )
         return ProcessResult(
             subdomain_id,
             ActionConverged,
@@ -1900,6 +1918,16 @@ Main adaptive refinement loop with parallel processing.
     through to the ordinary bump/split ladder. `fallback_n_cells::Int=3`,
     `fallback_h::Float64=0.01` — probe grid (costs `(n+1)·n_cellsⁿ` extra
     objective evaluations on the leaf, only when triggered).
+- `gradient_tolerance::Float64=Inf`: gradient check on leaf convergence
+  (subdomain_gradient_check.jl). When finite, a leaf that meets `l2_tolerance` must also
+  have relative gradient error ‖∇f − ∇p‖/‖∇f‖ ≤ `gradient_tolerance` (box coordinates, on
+  a strided subset of its samples), else it is bumped or split like any non-converged
+  leaf. The measured value is stored in `subdomain.relative_grad_error`. `Inf` (default)
+  skips the check entirely: no extra evaluations, behavior unchanged. Not wired into
+  `two_phase_refine`.
+- `gradient_method::Symbol=:forwarddiff`: `:forwarddiff` or `:finitediff` for that check.
+- `gradient_check_points::Int=0`: rows checked per leaf; `0` ⇒ `min(#samples, 10·n)`.
+  Each costs one gradient of f.
 
 # Returns
 - SubdivisionTree with refined subdomains
@@ -1974,6 +2002,9 @@ function adaptive_refine(
     sampling::Symbol = :tensor,
     christoffel_oversampling::Float64 = 2.0,
     rng_base_seed::Union{Nothing,Integer} = nothing,
+    gradient_tolerance::Float64 = Inf,
+    gradient_method::Symbol = :forwarddiff,
+    gradient_check_points::Int = 0,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -2082,6 +2113,9 @@ function adaptive_refine(
             sampling,
             christoffel_oversampling,
             rng_base_seed,
+            gradient_tolerance,
+            gradient_method,
+            gradient_check_points,
         )
 
         if parallel && length(current_active) > 1 && Threads.nthreads() > 1
@@ -2176,9 +2210,16 @@ function adaptive_refine(
             push!(tree.pruned_leaves, leaf_id)
             continue
         end
-        # Check if leaf now meets tolerance → mark as converged
+        # Check if leaf now meets tolerance → mark as converged (and the gradient
+        # check, when a gradient_tolerance is set — same rule as process_subdomain)
         check_error = tolerance_mode == :relative ? sd.relative_l2_error : sd.l2_error
-        if check_error <= l2_tolerance
+        if check_error <= l2_tolerance && _passes_gradient_check!(
+            f,
+            sd,
+            gradient_tolerance;
+            method = gradient_method,
+            n_points = gradient_check_points,
+        )
             filter!(id -> id != leaf_id, tree.active_leaves)
             push!(tree.converged_leaves, leaf_id)
         end
