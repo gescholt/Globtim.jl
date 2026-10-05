@@ -36,12 +36,14 @@ using Globtim:
     @testset "T_8(x) leaf → :split (mass past cutoff, no decay, low conc.)" begin
         # Single Chebyshev mode at α=(8,0). Real mass at shell d+4=8, FP-roundoff
         # mass elsewhere. shell_decay deeply negative; concentration ≈ 0 (mass
-        # is at d+4 not d+1/d+2). Both signals say :split.
+        # is at d+4 not d+1/d+2). Both signals say :split. The full-coverage
+        # guard (default 0.99) is disarmed here to test the decay/concentration
+        # axes in isolation; its interaction is the "Full-coverage guard" testset.
         T8(t) = 128t^8 - 256t^6 + 160t^4 - 32t^2 + 1
         f(x) = T8(x[1])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
-        @test pick_strategy(sd) === :split
+        @test pick_strategy(sd; θ_coverage_full = Inf) === :split
     end
 
     @testset "Stagnant T_6+T_8 → :split (m(d+4) > m(d+2), low conc.)" begin
@@ -53,20 +55,23 @@ using Globtim:
         f(x) = 0.5 * T6(x[1]) + 1.0 * T8(x[1])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
-        @test pick_strategy(sd) === :split
+        # guard disarmed: this testset is about the decay/concentration axes
+        @test pick_strategy(sd; θ_coverage_full = Inf) === :split
     end
 
     @testset "Full-coverage guard (v3): cov≈1 flips :split to :bump" begin
         # T_8 leaf: both bump signals say :split (see the T_8 testset above),
         # but its residual energy sits entirely inside the extended window, so
         # window_coverage_sample ≈ 1. With the guard armed at 0.99 the leaf
-        # must bump — the levy misfire pattern. Default (Inf) leaves :split.
+        # must bump — the levy misfire pattern. The guard is on by default
+        # (0.99, since 2026-10-05); θ_coverage_full = Inf is the legacy rule.
         T8(t) = 128t^8 - 256t^6 + 160t^4 - 32t^2 + 1
         f(x) = T8(x[1])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
-        @test pick_strategy(sd) === :split
+        @test pick_strategy(sd; θ_coverage_full = Inf) === :split
         @test pick_strategy(sd; θ_coverage_full = 0.99) === :bump
+        @test pick_strategy(sd) === :bump
         # Guard must not override the low-coverage stagnation gate (they are
         # disjoint regimes): forcing the gate with θ_coverage = 1e9 while the
         # guard threshold sits above the leaf's coverage keeps :split.
@@ -82,7 +87,9 @@ using Globtim:
         f(x) = T5(x[1])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
-        @test pick_strategy(sd; θ_coverage = 1e9) === :split
+        # guard disarmed: it is checked before the gate and a pure T_5 leaf
+        # has its residual fully inside the window
+        @test pick_strategy(sd; θ_coverage = 1e9, θ_coverage_full = Inf) === :split
     end
 
     @testset "Bump signals are OR'd: both axes must fail to split" begin
@@ -95,7 +102,12 @@ using Globtim:
         f(x) = T5(x[1])
         sd = Subdomain([(-1.0, 1.0), (-1.0, 1.0)])
         estimate_subdomain_error(f, sd, 4, basis = :chebyshev)
-        @test pick_strategy(sd; θ_decay = 1e9, θ_concentration = 1e9) === :split
+        @test pick_strategy(
+            sd;
+            θ_decay = 1e9,
+            θ_concentration = 1e9,
+            θ_coverage_full = Inf,
+        ) === :split
     end
 
     @testset "Bump-friendly two-mode (T_5 + small T_7) → :bump" begin

@@ -93,6 +93,14 @@ into the window and inflates coverage to 0.90 (a limit of any sample
 statistic — grid density is the only cure). Margin: stagnant max 0.35,
 bump-friendly min 0.94 at the calibration config.
 
+Full-coverage guard (v3, default on): when `window_coverage_sample ≥
+θ_coverage_full` (default 0.99) the leaf bumps regardless of the other axes —
+the residual already sits inside the extended window, so degree escalation
+resolves it and a split is wasted (levy_3d: 87/116 harmful splits removed,
+levy_2d 4/4, zero split decisions changed on ackley/griewank/fhn3d). The
+default was `Inf` (guard off) until 2026-10-05; pass `θ_coverage_full = Inf`
+to reproduce runs made before then.
+
 Fallbacks:
 - If `subdomain.polynomial === nothing`, returns `:bump` (no signal; preserve
   the legacy bump-by-default behavior so the predicate is backward-compatible).
@@ -112,7 +120,7 @@ function pick_strategy(
     θ_coverage::Real = 0.4,
     θ_concentration::Real = 0.9,
     θ_stagnant::Real = 1e-2,
-    θ_coverage_full::Real = Inf,
+    θ_coverage_full::Real = 0.99,
     extended_degree::Int = 0,
 )
     if subdomain.polynomial === nothing
@@ -147,7 +155,7 @@ function pick_strategy(
     θ_coverage::Real = 0.4,
     θ_concentration::Real = 0.9,
     θ_stagnant::Real = 1e-2,
-    θ_coverage_full::Real = Inf,
+    θ_coverage_full::Real = 0.99,
     rel_l2::Real = NaN,
 )
     if isempty(spec.spectrum)
@@ -159,8 +167,8 @@ function pick_strategy(
     # degree escalation — never split. Calibrated on the A/B traces: at
     # θ_coverage_full = 0.99 this suppresses 87/116 of levy_3d's harmful
     # splits (and 4/4 of levy_2d's) while touching zero split decisions on
-    # ackley/griewank/fhn3d. Disabled by default (Inf) pending DR-FLIP
-    #.
+    # ackley/griewank/fhn3d. Default 0.99 since 2026-10-05 (was Inf pending
+    # DR-FLIP); pass θ_coverage_full = Inf to reproduce pre-2026-10-05 A/B runs.
     if !isnan(spec.window_coverage_sample) && spec.window_coverage_sample >= θ_coverage_full
         return :bump
     end
