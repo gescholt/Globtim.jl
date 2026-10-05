@@ -1923,8 +1923,8 @@ Main adaptive refinement loop with parallel processing.
   have relative gradient error ‖∇f − ∇p‖/‖∇f‖ ≤ `gradient_tolerance` (box coordinates, on
   a strided subset of its samples), else it is bumped or split like any non-converged
   leaf. The measured value is stored in `subdomain.relative_grad_error`. `Inf` (default)
-  skips the check entirely: no extra evaluations, behavior unchanged. Not wired into
-  `two_phase_refine`.
+  skips the check entirely: no extra evaluations, behavior unchanged.
+  `two_phase_refine` takes the same three keywords and applies them to its fine phase.
 - `gradient_method::Symbol=:forwarddiff`: `:forwarddiff` or `:finitediff` for that check.
 - `gradient_check_points::Int=0`: rows checked per leaf; `0` ⇒ `min(#samples, 10·n)`.
   Each costs one gradient of f.
@@ -2348,6 +2348,12 @@ Phase 2 refines to meet the final tolerance.
 - `leaf_extra_fn::Union{Function,Nothing}=nothing`: Optional `(sd, leaf_id) -> Dict`
     that supplies per-leaf data the library can't know (HC-side stats, predicate
     counters); the returned entries are folded into each leaf row's `extra`.
+- `gradient_tolerance::Float64=Inf`, `gradient_method::Symbol=:forwarddiff`,
+    `gradient_check_points::Int=0`: the gradient check of `adaptive_refine`, applied to
+    FINE convergence only — at the Phase 1 → Phase 2 hand-off (a leaf below
+    `fine_tolerance` that fails the check is re-activated) and in Phase 2. Phase 1
+    (coarse balancing) never measures gradients. `Inf` (default): no check, no extra
+    evaluations, behavior unchanged.
 
 # Returns
 - SubdivisionTree with refined subdomains
@@ -2384,6 +2390,9 @@ function two_phase_refine(
     anisotropic_degree::Union{Nothing,NamedTuple} = nothing,
     logger::Union{Metrics.MetricsLogger,Nothing} = nothing,
     leaf_extra_fn::Union{Function,Nothing} = nothing,
+    gradient_tolerance::Float64 = Inf,
+    gradient_method::Symbol = :forwarddiff,
+    gradient_check_points::Int = 0,
 )
     tolerance_mode in (:absolute, :relative) ||
         error("Unknown tolerance_mode: $tolerance_mode. Use :absolute or :relative.")
@@ -2457,6 +2466,11 @@ function two_phase_refine(
         degeneracy_opts,
         anisotropic_degree,
     )
+    # The gradient check (subdomain_gradient_check.jl) gates FINE convergence only:
+    # Phase 1 is a coarse balancing pass whose leaves are refined again, so checking
+    # gradients there would spend ∇f evaluations on fits that are about to be replaced.
+    # hp_kwargs leaves the check at its default (Inf, off); Phase 2 adds it.
+    fine_kwargs = (; hp_kwargs..., gradient_tolerance, gradient_method, gradient_check_points)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100
@@ -2561,8 +2575,20 @@ function two_phase_refine(
     _leaf_error(id) =
         tolerance_mode == :relative ? tree.subdomains[id].relative_l2_error :
         tree.subdomains[id].l2_error
-    needs_reeval = filter(id -> _leaf_error(id) > fine_tolerance, tree.converged_leaves)
-    already_fine = filter(id -> _leaf_error(id) <= fine_tolerance, tree.converged_leaves)
+    # With a finite gradient_tolerance a leaf stays converged only if it also passes the
+    # gradient check; one that meets fine_tolerance but fails it is re-activated and
+    # bumped or split in Phase 2 like any other non-converged leaf.
+    _fine_ok(id) =
+        _leaf_error(id) <= fine_tolerance && _passes_gradient_check!(
+            f,
+            tree.subdomains[id],
+            gradient_tolerance;
+            method = gradient_method,
+            n_points = gradient_check_points,
+        )
+    fine_flags = Dict(id => _fine_ok(id) for id in tree.converged_leaves)
+    needs_reeval = filter(id -> !fine_flags[id], tree.converged_leaves)
+    already_fine = filter(id -> fine_flags[id], tree.converged_leaves)
     append!(tree.active_leaves, needs_reeval)
     tree.converged_leaves = already_fine
 
@@ -2597,7 +2623,7 @@ function two_phase_refine(
                     fine_tolerance;
                     optimize_cuts = true,
                     basis = basis,
-                    hp_kwargs...,
+                    fine_kwargs...,
                 )
             end
             results = fetch.(tasks)
@@ -2611,7 +2637,7 @@ function two_phase_refine(
                     fine_tolerance;
                     optimize_cuts = true,
                     basis = basis,
-                    hp_kwargs...,
+                    fine_kwargs...,
                 ) for leaf_id in current_active
             ]
         end

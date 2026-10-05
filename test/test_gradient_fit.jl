@@ -103,4 +103,23 @@ using LinearAlgebra
         sd = conv[1]
         @test subdomain_gradient_error(f, sd) ≈ sd.relative_grad_error
     end
+
+    @testset "two_phase_refine: the gradient check gates fine convergence only" begin
+        f(x) = sin(4x[1]) * cos(3x[2])
+        bounds = [(-1.0, 1.0), (-1.0, 1.0)]
+        kw = (; coarse_tolerance = 0.1, fine_tolerance = 0.05, max_depth = 4, parallel = false)
+        t0 = two_phase_refine(f, bounds, 6; kw...)
+        t1 = two_phase_refine(f, bounds, 6; kw..., gradient_tolerance = 0.02)
+        # default: no check, nothing measured anywhere in the tree
+        @test all(isnan(sd.relative_grad_error) for sd in t0.subdomains)
+        # with a tolerance: every converged leaf was measured and passed
+        conv = [t1.subdomains[i] for i in t1.converged_leaves]
+        @test !isempty(conv)
+        @test all(sd -> sd.relative_grad_error <= 0.02, conv)
+        @test Globtim.n_leaves(t1) >= Globtim.n_leaves(t0)
+        # an unreachable gradient tolerance converges nothing by the gradient route:
+        # every leaf that stays converged must have passed it, so none may remain
+        t2 = two_phase_refine(f, bounds, 6; merge(kw, (; max_depth = 2))..., gradient_tolerance = 1e-12)
+        @test isempty(t2.converged_leaves)
+    end
 end
