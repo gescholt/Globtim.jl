@@ -109,23 +109,28 @@ function rel_l2_ladder_step(
     max_reliable_solves::Int = 4,
     stagnation_threshold::Real = 0.01,
 )
-    isempty(history) && return (; action = :continue, verdict = :running, reason = "no degree fitted yet")
+    isempty(history) &&
+        return (; action = :continue, verdict = :running, reason = "no degree fitted yet")
     last = history[end]
 
     # 3. reliable band: GRADRES plateau on the reliable solves only
     reliable_solved = [
-        h for h in history if h.solved && h.best_estimate !== nothing && h.rel_l2 < thresholds.reliable
+        h for h in history if
+        h.solved && h.best_estimate !== nothing && h.rel_l2 < thresholds.reliable
     ]
     if length(reliable_solved) >= 3
         ms = [h.best_estimate for h in reliable_solved]
         rel(a, b) = norm(a - b) / (norm(b) + 1e-15)
-        if rel(ms[end], ms[end-1]) < minimizer_tol && rel(ms[end-1], ms[end-2]) < minimizer_tol
+        if rel(ms[end], ms[end-1]) < minimizer_tol &&
+           rel(ms[end-1], ms[end-2]) < minimizer_tol
             return (;
                 action = :stop,
                 verdict = :converged,
                 reason = @sprintf(
                     "rel-L2 %.3g < %.3g and recovered minimizer moved < %.1e over the last two reliable degrees",
-                    last.rel_l2, thresholds.reliable, minimizer_tol
+                    last.rel_l2,
+                    thresholds.reliable,
+                    minimizer_tol
                 ),
             )
         end
@@ -147,7 +152,9 @@ function rel_l2_ladder_step(
                 verdict = :stagnated_unsolvable,
                 reason = @sprintf(
                     "rel-L2 stagnated at %.3g (> solve_below %.3g, band %s): escalate to subdivision, a chart change or a rational surrogate",
-                    last.rel_l2, solve_below, classify_rel_l2(last.rel_l2, thresholds)
+                    last.rel_l2,
+                    solve_below,
+                    classify_rel_l2(last.rel_l2, thresholds)
                 ),
             )
         elseif last.rel_l2 >= thresholds.reliable
@@ -188,13 +195,23 @@ function rel_l2_final_verdict(
     r = history[end].rel_l2
     band = classify_rel_l2(r, thresholds)
     if band == :reliable
-        return (; verdict = :range_exhausted_reliable, reason = @sprintf("degree range exhausted at rel-L2 %.3g (reliable)", r))
+        return (;
+            verdict = :range_exhausted_reliable,
+            reason = @sprintf("degree range exhausted at rel-L2 %.3g (reliable)", r)
+        )
     elseif isfinite(r) && r <= solve_below
-        return (; verdict = :range_exhausted_partial, reason = @sprintf("degree range exhausted at rel-L2 %.3g (%s)", r, band))
+        return (;
+            verdict = :range_exhausted_partial,
+            reason = @sprintf("degree range exhausted at rel-L2 %.3g (%s)", r, band)
+        )
     else
         return (;
             verdict = :range_exhausted_unsolvable,
-            reason = @sprintf("degree range exhausted at rel-L2 %.3g (%s): no degree was solvable — raise the degree range or escalate", r, band),
+            reason = @sprintf(
+                "degree range exhausted at rel-L2 %.3g (%s): no degree was solvable — raise the degree range or escalate",
+                r,
+                band
+            ),
         )
     end
 end

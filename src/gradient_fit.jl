@@ -88,7 +88,8 @@ function derivative_vandermonde(
     A = Lambda.data
     m, n = size(A)
     N = size(S, 1)
-    size(S, 2) == n || throw(DimensionMismatch("points have $(size(S, 2)) coordinates, support has $n"))
+    size(S, 2) == n ||
+        throw(DimensionMismatch("points have $(size(S, 2)) coordinates, support has $n"))
     dmax = maximum(A)
     c = _basis_normalization(basis, dmax)
     # per point, per coordinate: normalized values and derivatives of φ_0..φ_dmax
@@ -112,7 +113,9 @@ function derivative_vandermonde(
     end
     if reference !== nothing
         size(reference) == size(V) || throw(
-            DimensionMismatch("reference Vandermonde is $(size(reference)), expected $(size(V))"),
+            DimensionMismatch(
+                "reference Vandermonde is $(size(reference)), expected $(size(V))",
+            ),
         )
         err = maximum(abs, V .- reference)
         scale = max(1.0, maximum(abs, reference))
@@ -152,8 +155,9 @@ function objective_gradients_box(
     method::Symbol = :forwarddiff,
     h::Real = 1e-6,
 )
-    method in (:forwarddiff, :finitediff) ||
-        throw(ArgumentError("gradient method must be :forwarddiff or :finitediff, got :$method"))
+    method in (:forwarddiff, :finitediff) || throw(
+        ArgumentError("gradient method must be :forwarddiff or :finitediff, got :$method"),
+    )
     N, n = size(S)
     c = Vector{Float64}(center)
     g(ẑ) = _call_objective(f, _box_point(ẑ, scale_factor, c))
@@ -205,7 +209,10 @@ end
 # define the same affine map the fit used, also for a rotated leaf: the leaf polynomial
 # lives in its own normalized frame).
 function _surrogate_gradient_box(pol::ApproxPoly, ẑ::AbstractVector)
-    return ForwardDiff.gradient(z -> evaluate(pol, pol.center .+ pol.scale_factor .* z), Vector{Float64}(ẑ))
+    return ForwardDiff.gradient(
+        z -> evaluate(pol, pol.center .+ pol.scale_factor .* z),
+        Vector{Float64}(ẑ),
+    )
 end
 
 """
@@ -243,14 +250,17 @@ function relative_gradient_error(
     end
     N, n = size(S)
     w = if weights !== nothing
-        length(weights) == N || throw(DimensionMismatch("$(length(weights)) weights for $N points"))
+        length(weights) == N ||
+            throw(DimensionMismatch("$(length(weights)) weights for $N points"))
         weights
     elseif points === nothing && !subset && (round(Int, N^(1 / n)))^n == N
         compute_quadrature_weights(pol.basis, round(Int, N^(1 / n)) - 1, n)
     else
         fill(1.0 / N, N)
     end
-    xmap = objective_point === nothing ? (z -> pol.center .+ pol.scale_factor .* z) : objective_point
+    xmap =
+        objective_point === nothing ? (z -> pol.center .+ pol.scale_factor .* z) :
+        objective_point
     g(z) = _call_objective(f, xmap(z))
     num = 0.0
     den = 0.0
@@ -259,12 +269,21 @@ function relative_gradient_error(
         gf = if method == :forwarddiff
             ForwardDiff.gradient(g, z)
         elseif method == :finitediff
-            [begin
-                zp = copy(z); zm = copy(z); zp[k] += h; zm[k] -= h
-                (g(zp) - g(zm)) / (2h)
-            end for k in 1:n]
+            [
+                begin
+                    zp = copy(z)
+                    zm = copy(z)
+                    zp[k] += h
+                    zm[k] -= h
+                    (g(zp) - g(zm)) / (2h)
+                end for k in 1:n
+            ]
         else
-            throw(ArgumentError("gradient method must be :forwarddiff or :finitediff, got :$method"))
+            throw(
+                ArgumentError(
+                    "gradient method must be :forwarddiff or :finitediff, got :$method",
+                ),
+            )
         end
         all(isfinite, gf) || error("objective gradient is not finite at box point $z")
         gp = _surrogate_gradient_box(pol, z)

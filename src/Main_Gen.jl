@@ -347,7 +347,12 @@ TimerOutputs.@timeit _TO function MainGenerate(
         sol = if gradient_weight > 0
             # Gradient-enhanced (discrete H¹) least squares, gradient_fit.jl: derivative
             # rows in box coordinates under the value rows, one ∇f per sample point.
-            _, DL = derivative_vandermonde(Lambda, matrix_from_grid; basis = basis, reference = VL)
+            _, DL = derivative_vandermonde(
+                Lambda,
+                matrix_from_grid;
+                basis = basis,
+                reference = VL,
+            )
             G = objective_gradients_box(
                 f,
                 matrix_from_grid,

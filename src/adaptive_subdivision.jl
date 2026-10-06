@@ -2470,7 +2470,8 @@ function two_phase_refine(
     # Phase 1 is a coarse balancing pass whose leaves are refined again, so checking
     # gradients there would spend ∇f evaluations on fits that are about to be replaced.
     # hp_kwargs leaves the check at its default (Inf, off); Phase 2 adds it.
-    fine_kwargs = (; hp_kwargs..., gradient_tolerance, gradient_method, gradient_check_points)
+    fine_kwargs =
+        (; hp_kwargs..., gradient_tolerance, gradient_method, gradient_check_points)
 
     phase1_iter = 0
     while !isempty(tree.active_leaves) && phase1_iter < 100

@@ -25,6 +25,9 @@
 # square-system entry point of the HC extension; same per-face pattern as
 # `certify_positive_denominator(:recursion)`): requires `using HomotopyContinuation`.
 
+# Generic offset (irrational ratio to the box scale) for homogeneous face systems.
+const _STRATA_SHIFT = 0.1 * (sqrt(5) - 1) / 2
+
 """
     surrogate_monomial_polynomial(pol::ApproxPoly) -> (p, x)
 
@@ -94,8 +97,9 @@ function box_strata_census(
     max_dim::Int = 8,
 )
     n = length(x)
-    n <= max_dim ||
-        throw(ArgumentError("box_strata_census: n = $n > max_dim = $max_dim (3ⁿ face solves)"))
+    n <= max_dim || throw(
+        ArgumentError("box_strata_census: n = $n > max_dim = $max_dim (3ⁿ face solves)"),
+    )
     grad = differentiate(p, x)
     hess = [differentiate(grad[i], x[j]) for i in 1:n, j in 1:n]
     evalat(q, pt) = Float64(q(x => pt))
@@ -128,6 +132,17 @@ function box_strata_census(
             end
             # a nonzero constant equation: no stationary point on this face
             any(e -> maxdegree(e) == 0, eqs) && continue
+            # HC solves a system of homogeneous equations projectively, where the
+            # affine root 0 is not a point and is dropped as an excess solution
+            # (p = |x|² loses its minimum). Shift such a system off the origin.
+            shift = zeros(length(free))
+            if all(e -> mindegree(e) == maxdegree(e), eqs)
+                shift .= _STRATA_SHIFT .* (1:length(free))
+                eqs = [
+                    subs(e, (x[i] => x[i] + s for (i, s) in zip(free, shift))...) for
+                    e in eqs
+                ]
+            end
             sols, st = _solve_rational_hc(
                 eqs,
                 x[free];
@@ -136,7 +151,7 @@ function box_strata_census(
             )
             st.n_singular > 0 && (n_singular_faces += 1)
             for s in sols
-                y = Vector{Float64}(real.(s))
+                y = Vector{Float64}(real.(s)) .+ shift
                 all(abs.(y) .<= 1 + edge_tol) || continue
                 pt = copy(base)
                 pt[free] .= clamp.(y, -1.0, 1.0)
@@ -178,7 +193,8 @@ function box_strata_census(
             else
                 index = 0
             end
-            status = (tangential || degenerate) ? :ambiguous : (inward ? :counted : :outward)
+            status =
+                (tangential || degenerate) ? :ambiguous : (inward ? :counted : :outward)
             counted = status == :counted
             counted && (total += isodd(index) ? -1 : 1)
             push!(

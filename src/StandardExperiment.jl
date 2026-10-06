@@ -443,7 +443,9 @@ end
 function _ladder_history(degree_results)
     rs = sort(
         filter(
-            r -> r.status in ("success", "skipped_rel_l2") && isfinite(r.relative_l2_error),
+            r ->
+                r.status in ("success", "skipped_rel_l2") &&
+                    isfinite(r.relative_l2_error),
             degree_results,
         ),
         by = r -> r.degree,
@@ -505,7 +507,9 @@ function run_standard_experiment(;
     box_census::Bool = false,
 )
     degree_policy in (:sweep, :rel_l2_ladder) || throw(
-        ArgumentError("degree_policy must be :sweep or :rel_l2_ladder, got :$degree_policy"),
+        ArgumentError(
+            "degree_policy must be :sweep or :rel_l2_ladder, got :$degree_policy",
+        ),
     )
     if degree_policy == :rel_l2_ladder && (stagnation_stop || gradient_residual_gate)
         throw(
@@ -896,13 +900,12 @@ function process_single_degree(
     timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
     if gradient_errors !== nothing
-        gradient_errors[degree] =
-            relative_gradient_error(
-                pol,
-                objective_function;
-                method = gradient_method,
-                n_points = gradient_check_points,
-            )
+        gradient_errors[degree] = relative_gradient_error(
+            pol,
+            objective_function;
+            method = gradient_method,
+            n_points = gradient_check_points,
+        )
     end
 
     # Relative-L2 ladder: a fit above solve_rel_l2_max is not solved — its critical
