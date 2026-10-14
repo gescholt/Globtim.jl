@@ -313,5 +313,157 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
             c = certify_positive_denominator(R)
             @test c.ok && c.qmin ≈ 1.0
         end
+
+        # ── Phase-3 brief B1.2 / B1.3: parametric lifted solver ──────────────────
+        # One compiled family and one generic anchor per shape (n, M, N); each fit
+        # is a parameter homotopy tracking exactly C(n, M, N) paths. Assertions are
+        # agreement with the from-scratch :polyhedral solve, the anchor count, the
+        # cache, and zero failed paths (RATIONAL_PHASE3_BRIEF.md, B1.2 tests 1–5,
+        # B1.3 unit test).
+        @testset "B1.2 parametric lifted solver" begin
+            anchor_dir = mktempdir()
+            Globtim._rational_parametric_cache_clear!()
+            C = rational_generic_path_count
+
+            # the same accepted set, the same rejection counts, under both methods
+            function same_census(R; tol)
+                rp = solve_rational_critical_points(R; method = :polyhedral)
+                rq = solve_rational_critical_points(R; method = :parametric, anchor_dir = anchor_dir)
+                @test sets_match(rp.points, rq.points; tol = tol)
+                @test rp.n_rejected_q == rq.n_rejected_q
+                @test rp.n_outside == rq.n_outside
+                @test rp.n_inconsistent_y == rq.n_inconsistent_y
+                @test sort(rp.index) == sort(rq.index)
+                @test rq.n_path_failures == 0
+                @test rq.n_singular == 0
+                @test rq.stats.start_system == :parametric
+                return rp, rq
+            end
+
+            TRp = TestInput(f_pole; dim = 2, center = [0.0, 0.0], sample_range = 1.0, GN = 24)
+            @testset "1. A2 at (8,4), GN 24: agrees with :polyhedral to 1e-10" begin
+                R = RationalConstructor(TRp, 8, 4)
+                @test (R.M, R.N) == (8, 4)
+                rp, rq = same_census(R; tol = 1e-10)
+                @test length(rq.points) == 3
+                @testset "2. anchor has C(2,8,4) = 89 solutions; the track reports 89 paths" begin
+                    @test C(2, 8, 4) == 89
+                    @test rq.stats.C == 89
+                    @test rq.n_paths == 89
+                    @test rq.stats.cache_hit == false
+                    @test rq.stats.anchor == :polyhedral
+                    info = Globtim._rational_parametric_cache_info()
+                    @test info.misses == 1
+                    @test info.n_shapes == 1
+                    @test isfile(Globtim._rational_anchor_path(anchor_dir, 2, 8, 4))
+                end
+                @testset "4. a second fit of the same shape does not recompile" begin
+                    TRs = TestInput(f_pole; dim = 2, center = [0.1, -0.05], sample_range = 0.9, GN = 24)
+                    R2 = RationalConstructor(TRs, 8, 4)
+                    @test (R2.M, R2.N) == (8, 4)
+                    hits0 = Globtim._rational_parametric_cache_info().hits
+                    r2 = solve_rational_critical_points(R2; method = :parametric, anchor_dir = anchor_dir)
+                    @test r2.stats.cache_hit == true
+                    @test Globtim._rational_parametric_cache_info().hits == hits0 + 1
+                    @test Globtim._rational_parametric_cache_info().misses == 1
+                    @test r2.n_paths == 89
+                    @test r2.n_path_failures == 0
+                    # and the census is the from-scratch one
+                    r2p = solve_rational_critical_points(R2; method = :polyhedral)
+                    @test sets_match(r2.points, r2p.points; tol = 1e-10)
+                    # the warm track is far cheaper than the cold compile + anchor:
+                    # the compile cost is paid once per shape, which is the point
+                    t_warm = @elapsed solve_rational_critical_points(R2; method = :parametric, anchor_dir = anchor_dir)
+                    @test t_warm < 5.0
+                end
+            end
+
+            @testset "5. (6,3) misfit of A2 (q has a zero in the box): same accepted set" begin
+                R63 = RationalConstructor(TRp, 6, 3)
+                @test (R63.M, R63.N) == (6, 3)
+                @test certify_positive_denominator(R63).qmin < 0
+                rp, rq = same_census(R63; tol = 1e-8)
+                @test rq.n_paths == C(2, 6, 3)
+            end
+
+            @testset "3. f₃ at (8,4): agrees with :polyhedral" begin
+                TR3 = TestInput(f_pole3; dim = 3, center = zeros(3), sample_range = 1.0)
+                R3 = RationalConstructor(TR3, 8, 4)
+                @test (R3.M, R3.N) == (8, 4)
+                rp, rq = same_census(R3; tol = 1e-8)
+                @test length(rq.points) == 3
+                @test rq.n_paths == C(3, 8, 4) == 659
+                @test rq.stats.cache_hit == false
+            end
+
+            @testset "polynomial special case N = 0 under :parametric" begin
+                R0 = RationalConstructor(TRp, 10, 0)
+                rp, rq = same_census(R0; tol = 1e-8)
+                @test rq.n_paths == C(2, 10, 0) == 81
+            end
+
+            @testset "disk store: a cold cache reloads the anchor and gives the same census" begin
+                R = RationalConstructor(TRp, 8, 4)
+                r_mem = solve_rational_critical_points(R; method = :parametric, anchor_dir = anchor_dir)
+                Globtim._rational_parametric_cache_clear!()
+                @test Globtim._rational_parametric_cache_info().n_shapes == 0
+                out = Globtim._solve_rational_hc_parametric(
+                    2, 8, 4, [(Globtim._rational_monomial_coefficients(R).a, Globtim._rational_monomial_coefficients(R).b)];
+                    anchor_dir = anchor_dir,
+                )
+                @test out.anchor.source == :disk
+                @test out.anchor.n_solutions == 89
+                sols, st = out.per_fit[1]
+                pts = [Vector{Float64}(s[1:2]) for s in sols if all(-1 .<= s[1:2] .<= 1)]
+                @test sets_match(pts, r_mem.points; tol = 1e-10)
+                @test st.n_path_failures == 0
+                # a stored anchor of the wrong count is refused, not used
+                bad_dir = mktempdir()
+                # 45 + 15 monomial coefficients for (2,8,4); 88 ≠ 89 solutions
+                Globtim._rational_anchor_save(bad_dir, 2, 8, 4; params = randn(ComplexF64, 60),
+                    solutions = [randn(ComplexF64, 3) for _ in 1:88], anchor = :polyhedral, t_anchor = 0.0)
+                Globtim._rational_parametric_cache_clear!()
+                @test_throws ErrorException solve_rational_critical_points(R; method = :parametric, anchor_dir = bad_dir)
+            end
+
+            @testset "B1.3 monodromy anchor: exactly C solutions, agrees with :polyhedral" begin
+                mono_dir = mktempdir()
+                Globtim._rational_parametric_cache_clear!()
+                R = RationalConstructor(TRp, 8, 4)
+                rp = solve_rational_critical_points(R; method = :polyhedral)
+                rq = solve_rational_critical_points(R; method = :parametric, anchor = :monodromy, anchor_dir = mono_dir)
+                @test rq.stats.anchor == :monodromy
+                @test rq.stats.C == 89
+                @test rq.n_paths == 89
+                @test rq.n_path_failures == 0
+                @test sets_match(rp.points, rq.points; tol = 1e-10)
+                @test rp.n_rejected_q == rq.n_rejected_q
+                @test rp.n_outside == rq.n_outside
+                stored = Globtim._rational_anchor_load(mono_dir, 2, 8, 4)
+                @test stored.n_solutions == 89
+                @test stored.anchor == :monodromy
+
+                TR3 = TestInput(f_pole3; dim = 3, center = zeros(3), sample_range = 1.0)
+                R63 = RationalConstructor(TR3, 6, 3)
+                (M3, N3) = (R63.M, R63.N)
+                rp3 = solve_rational_critical_points(R63; method = :polyhedral)
+                rq3 = solve_rational_critical_points(R63; method = :parametric, anchor = :monodromy, anchor_dir = mono_dir)
+                @test rq3.stats.anchor == :monodromy
+                @test rq3.stats.C == C(3, M3, N3)
+                @test rq3.n_paths == C(3, M3, N3)
+                @test rq3.n_path_failures == 0
+                @test sets_match(rp3.points, rq3.points; tol = 1e-8)
+                @test rp3.n_rejected_q == rq3.n_rejected_q
+                @test rp3.n_outside == rq3.n_outside
+            end
+
+            @testset "argument checks" begin
+                R = RationalConstructor(TRp, 8, 4)
+                @test_throws ArgumentError solve_rational_critical_points(R; method = :newton)
+                @test_throws ArgumentError solve_rational_critical_points(R; method = :parametric, anchor = :random)
+                @test_throws ArgumentError Globtim._solve_rational_hc_parametric(2, 8, 4, [(zeros(3), zeros(2))]; anchor_dir = nothing)
+            end
+            Globtim._rational_parametric_cache_clear!()
+        end
     end
 end

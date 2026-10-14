@@ -19,6 +19,9 @@
 # `solve_polynomial_system` are untouched. msolve for the lifted system is
 # Phase 2.
 
+import JLD2
+using MultivariatePolynomials: terms, monomial, coefficient, degree
+
 """
     _solve_rational_hc(eqs, vars; start_system = :polyhedral, compile = nothing) -> (sols, stats)
 
@@ -36,6 +39,187 @@ function _solve_rational_hc(args...; kwargs...)
         "solve_rational_critical_points requires HomotopyContinuation.jl. " *
         "Add `using HomotopyContinuation` before calling.",
     )
+end
+
+"""
+    _solve_rational_hc_parametric(n, M, N, fits; anchor = :polyhedral,
+                                  anchor_dir = _default_rational_anchor_dir(), verbose = 0)
+        -> (; per_fit, anchor)
+
+Parametric lifted solve (docs/research/plans/RATIONAL_PHASE3_BRIEF.md, B1.2/B1.3).
+The lifted system `p − y q = 0, ∇p − y ∇q = 0` is built ONCE per shape `(n, M, N)`
+with the monomial coefficients of `p` and `q` (over `SupportGen(n, (:one_d_for_all, M))`
+and `(…, N)`) as HomotopyContinuation parameters. One generic complex anchor
+`(θ₀, S₀)` is solved per shape and cached (module-level, keyed on `(n, M, N)`; the
+orthogonal basis of a fit does not enter the family, only its conversion to
+monomials), then each fit `(a, b)` in `fits` is a parameter homotopy from `θ₀` to
+`vcat(a, b)` tracking exactly `C(n, M, N) = rational_generic_path_count(n, M, N)` paths.
+
+`anchor`:
+- `:polyhedral`: `solve` the family at a random complex `θ₀` with the polyhedral start
+  (0 singular endpoints required). HC's polyhedral tracker loses a path now and then
+  (80 of 81 on `(2,10,0)`, 88 of 89 on `(2,8,4)` in one audit run); a short start set
+  is completed by `monodromy_solve` from the solutions found, with a `@warn`, and the
+  anchor is then recorded as `:polyhedral_completed`. Still short after that: error.
+- `:monodromy`: `monodromy_solve` from a CONSTRUCTED seed (`x₀, y₀, b` random, `a`
+  solved from the `n + 1` linear conditions) with `target_solutions_count = C` as the
+  stopping rule — no start system at all, which is what makes `(8, 4)` run at `n ≥ 7`
+  where the polyhedral start overflows. Errors if monodromy stops short of `C`.
+
+`anchor_dir` (`nothing` disables): the anchor of each shape is stored as
+`<anchor_dir>/n<n>_M<M>_N<N>.jld2` and loaded on the next cold start, so an anchor
+that took hours is paid once per machine.
+
+Returns `per_fit::Vector{Tuple{sols, stats}}` in the order of `fits` — `sols` are the
+real solutions (`Vector{Vector{Float64}}` of length `n + 1`), `stats` is
+`(; start_system = :parametric, anchor, n_paths, n_solutions, n_singular, n_real,
+n_path_failures, n_at_infinity, cache_hit, t_anchor, C)` — and
+`anchor = (; n_solutions, t_anchor, cache_hit, anchor, source)` with `source` one of
+`:polyhedral`, `:monodromy`, `:disk`.
+
+Implemented in GlobtimHomotopyContinuationExt — requires `using HomotopyContinuation`.
+"""
+function _solve_rational_hc_parametric(args...; kwargs...)
+    error(
+        "solve_rational_critical_points(method = :parametric) requires HomotopyContinuation.jl. " *
+        "Add `using HomotopyContinuation` before calling.",
+    )
+end
+
+# The cache lives in the HC extension; these dispatch on the loaded extension
+# module (`nothing` when HomotopyContinuation is not loaded), so the source keeps
+# a fallback without the extension overwriting a method at precompile time.
+_rational_hc_ext() = Base.get_extension(@__MODULE__, :GlobtimHomotopyContinuationExt)
+
+"""
+    _rational_parametric_cache_info() -> (; n_shapes, hits, misses)
+
+Hit/miss counters of the per-shape cache behind `_solve_rational_hc_parametric`
+(a subdivision tree with 300 leaves of one shape should show 1 miss, 299 hits).
+Without the HC extension the counters are all zero.
+"""
+_rational_parametric_cache_info() = _rational_parametric_cache_info(_rational_hc_ext())
+_rational_parametric_cache_info(::Nothing) = (; n_shapes = 0, hits = 0, misses = 0)
+
+"""
+    _rational_parametric_cache_clear!()
+
+Drop every compiled family and in-memory anchor (the on-disk store is untouched).
+"""
+_rational_parametric_cache_clear!() = _rational_parametric_cache_clear!(_rational_hc_ext())
+_rational_parametric_cache_clear!(::Nothing) = nothing
+
+"""
+    _default_rational_anchor_dir() -> String
+
+`_generated/rational_anchors` (relative to the working directory; gitignored). An
+anchor worth keeping is promoted to `globtim_results/rational_anchors/` by hand with a
+ledger record (brief, "Things to decide").
+"""
+_default_rational_anchor_dir() = joinpath("_generated", "rational_anchors")
+
+_rational_anchor_path(dir::AbstractString, n::Int, M::Int, N::Int) =
+    joinpath(dir, "n$(n)_M$(M)_N$(N).jld2")
+
+"""
+    _rational_anchor_save(dir, n, M, N; params, solutions, anchor, t_anchor) -> path
+
+Write the anchor of shape `(n, M, N)` to `_rational_anchor_path(dir, n, M, N)`
+atomically (temporary file, then `mv`). `solutions` is stored as an
+`(n+1) × C` `ComplexF64` matrix.
+"""
+function _rational_anchor_save(
+    dir::AbstractString,
+    n::Int,
+    M::Int,
+    N::Int;
+    params::AbstractVector,
+    solutions::AbstractVector,
+    anchor::Symbol,
+    t_anchor::Real,
+)
+    mkpath(dir)
+    path = _rational_anchor_path(dir, n, M, N)
+    S = isempty(solutions) ? zeros(ComplexF64, n + 1, 0) :
+        reduce(hcat, (Vector{ComplexF64}(s) for s in solutions))
+    tmp = path * ".tmp-" * string(getpid())
+    JLD2.jldsave(
+        tmp;
+        n = n,
+        M = M,
+        N = N,
+        C = length(solutions),
+        params = Vector{ComplexF64}(params),
+        solutions = S,
+        anchor = String(anchor),
+        t_anchor = Float64(t_anchor),
+        created = string(Dates.now()),
+    )
+    mv(tmp, path; force = true)
+    return path
+end
+
+"""
+    _rational_anchor_load(dir, n, M, N) -> NamedTuple or nothing
+
+Read a stored anchor: `(; params, solutions, n_solutions, anchor, t_anchor)`, or
+`nothing` when no file exists for the shape.
+"""
+function _rational_anchor_load(dir::AbstractString, n::Int, M::Int, N::Int)
+    path = _rational_anchor_path(dir, n, M, N)
+    isfile(path) || return nothing
+    d = JLD2.load(path)
+    (d["n"], d["M"], d["N"]) == (n, M, N) ||
+        error("anchor file $path is for shape $((d["n"], d["M"], d["N"])), expected $((n, M, N))")
+    S = d["solutions"]
+    sols = [Vector{ComplexF64}(S[:, j]) for j in 1:size(S, 2)]
+    return (;
+        params = Vector{ComplexF64}(d["params"]),
+        solutions = sols,
+        n_solutions = Int(d["C"]),
+        anchor = Symbol(d["anchor"]),
+        t_anchor = Float64(d["t_anchor"]),
+    )
+end
+
+"""
+    _coefficients_on_support(p, x, S) -> Vector{Float64}
+
+Coefficients of the polynomial `p` (in the variables `x`) over the rows of the
+exponent matrix `S`: entry `k` is the coefficient of `x^S[k, :]`, zero when `p` has no
+such term. A term of `p` outside the support is an error (never dropped).
+"""
+function _coefficients_on_support(p, x::AbstractVector, S::AbstractMatrix{<:Integer})
+    idx = Dict{Vector{Int},Int}(Vector{Int}(S[k, :]) => k for k in 1:size(S, 1))
+    c = zeros(Float64, size(S, 1))
+    for t in terms(p)
+        m = monomial(t)
+        α = [degree(m, x[i]) for i in 1:length(x)]
+        k = get(idx, α, nothing)
+        k === nothing && error(
+            "monomial $m of $p lies outside the $(size(S, 1))-element support (degree $(maximum(sum(S; dims = 2); init = 0)))",
+        )
+        c[k] += Float64(coefficient(t))
+    end
+    return c
+end
+
+"""
+    _rational_monomial_coefficients(R::ApproxRational) -> (; a, b, SM, SN)
+
+Monomial coefficients of `p` and `q` of `R` over `SM = SupportGen(n, (:one_d_for_all, R.M)).data`
+and `SN = SupportGen(n, (:one_d_for_all, R.N)).data` — the parameter vector
+`vcat(a, b)` of the family solved by `_solve_rational_hc_parametric`. Goes through
+`rational_critical_system` (exact basis conversion, then `Float64`).
+"""
+function _rational_monomial_coefficients(R::ApproxRational)
+    n = size(R.grid, 2)
+    sys = rational_critical_system(R)
+    SM = SupportGen(n, (:one_d_for_all, R.M)).data
+    SN = SupportGen(n, (:one_d_for_all, R.N)).data
+    a = _coefficients_on_support(sys.p, sys.x, SM)
+    b = _coefficients_on_support(sys.q, sys.x, SN)
+    return (; a = a, b = b, SM = SM, SN = SN)
 end
 
 """
@@ -196,6 +380,17 @@ for a missing extension).
   counted in `n_inconsistent_y` and kept in `raw` with status `:y_mismatch`.
 - `start_system = :polyhedral`: `y` enters linearly, so the polyhedral start system is
   the default at every `n` (total degree pays for the loose Bézout bound).
+- `method = start_system`: `:polyhedral` or `:total_degree` solve the lifted system of
+  this `R` from scratch (one HC compile per call); `:parametric` tracks the
+  `rational_generic_path_count(n, M, N)` paths of a cached generic anchor of the shape
+  `(n, M, N)` to this fit's coefficients (`_solve_rational_hc_parametric`): the family
+  compiles once per shape, so a tree with hundreds of leaves of one shape pays the
+  compile and the anchor once. Phase-3 brief B1.2; `:polyhedral` stays the default.
+- `anchor = :polyhedral` (`:parametric` only): how the shape's anchor is solved on a
+  cold cache, `:polyhedral` or `:monodromy` (brief B1.3, for shapes whose polyhedral
+  start overflows). Ignored on a cache or disk hit.
+- `anchor_dir = _default_rational_anchor_dir()` (`:parametric` only): on-disk anchor
+  store, `nothing` to disable.
 - `verbose = 0`.
 
 # Returns
@@ -207,6 +402,10 @@ n_singular, raw, stats)`:
 - `index`: Morse index of each accepted point (`rational_hessian_index`).
 - `n_paths`, `n_singular`: HC path count and singular endpoints (a nonzero
   `n_singular` on the lifted system deserves a look).
+- `n_path_failures`: paths HC gave up on (step size, iteration cap); 0 on every
+  well-conditioned fit, and the brief's B1.2 test asserts it. Under `:parametric`
+  the `C − n_solutions` remaining paths went to infinity (`stats.n_at_infinity`),
+  which a non-generic fit (sparsified, degenerate leading coefficients) does legitimately.
 - `n_outside`: real solutions outside the box.
 - `raw`: every real solution as `(; x, y, q, status)` with status one of
   `:accepted`, `:outside`, `:q_zero`, `:y_mismatch`, so the audit can count them.
@@ -216,11 +415,33 @@ function solve_rational_critical_points(
     q_tol::Real = 1e-8,
     y_tol::Real = 1e-8,
     start_system::Symbol = :polyhedral,
+    method::Symbol = start_system,
+    anchor::Symbol = :polyhedral,
+    anchor_dir::Union{Nothing,AbstractString} = _default_rational_anchor_dir(),
     verbose::Int = 0,
 )
+    method in (:polyhedral, :total_degree, :parametric) || throw(
+        ArgumentError("method must be :polyhedral, :total_degree or :parametric, got $method"),
+    )
+    anchor in (:polyhedral, :monodromy) ||
+        throw(ArgumentError("anchor must be :polyhedral or :monodromy, got $anchor"))
     n = size(R.grid, 2)
-    sys = rational_critical_system(R)
-    sols, stats = _solve_rational_hc(sys.eqs, sys.vars; start_system = start_system)
+    sols, stats = if method == :parametric
+        coef = _rational_monomial_coefficients(R)
+        out = _solve_rational_hc_parametric(
+            n,
+            R.M,
+            R.N,
+            [(coef.a, coef.b)];
+            anchor = anchor,
+            anchor_dir = anchor_dir,
+            verbose = verbose,
+        )
+        out.per_fit[1]
+    else
+        sys = rational_critical_system(R)
+        _solve_rational_hc(sys.eqs, sys.vars; start_system = method)
+    end
 
     points = Vector{Vector{Float64}}()
     values = Float64[]
@@ -251,9 +472,10 @@ function solve_rational_critical_points(
         push!(raw, (; x = xs, y = ys, q = qv, status = status))
     end
     if verbose >= 1
-        @info "solve_rational_critical_points: $(stats.n_paths) paths, $(length(sols)) real, " *
+        @info "solve_rational_critical_points ($method): $(stats.n_paths) paths, $(length(sols)) real, " *
               "$(length(points)) in box, $n_outside outside, $n_rejected_q with |q| ≤ $q_tol, " *
-              "$n_inconsistent_y y-inconsistent, $(stats.n_singular) singular"
+              "$n_inconsistent_y y-inconsistent, $(stats.n_singular) singular, " *
+              "$(stats.n_path_failures) failed paths"
     end
     return (;
         points = points,
@@ -264,6 +486,7 @@ function solve_rational_critical_points(
         n_outside = n_outside,
         n_inconsistent_y = n_inconsistent_y,
         n_singular = stats.n_singular,
+        n_path_failures = stats.n_path_failures,
         raw = raw,
         stats = stats,
     )

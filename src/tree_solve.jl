@@ -40,6 +40,9 @@ before/after — recorded per leaf for `:hc`; empty for `:msolve`).
   with `sampling = :christoffel`; `:uniform` is for tensor-grid samples.
 - `rational_holdout::Float64 = 0.2`, `rational_seed::Int = 0`: the held-out
   fraction and the seed of the split used to choose the type.
+- `rational_solver::Symbol = :polyhedral`: `method` of `solve_rational_critical_points`
+  for the leaf fits — `:parametric` compiles one family per shape `(n, M, N)` and
+  tracks `rational_generic_path_count` paths per leaf (Phase-3 brief B1.2).
 - `rational_fit::Symbol = :lm`: `:lm` (`rational_lm_refit`) or `:pts`, the
   positive-denominator fit (q ≥ 0.01 · mean(q) at points and exchanged minimisers
   of q); see `rational_fit_on_points`.
@@ -71,7 +74,13 @@ function solve_tree_leaves(
     rational_holdout::Float64 = 0.2,
     rational_seed::Int = 0,
     rational_fit::Symbol = :lm,
+    rational_solver::Symbol = :polyhedral,
 )
+    rational_solver in (:polyhedral, :total_degree, :parametric) || throw(
+        ArgumentError(
+            "rational_solver must be :polyhedral, :total_degree or :parametric, got $rational_solver",
+        ),
+    )
     rational_weights in (:christoffel, :uniform) || throw(
         ArgumentError(
             "rational_weights must be :christoffel or :uniform, got $rational_weights",
@@ -150,6 +159,7 @@ function solve_tree_leaves(
                 rational_holdout,
                 rational_seed + leaf_id,
                 rational_fit,
+                rational_solver,
             )
             rational_choice[leaf_id] = choice
             for u in pts
@@ -174,7 +184,7 @@ function solve_tree_leaves(
 end
 
 """
-    _best_leaf_rational(sd, types, weights, holdout, seed, fit) -> (choice, points)
+    _best_leaf_rational(sd, types, weights, holdout, seed, fit, solver = :polyhedral) -> (choice, points)
 
 The leaf's best certified rational surrogate among `types`, fitted to its stored
 samples (penalized rows dropped): the smallest held-out relative residual among fits
@@ -182,7 +192,7 @@ whose denominator is certified positive on the leaf; the winner is refit on all
 samples and solved. `points` are its critical points inside the leaf, in leaf
 coordinates [-1, 1]^n; `choice` is `(M, N, heldout)` or `nothing`.
 """
-function _best_leaf_rational(sd, types, weights, holdout, seed, fit)
+function _best_leaf_rational(sd, types, weights, holdout, seed, fit, solver::Symbol = :polyhedral)
     pen = Set(sd.penalized_rows)
     keep = [!(i in pen) for i in 1:size(sd.samples, 1)]
     S = Matrix{Float64}(sd.samples[keep, :])
@@ -214,7 +224,7 @@ function _best_leaf_rational(sd, types, weights, holdout, seed, fit)
     end
     best === nothing && return nothing, Vector{Float64}[]
     R = rational_fit_on_points(S, y, best[1], best[2]; sqrt_w = w, fit = fit)
-    res = solve_rational_critical_points(R)
+    res = solve_rational_critical_points(R; method = solver)
     return best, [Vector{Float64}(x) for x in res.points if all(abs.(x) .<= 1 + 1e-9)]
 end
 

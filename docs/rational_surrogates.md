@@ -143,6 +143,56 @@ classifies each point with `rational_hessian_index`: at a critical point
 with no division, whatever the sign of `q` (`rational_hessian_inertia` returns the
 eigenvalues).
 
+## Parametric solve: one compile and one anchor per shape
+
+`solve_rational_critical_points(R; method = :parametric)` (Phase-3 brief B1.2,
+bead 8f4p.7.14) does not build and compile a `System` for each fit. The lifted
+system of a *shape* `(n, M, N)` — monomial supports `SupportGen(n, (:one_d_for_all, M))`
+and `(…, N)`, the coefficients of `p` and `q` as HomotopyContinuation parameters —
+is compiled once and solved once at a generic complex parameter `θ₀`; that
+anchor has exactly
+
+    C(n, M, N) = (M−1)^n + N · Σ_{k=1}^{n} (M−1)^{n−k} (N−1)^{k−1}
+
+solutions (`rational_generic_path_count`; the B1.0 gate checked that the count
+is attained, 0 singular, up to `(4,8,4)` and `(5,6,3)`). Every later fit of the
+shape is a parameter homotopy `θ₀ → (a, b)` tracking exactly `C` paths: no start
+system, no recompile. A tree with 300 leaves of one shape pays the compile and
+the anchor once. The family and anchor live in a module-level cache keyed on
+`(n, M, N)` (the orthogonal basis of a fit only enters its conversion to
+monomials, `_rational_monomial_coefficients`); `_rational_parametric_cache_info()`
+reports hits and misses.
+
+The anchor on a cold cache (`anchor = …`):
+
+- `:polyhedral` (default): `solve` at a random complex `θ₀` with the polyhedral
+  start. HC's polyhedral tracker loses a path now and then (80 of 81 on
+  `(2,10,0)`); a short start set is completed by `monodromy_solve` from the
+  solutions found, with a `@warn`, and recorded as `:polyhedral_completed`.
+- `:monodromy` (brief B1.3): no start system at all — a seed solution is
+  *constructed* (`x₀, y₀, b` random, `a` from the `n+1` linear conditions
+  `p(x₀) = y₀ q(x₀)`, `∇p(x₀) = y₀ ∇q(x₀)`) and `monodromy_solve` runs with
+  `target_solutions_count = C` as the stopping rule. This is the route for
+  shapes whose polyhedral start overflows (`(8,4)` at `n = 7`: 1.64 M paths).
+
+An anchor short of `C` after that is an error, never a silently deficient
+start set. Anchors are stored in `_generated/rational_anchors/n<n>_M<M>_N<N>.jld2`
+(`anchor_dir`; `nothing` disables) and reloaded on the next cold start, so an
+anchor that took hours is paid once per machine. The per-fit `stats` add
+`n_path_failures` (paths HC gave up on; 0 on every tested fit), `n_at_infinity`
+(the `C − n_solutions` paths of a non-generic fit, e.g. a sparsified one),
+`cache_hit`, `t_anchor` and `C`.
+
+Benchmark 1 of the brief (`scripts/audit_rational_phase1.jl --rational-solver
+parametric`, `globtim_results/rational_phase1/20261013T212405_pid2179301`): on
+B, the second 2-D objective of the shape `(2,8,4)`, the cold solve took 0.012 s
+against 0.011 s warm (baseline from-scratch: 7.4 s cold on A), with identical
+paths, real solutions and in-box points — GO. The flags `--solver parametric
+--anchor monodromy` of `experiments/sandbox/rational_trajectories/rational_tree.jl`
+and `rational_solver = :parametric` of `solve_tree_leaves` run the tree leaves
+through the same cache; benchmark 2 (korok 1039183–88 re-run) is stage `b1.2`
+of `experiments/sandbox/rational_phase3/submit_korok.sh`.
+
 ## The `q > 0` requirement
 
 Poincaré–Hopf holds for `r` on the box only if `q` has no zero on the closed
@@ -170,7 +220,11 @@ box) must not be used for a census.
 - `test/test_rational_approx.jl` — the fit (exact recovery, degree reduction,
   `N = 0` parity with `Constructor`, the pole-pair win over degree 20).
 - `test/test_rational_solver.jl` — the lifted solve against a multistart Newton
-  oracle on `f`, the 3-D case, the product-form failure mode, the certificate.
+  oracle on `f`, the 3-D case, the product-form failure mode, the certificate;
+  the B1.2/B1.3 testset (`:parametric` agrees with `:polyhedral` to 1e-10 on the
+  pole pair at `(8,4)`, on its `(6,3)` misfit and on the 3-D pole; anchor
+  `nsolutions == C`; no recompile on the second fit of a shape; the disk store;
+  the monodromy anchor on `(2,8,4)` and `(3,6,3)`; `n_path_failures == 0`).
   Everything HC-dependent is `@test_skip`ped loudly if the extension is
   missing; a missing extension is never "0 critical points".
 - `scripts/audit_rational_phase1.jl` — the comparison at matched degrees of
