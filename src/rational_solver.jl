@@ -49,6 +49,36 @@ function _rational_polyvars(n::Int)
 end
 
 """
+    rational_generic_path_count(n, M, N) -> Int
+
+Number of isolated solutions of the lifted system p − y q = 0, ∇p − y ∇q = 0 for
+a GENERIC rational function p/q of type (M, N) in `n` variables, i.e. the
+number of critical points of a generic rational function of that type, and
+hence the number of paths HC's polyhedral start tracks for it
+(docs/research/plans/RATIONAL_PHASE3_BRIEF.md, B1.0):
+
+    C(n, M, N) = (M−1)^n + N · Σ_{k=1}^{n} (M−1)^{n−k} (N−1)^{k−1}
+
+It reproduces every ledgered polyhedral count — (8,4) in 2–6-D: 89, 659,
+4 721, 33 371, 234 569; (6,3) at n = 6, 7, 8: 31 186, 156 122, 780 994 — and
+gives M + N − 1 at n = 1. The formula is a cost model: `M` sets the exponent,
+`N` only the multiplier. `N = 0` is the polynomial case, (M−1)^n (the Bézout
+count of ∇p = 0). Overflow-safe: computed in `Int128` and converted, so a
+count above `typemax(Int)` raises instead of wrapping.
+"""
+function rational_generic_path_count(n::Integer, M::Integer, N::Integer)
+    n >= 1 || throw(ArgumentError("n must be ≥ 1, got $n"))
+    M >= 1 || throw(ArgumentError("M must be ≥ 1, got $M"))
+    N >= 0 || throw(ArgumentError("N must be ≥ 0, got $N"))
+    a, b = Int128(M - 1), Int128(N - 1)
+    c = a^n
+    if N > 0
+        c += Int128(N) * sum(a^(n - k) * b^(k - 1) for k in 1:n)
+    end
+    return Int(c)
+end
+
+"""
     rational_critical_system(R::ApproxRational; float_coeffs = true)
         -> (; eqs, vars, x, y, p, q)
 

@@ -367,6 +367,9 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_rational_positive.jl") do
     include("test_rational_positive.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_rational_pathcount.jl") do
+    include("test_rational_pathcount.jl")
+end
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_rational_solver.jl") do
     include("test_rational_solver.jl")
 end
