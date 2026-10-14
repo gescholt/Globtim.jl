@@ -2,8 +2,18 @@ module GlobtimHomotopyContinuationExt
 
 using Globtim
 using HomotopyContinuation:
-    solve, real_solutions, System, solutions, nsolutions, ntracked, nsingular, nfailed,
-    nat_infinity, nparameters, monodromy_solve, @var
+    solve,
+    real_solutions,
+    System,
+    solutions,
+    nsolutions,
+    ntracked,
+    nsingular,
+    nfailed,
+    nat_infinity,
+    nparameters,
+    monodromy_solve,
+    @var
 import HomotopyContinuation   # for HomotopyContinuation.differentiate (parametric path)
 using MultivariatePolynomials: differentiate   # cold path: differentiate DynamicPolynomials
 using LinearAlgebra: norm, pinv
@@ -107,7 +117,11 @@ const _RAT_PARAM_HITS = Ref(0)
 const _RAT_PARAM_MISSES = Ref(0)
 
 Globtim._rational_parametric_cache_info(::Module) = lock(_RAT_PARAM_LOCK) do
-    (; n_shapes = length(_RAT_PARAM_CACHE), hits = _RAT_PARAM_HITS[], misses = _RAT_PARAM_MISSES[])
+    (;
+        n_shapes = length(_RAT_PARAM_CACHE),
+        hits = _RAT_PARAM_HITS[],
+        misses = _RAT_PARAM_MISSES[],
+    )
 end
 
 Globtim._rational_parametric_cache_clear!(::Module) = lock(_RAT_PARAM_LOCK) do
@@ -123,7 +137,11 @@ end
 The lifted system `p − y q, ∂ᵢp − y ∂ᵢq` in `vcat(x, [y])` with the monomial
 coefficients `a` (over the rows of `SM`) and `b` (rows of `SN`) as parameters.
 """
-function _rational_family(n::Int, SM::AbstractMatrix{<:Integer}, SN::AbstractMatrix{<:Integer})
+function _rational_family(
+    n::Int,
+    SM::AbstractMatrix{<:Integer},
+    SN::AbstractMatrix{<:Integer},
+)
     @var x[1:n] y
     @var a[1:size(SM, 1)] b[1:size(SN, 1)]
     xv = collect(x)
@@ -147,14 +165,18 @@ A solution of the family by construction (brief B1.3): `x₀, y₀, b` random co
 then `a` is a solution of the `n + 1` linear conditions `p(x₀) = y₀ q(x₀)`,
 `∇p(x₀) = y₀ ∇q(x₀)`; the least-norm correction of a random `a` keeps it generic.
 """
-function _rational_constructed_seed(rng, n::Int, SM::AbstractMatrix{<:Integer}, SN::AbstractMatrix{<:Integer})
+function _rational_constructed_seed(
+    rng,
+    n::Int,
+    SM::AbstractMatrix{<:Integer},
+    SN::AbstractMatrix{<:Integer},
+)
     x0 = randn(rng, ComplexF64, n)
     y0 = randn(rng, ComplexF64)
     b = randn(rng, ComplexF64, size(SN, 1))
     monoval(α, x) = prod(x[i]^Int(α[i]) for i in 1:n)
     dmono(α, x, j) =
-        α[j] == 0 ? zero(ComplexF64) :
-        α[j] * prod(x[i]^Int(α[i] - (i == j)) for i in 1:n)
+        α[j] == 0 ? zero(ComplexF64) : α[j] * prod(x[i]^Int(α[i] - (i == j)) for i in 1:n)
     A = Matrix{ComplexF64}(undef, n + 1, size(SM, 1))
     B = Matrix{ComplexF64}(undef, n + 1, size(SN, 1))
     for k in 1:size(SM, 1)
@@ -174,8 +196,9 @@ function _rational_constructed_seed(rng, n::Int, SM::AbstractMatrix{<:Integer}, 
     rhs = y0 .* (B * b)
     a_rand = randn(rng, ComplexF64, size(SM, 1))
     a = a_rand + pinv(A) * (rhs - A * a_rand)
-    norm(A * a - rhs) < 1e-8 * (1 + norm(rhs)) ||
-        error("constructed monodromy seed does not satisfy the lifted system (residual $(norm(A * a - rhs)))")
+    norm(A * a - rhs) < 1e-8 * (1 + norm(rhs)) || error(
+        "constructed monodromy seed does not satisfy the lifted system (residual $(norm(A * a - rhs)))",
+    )
     return (; params = vcat(a, b), sol = vcat(x0, [y0]))
 end
 
@@ -191,7 +214,17 @@ is completed by `monodromy_solve` from the solutions it did find, with a `@warn`
 `anchor = :polyhedral_completed` in the record; an anchor still short of `C` after that
 is an error, never a silently deficient start set.
 """
-function _rational_anchor(n::Int, M::Int, N::Int, F, SM, SN; anchor::Symbol, anchor_dir, verbose::Int)
+function _rational_anchor(
+    n::Int,
+    M::Int,
+    N::Int,
+    F,
+    SM,
+    SN;
+    anchor::Symbol,
+    anchor_dir,
+    verbose::Int,
+)
     C = Globtim.rational_generic_path_count(n, M, N)
     if anchor_dir !== nothing
         stored = Globtim._rational_anchor_load(anchor_dir, n, M, N)
@@ -200,7 +233,8 @@ function _rational_anchor(n::Int, M::Int, N::Int, F, SM, SN; anchor::Symbol, anc
                 "stored anchor $(Globtim._rational_anchor_path(anchor_dir, n, M, N)) has " *
                 "$(stored.n_solutions) solutions but C($n,$M,$N) = $C; delete the file to re-solve",
             )
-            verbose >= 1 && @info "rational anchor ($n,$M,$N): loaded $C solutions from $anchor_dir"
+            verbose >= 1 &&
+                @info "rational anchor ($n,$M,$N): loaded $C solutions from $anchor_dir"
             return (;
                 params = stored.params,
                 solutions = stored.solutions,
@@ -219,7 +253,12 @@ function _rational_anchor(n::Int, M::Int, N::Int, F, SM, SN; anchor::Symbol, anc
     t = @elapsed begin
         if anchor == :polyhedral
             θ0 = randn(rng, ComplexF64, nparameters(F))
-            R0 = solve(F; target_parameters = θ0, start_system = :polyhedral, show_progress = false)
+            R0 = solve(
+                F;
+                target_parameters = θ0,
+                start_system = :polyhedral,
+                show_progress = false,
+            )
             S0 = solutions(R0)
             nsingular(R0) == 0 || error(
                 "polyhedral anchor for shape ($n,$M,$N) has $(nsingular(R0)) singular endpoints " *
@@ -261,11 +300,26 @@ function _rational_anchor(n::Int, M::Int, N::Int, F, SM, SN; anchor::Symbol, anc
         "$anchor_kind anchor for shape ($n,$M,$N) reached $(length(S0)) solutions, the generic count is " *
         "C($n,$M,$N) = $C (brief B1.0 gate); the start set would be deficient — not cached",
     )
-    verbose >= 1 && @info "rational anchor ($n,$M,$N): $anchor_kind, $C solutions in $(round(t; digits = 2)) s"
+    verbose >= 1 &&
+        @info "rational anchor ($n,$M,$N): $anchor_kind, $C solutions in $(round(t; digits = 2)) s"
     anchor_dir !== nothing && Globtim._rational_anchor_save(
-        anchor_dir, n, M, N; params = θ0, solutions = S0, anchor = anchor_kind, t_anchor = t,
+        anchor_dir,
+        n,
+        M,
+        N;
+        params = θ0,
+        solutions = S0,
+        anchor = anchor_kind,
+        t_anchor = t,
     )
-    return (; params = θ0, solutions = S0, C = C, t_anchor = t, anchor = anchor_kind, source = anchor)
+    return (;
+        params = θ0,
+        solutions = S0,
+        C = C,
+        t_anchor = t,
+        anchor = anchor_kind,
+        source = anchor,
+    )
 end
 
 function Globtim._solve_rational_hc_parametric(
@@ -273,7 +327,7 @@ function Globtim._solve_rational_hc_parametric(
     M::Int,
     N::Int,
     fits::AbstractVector;
-    anchor::Symbol = :polyhedral,
+    anchor::Symbol = :monodromy,
     anchor_dir::Union{Nothing,AbstractString} = Globtim._default_rational_anchor_dir(),
     verbose::Int = 0,
 )
@@ -286,7 +340,17 @@ function Globtim._solve_rational_hc_parametric(
             SM = Globtim.SupportGen(n, (:one_d_for_all, M)).data
             SN = Globtim.SupportGen(n, (:one_d_for_all, N)).data
             F = _rational_family(n, SM, SN)
-            anc = _rational_anchor(n, M, N, F, SM, SN; anchor = anchor, anchor_dir = anchor_dir, verbose = verbose)
+            anc = _rational_anchor(
+                n,
+                M,
+                N,
+                F,
+                SM,
+                SN;
+                anchor = anchor,
+                anchor_dir = anchor_dir,
+                verbose = verbose,
+            )
             e = (; F = F, SM = SM, SN = SN, anc...)
             _RAT_PARAM_CACHE[key] = e
             _RAT_PARAM_MISSES[] += 1
@@ -297,7 +361,9 @@ function Globtim._solve_rational_hc_parametric(
     per_fit = Vector{Tuple{Vector{Vector{Float64}},NamedTuple}}(undef, length(fits))
     for (j, (a, b)) in enumerate(fits)
         length(a) == na && length(b) == nb || throw(
-            ArgumentError("fit $j has $(length(a)) + $(length(b)) coefficients; shape ($n,$M,$N) needs $na + $nb"),
+            ArgumentError(
+                "fit $j has $(length(a)) + $(length(b)) coefficients; shape ($n,$M,$N) needs $na + $nb",
+            ),
         )
         Rj = solve(
             entry.F,

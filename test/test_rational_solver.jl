@@ -319,7 +319,8 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
         # is a parameter homotopy tracking exactly C(n, M, N) paths. Assertions are
         # agreement with the from-scratch :polyhedral solve, the anchor count, the
         # cache, and zero failed paths (RATIONAL_PHASE3_BRIEF.md, B1.2 tests 1–5,
-        # B1.3 unit test).
+        # B1.3 unit test). The default anchor is :monodromy; the :polyhedral anchor
+        # has its own testset below.
         @testset "B1.2 parametric lifted solver" begin
             anchor_dir = mktempdir()
             Globtim._rational_parametric_cache_clear!()
@@ -351,7 +352,7 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
                     @test rq.stats.C == 89
                     @test rq.n_paths == 89
                     @test rq.stats.cache_hit == false
-                    @test rq.stats.anchor == :polyhedral
+                    @test rq.stats.anchor == :monodromy      # the default anchor
                     info = Globtim._rational_parametric_cache_info()
                     @test info.misses == 1
                     @test info.n_shapes == 1
@@ -442,6 +443,11 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
                 stored = Globtim._rational_anchor_load(mono_dir, 2, 8, 4)
                 @test stored.n_solutions == 89
                 @test stored.anchor == :monodromy
+                # monodromy is the default: the same call without `anchor` gives the same anchor
+                Globtim._rational_parametric_cache_clear!()
+                rq_def = solve_rational_critical_points(R; method = :parametric, anchor_dir = mktempdir())
+                @test rq_def.stats.anchor == :monodromy
+                @test sets_match(rq.points, rq_def.points; tol = 1e-10)
 
                 TR3 = TestInput(f_pole3; dim = 3, center = zeros(3), sample_range = 1.0)
                 R63 = RationalConstructor(TR3, 6, 3)
@@ -455,6 +461,25 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
                 @test sets_match(rp3.points, rq3.points; tol = 1e-8)
                 @test rp3.n_rejected_q == rq3.n_rejected_q
                 @test rp3.n_outside == rq3.n_outside
+            end
+
+            @testset "polyhedral anchor (the independent check of C): exactly C solutions, same census" begin
+                poly_dir = mktempdir()
+                Globtim._rational_parametric_cache_clear!()
+                R = RationalConstructor(TRp, 8, 4)
+                rp = solve_rational_critical_points(R; method = :polyhedral)
+                rq = solve_rational_critical_points(R; method = :parametric, anchor = :polyhedral, anchor_dir = poly_dir)
+                # :polyhedral_completed when the polyhedral tracker lost a path and monodromy filled it
+                @test rq.stats.anchor in (:polyhedral, :polyhedral_completed)
+                @test rq.stats.C == 89
+                @test rq.n_paths == 89
+                @test rq.n_path_failures == 0
+                @test sets_match(rp.points, rq.points; tol = 1e-10)
+                @test rp.n_rejected_q == rq.n_rejected_q
+                @test rp.n_outside == rq.n_outside
+                stored = Globtim._rational_anchor_load(poly_dir, 2, 8, 4)
+                @test stored.n_solutions == 89
+                @test stored.anchor == rq.stats.anchor
             end
 
             @testset "argument checks" begin

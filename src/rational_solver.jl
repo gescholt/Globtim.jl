@@ -42,7 +42,7 @@ function _solve_rational_hc(args...; kwargs...)
 end
 
 """
-    _solve_rational_hc_parametric(n, M, N, fits; anchor = :polyhedral,
+    _solve_rational_hc_parametric(n, M, N, fits; anchor = :monodromy,
                                   anchor_dir = _default_rational_anchor_dir(), verbose = 0)
         -> (; per_fit, anchor)
 
@@ -56,15 +56,19 @@ monomials), then each fit `(a, b)` in `fits` is a parameter homotopy from `θ₀
 `vcat(a, b)` tracking exactly `C(n, M, N) = rational_generic_path_count(n, M, N)` paths.
 
 `anchor`:
+- `:monodromy` (default): `monodromy_solve` from a CONSTRUCTED seed (`x₀, y₀, b` random,
+  `a` solved from the `n + 1` linear conditions) with `target_solutions_count = C` as the
+  stopping rule — no start system at all, which is what makes `(8, 4)` run at `n ≥ 7`
+  where the polyhedral start overflows, and is ≈ 10× cheaper than the polyhedral anchor at
+  equal count (B1.0: 5.9 s vs 66 s on `(4,8,4)` = 4721; the five cold shapes of a 4-D
+  shooting-tree chart cost 150 s polyhedral). Errors if monodromy stops short of `C`.
 - `:polyhedral`: `solve` the family at a random complex `θ₀` with the polyhedral start
   (0 singular endpoints required). HC's polyhedral tracker loses a path now and then
   (80 of 81 on `(2,10,0)`, 88 of 89 on `(2,8,4)` in one audit run); a short start set
   is completed by `monodromy_solve` from the solutions found, with a `@warn`, and the
   anchor is then recorded as `:polyhedral_completed`. Still short after that: error.
-- `:monodromy`: `monodromy_solve` from a CONSTRUCTED seed (`x₀, y₀, b` random, `a`
-  solved from the `n + 1` linear conditions) with `target_solutions_count = C` as the
-  stopping rule — no start system at all, which is what makes `(8, 4)` run at `n ≥ 7`
-  where the polyhedral start overflows. Errors if monodromy stops short of `C`.
+  Kept as the independent check of `C`: monodromy can only stop AT `C`, the polyhedral
+  start can also exceed it (`test_rational_pathcount.jl`).
 
 `anchor_dir` (`nothing` disables): the anchor of each shape is stored as
 `<anchor_dir>/n<n>_M<M>_N<N>.jld2` and loaded on the next cold start, so an anchor
@@ -388,9 +392,10 @@ for a missing extension).
   `(n, M, N)` to this fit's coefficients (`_solve_rational_hc_parametric`): the family
   compiles once per shape, so a tree with hundreds of leaves of one shape pays the
   compile and the anchor once. Phase-3 brief B1.2; `:polyhedral` stays the default.
-- `anchor = :polyhedral` (`:parametric` only): how the shape's anchor is solved on a
-  cold cache, `:polyhedral` or `:monodromy` (brief B1.3, for shapes whose polyhedral
-  start overflows). Ignored on a cache or disk hit.
+- `anchor = :monodromy` (`:parametric` only): how the shape's anchor is solved on a
+  cold cache — `:monodromy` from a constructed seed (brief B1.3; ≈ 10× cheaper than the
+  polyhedral anchor at equal count and the only route where that start overflows) or
+  `:polyhedral` (the independent check of `C`). Ignored on a cache or disk hit.
 - `anchor_dir = _default_rational_anchor_dir()` (`:parametric` only): on-disk anchor
   store, `nothing` to disable.
 - `verbose = 0`.
@@ -418,7 +423,7 @@ function solve_rational_critical_points(
     y_tol::Real = 1e-8,
     start_system::Symbol = :polyhedral,
     method::Symbol = start_system,
-    anchor::Symbol = :polyhedral,
+    anchor::Symbol = :monodromy,
     anchor_dir::Union{Nothing,AbstractString} = _default_rational_anchor_dir(),
     verbose::Int = 0,
 )

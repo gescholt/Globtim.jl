@@ -165,15 +165,20 @@ reports hits and misses.
 
 The anchor on a cold cache (`anchor = …`):
 
-- `:polyhedral` (default): `solve` at a random complex `θ₀` with the polyhedral
-  start. HC's polyhedral tracker loses a path now and then (80 of 81 on
-  `(2,10,0)`); a short start set is completed by `monodromy_solve` from the
-  solutions found, with a `@warn`, and recorded as `:polyhedral_completed`.
-- `:monodromy` (brief B1.3): no start system at all — a seed solution is
+- `:monodromy` (default; brief B1.3): no start system at all — a seed solution is
   *constructed* (`x₀, y₀, b` random, `a` from the `n+1` linear conditions
   `p(x₀) = y₀ q(x₀)`, `∇p(x₀) = y₀ ∇q(x₀)`) and `monodromy_solve` runs with
-  `target_solutions_count = C` as the stopping rule. This is the route for
-  shapes whose polyhedral start overflows (`(8,4)` at `n = 7`: 1.64 M paths).
+  `target_solutions_count = C` as the stopping rule. It is ≈ 10× cheaper than
+  the polyhedral anchor at equal count (B1.0: 5.9 s vs 66 s on `(4,8,4)` =
+  4721 solutions; the five cold shapes of a 4-D shooting-tree chart cost 150 s
+  polyhedral, a quarter of that chart's HC wall) and the only route for shapes
+  whose polyhedral start overflows (`(8,4)` at `n = 7`: 1.64 M paths).
+- `:polyhedral`: `solve` at a random complex `θ₀` with the polyhedral start.
+  HC's polyhedral tracker loses a path now and then (80 of 81 on `(2,10,0)`);
+  a short start set is completed by `monodromy_solve` from the solutions
+  found, with a `@warn`, and recorded as `:polyhedral_completed`. Kept as the
+  independent check of `C`: monodromy with a target count can only stop *at*
+  `C`, the polyhedral start can also exceed it.
 
 An anchor short of `C` after that is an error, never a silently deficient
 start set. Anchors are stored in `_generated/rational_anchors/n<n>_M<M>_N<N>.jld2`

@@ -255,8 +255,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # (from scratch per fit); :parametric → one compiled family + anchor per
         # shape (n,M,N), parameter homotopy per fit (Phase-3 brief B1.2)
         "rational_solver" => nothing,
-        # anchor of the parametric solver on a cold cache: polyhedral | monodromy (B1.3)
-        "rational_anchor" => :polyhedral,
+        # anchor of the parametric solver on a cold cache: monodromy (default; ≈ 10× cheaper
+        # at equal count, B1.0/B1.2) | polyhedral (the independent check of C)
+        "rational_anchor" => :monodromy,
     )
     i = 1
     while i <= length(argv)
@@ -754,7 +755,7 @@ with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
 """
 function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
         dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, face_samples::Int = face_samples_for(o.dim),
-        fit::String = "lin", start_system::Symbol = :polyhedral, anchor::Symbol = :polyhedral, qfilter::Real = 0.0)
+        fit::String = "lin", start_system::Symbol = :polyhedral, anchor::Symbol = :monodromy, qfilter::Real = 0.0)
     lo, hi = box(o)
     fit in ("lin", "lm", "pts") || error("rational fit must be lin, lm or pts, got $fit")
     # pts: q ≥ 0.01 · mean(q) at the fit points, box points and exchanged minimisers
