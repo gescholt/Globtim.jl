@@ -192,7 +192,15 @@ whose denominator is certified positive on the leaf; the winner is refit on all
 samples and solved. `points` are its critical points inside the leaf, in leaf
 coordinates [-1, 1]^n; `choice` is `(M, N, heldout)` or `nothing`.
 """
-function _best_leaf_rational(sd, types, weights, holdout, seed, fit, solver::Symbol = :polyhedral)
+function _best_leaf_rational(
+    sd,
+    types,
+    weights,
+    holdout,
+    seed,
+    fit,
+    solver::Symbol = :polyhedral,
+)
     pen = Set(sd.penalized_rows)
     keep = [!(i in pen) for i in 1:size(sd.samples, 1)]
     S = Matrix{Float64}(sd.samples[keep, :])

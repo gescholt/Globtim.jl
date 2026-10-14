@@ -140,7 +140,8 @@ function _rational_anchor_save(
 )
     mkpath(dir)
     path = _rational_anchor_path(dir, n, M, N)
-    S = isempty(solutions) ? zeros(ComplexF64, n + 1, 0) :
+    S =
+        isempty(solutions) ? zeros(ComplexF64, n + 1, 0) :
         reduce(hcat, (Vector{ComplexF64}(s) for s in solutions))
     tmp = path * ".tmp-" * string(getpid())
     JLD2.jldsave(
@@ -169,8 +170,9 @@ function _rational_anchor_load(dir::AbstractString, n::Int, M::Int, N::Int)
     path = _rational_anchor_path(dir, n, M, N)
     isfile(path) || return nothing
     d = JLD2.load(path)
-    (d["n"], d["M"], d["N"]) == (n, M, N) ||
-        error("anchor file $path is for shape $((d["n"], d["M"], d["N"])), expected $((n, M, N))")
+    (d["n"], d["M"], d["N"]) == (n, M, N) || error(
+        "anchor file $path is for shape $((d["n"], d["M"], d["N"])), expected $((n, M, N))",
+    )
     S = d["solutions"]
     sols = [Vector{ComplexF64}(S[:, j]) for j in 1:size(S, 2)]
     return (;
@@ -421,7 +423,9 @@ function solve_rational_critical_points(
     verbose::Int = 0,
 )
     method in (:polyhedral, :total_degree, :parametric) || throw(
-        ArgumentError("method must be :polyhedral, :total_degree or :parametric, got $method"),
+        ArgumentError(
+            "method must be :polyhedral, :total_degree or :parametric, got $method",
+        ),
     )
     anchor in (:polyhedral, :monodromy) ||
         throw(ArgumentError("anchor must be :polyhedral or :monodromy, got $anchor"))
