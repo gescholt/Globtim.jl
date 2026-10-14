@@ -258,6 +258,9 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # anchor of the parametric solver on a cold cache: monodromy (default; ≈ 10× cheaper
         # at equal count, B1.0/B1.2) | polyhedral (the independent check of C)
         "rational_anchor" => :monodromy,
+        # HC representation of the parametric family: auto (interpreted above 2000
+        # parameters) | mixed (compiled) | false (interpreted)
+        "rational_compile" => :auto,
     )
     i = 1
     while i <= length(argv)
@@ -336,6 +339,12 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
             cfg["rational_anchor"] = Symbol(argv[i+1])
             cfg["rational_anchor"] in (:polyhedral, :monodromy) ||
                 error("--rational-anchor takes polyhedral or monodromy")
+            i += 1
+        elseif a == "--rational-compile"        # auto | mixed | false
+            v = argv[i+1]
+            cfg["rational_compile"] = v == "false" ? false : v == "true" ? true : Symbol(v)
+            cfg["rational_compile"] in (:auto, :mixed, true, false) ||
+                error("--rational-compile takes auto, mixed or false")
             i += 1
         elseif a == "--start-system"        # auto | polyhedral | total_degree
             cfg["start_system"] = Symbol(argv[i+1])
@@ -755,7 +764,8 @@ with seed `arm.seed`; `n_evals` counts the objective evaluations of the fit and
 """
 function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothing, truth = nothing,
         dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, face_samples::Int = face_samples_for(o.dim),
-        fit::String = "lin", start_system::Symbol = :polyhedral, anchor::Symbol = :monodromy, qfilter::Real = 0.0)
+        fit::String = "lin", start_system::Symbol = :polyhedral, anchor::Symbol = :monodromy,
+        compile::Union{Symbol,Bool} = :auto, qfilter::Real = 0.0)
     lo, hi = box(o)
     fit in ("lin", "lm", "pts") || error("rational fit must be lin, lm or pts, got $fit")
     # pts: q ≥ 0.01 · mean(q) at the fit points, box points and exchanged minimisers
@@ -782,18 +792,19 @@ function run_rational(o::Objective, TR, M, N; arm = GRID_ARM, validation = nothi
     # the conversion is repeated inside solve_rational_critical_points; it is
     # timed separately here because it is cheap and the brief asks for the split
     t_convert = @elapsed rational_critical_system(R)
-    t_solve = @elapsed res = solve_rational_critical_points(R; method = start_system, anchor = anchor)
+    t_solve = @elapsed res = solve_rational_critical_points(R; method = start_system, anchor = anchor, compile = compile)
     t_solve -= t_convert
     # second solve of the same system: HC compiles a straight-line program per
     # new System, so the first call is JIT-dominated at these sizes; the warm
     # time is the path-tracking cost. Under :parametric the first call of a
     # SHAPE pays the compile and the anchor (stats.t_anchor), later fits of the
     # shape do not — Phase-3 brief B1.2, benchmark 1.
-    t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R; method = start_system, anchor = anchor)) - t_convert : NaN
+    t_solve_warm = warm ? (@elapsed solve_rational_critical_points(R; method = start_system, anchor = anchor, compile = compile)) - t_convert : NaN
     stats = res.stats
     if start_system == :parametric
-        @printf("[parametric: %d paths = C(%d,%d,%d), anchor %s %s, t_anchor %.2fs, %d failed] ",
-            stats.n_paths, o.dim, R.M, R.N, stats.anchor, stats.cache_hit ? "cached" : "cold", stats.t_anchor, stats.n_path_failures)
+        @printf("[parametric: %d paths = C(%d,%d,%d), anchor %s %s, t_anchor %.2fs, %d failed, %s] ",
+            stats.n_paths, o.dim, R.M, R.N, stats.anchor, stats.cache_hit ? "cached" : "cold", stats.t_anchor, stats.n_path_failures,
+            stats.compile === false ? "interpreted" : "compiled")
     end
     # the exact minimum of q on the box (face recursion) wherever it is affordable:
     # q quadratic at any n, one small HC solve per face for N ≥ 3 up to n = 8.
@@ -1330,7 +1341,7 @@ function main(
             # what the Christoffel arms avoid), compile on a Christoffel arm
             warm_arm = any(a -> a.sampling == :grid, cfg["sampling"]) ? GRID_ARM :
                        (; sampling = :christoffel, per_dof = 2.0, seed = 0)
-            run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3, start_system = rational_solver(cfg), anchor = cfg["rational_anchor"])
+            run_rational(o, TRw, 3, 2; arm = warm_arm, face_samples = 3, start_system = rational_solver(cfg), anchor = cfg["rational_anchor"], compile = cfg["rational_compile"])
             # degree 2 above n = 8: the warm-up only compiles, and a degree-4 polyhedral
             # start system overflows at n = 12
             run_polynomial(o, TRw, o.dim > 8 ? 2 : 4; arm = warm_arm, start_system = cfg["start_system"])
@@ -1371,7 +1382,7 @@ function main(
             @printf("  rational %-16s ... ", label)
             c = try
                 run_rational(o, TR, M, N; arm = arm, validation = validation, face_samples = fs, fit = fit,
-                    start_system = rational_solver(cfg), anchor = cfg["rational_anchor"], qfilter = cfg["qfilter"], ckw...)
+                    start_system = rational_solver(cfg), anchor = cfg["rational_anchor"], compile = cfg["rational_compile"], qfilter = cfg["qfilter"], ckw...)
             catch e
                 failed_cell(o, "rational", label, M, N, sprint(showerror, e); truth = truth_pts, arm = arm,
                     base_label = "($M,$N)" * ftag)
@@ -1513,6 +1524,7 @@ function main(
             "rational_start_system" => String(cfg["rational_start_system"]),
             "rational_solver" => String(rational_solver(cfg)),
             "rational_anchor" => String(cfg["rational_anchor"]),
+            "rational_compile" => string(cfg["rational_compile"]),
             "smoke" => cfg["smoke"],
             "target" => cfg["target"], "target_eps" => cfg["target_eps"], "target_shift" => cfg["target_shift"],
         ))

@@ -116,6 +116,19 @@ const _RAT_PARAM_CACHE = Dict{Tuple{Int,Int,Int},Any}()
 const _RAT_PARAM_HITS = Ref(0)
 const _RAT_PARAM_MISSES = Ref(0)
 
+# Families with more HC parameters than this are interpreted (`compile = false`)
+# under `compile = :auto`; smaller ones take HC's default `:mixed` (compiled
+# straight-line program). The compile is serial Julia/LLVM codegen on one function
+# whose size is the term count of the family: (8,8,4) with 13 365 parameters was
+# still in LLVM register allocation after 10 h on korok 1104280, while interpreted
+# evaluation costs only ~1.5–2× a compiled one per call (bench in
+# docs/research/rational_surrogates_phase3.md, B1.3).
+const _RAT_PARAM_COMPILE_MAX_PARAMS = 2000
+
+_rational_compile_mode(F::System, compile) =
+    compile === :auto ? (nparameters(F) > _RAT_PARAM_COMPILE_MAX_PARAMS ? false : :mixed) :
+    compile
+
 Globtim._rational_parametric_cache_info(::Module) = lock(_RAT_PARAM_LOCK) do
     (;
         n_shapes = length(_RAT_PARAM_CACHE),
@@ -203,7 +216,7 @@ function _rational_constructed_seed(
 end
 
 """
-    _rational_anchor(n, M, N, F, SM, SN; anchor, anchor_dir, verbose) -> NamedTuple
+    _rational_anchor(n, M, N, F, Fx, SM, SN; anchor, anchor_dir, verbose, compile) -> NamedTuple
 
 The shape's anchor `(; params, solutions, C, t_anchor, anchor, source)`: loaded from
 `anchor_dir` when stored there, else solved (`:polyhedral` start at a random complex
@@ -212,18 +225,22 @@ and stored. The solution count must equal `C(n, M, N)`: a polyhedral start that 
 paths (it does, once in a while — 80 of 81 on (2,10,0) at a random complex parameter)
 is completed by `monodromy_solve` from the solutions it did find, with a `@warn` and
 `anchor = :polyhedral_completed` in the record; an anchor still short of `C` after that
-is an error, never a silently deficient start set.
+is an error, never a silently deficient start set. `Fx` is `fixed(F; compile)` — the
+representation (compiled or interpreted) shared by the monodromy anchor and every
+later track; the polyhedral start needs the symbolic `F` and takes `compile` itself.
 """
 function _rational_anchor(
     n::Int,
     M::Int,
     N::Int,
     F,
+    Fx,
     SM,
     SN;
     anchor::Symbol,
     anchor_dir,
     verbose::Int,
+    compile,
 )
     C = Globtim.rational_generic_path_count(n, M, N)
     if anchor_dir !== nothing
@@ -258,6 +275,7 @@ function _rational_anchor(
                 target_parameters = θ0,
                 start_system = :polyhedral,
                 show_progress = false,
+                compile = compile,
             )
             S0 = solutions(R0)
             nsingular(R0) == 0 || error(
@@ -270,7 +288,7 @@ function _rational_anchor(
                 @warn "polyhedral anchor for shape ($n,$M,$N): $(length(S0)) of C = $C solutions " *
                       "($(nfailed(R0)) failed paths, $(nat_infinity(R0)) at infinity); completing by monodromy"
                 Rm = monodromy_solve(
-                    F,
+                    Fx,
                     S0,
                     θ0;
                     target_solutions_count = C,
@@ -283,7 +301,7 @@ function _rational_anchor(
         elseif anchor == :monodromy
             seed = _rational_constructed_seed(rng, n, SM, SN)
             Rm = monodromy_solve(
-                F,
+                Fx,
                 [seed.sol],
                 seed.params;
                 target_solutions_count = C,
@@ -330,7 +348,10 @@ function Globtim._solve_rational_hc_parametric(
     anchor::Symbol = :monodromy,
     anchor_dir::Union{Nothing,AbstractString} = Globtim._default_rational_anchor_dir(),
     verbose::Int = 0,
+    compile::Union{Symbol,Bool} = :auto,
 )
+    compile in (:auto, :mixed, true, false) ||
+        throw(ArgumentError("compile must be :auto, :mixed, true or false, got $compile"))
     key = (n, M, N)
     entry, hit = lock(_RAT_PARAM_LOCK) do
         if haskey(_RAT_PARAM_CACHE, key)
@@ -340,18 +361,24 @@ function Globtim._solve_rational_hc_parametric(
             SM = Globtim.SupportGen(n, (:one_d_for_all, M)).data
             SN = Globtim.SupportGen(n, (:one_d_for_all, N)).data
             F = _rational_family(n, SM, SN)
+            mode = _rational_compile_mode(F, compile)
+            verbose >= 1 &&
+                @info "rational family ($n,$M,$N): $(nparameters(F)) parameters, compile = $mode"
+            Fx = HomotopyContinuation.fixed(F; compile = mode)
             anc = _rational_anchor(
                 n,
                 M,
                 N,
                 F,
+                Fx,
                 SM,
                 SN;
                 anchor = anchor,
                 anchor_dir = anchor_dir,
                 verbose = verbose,
+                compile = mode,
             )
-            e = (; F = F, SM = SM, SN = SN, anc...)
+            e = (; F = F, Fx = Fx, compile = mode, SM = SM, SN = SN, anc...)
             _RAT_PARAM_CACHE[key] = e
             _RAT_PARAM_MISSES[] += 1
             (e, false)
@@ -366,7 +393,7 @@ function Globtim._solve_rational_hc_parametric(
             ),
         )
         Rj = solve(
-            entry.F,
+            entry.Fx,
             entry.solutions;
             start_parameters = entry.params,
             target_parameters = vcat(a, b),
@@ -385,6 +412,7 @@ function Globtim._solve_rational_hc_parametric(
             cache_hit = hit,
             t_anchor = entry.t_anchor,
             C = entry.C,
+            compile = entry.compile,
         )
         per_fit[j] = (rl, stats)
     end

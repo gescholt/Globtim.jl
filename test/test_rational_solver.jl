@@ -482,6 +482,36 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
                 @test stored.anchor == rq.stats.anchor
             end
 
+            @testset "interpreted family (compile = false): same census, same anchor count" begin
+                int_dir = mktempdir()
+                Globtim._rational_parametric_cache_clear!()
+                R = RationalConstructor(TRp, 8, 4)
+                rp = solve_rational_critical_points(R; method = :polyhedral)
+                rq = solve_rational_critical_points(R; method = :parametric, compile = false, anchor_dir = int_dir)
+                @test rq.stats.compile == false
+                @test rq.stats.anchor == :monodromy
+                @test rq.n_paths == 89
+                @test rq.n_path_failures == 0
+                @test sets_match(rp.points, rq.points; tol = 1e-10)
+                @test rp.n_rejected_q == rq.n_rejected_q
+                # the interpreted representation is cached with the shape: a second fit reuses it
+                R2 = RationalConstructor(TestInput(x -> f_pole(x .+ 0.1); dim = 2, center = [0.0, 0.0], sample_range = 1.0, GN = 24), 8, 4)
+                rq2 = solve_rational_critical_points(R2; method = :parametric, compile = false, anchor_dir = int_dir)
+                @test rq2.stats.cache_hit == true
+                @test rq2.stats.compile == false
+                # the polyhedral anchor under an interpreted family
+                Globtim._rational_parametric_cache_clear!()
+                rq3 = solve_rational_critical_points(R; method = :parametric, compile = false, anchor = :polyhedral, anchor_dir = mktempdir())
+                @test rq3.stats.anchor in (:polyhedral, :polyhedral_completed)
+                @test rq3.n_paths == 89
+                @test sets_match(rp.points, rq3.points; tol = 1e-10)
+                # :auto compiles a 60-parameter family
+                Globtim._rational_parametric_cache_clear!()
+                rq4 = solve_rational_critical_points(R; method = :parametric, anchor_dir = int_dir)
+                @test rq4.stats.compile == :mixed
+                @test_throws ArgumentError solve_rational_critical_points(R; method = :parametric, compile = :fast)
+            end
+
             @testset "argument checks" begin
                 R = RationalConstructor(TRp, 8, 4)
                 @test_throws ArgumentError solve_rational_critical_points(R; method = :newton)

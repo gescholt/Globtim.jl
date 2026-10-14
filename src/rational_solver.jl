@@ -43,7 +43,8 @@ end
 
 """
     _solve_rational_hc_parametric(n, M, N, fits; anchor = :monodromy,
-                                  anchor_dir = _default_rational_anchor_dir(), verbose = 0)
+                                  anchor_dir = _default_rational_anchor_dir(), verbose = 0,
+                                  compile = :auto)
         -> (; per_fit, anchor)
 
 Parametric lifted solve (docs/research/plans/RATIONAL_PHASE3_BRIEF.md, B1.2/B1.3).
@@ -70,6 +71,14 @@ monomials), then each fit `(a, b)` in `fits` is a parameter homotopy from `θ₀
   Kept as the independent check of `C`: monodromy can only stop AT `C`, the polyhedral
   start can also exceed it (`test_rational_pathcount.jl`).
 
+`compile`: how HC represents the family — `:mixed` (HC's default, a compiled
+straight-line program), `false` (interpreted), or `:auto` (default): interpreted when
+the family has more than `_RAT_PARAM_COMPILE_MAX_PARAMS` = 2000 parameters. The compile
+is serial codegen on one function the size of the family and grows faster than the
+parameter count — (8,8,4), 13 365 parameters, had not finished after 10 h on korok
+1104280 — while interpreted evaluation costs ~1.5–2× a compiled one per call.
+Fixed once per shape and shared by the anchor and every track.
+
 `anchor_dir` (`nothing` disables): the anchor of each shape is stored as
 `<anchor_dir>/n<n>_M<M>_N<N>.jld2` and loaded on the next cold start, so an anchor
 that took hours is paid once per machine.
@@ -77,7 +86,7 @@ that took hours is paid once per machine.
 Returns `per_fit::Vector{Tuple{sols, stats}}` in the order of `fits` — `sols` are the
 real solutions (`Vector{Vector{Float64}}` of length `n + 1`), `stats` is
 `(; start_system = :parametric, anchor, n_paths, n_solutions, n_singular, n_real,
-n_path_failures, n_at_infinity, cache_hit, t_anchor, C)` — and
+n_path_failures, n_at_infinity, cache_hit, t_anchor, C, compile)` — and
 `anchor = (; n_solutions, t_anchor, cache_hit, anchor, source)` with `source` one of
 `:polyhedral`, `:monodromy`, `:disk`.
 
@@ -398,6 +407,9 @@ for a missing extension).
   `:polyhedral` (the independent check of `C`). Ignored on a cache or disk hit.
 - `anchor_dir = _default_rational_anchor_dir()` (`:parametric` only): on-disk anchor
   store, `nothing` to disable.
+- `compile = :auto` (`:parametric` only): `:mixed` (compiled straight-line program, HC's
+  default), `false` (interpreted) or `:auto` — interpreted above 2000 family parameters,
+  where the serial compile runs for hours (see `_solve_rational_hc_parametric`).
 - `verbose = 0`.
 
 # Returns
@@ -426,6 +438,7 @@ function solve_rational_critical_points(
     anchor::Symbol = :monodromy,
     anchor_dir::Union{Nothing,AbstractString} = _default_rational_anchor_dir(),
     verbose::Int = 0,
+    compile::Union{Symbol,Bool} = :auto,
 )
     method in (:polyhedral, :total_degree, :parametric) || throw(
         ArgumentError(
@@ -445,6 +458,7 @@ function solve_rational_critical_points(
             anchor = anchor,
             anchor_dir = anchor_dir,
             verbose = verbose,
+            compile = compile,
         )
         out.per_fit[1]
     else

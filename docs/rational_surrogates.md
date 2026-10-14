@@ -181,7 +181,19 @@ The anchor on a cold cache (`anchor = …`):
   `C`, the polyhedral start can also exceed it.
 
 An anchor short of `C` after that is an error, never a silently deficient
-start set. Anchors are stored in `_generated/rational_anchors/n<n>_M<M>_N<N>.jld2`
+start set.
+
+How HC represents the family (`compile = :auto`): families with more than
+2000 parameters are *interpreted* (`compile = false`), smaller ones take HC's
+default compiled straight-line program (`:mixed`). The compile is serial
+codegen on one function the size of the family and grows much faster than
+the parameter count: `(8,8,4)` (13 365 parameters) was still inside LLVM
+register allocation after 10 h on korok 1104280, while an interpreted
+evaluation costs only ~1.5–2× a compiled one per call. The representation is
+fixed once per shape (`fixed(F; compile)`) and shared by the anchor and every
+track; `--rational-compile mixed | false` in the audit script forces it.
+
+Anchors short of `C` are never cached. Anchors are stored in `_generated/rational_anchors/n<n>_M<M>_N<N>.jld2`
 (`anchor_dir`; `nothing` disables) and reloaded on the next cold start, so an
 anchor that took hours is paid once per machine. The per-fit `stats` add
 `n_path_failures` (paths HC gave up on; 0 on every tested fit), `n_at_infinity`
