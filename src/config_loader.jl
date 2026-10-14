@@ -25,7 +25,7 @@ Maps directly to `run_standard_experiment()` args + catalogue integration.
   Optional: time_interval (override catalogue default, catalogue mode only)
   Optional: sample_times (explicit time sample points, overrides time_interval + numpoints)
 - `[domain]`: radius (symmetric) OR radii (anisotropic) OR bounds (explicit)
-- `[polynomial]`: GN, degree_range, basis, truncation_threshold (opt-in), truncation_mode
+- `[polynomial]`: GN, degree_range, basis, truncation_threshold (opt-in), truncation_mode ('relative', 'absolute', or 'auto' for the noise-floor chop)
 - `[solver]`: solver overrides (optional)
 - `[refinement]`: post-processing refinement (optional)
 - `[analysis]`: Newton CP refinement and classification (optional)
@@ -473,9 +473,13 @@ function validate_experiment_toml(d::Dict)
     end
     if haskey(poly, "truncation_mode")
         m = poly["truncation_mode"]
-        m in ["relative", "absolute"] || push!(
+        m in ["relative", "absolute", "auto"] || push!(
             errors,
-            "[polynomial] truncation_mode must be 'relative' or 'absolute', got: '$m'",
+            "[polynomial] truncation_mode must be 'relative', 'absolute' or 'auto', got: '$m'",
+        )
+        m == "auto" && haskey(poly, "truncation_threshold") && push!(
+            errors,
+            "[polynomial] truncation_mode = 'auto' estimates its own threshold; remove truncation_threshold",
         )
     end
 

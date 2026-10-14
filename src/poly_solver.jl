@@ -57,6 +57,12 @@ Find all critical points of a polynomial approximation by solving the gradient s
 - `power_of_two_denom::Bool=false`: For rational precision, ensures denominators are powers of 2
 - `return_system::Bool=false`: If true, also return the polynomial system information (`:hc` only)
 - `msolve_threads::Int=1`: Number of threads for msolve (`:msolve` only)
+- `msolve_coeff_tol::Float64=0.0`: (`:msolve` only) relative tolerance for
+  [`dyadic_quantize`](@ref): coefficients are rounded onto a common grid `2^-b` with
+  `2^-b ≤ msolve_coeff_tol * max|c|` before the exact basis conversion, so msolve works
+  with ~`log2(1/msolve_coeff_tol)`-bit integers instead of the 50–100-bit numerators and
+  denominators of exact `Float64` conversion. `0.0` keeps the exact conversion. A fit whose
+  coefficients are only accurate to `1e-12` loses nothing at `msolve_coeff_tol = 1e-14`.
 
 # Returns
 - If `return_system=false`: `Vector{Vector{Float64}}` — Real solutions within [-1,1]ⁿ
@@ -99,6 +105,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    msolve_coeff_tol::Float64 = 0.0,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
 )
@@ -168,11 +175,58 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
             power_of_two_denom,
             threads = msolve_threads,
             timeout_seconds = msolve_timeout_seconds,
+            coeff_tol = msolve_coeff_tol,
             search_bounds = search_bounds,
         )
     else
         error("Unknown solver: $solver. Available: :hc, :msolve")
     end
+end
+
+"""
+    dyadic_quantize(coeffs; rel_tol = 1e-14, bits = nothing) -> Vector{Rational{BigInt}}
+
+Round every coefficient onto a common dyadic grid `k / 2^b` and return exact rationals.
+
+`b` is the smallest integer with `2^-b ≤ rel_tol * max|c|` (so every coefficient moves
+by at most `rel_tol * max|c| / 2`), or the explicit `bits` when given. With
+`rel_tol = 0` (or `bits = nothing` and `rel_tol = 0`) the conversion is the exact
+`Rational{BigInt}(c)` used before this function existed.
+
+Why: exact conversion of a `Float64` gives a 53-bit numerator over `2^(52 - e)`; a
+coefficient of size `1e-12` has a ~92-bit denominator, and after clearing the lcm over
+all coefficients msolve carries integers of that size times the Chebyshev→monomial
+growth. A fit is only accurate to the least-squares residual, so rounding to a common
+`2^-b` with `b ≈ 47` for `rel_tol = 1e-14` discards digits the fit never had while
+roughly halving the integer size in the Gröbner computation.
+"""
+function dyadic_quantize(
+    coeffs::AbstractVector{<:Real};
+    rel_tol::Real = 1e-14,
+    bits::Union{Nothing,Int} = nothing,
+)
+    rel_tol >= 0 || throw(ArgumentError("dyadic_quantize: rel_tol must be ≥ 0, got $rel_tol"))
+    out = Vector{Rational{BigInt}}(undef, length(coeffs))
+    if bits === nothing && rel_tol == 0
+        for (i, c) in enumerate(coeffs)
+            out[i] = Rational{BigInt}(c)
+        end
+        return out
+    end
+    cmax = isempty(coeffs) ? 0.0 : maximum(abs, coeffs)
+    if cmax == 0
+        fill!(out, zero(Rational{BigInt}))
+        return out
+    end
+    b = bits === nothing ? max(0, ceil(Int, -log2(rel_tol * cmax))) : bits
+    b >= 0 || throw(ArgumentError("dyadic_quantize: bits must be ≥ 0, got $b"))
+    den = BigInt(2)^b
+    for (i, c) in enumerate(coeffs)
+        # exact: c is dyadic, c * 2^b is an integer or a half-integer multiple only when
+        # b is below c's own exponent; round(BigInt, Rational) is correct in both cases.
+        out[i] = round(BigInt, Rational{BigInt}(c) * den) // den
+    end
+    return out
 end
 
 """
@@ -229,10 +283,13 @@ function _solve_msolve(
     power_of_two_denom,
     threads::Int = 1,
     timeout_seconds::Union{Nothing,Float64} = nothing,
+    coeff_tol::Float64 = 0.0,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
 )
-    # Convert coefficients to the format expected by construct_orthopoly_polynomial
-    rational_coeffs = [Rational{BigInt}(c) for c in coeffs]
+    # Convert coefficients to the format expected by construct_orthopoly_polynomial.
+    # coeff_tol = 0 is the exact Rational{BigInt}(c); coeff_tol > 0 rounds onto a common
+    # dyadic grid first (dyadic_quantize) to keep msolve's integers small.
+    rational_coeffs = dyadic_quantize(coeffs; rel_tol = coeff_tol)
 
     # Build the polynomial in monomial basis (rational precision for msolve)
     degree = normalize_degree(d)
@@ -373,6 +430,7 @@ function solve_polynomial_system_from_approx(
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    msolve_coeff_tol::Float64 = 0.0,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
 )::Vector{Vector{Float64}}
@@ -388,6 +446,7 @@ function solve_polynomial_system_from_approx(
         solver = solver,
         msolve_threads = msolve_threads,
         msolve_timeout_seconds = msolve_timeout_seconds,
+        msolve_coeff_tol = msolve_coeff_tol,
         search_bounds = search_bounds,
         path_stats_ref = path_stats_ref,
     )

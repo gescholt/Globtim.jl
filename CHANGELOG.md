@@ -2,6 +2,41 @@
 
 All notable changes to Globtim.jl will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **`CachedObjective`** (`src/eval_cache.jl`): memoising wrapper keyed on the bit-exact
+  evaluation point; ForwardDiff duals pass through uncached. `Constructor` evaluates the
+  objective on the whole `(GN+1)^n` grid at every degree and `TestInput` stores no
+  values, so a degree sweep re-evaluated an ODE objective once per degree on identical
+  points. `run_standard_experiment` now wraps the objective by default
+  (`cache_evaluations = true`) and records hit/miss counts in
+  `metadata["evaluation_cache"]`.
+- **Monotone value transforms** (`src/value_transform.jl`): `AsinhTransform`,
+  `LogTransform`, `SqrtTransform`, `TransformedObjective`, `fit_value_transform`.
+  Critical points and Morse indices of `g∘f` are those of `f` for strictly increasing
+  `g`; the fit is not invariant, and `asinh((f − f_min)/s)` turns the algebraic
+  coefficient decay of a misfit landscape into geometric decay.
+  `run_standard_experiment(...; value_transform = :asinh)` fits the transform on the fit
+  grid's own values (free with the cache) and keeps reporting objective values of the
+  original `f`.
+- **Noise-floor chop** (`src/chop.jl`): `coefficient_envelope`, `axis_envelopes`,
+  `axis_decay_rates`, `estimate_noise_floor`, `chop_polynomial`. Two-piece
+  (line + plateau) split of the log total-degree envelope, with separation and tail
+  flatness criteria; reports the floor, the usable degree and the decay rate.
+  `truncation_mode = :auto` (CLI and TOML) replaces the manual threshold by this chop.
+- **`dyadic_quantize`** and `msolve_coeff_tol` (`src/poly_solver.jl`): round Float64
+  coefficients onto a common `2^-b` grid before the exact basis conversion that feeds
+  msolve, so the Gröbner computation carries ~`log2(1/tol)`-bit integers instead of the
+  50–100-bit numerators/denominators of exact conversion. Default `0.0` is exact.
+- **`classify_with_index`, `IndexClassification`, `morse_index`, `poincare_hopf_sum`**
+  (`src/hessian_analysis.jl`): Morse-index classification with a scale-aware zero band
+  `max(abs_tol, rel_tol·‖H‖₂)`, an explicit `:ambiguous` state carrying index bounds,
+  a `:nonstationary` state for points with `‖∇f‖ > grad_tol`, and the index sum with
+  the range the ambiguous points could add. `classify_critical_points` (absolute
+  `1e-8` tolerances) is unchanged.
+
 ## [1.4.0] - 2026-09-09
 
 Note: 1.3.0 was tagged in this file but never published to the package repository, so

@@ -121,6 +121,163 @@ function classify_critical_points(
 end
 
 """
+    IndexClassification
+
+Per-point result of [`classify_with_index`](@ref).
+
+- `class::Symbol` — `:minimum`, `:maximum`, `:saddle`, `:ambiguous`, `:nonstationary`
+  or `:error`;
+- `index_low::Int`, `index_high::Int` — bounds on the Morse index: eigenvalues below
+  `-band` are certainly negative, eigenvalues inside `[-band, band]` may go either way;
+  `index_low == index_high` iff the point is unambiguous;
+- `n_band::Int` — number of eigenvalues inside the band;
+- `band::Float64` — the tolerance that was applied, `max(abs_tol, rel_tol * ‖H‖₂)`;
+- `min_abs_eig::Float64` — smallest `|λ|`, the margin by which the inertia is decided;
+- `hessian_norm::Float64` — `‖H‖₂`;
+- `grad_norm::Float64` — `‖∇f‖` when supplied, `NaN` otherwise.
+"""
+struct IndexClassification
+    class::Symbol
+    index_low::Int
+    index_high::Int
+    n_band::Int
+    band::Float64
+    min_abs_eig::Float64
+    hessian_norm::Float64
+    grad_norm::Float64
+end
+
+"""
+    morse_index(c::IndexClassification) -> Int
+
+The Morse index when it is decided (`index_low == index_high`); throws otherwise.
+"""
+function morse_index(c::IndexClassification)
+    c.index_low == c.index_high || throw(
+        ArgumentError("morse_index: point is ambiguous (index in $(c.index_low):$(c.index_high))"),
+    )
+    return c.index_low
+end
+
+"""
+    classify_with_index(hessians; rel_tol = 1e-8, abs_tol = 0.0, grad_norms = nothing, grad_tol = Inf)
+        -> Vector{IndexClassification}
+    classify_with_index(f, points::Matrix{Float64}; kwargs...) -> Vector{IndexClassification}
+
+Morse-index classification with a **scale-aware** zero band. `classify_critical_points`
+compares eigenvalues with an absolute `1e-8`, so a Hessian with `‖H‖ ~ 1e6` (a misfit
+landscape) never sees a degenerate direction and a Hessian with `‖H‖ ~ 1e-6` (a flat
+trough) sees nothing else. Here an eigenvalue counts as decided only if it clears
+`band = max(abs_tol, rel_tol * ‖H‖₂)`; eigenvalues inside the band leave the index
+undecided and the point is reported `:ambiguous` with `index_low:index_high` bounds,
+rather than being rounded to `:degenerate` or silently to a sign.
+
+The second method computes the Hessians and gradient norms of `f` by ForwardDiff
+(the true objective, not the surrogate), one row of `points` per point. A point with
+`‖∇f‖ > grad_tol` is `:nonstationary` — its Hessian inertia is not an index of
+anything — which is the refinement-on-a-box-face failure mode recorded in
+`.claude/CLAUDE.md` (a `lam_min > 0` "minimum" with `‖∇f‖` of order one).
+
+Use [`poincare_hopf_sum`](@ref) to turn the result into the index-sum check.
+"""
+function classify_with_index(
+    hessians::AbstractVector{<:AbstractMatrix{<:Real}};
+    rel_tol::Real = 1e-8,
+    abs_tol::Real = 0.0,
+    grad_norms::Union{Nothing,AbstractVector{<:Real}} = nothing,
+    grad_tol::Real = Inf,
+)::Vector{IndexClassification}
+    rel_tol >= 0 || throw(ArgumentError("rel_tol must be ≥ 0, got $rel_tol"))
+    abs_tol >= 0 || throw(ArgumentError("abs_tol must be ≥ 0, got $abs_tol"))
+    grad_norms === nothing || length(grad_norms) == length(hessians) || throw(
+        ArgumentError("grad_norms has $(length(grad_norms)) entries for $(length(hessians)) Hessians"),
+    )
+    out = Vector{IndexClassification}(undef, length(hessians))
+    for (i, H) in enumerate(hessians)
+        g = grad_norms === nothing ? NaN : Float64(grad_norms[i])
+        if any(x -> !isfinite(x), H)
+            out[i] = IndexClassification(:error, 0, size(H, 1), size(H, 1), NaN, NaN, NaN, g)
+            continue
+        end
+        λ = eigvals(Symmetric(Matrix{Float64}(H)))
+        hnorm = isempty(λ) ? 0.0 : maximum(abs, λ)
+        band = max(Float64(abs_tol), Float64(rel_tol) * hnorm)
+        n_neg = count(<(-band), λ)
+        n_band = count(x -> abs(x) <= band, λ)
+        min_abs = isempty(λ) ? NaN : minimum(abs, λ)
+        n = length(λ)
+        class = if grad_norms !== nothing && g > grad_tol
+            :nonstationary
+        elseif n_band > 0
+            :ambiguous
+        elseif n_neg == 0
+            :minimum
+        elseif n_neg == n
+            :maximum
+        else
+            :saddle
+        end
+        out[i] = IndexClassification(class, n_neg, n_neg + n_band, n_band, band, min_abs, hnorm, g)
+    end
+    return out
+end
+
+function classify_with_index(f, points::Matrix{Float64}; kwargs...)
+    n_points = size(points, 1)
+    hessians = Vector{Matrix{Float64}}(undef, n_points)
+    grad_norms = Vector{Float64}(undef, n_points)
+    for i in 1:n_points
+        x = points[i, :]
+        hessians[i] = ForwardDiff.hessian(f, x)
+        grad_norms[i] = norm(ForwardDiff.gradient(f, x))
+    end
+    return classify_with_index(hessians; grad_norms = grad_norms, kwargs...)
+end
+
+"""
+    poincare_hopf_sum(classes::AbstractVector{IndexClassification}) -> NamedTuple
+
+`Σ (−1)^index` over the decided points, with the range the ambiguous points could add.
+
+Returns `(sum, lower, upper, n_decided, n_ambiguous, n_excluded, exact)`:
+- `sum` — contribution of the decided points;
+- `lower`/`upper` — `sum` plus the most negative / most positive contribution the
+  ambiguous points can make (`±1` each — an ambiguous point with `n_band ≥ 1` can take
+  either parity);
+- `n_excluded` — `:nonstationary` and `:error` points, which contribute nothing and make
+  the census non-exact;
+- `exact` — `n_ambiguous == 0 && n_excluded == 0`.
+
+On a contractible domain whose gradient points outward on the boundary the exact sum
+must be `1`; a decided sum outside `[lower, upper]` of a reference value means points
+are missing (or spurious). The sum is blind to a fold-created pair (indices `i` and
+`i+1` cancel), so equality is necessary, not sufficient, for completeness.
+"""
+function poincare_hopf_sum(classes::AbstractVector{IndexClassification})
+    s = 0
+    n_amb = 0
+    n_exc = 0
+    for c in classes
+        if c.class === :nonstationary || c.class === :error
+            n_exc += 1
+        elseif c.index_low == c.index_high
+            s += iseven(c.index_low) ? 1 : -1
+        else
+            n_amb += 1
+        end
+    end
+    return (
+        sum = s,
+        lower = s - n_amb,
+        upper = s + n_amb,
+        n_decided = length(classes) - n_amb - n_exc,
+        n_ambiguous = n_amb,
+        n_excluded = n_exc,
+        exact = n_amb == 0 && n_exc == 0,
+    )
+end
+
+"""
     store_all_eigenvalues(hessians::Vector{Matrix{Float64}})::Vector{Vector{Float64}}
 
 Store all eigenvalues for each Hessian matrix for detailed analysis.

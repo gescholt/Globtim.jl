@@ -246,6 +246,7 @@ function solve_and_transform(
     solver::Symbol = :hc,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    msolve_coeff_tol::Float64 = 0.0,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     transform::Union{Nothing,Matrix{Float64}} = nothing,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
@@ -284,6 +285,7 @@ function solve_and_transform(
             solver = solver,
             msolve_threads = msolve_threads,
             msolve_timeout_seconds = msolve_timeout_seconds,
+            msolve_coeff_tol = msolve_coeff_tol,
             search_bounds = normalized_search_bounds,
             path_stats_ref = path_stats_ref,
         )
@@ -359,6 +361,29 @@ only raw critical points from HomotopyContinuation.
 - `box_census::Bool = false`: run `box_strata_census` on every solved degree's surrogate
   (3ⁿ HC face solves) and record sum / ok / boundary counts in
   `metadata["box_strata_census"]`. A sum ≠ 1 means the surrogate census missed points.
+
+# Objective pre-processing (value_transform.jl, eval_cache.jl)
+- `cache_evaluations::Bool = true`: wrap the objective in a `CachedObjective` so the
+  degree sweep evaluates it once per grid point — `Constructor` re-evaluates the full
+  `(GN+1)^dim` grid at every degree otherwise. Hit/miss counts land in
+  `metadata["evaluation_cache"]`. Set `false` for non-deterministic objectives whose
+  repeated evaluation is intended.
+- `value_transform = nothing`: fit `g ∘ f` instead of `f` for a strictly increasing `g`
+  (critical points and Morse indices are invariant; see `AbstractValueTransform`). Pass
+  a transform (`AsinhTransform(scale; shift)`), or a `Symbol` (`:asinh`, `:log`, `:sqrt`)
+  to fit one with `fit_value_transform` on the fit grid's own values — with
+  `cache_evaluations` those evaluations are reused by the first fit, so the pilot costs
+  nothing. Objective values reported at critical points are always those of the
+  ORIGINAL `f`; the relative L² and gradient errors are those of the transformed fit.
+  Recorded in `metadata["value_transform"]`.
+- `msolve_coeff_tol::Float64 = 0.0`: (`solver = :msolve`) round coefficients onto a common
+  dyadic grid before the exact basis conversion (`dyadic_quantize`); `0.0` is exact.
+
+# Automatic chop
+`experiment_config.truncation_mode = :auto` replaces the manual threshold by
+`chop_polynomial`: the coefficient envelope's noise plateau is estimated per degree and
+coefficients at or below it are zeroed. The estimate (`floor`, `usable_degree`,
+`decay_rate`) is recorded in the degree's timing dictionary.
 
 # Returns
 Dictionary with:
@@ -505,6 +530,9 @@ function run_standard_experiment(;
     gradient_check::Bool = gradient_weight > 0,
     gradient_check_points::Int = 20 * length(bounds),
     box_census::Bool = false,
+    cache_evaluations::Bool = true,
+    value_transform::Union{Nothing,Symbol,AbstractValueTransform} = nothing,
+    msolve_coeff_tol::Float64 = 0.0,
 )
     degree_policy in (:sweep, :rel_l2_ladder) || throw(
         ArgumentError(
@@ -533,10 +561,38 @@ function run_standard_experiment(;
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
     sample_range = [(bounds[2] - bounds[1]) / 2 for bounds in bounds]
 
-    # Build tensor representation ONCE (evaluates objective on (GN+1)^dimension grid points)
-    # This is invariant across degrees — only Constructor depends on degree.
+    # The objective the FIT sees. TestInput stores no values — Constructor evaluates the
+    # objective on the full (GN+1)^dimension grid at every degree — so the sweep is wrapped
+    # in a CachedObjective (eval_cache.jl): bit-identical grid points hit the cache from the
+    # second degree on. An optional monotone value transform (value_transform.jl) is
+    # composed on top; critical points are invariant under it, the fit is not. Everything
+    # downstream (objective values at critical points, true_params recovery) keeps using
+    # `objective_function`, the original.
+    fit_objective = cache_evaluations ? CachedObjective(objective_function) : objective_function
+    transform = if value_transform === nothing
+        nothing
+    elseif value_transform isa Symbol
+        # Pilot sample = the fit grid itself, so with caching the pilot is free.
+        pilot_grid = Globtim.generate_grid(dimension, experiment_config.GN; basis = experiment_config.basis)
+        # Same affine map and operation order as MainGenerate's eval_fn, so the keys are
+        # bit-identical to the fit's; 1-D objectives receive a scalar there too.
+        pilot_vals = [
+            let sx = sample_range .* collect(x), p = sx .+ center
+                dimension == 1 ? fit_objective(p[1]) : fit_objective(p)
+            end for x in vec(pilot_grid)
+        ]
+        fit_value_transform(pilot_vals; kind = value_transform)
+    else
+        value_transform
+    end
+    if transform !== nothing && !(transform isa IdentityTransform)
+        fit_objective = TransformedObjective(fit_objective, transform)
+        metadata["value_transform"] = transform_summary(transform)
+        @info "Fitting transformed objective" transform = transform_summary(transform)
+    end
+
     TR = Globtim.TestInput(
-        objective_function,
+        fit_objective,
         dim = dimension,
         center = center,
         GN = experiment_config.GN,
@@ -588,6 +644,7 @@ function run_standard_experiment(;
                     start_system = start_system,
                     msolve_threads = msolve_threads,
                     msolve_timeout_seconds = msolve_timeout_seconds,
+                    msolve_coeff_tol = msolve_coeff_tol,
                     solve_rel_l2_max = ladder ? rel_l2_solve_below : Inf,
                     gradient_weight = gradient_weight,
                     gradient_method = gradient_method,
@@ -764,6 +821,19 @@ function run_standard_experiment(;
         metadata["box_strata_census"] =
             Dict{String,Any}(string(d) => v for (d, v) in sort(collect(census_out)))
     end
+    if cache_evaluations
+        # unwrap the transform (if any), keep the cache
+        cached = fit_objective isa TransformedObjective ? original_objective(fit_objective) : fit_objective
+        if cached isa CachedObjective
+            st = cache_stats(cached)
+            metadata["evaluation_cache"] = Dict{String,Any}(
+                "hits" => st.hits,
+                "misses" => st.misses,
+                "unique_points" => st.size,
+                "hit_rate" => st.hit_rate,
+            )
+        end
+    end
     if grad_errors !== nothing
         metadata["relative_gradient_error"] =
             Dict{String,Any}(string(d) => v for (d, v) in sort(collect(grad_errors)))
@@ -871,6 +941,7 @@ function process_single_degree(
     start_system::Symbol = :auto,
     msolve_threads::Int = 1,
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
+    msolve_coeff_tol::Float64 = 0.0,
     solve_rel_l2_max::Float64 = Inf,
     gradient_weight::Float64 = 0.0,
     gradient_method::Symbol = :forwarddiff,
@@ -900,9 +971,11 @@ function process_single_degree(
     timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
     if gradient_errors !== nothing
+        # Against the objective the fit saw (cached / transformed), not the raw one:
+        # under a value transform ∇(g∘f) ≠ ∇f and the comparison would be meaningless.
         gradient_errors[degree] = relative_gradient_error(
             pol,
-            objective_function;
+            TR.objective;
             method = gradient_method,
             n_points = gradient_check_points,
         )
@@ -945,8 +1018,28 @@ function process_single_degree(
         )
     end
 
-    # Phase 1b: Optional coefficient truncation
-    if experiment_config.truncation_threshold !== nothing
+    # Phase 1b: Optional coefficient truncation — automatic (noise-floor chop) or manual
+    if experiment_config.truncation_mode == :auto
+        chop = Globtim.chop_polynomial(pol)
+        est = chop.estimate
+        timing["chop_plateau_found"] = est.plateau_found ? 1.0 : 0.0
+        timing["chop_usable_degree"] = Float64(est.usable_degree)
+        timing["chop_decay_rate"] = est.decay_rate
+        timing["chop_floor"] = est.floor
+        timing["chop_relative_floor"] = est.relative_floor
+        timing["truncation_original_nnz"] = chop.original_nnz
+        timing["truncation_new_nnz"] = chop.new_nnz
+        timing["truncation_l2_ratio"] = chop.l2_ratio
+        if est.plateau_found
+            @info "  Chop: noise floor $(est.floor) (relative $(est.relative_floor)), " *
+                  "usable total degree $(est.usable_degree), decay $(round(est.decay_rate, digits=3))/degree: " *
+                  "$(chop.original_nnz) → $(chop.new_nnz) coefficients (L² ratio $(round(chop.l2_ratio, digits=6)))"
+            pol = chop.polynomial
+        else
+            @info "  Chop: no noise plateau at degree $degree (still converging, decay " *
+                  "$(round(est.decay_rate, digits=3))/degree); nothing removed"
+        end
+    elseif experiment_config.truncation_threshold !== nothing
         sparse_result = Globtim.sparsify_polynomial(
             pol,
             experiment_config.truncation_threshold,
@@ -986,6 +1079,7 @@ function process_single_degree(
         start_system = start_system,
         msolve_threads = msolve_threads,
         msolve_timeout_seconds = msolve_timeout_seconds,
+        msolve_coeff_tol = msolve_coeff_tol,
     )
     n_critical_points = length(critical_points_array)
     timing["critical_point_solving_time"] = solve_time

@@ -95,9 +95,14 @@ struct ExperimentParams
             truncation_mode isa String ? Symbol(truncation_mode) : truncation_mode
 
         # Validate truncation settings
-        if !(trunc_mode_sym in (:relative, :absolute))
+        if !(trunc_mode_sym in (:relative, :absolute, :auto))
             error(
-                "Invalid truncation_mode: $(trunc_mode_sym). Must be :relative or :absolute",
+                "Invalid truncation_mode: $(trunc_mode_sym). Must be :relative, :absolute or :auto",
+            )
+        end
+        if trunc_mode_sym == :auto && truncation_threshold !== nothing
+            error(
+                "truncation_mode = :auto estimates its own threshold (chop_polynomial); do not also set truncation_threshold",
             )
         end
         if truncation_threshold !== nothing && truncation_threshold <= 0

@@ -291,12 +291,15 @@ include("data_structures.jl") #Enhanced result / orthant data structures
 include("config.jl") # Unified configuration module (consolidates config.jl, ConfigValidation.jl, parameter_tracking_config.jl)
 include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
+include("value_transform.jl") #Monotone value transforms (asinh/log/sqrt) applied before the fit; CP-invariant
+include("eval_cache.jl") #CachedObjective: memoising wrapper so a degree sweep evaluates f once per grid point
 # enhanced_analysis.jl removed — types and functions live in GlobtimPostProcessing
 include("grid_utils.jl") #Grid format conversion utilities
 include("subdomain_management.jl") #4D subdomain decomposition management
 include("function_value_analysis.jl") #Function value error analysis
 include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsification
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
+include("chop.jl") #Coefficient envelope, noise-floor estimate, automatic chop
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
@@ -355,6 +358,25 @@ export discrete_l2_norm_riemann
 
 # Phase 2: Hessian analysis functions - only export main functions
 export compute_hessians, classify_critical_points, compute_eigenvalue_stats
+export IndexClassification, classify_with_index, morse_index, poincare_hopf_sum
+
+# Value transforms (value_transform.jl) and the evaluation cache (eval_cache.jl)
+export AbstractValueTransform,
+    IdentityTransform,
+    AsinhTransform,
+    LogTransform,
+    SqrtTransform,
+    TransformedObjective,
+    fit_value_transform,
+    original_objective,
+    value_transform,
+    transform_summary
+export CachedObjective, cache_stats, clear_cache!
+
+# Coefficient envelope / noise floor / chop (chop.jl)
+export coefficient_envelope,
+    axis_envelopes, axis_decay_rates, NoiseFloorEstimate, estimate_noise_floor, chop_polynomial
+export dyadic_quantize
 
 # Enhanced metrics collection - export module
 export EnhancedMetrics

@@ -324,6 +324,28 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_power_of_two_denom.jl") do
     include("test_power_of_two_denom.jl")
 end
 
+# Tier-1 engineering (2026-10): monotone value transforms, the evaluation cache, the
+# noise-floor chop, dyadic quantization for msolve, scale-aware index classification.
+with_timeout(TIMEOUT_TESTFILE, label = "test_value_transform.jl") do
+    include("test_value_transform.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_eval_cache.jl") do
+    include("test_eval_cache.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_chop.jl") do
+    include("test_chop.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_dyadic_quantize.jl") do
+    include("test_dyadic_quantize.jl")
+end
+
+with_timeout(TIMEOUT_TESTFILE, label = "test_index_classification.jl") do
+    include("test_index_classification.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
     include("test_tree_solve_observability.jl")
 end
