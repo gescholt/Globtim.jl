@@ -74,6 +74,14 @@ end
 `g(v) = sqrt(v − shift)` for `v ≥ shift`. Turns a sum of squares into a norm-like
 quantity: a non-degenerate minimum of `f` at value `shift` becomes a cone (non-smooth)
 in `g∘f`, so use it only when `shift` is strictly below the minimum of `f`.
+
+This is exactly the mechanism behind the withdrawn `L2_norm` critical-point counts:
+the unsquared misfit `sqrt(L2_squared)` has a cone at every zero-residual minimiser,
+and "published 19/65/139/182/41 CP counts were artifacts of this cone; under
+L2_squared all five collapse to 1 CP" (`docs/showcase/ode_parameter_estimation.md`,
+`docs/research/globopt_plan/examples_taxonomy.md`). `fit_value_transform(kind = :sqrt)`
+therefore sets `shift = min(f) − floor` with `floor > 0`; never pass `shift = min f`
+by hand on a misfit landscape. Prefer `AsinhTransform` for misfits.
 """
 struct SqrtTransform <: AbstractValueTransform
     shift::Float64
