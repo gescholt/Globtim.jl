@@ -165,9 +165,9 @@ end
     classify_with_index(f, points::Matrix{Float64}; kwargs...) -> Vector{IndexClassification}
 
 Morse-index classification with a **scale-aware** zero band. `classify_critical_points`
-compares eigenvalues with an absolute `1e-8`, so a Hessian with `‖H‖ ~ 1e6` (a misfit
-landscape) never sees a degenerate direction and a Hessian with `‖H‖ ~ 1e-6` (a flat
-trough) sees nothing else. Here an eigenvalue counts as decided only if it clears
+compares eigenvalues with an absolute tolerance (default `1e-8`), so a Hessian with
+`‖H‖ ~ 1e6` (a misfit landscape) never sees a degenerate direction, and a Hessian with
+`‖H‖` at or below the tolerance (a flat trough) sees nothing else. Here an eigenvalue counts as decided only if it clears
 `band = max(abs_tol, rel_tol * ‖H‖₂)`; eigenvalues inside the band leave the index
 undecided and the point is reported `:ambiguous` with `index_low:index_high` bounds,
 rather than being rounded to `:degenerate` or silently to a sign.

@@ -30,10 +30,15 @@ using ForwardDiff
         @test cl[6].class == :error && isnan(cl[6].band)
         @test all(isnan(c.grad_norm) for c in cl)
 
-        # the absolute-tolerance classifier calls the 1e6/1e-3 Hessian a minimum
-        # and the 1e-6/-1e-6 one degenerate — the two failure modes the band fixes
+        # the absolute-tolerance classifier: at its default 1e-8 it calls the 1e6/1e-3
+        # Hessian a minimum (1e-3 clears the absolute tolerance although it is 1e-9 of
+        # ‖H‖); at an absolute 1e-5, a natural choice for ‖H‖ ~ 1 landscapes, it calls the
+        # 1e-6/-1e-6 one degenerate. The two failure modes the relative band fixes.
         old = classify_critical_points(Hs[[4, 5]]; tol_zero = 1e-8, tol_pos = 1e-8, tol_neg = 1e-8)
-        @test old == [:minimum, :degenerate]
+        @test old == [:minimum, :saddle]
+        old5 = classify_critical_points(Hs[[4, 5]]; tol_zero = 1e-5, tol_pos = 1e-5, tol_neg = 1e-5)
+        @test old5 == [:minimum, :degenerate]
+        @test classify_with_index(Hs[[5]]; rel_tol = 1e-8)[1].class == :saddle
 
         # abs_tol widens the band; rel_tol = 0 with abs_tol reproduces an absolute rule
         cl_abs = classify_with_index(Hs[[3, 5]]; rel_tol = 0.0, abs_tol = 1e-5)
