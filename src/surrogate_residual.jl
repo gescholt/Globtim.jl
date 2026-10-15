@@ -38,9 +38,23 @@ function surrogate_gradient_residuals(
     scale_rows >= 1 || throw(ArgumentError("scale_rows must be ≥ 1, got $scale_rows"))
     phat(ẑ) = evaluate(pol, pol.center .+ pol.scale_factor .* ẑ)
     gradhat(ẑ) = ForwardDiff.gradient(phat, Vector{Float64}(ẑ))
+    # The fit grid holds one point per ROW on the single-domain path (n_samples × n) and
+    # one point per COLUMN on subdivision leaves (n × n_samples, see Subdomain fits);
+    # pick the orientation whose other extent is the dimension.
+    n = length(pol.center)
+    grid = pol.grid
+    points_as_rows = if size(grid, 2) == n
+        true
+    elseif size(grid, 1) == n
+        false
+    else
+        throw(DimensionMismatch("fit grid $(size(grid)) has no extent equal to the dimension $n"))
+    end
+    n_grid = points_as_rows ? size(grid, 1) : size(grid, 2)
     G = 0.0
-    for i in _strided_rows(size(pol.grid, 1), scale_rows)
-        G = max(G, norm(gradhat(view(pol.grid, i, :))))
+    for i in _strided_rows(n_grid, scale_rows)
+        gi = points_as_rows ? view(grid, i, :) : view(grid, :, i)
+        G = max(G, norm(gradhat(gi)))
     end
     out = Vector{Float64}(undef, length(points))
     for (i, ẑ) in enumerate(points)
