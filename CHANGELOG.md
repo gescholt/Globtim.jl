@@ -4,6 +4,15 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **`solve_polynomial_system(x, pol::ApproxPoly)` now defaults to the fit's own basis
+  metadata** (`basis`, `precision`, `normalized`, `power_of_two_denom` from `pol`), as
+  does `solve_polynomial_with_defaults`. Previously the overload forwarded only degree
+  and coefficients, so the main method's `basis = :chebyshev, normalized = true` took
+  over and a Legendre fit was solved as Chebyshev (`pkg/BioObjectives/README.md`).
+  Explicit keywords still override.
+
 ### Added
 
 - **`CachedObjective`** (`src/eval_cache.jl`): memoising wrapper keyed on the bit-exact
@@ -36,6 +45,32 @@ All notable changes to Globtim.jl will be documented in this file.
   a `:nonstationary` state for points with `‖∇f‖ > grad_tol`, and the index sum with
   the range the ambiguous points could add. `classify_critical_points` (absolute
   `1e-8` tolerances) is unchanged.
+
+- **Surrogate residual check** (`src/surrogate_residual.jl`):
+  `surrogate_gradient_residuals`, `check_surrogate_residuals`. Every root returned
+  through the `ApproxPoly` solve overload (HC and msolve, standard experiment and tree
+  solve) is checked to be a critical point of the surrogate that was fitted —
+  relative `‖∇p‖ ≤ surrogate_residual_tol` (default `1e-4`, `Inf` disables) — and the
+  solve **raises** otherwise. Catches the basis trap above and the recorded
+  "root with relative gradient 391" (`lv_aliasing_remedies/FINDINGS.md`).
+- **Gradient-fidelity gate** (`run_standard_experiment(...; gate_metric = :rel_grad,
+  rel_grad_thresholds)`): the solve gate and the degree ladder read the relative
+  gradient error `‖∇f − ∇p‖/‖∇f‖` instead of the relative L2 error. Motivation: 16
+  leaves under 5 % L2 produced 95 % spurious HC roots and leaf rel-L2 is uncorrelated
+  with yield (`docs/research/subdivision_findings.md`). `metadata["rel_l2_ladder"]`
+  gains a `"metric"` field; `metadata["gate_metric"]` records the choice. The
+  `:rel_grad` bands are uncalibrated starting values.
+- **Hessian-eigenaligned boxes** (`src/aligned_box.jl`): `AlignedBox`,
+  `eigen_aligned_box`, `axis_aligned_box`, `AlignedObjective`, `to_physical`,
+  `to_aligned`, `aligned_bounds`, `box_outflow`, `box_summary`.
+  `run_standard_experiment(...; align_box = x_star, align_shape, measure_outflow,
+  outflow_samples)` runs the whole pipeline in the eigenframe at `x_star`, records the
+  boundary outflow of the given and the aligned box in `metadata["box_outflow"]`,
+  writes `aligned_box.json` and `critical_points_physical_deg_X.csv`. Motivation: no
+  axis-aligned box in the LV atlas is closed and the outflow fraction is
+  scale-invariant for axis-aligned boxes about a sloppy minimum
+  (`experiments/sandbox/lv_landscape_atlas/BOUNDARY_AND_SUBDIVISION.md`); Poincaré–Hopf
+  certifies only a closed box.
 
 ## [1.4.0] - 2026-09-09
 

@@ -346,6 +346,20 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_index_classification.jl") do
     include("test_index_classification.jl")
 end
 
+# Evidence-driven gates (docs/research/plans/EVIDENCE_MAP_2026-10.md N1/N2/N4):
+# gradient-fidelity gate, eigen-aligned boxes + outflow, surrogate residual check.
+with_timeout(TIMEOUT_TESTFILE, label = "test_gate_metric.jl") do
+    include("test_gate_metric.jl")
+end
+
+with_timeout(TIMEOUT_SOLVE, label = "test_surrogate_residual.jl") do
+    include("test_surrogate_residual.jl")
+end
+
+with_timeout(TIMEOUT_SOLVE, label = "test_aligned_box.jl") do
+    include("test_aligned_box.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_tree_solve_observability.jl") do
     include("test_tree_solve_observability.jl")
 end

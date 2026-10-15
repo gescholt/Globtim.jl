@@ -350,6 +350,21 @@ only raw critical points from HomotopyContinuation.
   `globtimpostprocessing/quality_thresholds.toml` (0.03 / 0.05 / 0.10).
 - `rel_l2_solve_below::Float64 = rel_l2_thresholds.structure_visible`.
 - `rel_l2_max_reliable_solves::Int = 4`.
+- `gate_metric::Symbol = :rel_l2`: the quantity the solve gate and the ladder read.
+  `:rel_l2` is ‖f − p‖/‖f‖ as above. `:rel_grad` is the relative gradient error
+  ‖∇f − ∇p‖/‖∇f‖ on the fit grid (`relative_gradient_error`, gradient_fit.jl) — HC
+  solves ∇p = 0, and value accuracy does not predict whether its roots are near roots of
+  ∇f: 16 leaves under 5 % L2 produced 95 % spurious HC roots, and leaf rel-L2 is
+  uncorrelated with yield (`docs/research/subdivision_findings.md:13-25`,
+  `docs/research/plans/EVIDENCE_MAP_2026-10.md`, N1). With `:rel_grad` the gradient check
+  runs on every fitted degree (`gradient_check = true` is implied), the bands come from
+  `rel_grad_thresholds`, the unsolved degrees carry `skip_reason =
+  "rel_grad_above_solve_threshold"`, and the ladder record names the metric.
+- `rel_grad_thresholds::RelL2Thresholds = RelL2Thresholds(reliable = 0.03,
+  structure_visible = 0.10, unreliable = 0.30)`: bands for `:rel_grad`. These are NOT
+  calibrated by a campaign the way the rel-L2 bands are; they are the starting point for
+  the calibration run (N1 benchmark: the 3× LV tree of
+  `globtim_results/cluster/cert_subdiv_sweep/SEEDING_FINDINGS.md`).
 
 # Gradient information
 - `gradient_weight::Float64 = 0.0`: > 0 fits by gradient-enhanced least squares
@@ -384,6 +399,28 @@ only raw critical points from HomotopyContinuation.
 `chop_polynomial`: the coefficient envelope's noise plateau is estimated per degree and
 coefficients at or below it are zeroed. The estimate (`floor`, `usable_degree`,
 `decay_rate`) is recorded in the degree's timing dictionary.
+# Box geometry (aligned_box.jl; N2 of docs/research/plans/EVIDENCE_MAP_2026-10.md)
+- `align_box = nothing`: a candidate minimum `x*` (physical coordinates). When given, the
+  box is re-centred at `x*` and rotated to the eigenbasis of the Hessian of `f` there
+  (`eigen_aligned_box`), keeping the half-widths of `bounds`, and the WHOLE run — fit,
+  solve, census, CSV — happens in the aligned frame `y = Qᵀ(x − x*)`; `true_params` is
+  mapped into that frame too, so `recovery_error` is unchanged in meaning. Why: no
+  axis-aligned box in the LV atlas is closed (outflow 0.67–0.93 on 47/47) and the outflow
+  fraction is scale-invariant for an axis-aligned box about a sloppy minimum, while the
+  eigen-aligned box closes (`experiments/sandbox/lv_landscape_atlas/BOUNDARY_AND_SUBDIVISION.md:44-74`);
+  Poincaré–Hopf is a certificate only on a closed box. Written out: `aligned_box.json`
+  (center, `Q` by columns, half-widths, eigenvalues), `metadata["aligned_box"]`, and one
+  `critical_points_physical_deg_X.csv` per solved degree with the raw critical points
+  mapped back to physical coordinates (`critical_points_raw_deg_X.csv` stays in the
+  aligned frame, as do `DegreeResult.critical_points`).
+- `align_shape::Symbol = :isotropic`: `:eigen` widens the box along the flat Hessian
+  directions (see `eigen_aligned_box`).
+- `measure_outflow::Bool = align_box !== nothing`: sample the boundary (`outflow_samples`
+  per face) and record `metadata["box_outflow"]` — the fraction of the boundary where ∇f
+  points outward, for the box as given and, with `align_box`, for the aligned box.
+  `fraction < 1` means the open index sum need not be 1 on this box; read the strata
+  census instead.
+- `outflow_samples::Int = 64`.
 
 # Returns
 Dictionary with:
@@ -465,12 +502,18 @@ end
 
 # Ladder view of the degree results: fitted degrees (solved or deliberately skipped) with a
 # finite relative L2; failed and timed-out degrees carry no fit and are left out.
-function _ladder_history(degree_results)
+# `metric`: `nothing` ⇒ the entries carry the relative L2 error (the ladder's native
+# quantity); a `Dict{Int,Float64}` (degree ⇒ value, e.g. the per-degree relative gradient
+# error) ⇒ that value is put in the entry's `rel_l2` slot instead, so the same pure ladder
+# runs on the gradient-fidelity metric (gate_metric = :rel_grad). Degrees without a metric
+# value are left out.
+function _ladder_history(degree_results; metric::Union{Nothing,Dict{Int,Float64}} = nothing)
     rs = sort(
         filter(
             r ->
                 r.status in ("success", "skipped_rel_l2") &&
-                    isfinite(r.relative_l2_error),
+                    isfinite(r.relative_l2_error) &&
+                    (metric === nothing || (haskey(metric, r.degree) && isfinite(metric[r.degree]))),
             degree_results,
         ),
         by = r -> r.degree,
@@ -478,18 +521,28 @@ function _ladder_history(degree_results)
     return [
         RelL2LadderEntry(
             r.degree,
-            r.relative_l2_error,
+            metric === nothing ? r.relative_l2_error : metric[r.degree],
             r.status == "success",
             r.status == "success" ? r.best_estimate : nothing,
         ) for r in rs
     ]
 end
 
-function _record_ladder!(metadata, verdict, reason, degree, degree_results, th, solve_below)
-    hist = _ladder_history(degree_results)
+function _record_ladder!(
+    metadata,
+    verdict,
+    reason,
+    degree,
+    degree_results,
+    th,
+    solve_below;
+    metric::Union{Nothing,Dict{Int,Float64}} = nothing,
+)
+    hist = _ladder_history(degree_results; metric = metric)
     metadata["rel_l2_ladder"] = Dict{String,Any}(
         "verdict" => string(verdict),
         "reason" => reason,
+        "metric" => metric === nothing ? "rel_l2" : "rel_grad",
         "stopped_after_degree" => degree,
         "solve_below" => solve_below,
         "thresholds" => Dict(
@@ -498,7 +551,7 @@ function _record_ladder!(metadata, verdict, reason, degree, degree_results, th, 
             "unreliable" => th.unreliable,
         ),
         "degrees" => [h.degree for h in hist],
-        "relative_l2" => [h.rel_l2 for h in hist],
+        "relative_l2" => [h.rel_l2 for h in hist],   # the gate metric's values (see "metric")
         "solved" => [h.solved for h in hist],
         "band" => [string(classify_rel_l2(h.rel_l2, th)) for h in hist],
     )
@@ -525,6 +578,12 @@ function run_standard_experiment(;
     rel_l2_thresholds::RelL2Thresholds = RelL2Thresholds(),
     rel_l2_solve_below::Float64 = rel_l2_thresholds.structure_visible,
     rel_l2_max_reliable_solves::Int = 4,
+    gate_metric::Symbol = :rel_l2,
+    rel_grad_thresholds::RelL2Thresholds = RelL2Thresholds(
+        reliable = 0.03,
+        structure_visible = 0.10,
+        unreliable = 0.30,
+    ),
     gradient_weight::Float64 = 0.0,
     gradient_method::Symbol = :forwarddiff,
     gradient_check::Bool = gradient_weight > 0,
@@ -533,6 +592,10 @@ function run_standard_experiment(;
     cache_evaluations::Bool = true,
     value_transform::Union{Nothing,Symbol,AbstractValueTransform} = nothing,
     msolve_coeff_tol::Float64 = 0.0,
+    align_box::Union{Nothing,AbstractVector{<:Real}} = nothing,
+    align_shape::Symbol = :isotropic,
+    measure_outflow::Bool = align_box !== nothing,
+    outflow_samples::Int = 64,
 )
     degree_policy in (:sweep, :rel_l2_ladder) || throw(
         ArgumentError(
@@ -549,12 +612,70 @@ function run_standard_experiment(;
         )
     end
     ladder = degree_policy == :rel_l2_ladder
+    gate_metric in (:rel_l2, :rel_grad) ||
+        throw(ArgumentError("gate_metric must be :rel_l2 or :rel_grad, got :$gate_metric"))
+    gate_grad = gate_metric == :rel_grad
+    # The thresholds and solve-below the gate and the ladder actually use.
+    gate_thresholds = gate_grad ? rel_grad_thresholds : rel_l2_thresholds
+    gate_solve_below = gate_grad ? rel_grad_thresholds.structure_visible : rel_l2_solve_below
     # Gradient check (gradient_fit.jl): ‖∇f − ∇p‖/‖∇f‖ on the fit grid, per fitted degree,
-    # recorded in metadata["relative_gradient_error"] (degree => value).
-    grad_errors = gradient_check ? Dict{Int,Float64}() : nothing
+    # recorded in metadata["relative_gradient_error"] (degree => value). Mandatory when it
+    # is the gate metric.
+    grad_errors = (gradient_check || gate_grad) ? Dict{Int,Float64}() : nothing
     # Closed Poincaré–Hopf census (box_strata_census.jl) of every SOLVED degree's surrogate.
     census_out = box_census ? Dict{Int,Dict{String,Any}}() : nothing
     mkpath(output_dir)
+
+    # Box geometry (aligned_box.jl, N2). With align_box the run is re-expressed in the
+    # Hessian eigenframe at the candidate minimum; everything below sees the aligned
+    # objective, bounds and true parameters, and `aligned` carries the map back.
+    given_box = axis_aligned_box(bounds)
+    aligned = nothing
+    if measure_outflow
+        of = box_outflow(objective_function, given_box; n_samples = outflow_samples)
+        metadata["box_outflow"] = Dict{String,Any}(
+            "given" => Dict{String,Any}(
+                "fraction" => of.fraction,
+                "min_cos" => of.min_cos,
+                "n_faces_closed" => of.n_faces_closed,
+                "samples" => of.samples,
+            ),
+        )
+        @info "Box outflow (given box): $(round(of.fraction, digits=4)) " *
+              "($(of.n_faces_closed)/$(2 * length(bounds)) faces closed)"
+    end
+    if align_box !== nothing
+        length(align_box) == length(bounds) || throw(
+            ArgumentError("align_box has $(length(align_box)) entries for $(length(bounds)) bounds"),
+        )
+        aligned = eigen_aligned_box(
+            objective_function,
+            align_box;
+            half_widths = given_box.half_widths,
+            shape = align_shape,
+        )
+        if measure_outflow
+            ofa = box_outflow(objective_function, aligned; n_samples = outflow_samples)
+            metadata["box_outflow"]["aligned"] = Dict{String,Any}(
+                "fraction" => ofa.fraction,
+                "min_cos" => ofa.min_cos,
+                "n_faces_closed" => ofa.n_faces_closed,
+                "samples" => ofa.samples,
+            )
+            @info "Box outflow (eigen-aligned box): $(round(ofa.fraction, digits=4)) " *
+                  "($(ofa.n_faces_closed)/$(2 * length(bounds)) faces closed)"
+        end
+        metadata["aligned_box"] = box_summary(aligned)
+        metadata["aligned_box"]["shape"] = string(align_shape)
+        open(joinpath(output_dir, "aligned_box.json"), "w") do io
+            JSON3.pretty(io, metadata["aligned_box"])
+        end
+        objective_function = AlignedObjective(objective_function, aligned)
+        bounds = aligned_bounds(aligned)
+        true_params = true_params === nothing ? nothing : Vector{Float64}(to_aligned(aligned, true_params))
+        @info "Running in the Hessian-eigenaligned frame" center = aligned.center eigenvalues =
+            aligned.eigenvalues
+    end
 
     # Pre-compute domain geometry (invariant across degrees)
     dimension = length(bounds)
@@ -645,7 +766,8 @@ function run_standard_experiment(;
                     msolve_threads = msolve_threads,
                     msolve_timeout_seconds = msolve_timeout_seconds,
                     msolve_coeff_tol = msolve_coeff_tol,
-                    solve_rel_l2_max = ladder ? rel_l2_solve_below : Inf,
+                    solve_rel_l2_max = ladder ? gate_solve_below : Inf,
+                    gate_metric = gate_metric,
                     gradient_weight = gradient_weight,
                     gradient_method = gradient_method,
                     gradient_errors = grad_errors,
@@ -692,9 +814,9 @@ function run_standard_experiment(;
             # stagnation, and record the verdict in the run metadata.
             if ladder
                 lstep = rel_l2_ladder_step(
-                    _ladder_history(degree_results);
-                    thresholds = rel_l2_thresholds,
-                    solve_below = rel_l2_solve_below,
+                    _ladder_history(degree_results; metric = gate_grad ? grad_errors : nothing);
+                    thresholds = gate_thresholds,
+                    solve_below = gate_solve_below,
                     minimizer_tol = gradient_residual_tol,
                     max_reliable_solves = rel_l2_max_reliable_solves,
                     stagnation_threshold = stagnation_threshold,
@@ -708,8 +830,9 @@ function run_standard_experiment(;
                         lstep.reason,
                         degree,
                         degree_results,
-                        rel_l2_thresholds,
-                        rel_l2_solve_below,
+                        gate_thresholds,
+                        gate_solve_below;
+                        metric = gate_grad ? grad_errors : nothing,
                     )
                     break
                 end
@@ -840,12 +963,13 @@ function run_standard_experiment(;
         metadata["gradient_weight"] = gradient_weight
         metadata["gradient_method"] = string(gradient_method)
     end
+    metadata["gate_metric"] = string(gate_metric)
 
     if ladder && !haskey(metadata, "rel_l2_ladder")
         fv = rel_l2_final_verdict(
-            _ladder_history(degree_results);
-            thresholds = rel_l2_thresholds,
-            solve_below = rel_l2_solve_below,
+            _ladder_history(degree_results; metric = gate_grad ? grad_errors : nothing);
+            thresholds = gate_thresholds,
+            solve_below = gate_solve_below,
         )
         last_degree = isempty(degree_results) ? -1 : degree_results[end].degree
         _record_ladder!(
@@ -854,9 +978,25 @@ function run_standard_experiment(;
             fv.reason,
             last_degree,
             degree_results,
-            rel_l2_thresholds,
-            rel_l2_solve_below,
+            gate_thresholds,
+            gate_solve_below;
+            metric = gate_grad ? grad_errors : nothing,
         )
+    end
+
+    # Aligned frame: also write the raw critical points in physical coordinates.
+    if aligned !== nothing
+        for r in degree_results
+            (r.status == "success" && !isempty(r.critical_points)) || continue
+            n_cp = length(r.critical_points)
+            phys = [to_physical(aligned, cp) for cp in r.critical_points]
+            df = DataFrame(
+                :index => 1:n_cp,
+                [Symbol("p$i") => [phys[j][i] for j in 1:n_cp] for i in 1:length(bounds)]...,
+                :objective => r.objective_values,
+            )
+            CSV.write(joinpath(output_dir, "critical_points_physical_deg_$(r.degree).csv"), df)
+        end
     end
 
     # Generate results summary
@@ -943,6 +1083,7 @@ function process_single_degree(
     msolve_timeout_seconds::Union{Nothing,Float64} = nothing,
     msolve_coeff_tol::Float64 = 0.0,
     solve_rel_l2_max::Float64 = Inf,
+    gate_metric::Symbol = :rel_l2,
     gradient_weight::Float64 = 0.0,
     gradient_method::Symbol = :forwarddiff,
     gradient_errors::Union{Nothing,Dict{Int,Float64}} = nothing,
@@ -981,11 +1122,21 @@ function process_single_degree(
         )
     end
 
-    # Relative-L2 ladder: a fit above solve_rel_l2_max is not solved — its critical
-    # points are not yet those of f (quality_thresholds.toml). Recorded, not failed.
+    # Solve gate: a fit whose gate metric is above solve_rel_l2_max is not solved — its
+    # critical points are not yet those of f. Recorded, not failed. The metric is the
+    # relative L2 error (quality_thresholds.toml) or, with gate_metric = :rel_grad, the
+    # relative gradient error just computed (N1, EVIDENCE_MAP_2026-10.md).
     rel = timing["relative_l2_error"]
-    if !(rel <= solve_rel_l2_max)
-        @debug "Degree $degree fitted, not solved: rel-L2 $(rel) > $(solve_rel_l2_max)"
+    gate_value = if gate_metric == :rel_grad
+        gradient_errors === nothing && error(
+            "gate_metric = :rel_grad requires the gradient check (gradient_errors === nothing)",
+        )
+        gradient_errors[degree]
+    else
+        rel
+    end
+    if !(gate_value <= solve_rel_l2_max)
+        @debug "Degree $degree fitted, not solved: $(gate_metric) $(gate_value) > $(solve_rel_l2_max)"
         return DegreeResult(
             degree,
             "skipped_rel_l2",
@@ -1010,8 +1161,12 @@ function process_single_degree(
             timing["polynomial_construction_time"],
             output_dir,
             Dict{String,Any}(
-                "skip_reason" => "rel_l2_above_solve_threshold",
+                "skip_reason" => string(gate_metric, "_above_solve_threshold"),
+                "gate_metric" => string(gate_metric),
+                "gate_value" => gate_value,
                 "relative_l2_error" => rel,
+                "relative_gradient_error" =>
+                    gradient_errors === nothing ? NaN : get(gradient_errors, degree, NaN),
                 "solve_rel_l2_max" => solve_rel_l2_max,
                 "rel_l2_band" => string(classify_rel_l2(rel)),
             ),

@@ -150,6 +150,16 @@ export relative_l2_error
 
 # Exact conversion and sparsification functions - only export main functions
 export to_exact_monomial_basis, sparsify_polynomial, exact_polynomial_coefficients
+export surrogate_gradient_residuals, check_surrogate_residuals
+export AlignedBox,
+    axis_aligned_box,
+    eigen_aligned_box,
+    to_physical,
+    to_aligned,
+    aligned_bounds,
+    AlignedObjective,
+    box_outflow,
+    box_summary
 # L²-norm computation methods (documented in sparsification.md)
 export compute_l2_norm_vandermonde, compute_l2_norm_coeffs
 # Sparsification analysis helpers (documented in sparsification.md)
@@ -279,6 +289,7 @@ include("cheb_pol.jl") #functions to generate Chebyshev polynomials.
 include("lege_pol.jl") #functions to generate Legendre polynomials.
 include("ApproxPolyEval.jl") #ApproxPoly evaluation and gradient functions.
 include("gradient_fit.jl") #Gradient-enhanced LS fit + relative gradient error (gradient check)
+include("surrogate_residual.jl") #N4: relative ‖∇p‖ check on every root a solver returns (raises on the basis trap); uses _strided_rows
 export derivative_vandermonde, objective_gradients_box, relative_gradient_error
 # msolve_system.jl retired: its msolve_polynomial_system/solve_and_parse
 # hard-coded normalized=true, reconstructing a distorted polynomial for
@@ -293,6 +304,7 @@ include("refine.jl") #functions for critical point analysis and refinement.
 include("hessian_analysis.jl") #Phase 2: Hessian-based critical point classification
 include("value_transform.jl") #Monotone value transforms (asinh/log/sqrt) applied before the fit; CP-invariant
 include("eval_cache.jl") #CachedObjective: memoising wrapper so a degree sweep evaluates f once per grid point
+include("aligned_box.jl") #N2: Hessian-eigenaligned boxes, box outflow (Poincaré–Hopf precondition)
 # enhanced_analysis.jl removed — types and functions live in GlobtimPostProcessing
 include("grid_utils.jl") #Grid format conversion utilities
 include("subdomain_management.jl") #4D subdomain decomposition management

@@ -358,11 +358,23 @@ end
 """
     solve_polynomial_system(x, pol::ApproxPoly; kwargs...)
 
-Convenience method that automatically extracts dimension and degree from an ApproxPoly object.
+Convenience method that extracts dimension, degree **and the basis metadata** from an
+ApproxPoly object: `basis`, `precision`, `normalized` and `power_of_two_denom` default to
+the fit's own stored values (`pol.basis`, …), so the polynomial solved is the polynomial
+fitted. Until 2026-10 this overload forwarded only degree and coefficients and the main
+method's defaults (`basis = :chebyshev`, `normalized = true`) took over — a Legendre fit
+was solved as Chebyshev and returned `(±1.1407, 0)` for the minima of `(x²−1)² + y²`
+(`pkg/BioObjectives/README.md:138-174`). Explicit keyword arguments still override the
+stored values; a mismatch is then caught by the surrogate residual check below
+(`surrogate_residual_tol`, surrogate_residual.jl), which raises rather than returning
+roots of a different polynomial.
 
 # Arguments
 - `x`: Polynomial variables (from DynamicPolynomials)
 - `pol::ApproxPoly`: Polynomial approximation object
+- `surrogate_residual_tol::Real = 1e-4`: relative ‖∇p‖ allowed at a returned root
+  (`Inf` disables); `surrogate_residual_margin::Real = 0.5`: roots with a coordinate
+  beyond `1 + margin` are not checked
 - `kwargs...`: Additional keyword arguments passed to the main method
 
 # Returns
@@ -382,6 +394,12 @@ function solve_polynomial_system(
     pol::ApproxPoly;
     solver::Symbol = :hc,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
+    basis::Symbol = pol.basis,
+    precision::PrecisionType = pol.precision,
+    normalized::Bool = pol.normalized,
+    power_of_two_denom::Bool = pol.power_of_two_denom,
+    surrogate_residual_tol::Real = 1e-4,
+    surrogate_residual_margin::Real = 0.5,
     kwargs...,
 )
     # Handle both single variable and vector of variables
@@ -402,15 +420,33 @@ function solve_polynomial_system(
 
     # Pass the full degree spec through — main_nd → normalize_degree handles
     # both (:one_d_for_all, d) and (:one_d_per_dim, [d1, d2, ...]) correctly.
-    return solve_polynomial_system(
+    result = solve_polynomial_system(
         x_vec,
         n,
         pol.degree,
         pol.coeffs;
         solver = solver,
         search_bounds = search_bounds,
+        basis = basis,
+        precision = precision,
+        normalized = normalized,
+        power_of_two_denom = power_of_two_denom,
         kwargs...,
     )
+
+    # N4 (surrogate_residual.jl): every returned root must be a critical point of the
+    # surrogate that was FITTED. This overload is exactly where the basis trap lives —
+    # a caller who omits basis/normalized gets the main method's defaults and solves a
+    # different polynomial — so the check is here, on the raw box-coordinate roots, for
+    # HC and msolve alike. `return_system = true` returns (roots, system_info).
+    roots = result isa Tuple ? result[1] : result
+    check_surrogate_residuals(
+        pol,
+        roots;
+        tol = surrogate_residual_tol,
+        margin = surrogate_residual_margin,
+    )
+    return result
 end
 
 """
@@ -702,11 +738,13 @@ solutions = solve_polynomial_with_defaults(x, pol, precision=Float64Precision)
 function solve_polynomial_with_defaults(x, pol::ApproxPoly; solver::Symbol = :hc, kwargs...)
     # Use the existing ApproxPoly method but ensure we pass through our safe defaults
     # The kwargs will override the defaults when explicitly provided
+    # The "safe defaults" are the fit's own stored values (anything else solves a
+    # different polynomial than the one fitted; see the ApproxPoly overload).
     default_kwargs = Dict{Symbol,Any}(
-        :basis => :chebyshev,
-        :precision => RationalPrecision,
-        :normalized => true,
-        :power_of_two_denom => false,
+        :basis => pol.basis,
+        :precision => pol.precision,
+        :normalized => pol.normalized,
+        :power_of_two_denom => pol.power_of_two_denom,
         :return_system => false,
     )
 
