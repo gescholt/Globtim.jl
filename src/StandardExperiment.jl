@@ -394,6 +394,22 @@ only raw critical points from HomotopyContinuation.
 - `msolve_coeff_tol::Float64 = 0.0`: (`solver = :msolve`) round coefficients onto a common
   dyadic grid before the exact basis conversion (`dyadic_quantize`); `0.0` is exact.
 
+# Admissibility of the fit grid (admissibility.jl; N3 of docs/research/plans/EVIDENCE_MAP_2026-10.md)
+- `admissibility::Bool = true`: every degree's fit grid is checked before the least-squares
+  solve; a grid holding non-finite values, the objective's registered `penalty_value`
+  (`isapprox`, rtol 1e-3), or values with `|f| > max_abs_value` raises
+  `InadmissibleGridError` with the counts. The degree is recorded with status
+  `"inadmissible"` (counts in its `error` dictionary and in
+  `metadata["stopped_inadmissible"]`) and the sweep STOPS: with a fixed `GN` every
+  degree samples the same grid, so the later degrees would fail identically. Why: a
+  least-squares fit through penalty nodes is a fit of the wall ("treat a nonzero
+  penalty-node count as a failure, not a statistic", `pkg/Opt_Traj/.claude/CLAUDE.md`);
+  the subdivision path already masks such leaves (`barrier_mask.jl`), the single-domain
+  path had no gate.
+- `penalty_value = nothing`: the objective's sentinel (Opt_Traj: `barrier_value(obj)`).
+- `max_abs_value::Real = Inf`: dynamic-range cap (LV / FHN draws reach `1e18`–`1e113`
+  inside the box; such values are plateau noise, not landscape).
+
 # Automatic chop
 `experiment_config.truncation_mode = :auto` replaces the manual threshold by
 `chop_polynomial`: the coefficient envelope's noise plateau is estimated per degree and
@@ -592,6 +608,9 @@ function run_standard_experiment(;
     cache_evaluations::Bool = true,
     value_transform::Union{Nothing,Symbol,AbstractValueTransform} = nothing,
     msolve_coeff_tol::Float64 = 0.0,
+    admissibility::Bool = true,
+    penalty_value::Union{Nothing,Real} = nothing,
+    max_abs_value::Real = Inf,
     align_box::Union{Nothing,AbstractVector{<:Real}} = nothing,
     align_shape::Symbol = :isotropic,
     measure_outflow::Bool = align_box !== nothing,
@@ -773,6 +792,9 @@ function run_standard_experiment(;
                     gradient_errors = grad_errors,
                     gradient_check_points = gradient_check_points,
                     census_out = census_out,
+                    admissibility = admissibility,
+                    penalty_value = penalty_value,
+                    max_abs_value = max_abs_value,
                 ),
                 experiment_config.degree_timeout_seconds;
                 label = "degree $degree",
@@ -856,7 +878,54 @@ function run_standard_experiment(;
 
         catch e
             degree_time = time() - degree_start
-            if e isa SolverTimeoutError
+            stop_sweep = false
+            if e isa InadmissibleGridError
+                # N3: the fit grid is not a sample of the landscape. With a fixed GN every
+                # degree sees the same grid, so the sweep stops here (admissibility.jl).
+                counts = Dict{String,Any}(
+                    "n_total" => e.n_total,
+                    "n_nonfinite" => e.n_nonfinite,
+                    "n_penalty" => e.n_penalty,
+                    "n_above_cap" => e.n_above_cap,
+                    "penalty_value" => e.penalty_value,
+                    "max_abs_value" => e.max_abs_value,
+                )
+                @error "Degree $degree: fit grid inadmissible, stopping the sweep" exception = e counts
+                metadata["stopped_inadmissible"] = merge(counts, Dict("degree" => degree))
+                metadata["stopped_after_degree"] = degree
+                stop_sweep = true
+                degree_result = DegreeResult(
+                    degree,
+                    "inadmissible",
+                    0,  # n_critical_points
+                    Vector{Vector{Float64}}(),
+                    Vector{Float64}(),
+                    nothing,
+                    nothing,
+                    nothing,
+                    NaN,
+                    NaN,
+                    NaN,
+                    0,
+                    0,
+                    nothing,
+                    nothing,
+                    nothing,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    degree_time,
+                    output_dir,
+                    merge(
+                        counts,
+                        Dict{String,Any}(
+                            "error_type" => "InadmissibleGridError",
+                            "error_message" => sprint(showerror, e),
+                        ),
+                    ),
+                )
+            elseif e isa SolverTimeoutError
                 @warn "Degree $degree timed out" limit = e.seconds elapsed = degree_time
 
                 degree_result = DegreeResult(
@@ -933,6 +1002,7 @@ function run_standard_experiment(;
 
             push!(degree_results, degree_result)
             _save_checkpoint(output_dir, degree_results, config_hash)
+            stop_sweep && break
         end
     end
 
@@ -1089,6 +1159,9 @@ function process_single_degree(
     gradient_errors::Union{Nothing,Dict{Int,Float64}} = nothing,
     gradient_check_points::Int = 0,
     census_out::Union{Nothing,Dict{Int,Dict{String,Any}}} = nothing,
+    admissibility::Bool = true,
+    penalty_value::Union{Nothing,Real} = nothing,
+    max_abs_value::Real = Inf,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -1105,6 +1178,9 @@ function process_single_degree(
         normalized = false,
         gradient_weight = gradient_weight,
         gradient_method = gradient_method,
+        admissibility = admissibility,
+        penalty_value = penalty_value,
+        max_abs_value = max_abs_value,
     )
 
     timing["polynomial_construction_time"] = time() - poly_construction_start

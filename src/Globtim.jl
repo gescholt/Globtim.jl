@@ -223,6 +223,9 @@ export Subdomain,
     choose_per_dim_degree_lsfit_with_signal,  # Stage 2: + per-axis signal mask
     penalty_barrier_detector,
     flat_barrier_detector,  # Penalty/flat-barrier leaf-masking detectors
+    InadmissibleGridError,
+    grid_admissibility,
+    check_grid_admissibility,  # N3: single-domain penalty-node admissibility gate
     DegeneracyDiagnostics,
     detect_degeneracy!,  # Stage 0: per-leaf degeneracy detector
     box_to_physical!,
@@ -323,6 +326,7 @@ include("subdivision_reuse.jl") #Pure helpers for parent→child sample reuse
 include("mode_spectrum.jl") #Per-Chebyshev-mode residual decomposition
 include("mode_spectrum_predicate.jl") #Bump-vs-split predicate from spectrum
 include("barrier_mask.jl") #Penalty/flat-barrier leaf masking for subdivision
+include("admissibility.jl") #N3: penalty-node admissibility gate on the single-domain fit grid
 include("per_cut_predicate.jl") #Per-cut-direction predicate
 include("per_axis_cut_selection.jl") #Per-axis spectrum-based cut-dim selector
 include("per_cut_predicate_lsfit.jl") # E2: Eibner-Melenk LS-slope ρ_k estimator (opt-in)

@@ -4,6 +4,22 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Added (N3, 2026-10-16)
+
+- **Penalty-node admissibility gate** (`src/admissibility.jl`): `grid_admissibility`,
+  `check_grid_admissibility`, `InadmissibleGridError`. `MainGenerate` / `Constructor`
+  check every fit grid before the least-squares solve (`admissibility = true`): values
+  that are non-finite, equal to the registered `penalty_value` (`isapprox`, rtol 1e-3),
+  or above `max_abs_value` raise with the counts instead of fitting the wall.
+  `run_standard_experiment(...; penalty_value, max_abs_value, admissibility)` records the
+  degree with status `"inadmissible"` (counts in its `error` dictionary and in
+  `metadata["stopped_inadmissible"]`) and stops the sweep, since a fixed `GN` samples the
+  same grid at every degree. Non-finite grids previously failed later and without a count
+  (the L2-norm guard); penalty and cap are opt-in because Globtim has no registry of an
+  objective's sentinel (`barrier_value(obj)` in Opt_Traj). N3 of
+  `docs/research/plans/EVIDENCE_MAP_2026-10.md`; the subdivision path keeps masking such
+  leaves with `barrier_mask.jl`.
+
 ### Changed
 
 - **`solve_polynomial_system(x, pol::ApproxPoly)` now defaults to the fit's own basis

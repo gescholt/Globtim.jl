@@ -346,6 +346,11 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_index_classification.jl") do
     include("test_index_classification.jl")
 end
 
+# N3 penalty-node admissibility gate (admissibility.jl)
+with_timeout(TIMEOUT_TESTFILE, label = "test_admissibility.jl") do
+    include("test_admissibility.jl")
+end
+
 # Evidence-driven gates (docs/research/plans/EVIDENCE_MAP_2026-10.md N1/N2/N4):
 # gradient-fidelity gate, eigen-aligned boxes + outflow, surrogate residual check.
 with_timeout(TIMEOUT_TESTFILE, label = "test_gate_metric.jl") do

@@ -91,6 +91,9 @@ TimerOutputs.@timeit _TO function MainGenerate(
     sample_measure::Symbol = :uniform,
     gradient_weight::Float64 = 0.0,
     gradient_method::Symbol = :forwarddiff,
+    admissibility::Bool = true,
+    penalty_value::Union{Nothing,Real} = nothing,
+    max_abs_value::Real = Inf,
 )::ApproxPoly
     gradient_weight >= 0 ||
         throw(ArgumentError("gradient_weight must be ≥ 0, got $gradient_weight"))
@@ -313,6 +316,14 @@ TimerOutputs.@timeit _TO function MainGenerate(
         else
             F = map(eval_fn, grid_points)
         end
+        # N3 admissibility gate (admissibility.jl): a grid holding non-finite values, the
+        # objective's registered penalty, or values above the dynamic-range cap is not a
+        # sample of the landscape; raise with the counts rather than fit the wall.
+        admissibility && check_grid_admissibility(
+            F;
+            penalty_value = penalty_value,
+            max_abs_value = max_abs_value,
+        )
         eval_time = time() - eval_start
         if verbose >= 1 && eval_time > 1.0  # Only log if evaluation took significant time
             @info "  ⏱️  Evaluation rate: $(round(n_grid_points / eval_time, digits=1)) points/sec"
@@ -518,6 +529,9 @@ TimerOutputs.@timeit _TO function Constructor(
     stagnation_threshold::Float64 = 0.01,
     gradient_weight::Float64 = 0.0,
     gradient_method::Symbol = :forwarddiff,
+    admissibility::Bool = true,
+    penalty_value::Union{Nothing,Real} = nothing,
+    max_abs_value::Real = Inf,
 )
     if !(basis in [:chebyshev, :legendre])
         throw(ArgumentError("basis must be either :chebyshev or :legendre"))
@@ -552,6 +566,9 @@ TimerOutputs.@timeit _TO function Constructor(
             thread_evals = thread_evals,
             gradient_weight = gradient_weight,
             gradient_method = gradient_method,
+            admissibility = admissibility,
+            penalty_value = penalty_value,
+            max_abs_value = max_abs_value,
             # :nontensor — the positional degree is authoritative for the fit; the point set
             # only needs to overdetermine the basis (sparse/LS front-end).
             grid_degree = grid_mode === :nontensor ? degree : nothing,
@@ -580,6 +597,9 @@ TimerOutputs.@timeit _TO function Constructor(
             thread_evals = thread_evals,
             gradient_weight = gradient_weight,
             gradient_method = gradient_method,
+            admissibility = admissibility,
+            penalty_value = penalty_value,
+            max_abs_value = max_abs_value,
         )
         if verbose >= 1
             @info "  L2-norm: $(p.nrm)"
@@ -608,6 +628,9 @@ TimerOutputs.@timeit _TO function Constructor(
             thread_evals = thread_evals,
             gradient_weight = gradient_weight,
             gradient_method = gradient_method,
+            admissibility = admissibility,
+            penalty_value = penalty_value,
+            max_abs_value = max_abs_value,
         )
         push!(nrm_history, p.nrm)
         if !isnothing(T.tolerance) && p.nrm < T.tolerance
