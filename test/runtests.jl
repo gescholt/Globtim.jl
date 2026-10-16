@@ -356,6 +356,11 @@ with_timeout(TIMEOUT_SOLVE, label = "test_analyticity.jl") do
     include("test_analyticity.jl")
 end
 
+# N5 surrogate-side deduplication (surrogate_dedup.jl)
+with_timeout(TIMEOUT_SOLVE, label = "test_surrogate_dedup.jl") do
+    include("test_surrogate_dedup.jl")
+end
+
 # Evidence-driven gates (docs/research/plans/EVIDENCE_MAP_2026-10.md N1/N2/N4):
 # gradient-fidelity gate, eigen-aligned boxes + outflow, surrogate residual check.
 with_timeout(TIMEOUT_TESTFILE, label = "test_gate_metric.jl") do

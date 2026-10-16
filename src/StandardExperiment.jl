@@ -427,6 +427,16 @@ only raw critical points from HomotopyContinuation.
 - `analyticity_options::NamedTuple = (;)`: keyword overrides for `axis_analyticity`
   (`rate_threshold`, `model_ratio`, `min_points`, `rel_floor`).
 
+# Surrogate-side deduplication (surrogate_dedup.jl; N5 of docs/research/plans/EVIDENCE_MAP_2026-10.md)
+- `surrogate_dedup::Bool = true`: after the solve, every raw root is Newton-polished on
+  the surrogate (microseconds) and the polished roots are clustered at
+  `surrogate_dedup_tol` (box coordinates, default `1e-6`). The raw census is unchanged;
+  `critical_points_raw_deg_X.csv` gains `cluster_id`, `cluster_size`, `representative`
+  (1 for the first member of each cluster) and `surrogate_polish_move`, and the timing
+  records `n_surrogate_clusters`. `GlobtimPostProcessing.refine_experiment_results`
+  refines the representatives only (its default) — the recorded waste was 63–97 % of
+  the polish iterations on redundant seeds, a median of 16 seeds per point.
+
 # Automatic chop
 `experiment_config.truncation_mode = :auto` replaces the manual threshold by
 `chop_polynomial`: the coefficient envelope's noise plateau is estimated per degree and
@@ -632,6 +642,8 @@ function run_standard_experiment(;
     analyticity_stop::Bool = false,
     analyticity_min_degree::Int = 12,
     analyticity_options::NamedTuple = (;),
+    surrogate_dedup::Bool = true,
+    surrogate_dedup_tol::Float64 = 1e-6,
     align_box::Union{Nothing,AbstractVector{<:Real}} = nothing,
     align_shape::Symbol = :isotropic,
     measure_outflow::Bool = align_box !== nothing,
@@ -822,6 +834,8 @@ function run_standard_experiment(;
                     max_abs_value = max_abs_value,
                     analyticity_out = analyticity_out,
                     analyticity_options = analyticity_options,
+                    surrogate_dedup = surrogate_dedup,
+                    surrogate_dedup_tol = surrogate_dedup_tol,
                 ),
                 experiment_config.degree_timeout_seconds;
                 label = "degree $degree",
@@ -1218,6 +1232,8 @@ function process_single_degree(
     max_abs_value::Real = Inf,
     analyticity_out::Union{Nothing,Dict{Int,AnalyticityVerdict}} = nothing,
     analyticity_options::NamedTuple = (;),
+    surrogate_dedup::Bool = true,
+    surrogate_dedup_tol::Float64 = 1e-6,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -1408,6 +1424,22 @@ function process_single_degree(
         nothing
     end
 
+    # N5 (surrogate_dedup.jl): polish every raw root on the surrogate and cluster the
+    # polished points, so the refinement on f downstream starts once per cluster. The
+    # raw census above is untouched; the clusters are recorded as CSV columns.
+    dedup = nothing
+    if surrogate_dedup
+        points_box = [(pt .- center) ./ sample_range for pt in critical_points_array]
+        dedup = dedupe_on_surrogate(pol, points_box; tol = surrogate_dedup_tol)
+        timing["n_surrogate_clusters"] = Float64(dedup.n_clusters)
+        timing["n_surrogate_polish_converged"] = Float64(dedup.n_converged)
+        timing["surrogate_polish_max_move"] = isempty(dedup.moved) ? 0.0 : maximum(dedup.moved)
+        if dedup.n_clusters < n_critical_points
+            @info "  Surrogate dedup: $n_critical_points raw roots → $(dedup.n_clusters) clusters " *
+                  "(largest $(maximum(dedup.cluster_size)); polish moved ≤ $(round(maximum(dedup.moved), sigdigits=2)) in box units)"
+        end
+    end
+
     timing["critical_point_processing_time"] = time() - processing_start
 
     # Phase 4: CSV Export (raw critical points only)
@@ -1422,6 +1454,12 @@ function process_single_degree(
         ]...,
         :objective => objective_values,
     )
+    if dedup !== nothing
+        df_critical[!, :cluster_id] = dedup.cluster_id
+        df_critical[!, :cluster_size] = dedup.cluster_size
+        df_critical[!, :representative] = Int.(dedup.representative)
+        df_critical[!, :surrogate_polish_move] = dedup.moved
+    end
 
     # Export raw critical points (add '_raw' suffix for globtimpostprocessing)
     csv_path = joinpath(output_dir, "critical_points_raw_deg_$degree.csv")

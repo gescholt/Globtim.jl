@@ -4,6 +4,19 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Added (N5, 2026-10-16)
+
+- **Surrogate-side deduplication** (`src/surrogate_dedup.jl`): `newton_polish_on_surrogate`
+  (damped Newton on `∇p̂ = 0` in box coordinates, ForwardDiff), `cluster_points`
+  (membership-returning twin of `_dedup_point_indices`), `dedupe_on_surrogate`.
+  `run_standard_experiment` (`surrogate_dedup = true`, `surrogate_dedup_tol = 1e-6`)
+  polishes every raw root on the fitted surrogate and clusters the result; the raw
+  census is unchanged and `critical_points_raw_deg_X.csv` gains `cluster_id`,
+  `cluster_size`, `representative` and `surrogate_polish_move`, so the refinement on `f`
+  (GlobtimPostProcessing) starts once per cluster. N5 of
+  `docs/research/plans/EVIDENCE_MAP_2026-10.md` (63–97 % of polish iterations on
+  redundant seeds, median 16 seeds per point).
+
 ### Added (N7, 2026-10-16)
 
 - **Analyticity detector** (`src/analyticity.jl`): `axis_analyticity`,
