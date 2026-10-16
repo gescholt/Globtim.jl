@@ -346,10 +346,67 @@ function taylor_series(::Val{M}, K::ChebyshevGradientKernel, x_terms, c_terms) w
     Tx = promote_type(eltype(first(x_terms)), eltype(first(c_terms)))
     S = TaylorScalar{N,Tx}
     x = [S(x_terms[k]) for k in 1:K.n]
-    c = [S(c_terms[r]) for r in 1:K.m]
-    w = Vector{S}(undef, K.n)
-    evaluate!(w, K, x, c)
+    # The system is linear in the coefficients, so c(t) = Σ_j c_j t^j splits the series:
+    # ∇p(x(t); c(t)) = Σ_j t^j · [A(x(t)) c_j]. Each c_j is a PLAIN vector and the
+    # contraction runs with scalar × TaylorScalar products — no per-coefficient Taylor
+    # object (4 845 of them per call at degree 16 in 4-D, three calls per tracker step).
+    nc = min(maximum(length(t) for t in c_terms), N)
+    cs = [[length(c_terms[r]) >= j ? convert(Tx, c_terms[r][j]) : zero(Tx) for r in 1:K.m] for j in 1:nc]
+    keep = [j for j in 1:nc if !all(iszero, cs[j])]
+    w = [zero(S) for _ in 1:K.n]
+    isempty(keep) && return w
+    ws = [Vector{S}(undef, K.n) for _ in keep]
+    evaluate_multi!(ws, K, x, cs[keep])   # one pass over the support for all orders
+    for (i, j) in enumerate(keep), k in 1:K.n
+        w[k] = w[k] + _shift(ws[i][k], j - 1)
+    end
     return w
+end
+
+"""
+    evaluate_multi!(us, K::ChebyshevGradientKernel, x, cs) -> us
+
+`us[i][k] = ∂_k p(x; cs[i])` for several coefficient vectors on the same support and the
+same point, sharing the basis products (one pass over the support).
+"""
+function evaluate_multi!(us, K::ChebyshevGradientKernel, x, cs::AbstractVector{<:AbstractVector})
+    L = length(cs)
+    L == length(us) || throw(DimensionMismatch("$(length(us)) outputs for $L coefficient vectors"))
+    for c in cs
+        length(c) == K.m || throw(DimensionMismatch("coefficient vector has $(length(c)) entries for $(K.m) support rows"))
+    end
+    E = L == 0 ? eltype(x) : _eltype(K, x, cs[1])
+    T, dT, _ = _tables(K, x, E, false)
+    n = K.n
+    pre = Vector{E}(undef, n + 1)
+    suf = Vector{E}(undef, n + 1)
+    acc = [zeros(E, n) for _ in 1:L]
+    @inbounds for r in 1:K.m
+        pre[1] = one(E)
+        for k in 1:n
+            pre[k+1] = pre[k] * T[k][K.support[r, k]+1]
+        end
+        suf[n+1] = one(E)
+        for k in n:-1:1
+            suf[k] = suf[k+1] * T[k][K.support[r, k]+1]
+        end
+        for k in 1:n
+            term = pre[k] * dT[k][K.support[r, k]+1] * suf[k+1]
+            for i in 1:L
+                acc[i][k] += cs[i][r] * term
+            end
+        end
+    end
+    for i in 1:L, k in 1:n
+        us[i][k] = acc[i][k]
+    end
+    return us
+end
+
+# multiply a truncated series by ε^s (drop the terms that fall off the end)
+function _shift(x::TaylorScalar{N,T}, s::Int) where {N,T}
+    s == 0 && return x
+    TaylorScalar{N,T}(ntuple(i -> i > s ? x.a[i-s] : zero(T), Val(N)))
 end
 
 """

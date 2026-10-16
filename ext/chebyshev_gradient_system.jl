@@ -129,7 +129,7 @@ function chebyshev_anchor(
         target_solutions_count = target_count,
         max_loops_no_progress = max_loops_no_progress,
         show_progress = false,
-        threading = false,
+        threading = Threads.nthreads() > 1,   # the kernels allocate per call: no shared state
     )
     S0 = solutions(R)
     if target_count !== nothing && length(S0) != target_count

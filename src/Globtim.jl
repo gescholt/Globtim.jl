@@ -401,7 +401,7 @@ export AnalyticityVerdict, axis_analyticity, analyticity_verdict, analyticity_su
 export newton_polish_on_surrogate, cluster_points, dedupe_on_surrogate
 # Chebyshev-native kernels (chebyshev_eval.jl); the HC system is in the extension
 export ChebyshevGradientKernel, TaylorScalar, clenshaw, chebyshev_derivative_coeffs,
-    chebyshev_tables!, gradient_basis_matrix, taylor_series, taylor_coefficient!
+    chebyshev_tables!, gradient_basis_matrix, taylor_series, taylor_coefficient!, evaluate_multi!
 export dyadic_quantize
 
 # Enhanced metrics collection - export module
