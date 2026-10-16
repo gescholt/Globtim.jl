@@ -315,6 +315,7 @@ include("function_value_analysis.jl") #Function value error analysis
 include("advanced_l2_analysis.jl") #Advanced L2-norm computation and sparsification
 include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("chop.jl") #Coefficient envelope, noise-floor estimate, automatic chop
+include("analyticity.jl") #N7: per-axis analyticity detector from the coefficient envelope
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
@@ -392,6 +393,8 @@ export CachedObjective, cache_stats, clear_cache!
 # Coefficient envelope / noise floor / chop (chop.jl)
 export coefficient_envelope,
     axis_envelopes, axis_decay_rates, NoiseFloorEstimate, estimate_noise_floor, chop_polynomial
+# Analyticity detector (analyticity.jl, N7)
+export AnalyticityVerdict, axis_analyticity, analyticity_verdict, analyticity_summary
 export dyadic_quantize
 
 # Enhanced metrics collection - export module

@@ -410,6 +410,23 @@ only raw critical points from HomotopyContinuation.
 - `max_abs_value::Real = Inf`: dynamic-range cap (LV / FHN draws reach `1e18`–`1e113`
   inside the box; such values are plateau noise, not landscape).
 
+# Analyticity detector (analyticity.jl; N7 of docs/research/plans/EVIDENCE_MAP_2026-10.md)
+- `analyticity_check::Bool = true`: after every fit, `analyticity_verdict` reads the
+  per-axis coefficient envelopes: an analytic objective's Chebyshev coefficients decay
+  geometrically along each axis, a kink / plateau edge / wall inside the box makes them
+  decay algebraically on that axis (`|c_k| ~ k^{-ν}`), and further degrees then buy
+  nothing (the porkchop Δv sweep, rel-L2 0.09 → 0.18 → 0.17 at d = 8/12/16). Per-degree
+  verdicts land in `metadata["analyticity"]` (verdict, decay rate, algebraic exponent,
+  model RSS ratio, offending axes, suggested axis).
+- `analyticity_stop::Bool = false`: stop the sweep on the first `:non_analytic` verdict at
+  `degree ≥ analyticity_min_degree` (default 12: the laws are fitted on the peaks of the
+  envelope and need about nine of them before geometric and algebraic decay separate —
+  a kink at 0.2 is flagged at degree 14, not 10) and record
+  `metadata["stopped_non_analytic"]` with the offending axes and the hand-off
+  (subdivide along `suggested_axis`, or reformulate).
+- `analyticity_options::NamedTuple = (;)`: keyword overrides for `axis_analyticity`
+  (`rate_threshold`, `model_ratio`, `min_points`, `rel_floor`).
+
 # Automatic chop
 `experiment_config.truncation_mode = :auto` replaces the manual threshold by
 `chop_polynomial`: the coefficient envelope's noise plateau is estimated per degree and
@@ -611,6 +628,10 @@ function run_standard_experiment(;
     admissibility::Bool = true,
     penalty_value::Union{Nothing,Real} = nothing,
     max_abs_value::Real = Inf,
+    analyticity_check::Bool = true,
+    analyticity_stop::Bool = false,
+    analyticity_min_degree::Int = 12,
+    analyticity_options::NamedTuple = (;),
     align_box::Union{Nothing,AbstractVector{<:Real}} = nothing,
     align_shape::Symbol = :isotropic,
     measure_outflow::Bool = align_box !== nothing,
@@ -643,6 +664,10 @@ function run_standard_experiment(;
     grad_errors = (gradient_check || gate_grad) ? Dict{Int,Float64}() : nothing
     # Closed Poincaré–Hopf census (box_strata_census.jl) of every SOLVED degree's surrogate.
     census_out = box_census ? Dict{Int,Dict{String,Any}}() : nothing
+    # N7 analyticity detector (analyticity.jl): per-degree, per-axis verdict from the
+    # coefficient envelope; recorded in metadata["analyticity"], and with analyticity_stop
+    # a :non_analytic verdict at degree ≥ analyticity_min_degree ends the sweep.
+    analyticity_out = analyticity_check ? Dict{Int,AnalyticityVerdict}() : nothing
     mkpath(output_dir)
 
     # Box geometry (aligned_box.jl, N2). With align_box the run is re-expressed in the
@@ -795,6 +820,8 @@ function run_standard_experiment(;
                     admissibility = admissibility,
                     penalty_value = penalty_value,
                     max_abs_value = max_abs_value,
+                    analyticity_out = analyticity_out,
+                    analyticity_options = analyticity_options,
                 ),
                 experiment_config.degree_timeout_seconds;
                 label = "degree $degree",
@@ -806,6 +833,28 @@ function run_standard_experiment(;
             # Checkpoint: save accumulated results after each degree so partial
             # runs are recoverable if the job hits a wall-time limit.
             _save_checkpoint(output_dir, degree_results, config_hash)
+
+            # N7: a non-analytic axis makes every further degree a wasted fit (algebraic
+            # coefficient decay); stop and name the axis for a subdivision / reformulation.
+            if analyticity_stop &&
+               analyticity_out !== nothing &&
+               haskey(analyticity_out, degree) &&
+               analyticity_out[degree].verdict == :non_analytic &&
+               degree >= analyticity_min_degree
+                av = analyticity_out[degree]
+                @info "Stopping degree sweep: non-analytic axis detected (N7)" degree axes =
+                    findall(av.offending) suggested_axis = av.suggested_axis decay_rate =
+                    av.decay_rate
+                metadata["stopped_non_analytic"] = merge(
+                    analyticity_summary(av),
+                    Dict{String,Any}(
+                        "degree" => degree,
+                        "suggestion" => "subdivide along axis $(av.suggested_axis) or reformulate; more degree will not converge",
+                    ),
+                )
+                metadata["stopped_after_degree"] = degree
+                break
+            end
 
             # Optional early stop (opt-in; default off ⇒ full-range sweep unchanged):
             # halt once the relative-L2 approximation error has stopped improving.
@@ -1014,6 +1063,11 @@ function run_standard_experiment(;
         metadata["box_strata_census"] =
             Dict{String,Any}(string(d) => v for (d, v) in sort(collect(census_out)))
     end
+    if analyticity_out !== nothing && !isempty(analyticity_out)
+        metadata["analyticity"] = Dict{String,Any}(
+            string(d) => analyticity_summary(v) for (d, v) in sort(collect(analyticity_out); by = first)
+        )
+    end
     if cache_evaluations
         # unwrap the transform (if any), keep the cache
         cached = fit_objective isa TransformedObjective ? original_objective(fit_objective) : fit_objective
@@ -1162,6 +1216,8 @@ function process_single_degree(
     admissibility::Bool = true,
     penalty_value::Union{Nothing,Real} = nothing,
     max_abs_value::Real = Inf,
+    analyticity_out::Union{Nothing,Dict{Int,AnalyticityVerdict}} = nothing,
+    analyticity_options::NamedTuple = (;),
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -1187,6 +1243,17 @@ function process_single_degree(
     timing["l2_approx_error"] = pol.nrm
     timing["relative_l2_error"] = relative_l2_error(pol)
     timing["condition_number"] = pol.cond_vandermonde
+    if analyticity_out !== nothing
+        # N7: on the fit as produced (before any chop), per axis
+        av = analyticity_verdict(pol; analyticity_options...)
+        analyticity_out[degree] = av
+        timing["analyticity_n_offending_axes"] = Float64(count(av.offending))
+        if av.verdict == :non_analytic
+            @warn "  Analyticity: axis $(findall(av.offending)) decays algebraically at degree $degree " *
+                  "(rate $(round.(av.decay_rate, digits=3)), exponent $(round.(av.algebraic_exponent, digits=2))); " *
+                  "suggested subdivision axis $(av.suggested_axis)"
+        end
+    end
     if gradient_errors !== nothing
         # Against the objective the fit saw (cached / transformed), not the raw one:
         # under a value transform ∇(g∘f) ≠ ∇f and the comparison would be meaningless.

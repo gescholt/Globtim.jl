@@ -4,6 +4,27 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Added (N7, 2026-10-16)
+
+- **Analyticity detector** (`src/analyticity.jl`): `axis_analyticity`,
+  `analyticity_verdict`, `AnalyticityVerdict`, `analyticity_summary`. Per axis, the
+  peaks of the coefficient envelope (running maximum from the tail, which strips the
+  cos(kθ₀) modulation of an off-centre kink and parity zeros) are fitted by a geometric
+  model (log envelope linear in the degree: analytic, Bernstein ellipse) and an algebraic
+  one (linear in log degree: kink, jump, plateau edge, `|c_k| ~ k^{-ν}`); the axis is
+  non-analytic when the algebraic model fits clearly better (`model_ratio` 0.5, no flat
+  steps) or the geometric ratio is ≥ `rate_threshold` (0.9) with no plateau.
+  `run_standard_experiment` records the verdict for every fitted degree in
+  `metadata["analyticity"]` (`analyticity_check = true`) and, with
+  `analyticity_stop = true`, ends the sweep at the first `:non_analytic` verdict from
+  `analyticity_min_degree` (12; about nine peaks are needed) on, writing
+  `metadata["stopped_non_analytic"]` with the offending axes and the suggested
+  subdivision axis. Note for the chop: `estimate_noise_floor` reads an algebraic tail
+  as a plateau, so a non-analytic verdict means the automatic chop of that degree is
+  not trustworthy. N7 of
+  `docs/research/plans/EVIDENCE_MAP_2026-10.md` (the porkchop and SIR sweeps that
+  diverged with degree).
+
 ### Added (N3, 2026-10-16)
 
 - **Penalty-node admissibility gate** (`src/admissibility.jl`): `grid_admissibility`,
