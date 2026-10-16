@@ -75,6 +75,7 @@ function solve_tree_leaves(
     rational_seed::Int = 0,
     rational_fit::Symbol = :lm,
     rational_solver::Symbol = :polyhedral,
+    representation::Symbol = :monomial,
 )
     rational_solver in (:polyhedral, :total_degree, :parametric) || throw(
         ArgumentError(
@@ -134,6 +135,7 @@ function solve_tree_leaves(
                 search_bounds = search_bounds,
                 transform = sd.transform,  # Stage 2b: lift CPs back through the leaf's frame
                 path_stats_ref = stats_ref,
+                representation = representation,  # :monomial | :chebyshev (chebyshev_eval.jl)
             )
             append!(all_cps, cps)
             append!(all_leaf_tags, fill(leaf_id, length(cps)))

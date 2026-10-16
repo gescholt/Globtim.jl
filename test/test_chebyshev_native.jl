@@ -153,6 +153,18 @@ ENV["GLOBTIM_LEDGER_APPEND"] = "0"
         @test match_sets(cheb2, Globtim.solve_polynomial_system_from_approx(y, pr2))
     end
 
+    @testset "solve_tree_leaves with representation = :chebyshev" begin
+        f2(x) = Deuflhard(x)
+        bounds = [(-1.2, 1.2), (-1.2, 1.2)]
+        tree = Globtim.adaptive_refine(f2, bounds, 6; max_depth = 1, max_leaves = 2, parallel = false)
+        rm = Globtim.solve_tree_leaves(tree; solver = :hc)
+        rc = Globtim.solve_tree_leaves(tree; solver = :hc, representation = :chebyshev)
+        @test all(v == :ran for v in values(rc.leaf_status))
+        inbox(S) = [p for p in S if all(bounds[i][1] - 1e-9 <= p[i] <= bounds[i][2] + 1e-9 for i in 1:2)]
+        @test match_sets(inbox(rm.critical_points) ./ 1.2, inbox(rc.critical_points) ./ 1.2)
+        @test all(s.start_system == :chebyshev_anchor for (_, s) in rc.path_stats)
+    end
+
     @testset "argument checks" begin
         @polyvar z[1:2]
         TRd = TestInput(Deuflhard; dim = 2, center = [0.0, 0.0], GN = 10, sample_range = 1.2)
