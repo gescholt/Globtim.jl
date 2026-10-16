@@ -2,6 +2,10 @@ using Test
 using Globtim
 using HomotopyContinuation  # activates GlobtimHomotopyContinuationExt
 
+# No test run may append to the tracked central ledger (experiments/ledger.jsonl);
+# per-run ledger_record.json files in the temporary output directories are still written.
+ENV["GLOBTIM_LEDGER_APPEND"] = "0"
+
 # Test timeout infrastructure
 include("timeout_utils.jl")
 

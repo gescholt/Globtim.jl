@@ -6,6 +6,8 @@
 using Test
 using Globtim
 
+ENV["GLOBTIM_LEDGER_APPEND"] = "0"   # the pipeline runs below write no central-ledger row
+
 @testset "admissibility" begin
     @testset "grid_admissibility counts" begin
         F = [0.1, 0.2, Inf, NaN, 5.0, 5.0 * (1 + 1e-4), 1e12, -0.3]

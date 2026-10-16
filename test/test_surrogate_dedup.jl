@@ -6,6 +6,8 @@ using Globtim
 using LinearAlgebra
 using CSV, DataFrames
 
+ENV["GLOBTIM_LEDGER_APPEND"] = "0"   # the pipeline runs below write no central-ledger row
+
 @testset "surrogate dedup" begin
     @testset "cluster_points membership" begin
         pts = [[0.0, 0.0], [1.0, 0.0], [1e-9, 0.0], [1.0, 1e-9], [0.5, 0.5], [0.0, 2e-9]]

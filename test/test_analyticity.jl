@@ -6,6 +6,8 @@
 using Test
 using Globtim
 
+ENV["GLOBTIM_LEDGER_APPEND"] = "0"   # the pipeline runs below write no central-ledger row
+
 @testset "analyticity" begin
     @testset "synthetic envelopes" begin
         geo = [0.5^k for k in 0:12]                       # analytic: ρ = 2
