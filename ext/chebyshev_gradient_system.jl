@@ -107,16 +107,21 @@ function chebyshev_anchor(
     max_loops_no_progress::Int = 10,
 )
     F = ChebyshevGradientSystem(K)
-    x0 = randn(rng, ComplexF64, K.n)
+    # Start point inside the box with a small imaginary part: generic for monodromy (a
+    # nonsingular Jacobian is all it needs) and keeps T_j(x₀) of order one. A point of
+    # modulus > 1 makes T_j grow like |x₀|^j — 1e5 at degree 16 — and the projected pair's
+    # residual then only vanishes relative to that scale (korok 1113956 failed here).
+    x0 = complex.(2 .* rand(rng, K.n) .- 1, 0.05 .* randn(rng, K.n))
     A = Globtim.gradient_basis_matrix(K, x0)
     c = randn(rng, ComplexF64, K.m)
     c0 = c .- pinv(A) * (A * c)
     c0 ./= norm(c0)
-    # the constructed pair must satisfy the system
+    # the constructed pair must satisfy the system, relative to the gradient scale ‖A‖‖c₀‖
     u0 = zeros(ComplexF64, K.n)
     Globtim.evaluate!(u0, K, x0, c0)
-    norm(u0) < 1e-10 * max(1.0, norm(c0)) ||
-        error("chebyshev_anchor: constructed start pair has residual $(norm(u0))")
+    scale = max(1.0, opnorm(A) * norm(c0))
+    norm(u0) <= 1e-9 * scale ||
+        error("chebyshev_anchor: constructed start pair has residual $(norm(u0)) against scale $scale")
     R = monodromy_solve(
         F,
         [x0],

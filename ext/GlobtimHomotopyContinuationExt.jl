@@ -16,7 +16,7 @@ using HomotopyContinuation:
     @var
 import HomotopyContinuation   # for HomotopyContinuation.differentiate (parametric path)
 using MultivariatePolynomials: differentiate   # cold path: differentiate DynamicPolynomials
-using LinearAlgebra: norm, pinv, cond
+using LinearAlgebra: norm, pinv, cond, opnorm
 using Random: Xoshiro, randn
 
 function Globtim._solve_hc(
