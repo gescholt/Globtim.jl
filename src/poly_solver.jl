@@ -243,6 +243,22 @@ function _solve_hc(args...; kwargs...)
 end
 
 """
+    _solve_hc_chebyshev(pol::ApproxPoly; anchor = nothing, path_stats_ref = nothing)
+
+Chebyshev-native HC solve of ∇p = 0 (no monomial conversion): the gradient system is
+evaluated from the stored coefficients (chebyshev_eval.jl) and every fit on a support is
+a parameter homotopy from one cached generic anchor. Implemented in
+GlobtimHomotopyContinuationExt (ext/chebyshev_gradient_system.jl); requires
+`using HomotopyContinuation`.
+"""
+function _solve_hc_chebyshev(args...; kwargs...)
+    error(
+        "representation = :chebyshev requires HomotopyContinuation.jl. " *
+        "Add `using HomotopyContinuation` before calling.",
+    )
+end
+
+"""
     _solve_hc_parametric(support, n, cell_coeffs) -> (; anchor_n, per_cell)
 
 Batched parametric "solve-one-sweep-many" critical-point solve for a group of cells
@@ -469,7 +485,22 @@ function solve_polynomial_system_from_approx(
     msolve_coeff_tol::Float64 = 0.0,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
+    representation::Symbol = :monomial,
+    surrogate_residual_tol::Real = 1e-4,
 )::Vector{Vector{Float64}}
+    representation in (:monomial, :chebyshev) || throw(
+        ArgumentError("representation must be :monomial or :chebyshev, got :$representation"),
+    )
+    if representation === :chebyshev
+        # Chebyshev-native path (CHEBYSHEV_NATIVE_HC_PLAN.md): the gradient system is
+        # evaluated from the stored coefficients, no monomial polynomial is formed.
+        solver === :hc || throw(ArgumentError("representation = :chebyshev is an HC path; got solver = :$solver"))
+        sparsify_threshold == 0.0 ||
+            throw(ArgumentError("representation = :chebyshev does not sparsify; got sparsify_threshold = $sparsify_threshold"))
+        roots = _solve_hc_chebyshev(pol_approx; path_stats_ref = path_stats_ref)
+        check_surrogate_residuals(pol_approx, roots; tol = surrogate_residual_tol)
+        return roots
+    end
     return solve_polynomial_system(
         x,
         pol_approx;

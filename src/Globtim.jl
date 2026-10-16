@@ -317,6 +317,7 @@ include("truncation_analysis.jl") #Polynomial truncation with L2-norm analysis
 include("chop.jl") #Coefficient envelope, noise-floor estimate, automatic chop
 include("analyticity.jl") #N7: per-axis analyticity detector from the coefficient envelope
 include("surrogate_dedup.jl") #N5: Newton polish on the surrogate + clustering before any refinement on f
+include("chebyshev_eval.jl") #Chebyshev-native ∇p / ∇²p kernels on the sparse support (HC system in the ext)
 include("quadrature_l2_norm.jl") #Quadrature-based L2 norm computation
 include("anisotropic_grids.jl") #Anisotropic grid generation
 include("Metrics.jl") #Streaming JSONL per-leaf / per-CP metrics writer (parsed before adaptive_subdivision so its types are available in walker kwargs)
@@ -398,6 +399,9 @@ export coefficient_envelope,
 export AnalyticityVerdict, axis_analyticity, analyticity_verdict, analyticity_summary
 # Surrogate-side deduplication (surrogate_dedup.jl, N5)
 export newton_polish_on_surrogate, cluster_points, dedupe_on_surrogate
+# Chebyshev-native kernels (chebyshev_eval.jl); the HC system is in the extension
+export ChebyshevGradientKernel, TaylorScalar, clenshaw, chebyshev_derivative_coeffs,
+    chebyshev_tables!, gradient_basis_matrix, taylor_series, taylor_coefficient!
 export dyadic_quantize
 
 # Enhanced metrics collection - export module

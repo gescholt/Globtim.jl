@@ -16,7 +16,7 @@ using HomotopyContinuation:
     @var
 import HomotopyContinuation   # for HomotopyContinuation.differentiate (parametric path)
 using MultivariatePolynomials: differentiate   # cold path: differentiate DynamicPolynomials
-using LinearAlgebra: norm, pinv
+using LinearAlgebra: norm, pinv, cond
 using Random: Xoshiro, randn
 
 function Globtim._solve_hc(
@@ -467,5 +467,9 @@ function Globtim._solve_hc_parametric(
 
     return (; anchor_n = anchor_n, per_cell = per_cell)
 end
+
+# Chebyshev-native gradient system + coefficient parameter homotopy (Phase 1 of
+# docs/research/plans/CHEBYSHEV_NATIVE_HC_PLAN.md)
+include("chebyshev_gradient_system.jl")
 
 end # module

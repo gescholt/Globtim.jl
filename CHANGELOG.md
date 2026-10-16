@@ -4,6 +4,31 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Added (Chebyshev-native HC, Phase 1, 2026-10-16)
+
+- **Chebyshev-native gradient kernels** (`src/chebyshev_eval.jl`):
+  `ChebyshevGradientKernel` (the fit's sparse support), `evaluate!` (∇p), 
+  `evaluate_and_jacobian!` (∇p, ∇²p), `value`, `gradient_basis_matrix` (the system is
+  linear in the coefficients), `chebyshev_tables!` (T, T′, T″ by three-term
+  recurrences), `clenshaw`, `chebyshev_derivative_coeffs`, and `TaylorScalar` with
+  `taylor_series` / `taylor_coefficient!` for the tracker's predictor. Generic in the
+  scalar type (Float64, Complex, duals, HC's symbolic variables, truncated Taylor
+  scalars); cost O(m·n) per gradient on m coefficients, no dense (d+1)ⁿ tensor.
+- **`ChebyshevGradientSystem`** (`ext/chebyshev_gradient_system.jl`, HC extension): an
+  `AbstractSystem` with the coefficients as parameters, a cached generic anchor per
+  support (random complex coefficients in the null space of A(x₀), all critical points
+  by monodromy; `(d−1)ⁿ` checked on a total-degree support) and
+  `_solve_hc_chebyshev(pol)`: one parameter homotopy anchor → coefficients per fit.
+  `solve_polynomial_system_from_approx(...; representation = :chebyshev)` routes to it;
+  the surrogate residual check runs on its roots as on the monomial path. Endpoints far
+  outside the box (`|x| > 1e3`, the escaping paths of a fit with vanishing top
+  coefficients) are dropped and counted (`n_far`). B1 of
+  `docs/research/plans/CHEBYSHEV_NATIVE_HC_PLAN.md`: on Deuflhard 2-D (d = 4, 6, 8) and
+  Rosenbrock 3-D (d = 4, 6) the in-box real critical points agree with the monomial
+  path to 1e-8, with (d−1)ⁿ paths tracked and no path failures. Note: the dev profile's
+  HomotopyContinuation 2.17 tracks the native system but still builds a symbolic copy
+  for its homogeneity check, which is why the kernels accept symbolic scalars.
+
 ### Added (N5, 2026-10-16)
 
 - **Surrogate-side deduplication** (`src/surrogate_dedup.jl`): `newton_polish_on_surrogate`

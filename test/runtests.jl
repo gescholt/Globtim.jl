@@ -365,6 +365,11 @@ with_timeout(TIMEOUT_SOLVE, label = "test_surrogate_dedup.jl") do
     include("test_surrogate_dedup.jl")
 end
 
+# Chebyshev-native HC kernels and system (chebyshev_eval.jl, ext/chebyshev_gradient_system.jl)
+with_timeout(TIMEOUT_SOLVE, label = "test_chebyshev_native.jl") do
+    include("test_chebyshev_native.jl")
+end
+
 # Evidence-driven gates (docs/research/plans/EVIDENCE_MAP_2026-10.md N1/N2/N4):
 # gradient-fidelity gate, eigen-aligned boxes + outflow, surrogate residual check.
 with_timeout(TIMEOUT_TESTFILE, label = "test_gate_metric.jl") do
