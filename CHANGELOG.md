@@ -4,6 +4,24 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Changed (N4 fixes and N5 on the tree path, 2026-10-16)
+
+- **`surrogate_residual_tol` is forwarded on the monomial path** of
+  `solve_polynomial_system_from_approx` (it was accepted and silently ignored there), and
+  `solve_and_transform` / `solve_tree_leaves` take it. With `sparsify_threshold > 0` the
+  residual check now runs on the polynomial that was **solved** (`_sparsify_coeffs`, the
+  one rule shared with the solver, and `_with_coeffs`), not on the dense fit, which could
+  raise on a legitimate root of the truncated system.
+- **`solve_tree_leaves` reports `:surrogate_residual`** as the leaf status when the check
+  fails (was a generic `:exception` with the roots dropped behind a warning), so a driver
+  can count it and refuse to call the arm complete (`cert_subdiv_sweep.jl` records
+  `n_leaf_residual_fail` and fails the arm unless `--allow-residual-fail`).
+- **N5 on the tree path:** `solve_tree_leaves(; surrogate_dedup, surrogate_dedup_tol)`
+  polishes every polynomial-sourced root on its own leaf's surrogate in the leaf's box
+  frame and deduplicates on the polished coordinates; the raw coordinates are unchanged
+  and the result gains `cp_polished`, `cp_moved`, `cp_cluster_size` and a
+  `surrogate_dedup` summary. Rotated leaves and rational points are not polished.
+
 ### Added (Chebyshev-native HC, Phase 1, 2026-10-16)
 
 - **Chebyshev-native gradient kernels** (`src/chebyshev_eval.jl`):
