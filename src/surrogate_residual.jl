@@ -109,3 +109,35 @@ function check_surrogate_residuals(
     @debug "surrogate residual check: max relative ‖∇p‖ = $worst over $(length(finite)) roots"
     return worst
 end
+
+# ── Sparsification helpers (N4: the residual is measured on the polynomial that was solved) ──
+
+"""
+    _sparsify_coeffs(coeffs, threshold) -> Vector
+
+Coefficients with `|c| < threshold * max|c|` set to zero (`threshold <= 0` or an empty
+vector: `coeffs` unchanged). The one rule used both by the solver before building the
+system and by [`check_surrogate_residuals`](@ref) when it has to check the truncated
+polynomial, so the two can never disagree about which polynomial was solved.
+"""
+function _sparsify_coeffs(coeffs::AbstractVector, threshold::Real)
+    (threshold > 0 && !isempty(coeffs)) || return coeffs
+    max_c = maximum(abs, coeffs)
+    max_c > 0 || return coeffs
+    cutoff = threshold * max_c
+    return [abs(c) < cutoff ? zero(c) : c for c in coeffs]
+end
+
+"""
+    _with_coeffs(pol::ApproxPoly, coeffs) -> ApproxPoly
+
+A copy of `pol` with its coefficient vector replaced (same support, degree, frame,
+basis and normalisation), for evaluating a sparsified polynomial as a surrogate.
+"""
+function _with_coeffs(pol::ApproxPoly{T,S}, coeffs::Vector{T}) where {T,S}
+    length(coeffs) == length(pol.coeffs) ||
+        throw(DimensionMismatch("coefficient vector has $(length(coeffs)) entries, the polynomial $(length(pol.coeffs))"))
+    return ApproxPoly{T,S}(coeffs, pol.support, pol.degree, pol.nrm, pol.N, pol.scale_factor,
+        pol.center, pol.grid, pol.z, pol.basis, pol.precision, pol.normalized,
+        pol.power_of_two_denom, pol.cond_vandermonde)
+end

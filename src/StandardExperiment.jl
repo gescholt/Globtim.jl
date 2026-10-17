@@ -251,6 +251,7 @@ function solve_and_transform(
     transform::Union{Nothing,Matrix{Float64}} = nothing,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
     representation::Symbol = :monomial,
+    surrogate_residual_tol::Real = 1e-4,
 )
     dimension = length(bounds)
     center = [(bounds[1] + bounds[2]) / 2 for bounds in bounds]
@@ -290,6 +291,7 @@ function solve_and_transform(
             search_bounds = normalized_search_bounds,
             path_stats_ref = path_stats_ref,
             representation = representation,
+            surrogate_residual_tol = surrogate_residual_tol,
         )
     end
 

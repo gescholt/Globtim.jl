@@ -76,7 +76,12 @@ function solve_tree_leaves(
     rational_fit::Symbol = :lm,
     rational_solver::Symbol = :polyhedral,
     representation::Symbol = :monomial,
+    surrogate_residual_tol::Real = 1e-4,
+    surrogate_dedup::Bool = false,
+    surrogate_dedup_tol::Float64 = 1e-6,
 )
+    surrogate_dedup_tol > 0 ||
+        throw(ArgumentError("surrogate_dedup_tol must be > 0, got $surrogate_dedup_tol"))
     rational_solver in (:polyhedral, :total_degree, :parametric) || throw(
         ArgumentError(
             "rational_solver must be :polyhedral, :total_degree or :parametric, got $rational_solver",
@@ -136,6 +141,7 @@ function solve_tree_leaves(
                 transform = sd.transform,  # Stage 2b: lift CPs back through the leaf's frame
                 path_stats_ref = stats_ref,
                 representation = representation,  # :monomial | :chebyshev (chebyshev_eval.jl)
+                surrogate_residual_tol = surrogate_residual_tol,
             )
             append!(all_cps, cps)
             append!(all_leaf_tags, fill(leaf_id, length(cps)))
@@ -172,7 +178,36 @@ function solve_tree_leaves(
         end
     end
 
-    keep_idx = _dedup_point_indices(all_cps, dedup_tol)
+    # N5 (surrogate_dedup.jl) on the tree path: polish every polynomial-sourced root on
+    # ITS OWN leaf's surrogate (box coordinates of that leaf), so roots that HC left
+    # displaced by end-game precision coincide again, then dedup on the polished
+    # coordinates. The raw coordinates are what `critical_points` keeps (the raw census
+    # is unchanged); `cp_polished` carries the polished ones. Rotated leaves are not
+    # polished (their surrogate frame is not the leaf box), and rational points are
+    # roots of p/q, not of the leaf polynomial.
+    all_polished = [copy(p) for p in all_cps]
+    all_moved = zeros(length(all_cps))
+    n_polish_converged = 0
+    if surrogate_dedup
+        by_leaf = Dict{Int,Vector{Int}}()
+        for (i, lid) in enumerate(all_leaf_tags)
+            all_sources[i] === :polynomial || continue
+            push!(get!(by_leaf, lid, Int[]), i)
+        end
+        for (lid, idxs) in by_leaf
+            sd = tree.subdomains[lid]
+            (sd.polynomial === nothing || sd.transform !== nothing) && continue
+            ẑs = [(all_cps[i] .- sd.center) ./ sd.half_widths for i in idxs]
+            d = dedupe_on_surrogate(sd.polynomial, ẑs; tol = surrogate_dedup_tol)
+            n_polish_converged += d.n_converged
+            for (k, i) in enumerate(idxs)
+                all_polished[i] = sd.center .+ sd.half_widths .* d.polished[k]
+                all_moved[i] = norm(all_polished[i] .- all_cps[i])
+            end
+        end
+    end
+    keep_idx = _dedup_point_indices(surrogate_dedup ? all_polished : all_cps, dedup_tol)
+    cl = cluster_points(surrogate_dedup ? all_polished : all_cps, dedup_tol)
     return (;
         critical_points = all_cps[keep_idx],
         cp_sources = all_sources[keep_idx],
@@ -180,6 +215,16 @@ function solve_tree_leaves(
         # CP→leaf provenance, aligned with critical_points: yield-vs-observables
         # analysis needs to know which leaf produced each CP.
         cp_leaf_ids = all_leaf_tags[keep_idx],
+        cp_polished = all_polished[keep_idx],
+        cp_moved = all_moved[keep_idx],
+        cp_cluster_size = cl.cluster_size[keep_idx],
+        surrogate_dedup = (;
+            enabled = surrogate_dedup,
+            tol = surrogate_dedup_tol,
+            n_before = length(all_cps),
+            n_after = length(keep_idx),
+            n_polish_converged = n_polish_converged,
+        ),
         leaf_status = leaf_status,
         path_stats = path_stats,
     )
@@ -248,6 +293,10 @@ the message indicates the HomotopyContinuation extension failed to load, or
 function _classify_solve_failure(e)
     msg = sprint(showerror, e)
     occursin("requires HomotopyContinuation", msg) && return :hc_missing
+    # N4: a root that is not a critical point of the fitted surrogate is a solve-path
+    # bug; it is reported under its own status so a driver can count it and refuse to
+    # call the arm complete (cert_subdiv_sweep records n_leaf_residual_fail).
+    occursin("surrogate gradient residual check failed", msg) && return :surrogate_residual
     return :exception
 end
 

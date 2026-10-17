@@ -114,17 +114,7 @@ TimerOutputs.@timeit _TO function solve_polynomial_system(
     # drops zero-coefficient terms, so the resulting polynomial (and its Newton polytope)
     # will be genuinely sparser. This reduces the number of HC paths when using
     # polyhedral homotopy.
-    actual_coeffs = if sparsify_threshold > 0.0 && !isempty(coeffs)
-        max_c = maximum(abs, coeffs)
-        if max_c > 0
-            cutoff = sparsify_threshold * max_c
-            [abs(c) < cutoff ? zero(c) : c for c in coeffs]
-        else
-            coeffs
-        end
-    else
-        coeffs
-    end
+    actual_coeffs = _sparsify_coeffs(coeffs, sparsify_threshold)
 
     if solver == :hc
         result = _solve_hc(
@@ -414,6 +404,7 @@ function solve_polynomial_system(
     precision::PrecisionType = pol.precision,
     normalized::Bool = pol.normalized,
     power_of_two_denom::Bool = pol.power_of_two_denom,
+    sparsify_threshold::Float64 = 0.0,
     surrogate_residual_tol::Real = 1e-4,
     surrogate_residual_margin::Real = 0.5,
     kwargs...,
@@ -447,6 +438,7 @@ function solve_polynomial_system(
         precision = precision,
         normalized = normalized,
         power_of_two_denom = power_of_two_denom,
+        sparsify_threshold = sparsify_threshold,
         kwargs...,
     )
 
@@ -455,9 +447,14 @@ function solve_polynomial_system(
     # a caller who omits basis/normalized gets the main method's defaults and solves a
     # different polynomial — so the check is here, on the raw box-coordinate roots, for
     # HC and msolve alike. `return_system = true` returns (roots, system_info).
+    # With sparsification the polynomial that was SOLVED is the truncated one, so the
+    # residual is measured on it: a root of the truncated system is not a root of the
+    # dense one, and checking against the dense one would raise on legitimate roots.
     roots = result isa Tuple ? result[1] : result
+    pol_solved = sparsify_threshold > 0.0 ?
+                 _with_coeffs(pol, _sparsify_coeffs(pol.coeffs, sparsify_threshold)) : pol
     check_surrogate_residuals(
-        pol,
+        pol_solved,
         roots;
         tol = surrogate_residual_tol,
         margin = surrogate_residual_margin,
@@ -516,6 +513,7 @@ function solve_polynomial_system_from_approx(
         msolve_coeff_tol = msolve_coeff_tol,
         search_bounds = search_bounds,
         path_stats_ref = path_stats_ref,
+        surrogate_residual_tol = surrogate_residual_tol,
     )
 end
 

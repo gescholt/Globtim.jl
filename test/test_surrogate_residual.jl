@@ -66,6 +66,38 @@ using LinearAlgebra
         @test cps isa Vector
     end
 
+    @testset "tolerance is forwarded on the monomial path of from_approx" begin
+        @polyvar x[1:2]
+        pol = Constructor(TR, 4; basis = :chebyshev)
+        # a correct solve has residuals ~1e-12; an impossible tolerance must therefore
+        # raise — before the fix the keyword was accepted and silently ignored here
+        @test_throws ErrorException Globtim.solve_polynomial_system_from_approx(x, pol; surrogate_residual_tol = 1e-30)
+        @test Globtim.solve_polynomial_system_from_approx(x, pol; surrogate_residual_tol = Inf) isa Vector
+    end
+
+    @testset "sparsified solve is checked against the polynomial that was solved" begin
+        @polyvar x[1:2]
+        pol = Constructor(TR, 4; basis = :chebyshev)
+        c = pol.coeffs
+        @test Globtim._sparsify_coeffs(c, 0.0) === c
+        cs = Globtim._sparsify_coeffs(c, 0.3)
+        @test length(cs) == length(c)
+        @test count(iszero, cs) > count(iszero, c)                       # something was chopped
+        @test all((cs[i] == c[i]) || (cs[i] == 0 && abs(c[i]) < 0.3 * maximum(abs, c)) for i in eachindex(c))
+        ps = Globtim._with_coeffs(pol, cs)
+        @test ps.coeffs === cs && ps.basis == pol.basis && ps.center == pol.center
+        @test_throws DimensionMismatch Globtim._with_coeffs(pol, cs[1:end-1])
+        # the truncated system's roots are critical points of the TRUNCATED surrogate;
+        # measured against the dense fit at least one of them is not, so the dense check
+        # would have raised on a legitimate root
+        roots = Globtim.solve_polynomial_system_from_approx(x, pol; sparsify_threshold = 0.3)
+        @test roots isa Vector && !isempty(roots)
+        inbox = [r for r in roots if all(abs.(r) .<= 1.0)]
+        @test !isempty(inbox)
+        @test check_surrogate_residuals(ps, inbox) < 1e-6
+        @test maximum(surrogate_gradient_residuals(pol, inbox)) > 1e-4
+    end
+
     @testset "solve_polynomial_with_defaults uses the stored metadata" begin
         @polyvar x[1:2]
         pol_leg = Constructor(TR, 4; basis = :legendre)

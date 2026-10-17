@@ -86,5 +86,46 @@ Base.showerror(io::IO, ::_TestHCMissingErr) = print(
     @testset "_classify_solve_failure distinguishes :hc_missing" begin
         @test Globtim._classify_solve_failure(_TestHCMissingErr()) == :hc_missing
         @test Globtim._classify_solve_failure(ErrorException("unrelated")) == :exception
+        # N4: the residual check's failure is its own status, not a generic :exception
+        @test Globtim._classify_solve_failure(ErrorException("surrogate gradient residual check failed: root [0.1, 0.2] ...")) == :surrogate_residual
+    end
+
+    @testset "N4: a leaf whose roots fail the residual check is reported, its roots dropped" begin
+        f(x) = (x[1] - 0.3)^2 + (x[2] - 0.1)^2
+        tree = Globtim.adaptive_refine(f, [(-1.0, 1.0), (-1.0, 1.0)], 4;
+            max_depth = 1, max_leaves = 4, parallel = false)
+        # an impossible tolerance makes every solved leaf fail the check
+        r = Globtim.solve_tree_leaves(tree; solver = :hc, surrogate_residual_tol = 1e-30)
+        @test !isempty(r.leaf_status)
+        @test all(v == :surrogate_residual for v in values(r.leaf_status))
+        @test isempty(r.critical_points)
+        r_ok = Globtim.solve_tree_leaves(tree; solver = :hc, surrogate_residual_tol = 1e-4)
+        @test all(v == :ran for v in values(r_ok.leaf_status))
+    end
+
+    @testset "N5 on the tree path: polish on each leaf's surrogate, dedup, provenance" begin
+        f(x) = (x[1] - 0.3)^2 + (x[2] - 0.1)^2
+        tree = Globtim.adaptive_refine(f, [(-1.0, 1.0), (-1.0, 1.0)], 4;
+            max_depth = 1, max_leaves = 4, parallel = false)
+        n_leaves = count(id -> tree.subdomains[id].polynomial !== nothing,
+                         vcat(tree.converged_leaves, tree.active_leaves))
+        @test n_leaves >= 1
+        r0 = Globtim.solve_tree_leaves(tree; solver = :hc)
+        @test r0.surrogate_dedup.enabled == false
+        @test hasproperty(r0, :cp_polished) && hasproperty(r0, :cp_moved) && hasproperty(r0, :cp_cluster_size)
+        @test r0.cp_polished == r0.critical_points && all(iszero, r0.cp_moved)
+        # every leaf's quadratic fit has the one critical point; the leaves agree to ~1e-12,
+        # so with or without the surrogate polish they collapse to one representative
+        r1 = Globtim.solve_tree_leaves(tree; solver = :hc, surrogate_dedup = true)
+        @test r1.surrogate_dedup.enabled && r1.surrogate_dedup.tol == 1e-6
+        @test r1.surrogate_dedup.n_before == n_leaves
+        @test r1.surrogate_dedup.n_after == length(r1.critical_points) == 1
+        @test r1.surrogate_dedup.n_polish_converged == n_leaves
+        @test r1.cp_cluster_size == [n_leaves]
+        @test r1.critical_points[1] ≈ [0.3, 0.1] atol = 1e-6
+        @test r1.cp_polished[1] ≈ [0.3, 0.1] atol = 1e-8
+        @test all(m -> m < 1e-6, r1.cp_moved)
+        @test length(r1.cp_leaf_ids) == 1
+        @test_throws ArgumentError Globtim.solve_tree_leaves(tree; surrogate_dedup_tol = 0.0)
     end
 end
