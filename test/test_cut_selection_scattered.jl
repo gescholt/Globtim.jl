@@ -55,4 +55,26 @@ using Globtim: Subdomain, estimate_subdomain_error, select_cut_dimension
         end
         @test length(cut_axes) >= 2
     end
+
+    @testset "a parallel christoffel tree builds (no shared-timer race)" begin
+        # korok 1203749 / 1203752: parallel leaf tasks of a christoffel tree died in
+        # lambda_vandermonde_original's global TimerOutput ("Vector can not be resized
+        # concurrently", "array must be non-empty"). Many small concurrent fits.
+        if Threads.nthreads() < 2
+            @test_skip "needs julia -t >= 2 to exercise the parallel leaf fits"
+        else
+            box4 = fill((-1.0, 1.0), 4)
+            f4(x) = exp(x[1]) * cos(2 * x[2]) + x[3]^2 - 0.5 * x[4]^3
+            for seed in 1:3
+                tree = Globtim.adaptive_refine(f4, box4, 3;
+                    l2_tolerance = 1e-12, tolerance_mode = :relative,
+                    enable_p_refinement = false, max_depth = 8, max_leaves = 64,
+                    sampling = :christoffel, christoffel_oversampling = 2.0,
+                    rng_base_seed = seed, parallel = true, verbose = false)
+                leaves = vcat(tree.converged_leaves, tree.active_leaves)
+                @test length(leaves) == 64
+                @test all(tree.subdomains[id].polynomial !== nothing for id in leaves)
+            end
+        end
+    end
 end
