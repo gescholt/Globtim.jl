@@ -195,7 +195,8 @@ function dyadic_quantize(
     rel_tol::Real = 1e-14,
     bits::Union{Nothing,Int} = nothing,
 )
-    rel_tol >= 0 || throw(ArgumentError("dyadic_quantize: rel_tol must be ≥ 0, got $rel_tol"))
+    rel_tol >= 0 ||
+        throw(ArgumentError("dyadic_quantize: rel_tol must be ≥ 0, got $rel_tol"))
     out = Vector{Rational{BigInt}}(undef, length(coeffs))
     if bits === nothing && rel_tol == 0
         for (i, c) in enumerate(coeffs)
@@ -451,8 +452,9 @@ function solve_polynomial_system(
     # residual is measured on it: a root of the truncated system is not a root of the
     # dense one, and checking against the dense one would raise on legitimate roots.
     roots = result isa Tuple ? result[1] : result
-    pol_solved = sparsify_threshold > 0.0 ?
-                 _with_coeffs(pol, _sparsify_coeffs(pol.coeffs, sparsify_threshold)) : pol
+    pol_solved =
+        sparsify_threshold > 0.0 ?
+        _with_coeffs(pol, _sparsify_coeffs(pol.coeffs, sparsify_threshold)) : pol
     check_surrogate_residuals(
         pol_solved,
         roots;
@@ -486,14 +488,23 @@ function solve_polynomial_system_from_approx(
     surrogate_residual_tol::Real = 1e-4,
 )::Vector{Vector{Float64}}
     representation in (:monomial, :chebyshev) || throw(
-        ArgumentError("representation must be :monomial or :chebyshev, got :$representation"),
+        ArgumentError(
+            "representation must be :monomial or :chebyshev, got :$representation",
+        ),
     )
     if representation === :chebyshev
         # Chebyshev-native path (CHEBYSHEV_NATIVE_HC_PLAN.md): the gradient system is
         # evaluated from the stored coefficients, no monomial polynomial is formed.
-        solver === :hc || throw(ArgumentError("representation = :chebyshev is an HC path; got solver = :$solver"))
-        sparsify_threshold == 0.0 ||
-            throw(ArgumentError("representation = :chebyshev does not sparsify; got sparsify_threshold = $sparsify_threshold"))
+        solver === :hc || throw(
+            ArgumentError(
+                "representation = :chebyshev is an HC path; got solver = :$solver",
+            ),
+        )
+        sparsify_threshold == 0.0 || throw(
+            ArgumentError(
+                "representation = :chebyshev does not sparsify; got sparsify_threshold = $sparsify_threshold",
+            ),
+        )
         roots = _solve_hc_chebyshev(pol_approx; path_stats_ref = path_stats_ref)
         check_surrogate_residuals(pol_approx, roots; tol = surrogate_residual_tol)
         return roots

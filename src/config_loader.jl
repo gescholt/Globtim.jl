@@ -477,10 +477,12 @@ function validate_experiment_toml(d::Dict)
             errors,
             "[polynomial] truncation_mode must be 'relative', 'absolute' or 'auto', got: '$m'",
         )
-        m == "auto" && haskey(poly, "truncation_threshold") && push!(
-            errors,
-            "[polynomial] truncation_mode = 'auto' estimates its own threshold; remove truncation_threshold",
-        )
+        m == "auto" &&
+            haskey(poly, "truncation_threshold") &&
+            push!(
+                errors,
+                "[polynomial] truncation_mode = 'auto' estimates its own threshold; remove truncation_threshold",
+            )
     end
 
     # --- [solver] (optional) ---

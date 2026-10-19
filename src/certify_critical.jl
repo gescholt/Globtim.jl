@@ -81,7 +81,14 @@ until `interval_newton_step` returns `:unique` (→ certified objective point wi
 surrogate-to-objective displacement of the audit (`displacement` column) times a
 safety factor; `r_max` to half the distance to the nearest other candidate.
 """
-function transfer_to_objective(grad, hess, cp::CertifiedCriticalPoint; r0, r_max, growth = 2.0)
+function transfer_to_objective(
+    grad,
+    hess,
+    cp::CertifiedCriticalPoint;
+    r0,
+    r_max,
+    growth = 2.0,
+)
     error("not implemented: transfer_to_objective (CERTIFIED_CRITICAL_POINTS_PLAN.md §3)")
 end
 
@@ -98,7 +105,13 @@ axis up to `max_depth`. `status = :complete` iff every leaf was excluded or cove
 `uncovered` lists the leaves that were neither (candidates for missed critical
 points, to be fed back as new HC start points).
 """
-function exclusion_sweep(grad_p_lower, grad_diff_upper, certified_boxes, domain; max_depth = 40)
+function exclusion_sweep(
+    grad_p_lower,
+    grad_diff_upper,
+    certified_boxes,
+    domain;
+    max_depth = 40,
+)
     error("not implemented: exclusion_sweep (CERTIFIED_CRITICAL_POINTS_PLAN.md §4)")
 end
 

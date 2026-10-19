@@ -42,12 +42,18 @@ struct AlignedBox
     )
         n = length(center)
         size(Q) == (n, n) || throw(DimensionMismatch("Q must be $n×$n, got $(size(Q))"))
-        length(half_widths) == n ||
-            throw(DimensionMismatch("half_widths has $(length(half_widths)) entries for n = $n"))
+        length(half_widths) == n || throw(
+            DimensionMismatch("half_widths has $(length(half_widths)) entries for n = $n"),
+        )
         all(>(0), half_widths) || throw(ArgumentError("half_widths must be positive"))
         isapprox(Q' * Q, I; atol = 1e-10) ||
             throw(ArgumentError("Q is not orthogonal (‖QᵀQ − I‖ = $(norm(Q' * Q - I)))"))
-        new(Vector{Float64}(center), Matrix{Float64}(Q), Vector{Float64}(half_widths), Vector{Float64}(eigenvalues))
+        new(
+            Vector{Float64}(center),
+            Matrix{Float64}(Q),
+            Vector{Float64}(half_widths),
+            Vector{Float64}(eigenvalues),
+        )
     end
 end
 
@@ -100,7 +106,8 @@ function eigen_aligned_box(
     λ = E.values            # ascending
     Q = Matrix{Float64}(E.vectors)
     h = half_widths isa Real ? fill(Float64(half_widths), n) : Vector{Float64}(half_widths)
-    length(h) == n || throw(DimensionMismatch("half_widths has $(length(h)) entries for n = $n"))
+    length(h) == n ||
+        throw(DimensionMismatch("half_widths has $(length(h)) entries for n = $n"))
     if shape == :eigen
         λmax = maximum(abs, λ)
         λmax > 0 || error("eigen_aligned_box: zero Hessian, cannot shape by eigenvalues")
@@ -174,7 +181,8 @@ function box_outflow(
             y = (2 .* rand(rng, n) .- 1) .* b.half_widths
             y[k] = sgn * b.half_widths[k]
             g = ForwardDiff.gradient(f, to_physical(b, y))
-            all(isfinite, g) || error("box_outflow: gradient of f is not finite at $(to_physical(b, y))")
+            all(isfinite, g) ||
+                error("box_outflow: gradient of f is not finite at $(to_physical(b, y))")
             gy = b.Q' * g
             dot_n = sgn * gy[k]
             total += 1

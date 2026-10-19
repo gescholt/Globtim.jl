@@ -138,11 +138,7 @@ end
 # thread-safe — concurrent pushes corrupted it ("Vector can not be resized concurrently",
 # "array must be non-empty"; korok 1203749 / 1203752). Callers time their own blocks
 # (MainGenerate's "vandermonde_construction").
-function lambda_vandermonde_original(
-    Lambda::NamedTuple,
-    S;
-    basis = :chebyshev,
-)
+function lambda_vandermonde_original(Lambda::NamedTuple, S; basis = :chebyshev)
     T = eltype(S)  # Infer type from input
     m, n_dim = Lambda.size  # m = number of multi-indices, n_dim = number of dimensions  
     n, N = size(S)          # n = number of dimensions, N = number of sample points

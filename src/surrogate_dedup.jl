@@ -107,7 +107,11 @@ function cluster_points(points::AbstractVector{<:AbstractVector{<:Real}}, tol::R
     for j in reps
         representative[j] = true
     end
-    return (cluster_id = cluster_id, cluster_size = sizes[cluster_id], representative = representative)
+    return (
+        cluster_id = cluster_id,
+        cluster_size = sizes[cluster_id],
+        representative = representative,
+    )
 end
 
 """
@@ -137,7 +141,8 @@ function dedupe_on_surrogate(
         G = _surrogate_gradient_scale(pol)
         for i in 1:n
             any(z -> abs(z) > 1 + margin, points_box[i]) && continue
-            ẑ, conv, _, _ = newton_polish_on_surrogate(pol, points_box[i]; gscale = G, kwargs...)
+            ẑ, conv, _, _ =
+                newton_polish_on_surrogate(pol, points_box[i]; gscale = G, kwargs...)
             conv && (n_conv += 1)
             moved[i] = norm(ẑ .- points_box[i])
             polished[i] = ẑ

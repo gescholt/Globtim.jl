@@ -53,15 +53,18 @@ function TaylorScalar{N,T}(t::Tuple) where {N,T}
     TaylorScalar{N,T}(ntuple(i -> i <= length(t) ? convert(T, t[i]) : zero(T), Val(N)))
 end
 
-Base.zero(::Type{TaylorScalar{N,T}}) where {N,T} = TaylorScalar{N,T}(ntuple(_ -> zero(T), Val(N)))
+Base.zero(::Type{TaylorScalar{N,T}}) where {N,T} =
+    TaylorScalar{N,T}(ntuple(_ -> zero(T), Val(N)))
 Base.zero(::TaylorScalar{N,T}) where {N,T} = zero(TaylorScalar{N,T})
 Base.one(::Type{TaylorScalar{N,T}}) where {N,T} = TaylorScalar{N,T}(one(T))
 Base.one(::TaylorScalar{N,T}) where {N,T} = one(TaylorScalar{N,T})
 Base.getindex(x::TaylorScalar, k::Int) = x.a[k+1]   # coefficient of ε^k
 Base.length(::TaylorScalar{N}) where {N} = N
 
-Base.:+(x::TaylorScalar{N,T}, y::TaylorScalar{N,T}) where {N,T} = TaylorScalar{N,T}(x.a .+ y.a)
-Base.:-(x::TaylorScalar{N,T}, y::TaylorScalar{N,T}) where {N,T} = TaylorScalar{N,T}(x.a .- y.a)
+Base.:+(x::TaylorScalar{N,T}, y::TaylorScalar{N,T}) where {N,T} =
+    TaylorScalar{N,T}(x.a .+ y.a)
+Base.:-(x::TaylorScalar{N,T}, y::TaylorScalar{N,T}) where {N,T} =
+    TaylorScalar{N,T}(x.a .- y.a)
 Base.:-(x::TaylorScalar{N,T}) where {N,T} = TaylorScalar{N,T}(.-x.a)
 function Base.:*(x::TaylorScalar{N,T}, y::TaylorScalar{N,T}) where {N,T}
     TaylorScalar{N,T}(ntuple(Val(N)) do k
@@ -72,7 +75,8 @@ function Base.:*(x::TaylorScalar{N,T}, y::TaylorScalar{N,T}) where {N,T}
         s
     end)
 end
-Base.:*(s::Number, x::TaylorScalar{N,T}) where {N,T} = TaylorScalar{N,T}(convert(T, s) .* x.a)
+Base.:*(s::Number, x::TaylorScalar{N,T}) where {N,T} =
+    TaylorScalar{N,T}(convert(T, s) .* x.a)
 Base.:*(x::TaylorScalar, s::Number) = s * x
 Base.:+(x::TaylorScalar{N,T}, s::Number) where {N,T} = x + TaylorScalar{N,T}(s)
 Base.:+(s::Number, x::TaylorScalar) = x + s
@@ -173,10 +177,13 @@ function ChebyshevGradientKernel(support::AbstractMatrix{<:Integer})
 end
 
 function ChebyshevGradientKernel(pol::ApproxPoly)
-    pol.basis === :chebyshev ||
-        throw(ArgumentError("ChebyshevGradientKernel: basis $(pol.basis) is not :chebyshev"))
+    pol.basis === :chebyshev || throw(
+        ArgumentError("ChebyshevGradientKernel: basis $(pol.basis) is not :chebyshev"),
+    )
     pol.normalized && throw(
-        ArgumentError("ChebyshevGradientKernel: normalized Chebyshev coefficients are a different basis; the stored representation is plain T_n"),
+        ArgumentError(
+            "ChebyshevGradientKernel: normalized Chebyshev coefficients are a different basis; the stored representation is plain T_n",
+        ),
     )
     S = _support_matrix(pol)
     return ChebyshevGradientKernel(S)
@@ -189,7 +196,13 @@ function _tables(K::ChebyshevGradientKernel, x, ::Type{E}, second::Bool) where {
     dT = [Vector{E}(undef, K.dmax[k] + 1) for k in 1:K.n]
     d2T = second ? [Vector{E}(undef, K.dmax[k] + 1) for k in 1:K.n] : nothing
     for k in 1:K.n
-        chebyshev_tables!(T[k], dT[k], second ? d2T[k] : nothing, convert(E, x[k]), K.dmax[k])
+        chebyshev_tables!(
+            T[k],
+            dT[k],
+            second ? d2T[k] : nothing,
+            convert(E, x[k]),
+            K.dmax[k],
+        )
     end
     return T, dT, d2T
 end
@@ -206,7 +219,11 @@ _eltype(K::ChebyshevGradientKernel, x, c) =
 `p(x) = Σ_α c_α Π_k T_{α_k}(x_k)` on the kernel's support.
 """
 function value(K::ChebyshevGradientKernel, x, c::AbstractVector)
-    length(c) == K.m || throw(DimensionMismatch("coefficient vector has $(length(c)) entries for $(K.m) support rows"))
+    length(c) == K.m || throw(
+        DimensionMismatch(
+            "coefficient vector has $(length(c)) entries for $(K.m) support rows",
+        ),
+    )
     E = _eltype(K, x, c)
     T, _, _ = _tables(K, x, E, false)
     s = zero(E)
@@ -227,7 +244,11 @@ end
 `TaylorScalar`-valued; `eltype(u)` must hold the promotion of `eltype(x)` and `eltype(c)`.
 """
 function evaluate!(u, K::ChebyshevGradientKernel, x, c::AbstractVector)
-    length(c) == K.m || throw(DimensionMismatch("coefficient vector has $(length(c)) entries for $(K.m) support rows"))
+    length(c) == K.m || throw(
+        DimensionMismatch(
+            "coefficient vector has $(length(c)) entries for $(K.m) support rows",
+        ),
+    )
     E = _eltype(K, x, c)
     T, dT, _ = _tables(K, x, E, false)
     n = K.n
@@ -262,7 +283,11 @@ Hessian of the surrogate, so `cond(U)` at a solution is the conditioning of the 
 point itself (the plan's `cond_jacobian_median`).
 """
 function evaluate_and_jacobian!(u, U, K::ChebyshevGradientKernel, x, c::AbstractVector)
-    length(c) == K.m || throw(DimensionMismatch("coefficient vector has $(length(c)) entries for $(K.m) support rows"))
+    length(c) == K.m || throw(
+        DimensionMismatch(
+            "coefficient vector has $(length(c)) entries for $(K.m) support rows",
+        ),
+    )
     E = _eltype(K, x, c)
     T, dT, d2T = _tables(K, x, E, true)
     n = K.n
@@ -351,7 +376,9 @@ function taylor_series(::Val{M}, K::ChebyshevGradientKernel, x_terms, c_terms) w
     # contraction runs with scalar × TaylorScalar products — no per-coefficient Taylor
     # object (4 845 of them per call at degree 16 in 4-D, three calls per tracker step).
     nc = min(maximum(length(t) for t in c_terms), N)
-    cs = [[length(c_terms[r]) >= j ? convert(Tx, c_terms[r][j]) : zero(Tx) for r in 1:K.m] for j in 1:nc]
+    cs = [
+        [length(c_terms[r]) >= j ? convert(Tx, c_terms[r][j]) : zero(Tx) for r in 1:K.m] for j in 1:nc
+    ]
     keep = [j for j in 1:nc if !all(iszero, cs[j])]
     w = [zero(S) for _ in 1:K.n]
     isempty(keep) && return w
@@ -369,11 +396,21 @@ end
 `us[i][k] = ∂_k p(x; cs[i])` for several coefficient vectors on the same support and the
 same point, sharing the basis products (one pass over the support).
 """
-function evaluate_multi!(us, K::ChebyshevGradientKernel, x, cs::AbstractVector{<:AbstractVector})
+function evaluate_multi!(
+    us,
+    K::ChebyshevGradientKernel,
+    x,
+    cs::AbstractVector{<:AbstractVector},
+)
     L = length(cs)
-    L == length(us) || throw(DimensionMismatch("$(length(us)) outputs for $L coefficient vectors"))
+    L == length(us) ||
+        throw(DimensionMismatch("$(length(us)) outputs for $L coefficient vectors"))
     for c in cs
-        length(c) == K.m || throw(DimensionMismatch("coefficient vector has $(length(c)) entries for $(K.m) support rows"))
+        length(c) == K.m || throw(
+            DimensionMismatch(
+                "coefficient vector has $(length(c)) entries for $(K.m) support rows",
+            ),
+        )
     end
     E = L == 0 ? eltype(x) : _eltype(K, x, cs[1])
     T, dT, _ = _tables(K, x, E, false)
@@ -417,7 +454,13 @@ what HomotopyContinuation's predictor asks a system for (`taylor!` with `Val(M)`
 `assign_highest_order_only`): the lower orders of `x` are known, the order-`M` one is
 solved for from `J x_M = −u`.
 """
-function taylor_coefficient!(u, v::Val{M}, K::ChebyshevGradientKernel, x_terms, c_terms) where {M}
+function taylor_coefficient!(
+    u,
+    v::Val{M},
+    K::ChebyshevGradientKernel,
+    x_terms,
+    c_terms,
+) where {M}
     w = taylor_series(v, K, x_terms, c_terms)
     for k in 1:K.n
         u[k] = w[k][M]

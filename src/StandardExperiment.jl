@@ -560,7 +560,10 @@ function _ladder_history(degree_results; metric::Union{Nothing,Dict{Int,Float64}
             r ->
                 r.status in ("success", "skipped_rel_l2") &&
                     isfinite(r.relative_l2_error) &&
-                    (metric === nothing || (haskey(metric, r.degree) && isfinite(metric[r.degree]))),
+                    (
+                        metric === nothing ||
+                        (haskey(metric, r.degree) && isfinite(metric[r.degree]))
+                    ),
             degree_results,
         ),
         by = r -> r.degree,
@@ -673,7 +676,8 @@ function run_standard_experiment(;
     gate_grad = gate_metric == :rel_grad
     # The thresholds and solve-below the gate and the ladder actually use.
     gate_thresholds = gate_grad ? rel_grad_thresholds : rel_l2_thresholds
-    gate_solve_below = gate_grad ? rel_grad_thresholds.structure_visible : rel_l2_solve_below
+    gate_solve_below =
+        gate_grad ? rel_grad_thresholds.structure_visible : rel_l2_solve_below
     # Gradient check (gradient_fit.jl): ‖∇f − ∇p‖/‖∇f‖ on the fit grid, per fitted degree,
     # recorded in metadata["relative_gradient_error"] (degree => value). Mandatory when it
     # is the gate metric.
@@ -706,7 +710,9 @@ function run_standard_experiment(;
     end
     if align_box !== nothing
         length(align_box) == length(bounds) || throw(
-            ArgumentError("align_box has $(length(align_box)) entries for $(length(bounds)) bounds"),
+            ArgumentError(
+                "align_box has $(length(align_box)) entries for $(length(bounds)) bounds",
+            ),
         )
         aligned = eigen_aligned_box(
             objective_function,
@@ -732,7 +738,9 @@ function run_standard_experiment(;
         end
         objective_function = AlignedObjective(objective_function, aligned)
         bounds = aligned_bounds(aligned)
-        true_params = true_params === nothing ? nothing : Vector{Float64}(to_aligned(aligned, true_params))
+        true_params =
+            true_params === nothing ? nothing :
+            Vector{Float64}(to_aligned(aligned, true_params))
         @info "Running in the Hessian-eigenaligned frame" center = aligned.center eigenvalues =
             aligned.eigenvalues
     end
@@ -749,12 +757,17 @@ function run_standard_experiment(;
     # composed on top; critical points are invariant under it, the fit is not. Everything
     # downstream (objective values at critical points, true_params recovery) keeps using
     # `objective_function`, the original.
-    fit_objective = cache_evaluations ? CachedObjective(objective_function) : objective_function
+    fit_objective =
+        cache_evaluations ? CachedObjective(objective_function) : objective_function
     transform = if value_transform === nothing
         nothing
     elseif value_transform isa Symbol
         # Pilot sample = the fit grid itself, so with caching the pilot is free.
-        pilot_grid = Globtim.generate_grid(dimension, experiment_config.GN; basis = experiment_config.basis)
+        pilot_grid = Globtim.generate_grid(
+            dimension,
+            experiment_config.GN;
+            basis = experiment_config.basis,
+        )
         # Same affine map and operation order as MainGenerate's eval_fn, so the keys are
         # bit-identical to the fit's; 1-D objectives receive a scalar there too.
         pilot_vals = [
@@ -903,7 +916,10 @@ function run_standard_experiment(;
             # stagnation, and record the verdict in the run metadata.
             if ladder
                 lstep = rel_l2_ladder_step(
-                    _ladder_history(degree_results; metric = gate_grad ? grad_errors : nothing);
+                    _ladder_history(
+                        degree_results;
+                        metric = gate_grad ? grad_errors : nothing,
+                    );
                     thresholds = gate_thresholds,
                     solve_below = gate_solve_below,
                     minimizer_tol = gradient_residual_tol,
@@ -957,7 +973,8 @@ function run_standard_experiment(;
                     "penalty_value" => e.penalty_value,
                     "max_abs_value" => e.max_abs_value,
                 )
-                @error "Degree $degree: fit grid inadmissible, stopping the sweep" exception = e counts
+                @error "Degree $degree: fit grid inadmissible, stopping the sweep" exception =
+                    e counts
                 metadata["stopped_inadmissible"] = merge(counts, Dict("degree" => degree))
                 metadata["stopped_after_degree"] = degree
                 stop_sweep = true
@@ -1083,12 +1100,15 @@ function run_standard_experiment(;
     end
     if analyticity_out !== nothing && !isempty(analyticity_out)
         metadata["analyticity"] = Dict{String,Any}(
-            string(d) => analyticity_summary(v) for (d, v) in sort(collect(analyticity_out); by = first)
+            string(d) => analyticity_summary(v) for
+            (d, v) in sort(collect(analyticity_out); by = first)
         )
     end
     if cache_evaluations
         # unwrap the transform (if any), keep the cache
-        cached = fit_objective isa TransformedObjective ? original_objective(fit_objective) : fit_objective
+        cached =
+            fit_objective isa TransformedObjective ? original_objective(fit_objective) :
+            fit_objective
         if cached isa CachedObjective
             st = cache_stats(cached)
             metadata["evaluation_cache"] = Dict{String,Any}(
@@ -1134,10 +1154,15 @@ function run_standard_experiment(;
             phys = [to_physical(aligned, cp) for cp in r.critical_points]
             df = DataFrame(
                 :index => 1:n_cp,
-                [Symbol("p$i") => [phys[j][i] for j in 1:n_cp] for i in 1:length(bounds)]...,
+                [
+                    Symbol("p$i") => [phys[j][i] for j in 1:n_cp] for i in 1:length(bounds)
+                ]...,
                 :objective => r.objective_values,
             )
-            CSV.write(joinpath(output_dir, "critical_points_physical_deg_$(r.degree).csv"), df)
+            CSV.write(
+                joinpath(output_dir, "critical_points_physical_deg_$(r.degree).csv"),
+                df,
+            )
         end
     end
 
@@ -1437,7 +1462,8 @@ function process_single_degree(
         dedup = dedupe_on_surrogate(pol, points_box; tol = surrogate_dedup_tol)
         timing["n_surrogate_clusters"] = Float64(dedup.n_clusters)
         timing["n_surrogate_polish_converged"] = Float64(dedup.n_converged)
-        timing["surrogate_polish_max_move"] = isempty(dedup.moved) ? 0.0 : maximum(dedup.moved)
+        timing["surrogate_polish_max_move"] =
+            isempty(dedup.moved) ? 0.0 : maximum(dedup.moved)
         if dedup.n_clusters < n_critical_points
             @info "  Surrogate dedup: $n_critical_points raw roots → $(dedup.n_clusters) clusters " *
                   "(largest $(maximum(dedup.cluster_size)); polish moved ≤ $(round(maximum(dedup.moved), sigdigits=2)) in box units)"

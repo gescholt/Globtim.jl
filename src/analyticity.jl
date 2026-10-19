@@ -64,12 +64,20 @@ function axis_analyticity(
 )
     0 < rate_threshold < 1 ||
         throw(ArgumentError("rate_threshold must lie in (0, 1), got $rate_threshold"))
-    0 < model_ratio <= 1 || throw(ArgumentError("model_ratio must lie in (0, 1], got $model_ratio"))
+    0 < model_ratio <= 1 ||
+        throw(ArgumentError("model_ratio must lie in (0, 1], got $model_ratio"))
     min_points >= 3 || throw(ArgumentError("min_points must be ≥ 3, got $min_points"))
     env = Float64.(envelope)
     cmax = isempty(env) ? 0.0 : maximum(env)
-    unresolved = (resolved = false, offending = false, decay_rate = NaN, algebraic_exponent = NaN,
-        model_rss_ratio = NaN, plateau_found = false, n_points = 0)
+    unresolved = (
+        resolved = false,
+        offending = false,
+        decay_rate = NaN,
+        algebraic_exponent = NaN,
+        model_rss_ratio = NaN,
+        plateau_found = false,
+        n_points = 0,
+    )
     cmax > 0 || return unresolved
     est = estimate_noise_floor(env; kwargs...)
     # Degrees k ≥ 1 whose coefficient is resolved: above the parity / rounding floor. The
@@ -90,8 +98,15 @@ function axis_analyticity(
     end
     reverse!(idx)
     n = length(idx)
-    n >= min_points || return (resolved = false, offending = false, decay_rate = est.decay_rate,
-        algebraic_exponent = NaN, model_rss_ratio = NaN, plateau_found = est.plateau_found, n_points = n)
+    n >= min_points || return (
+        resolved = false,
+        offending = false,
+        decay_rate = est.decay_rate,
+        algebraic_exponent = NaN,
+        model_rss_ratio = NaN,
+        plateau_found = est.plateau_found,
+        n_points = n,
+    )
     y = log10.(env[idx.+1])
     geo = _linefit(Float64.(idx), y)            # log c = a + b k      (analytic)
     alg = _linefit(log10.(Float64.(idx)), y)    # log c = a + b log k  (kink / plateau edge)
@@ -107,14 +122,21 @@ function axis_analyticity(
     #     fitted on the decaying part when a plateau was found, on everything otherwise.
     rate = if est.plateau_found
         dec = [k for k in idx if k <= est.usable_degree && env[k+1] > est.floor]
-        length(dec) >= 2 ? 10.0^_linefit(Float64.(dec), log10.(env[dec.+1])).slope : est.decay_rate
+        length(dec) >= 2 ? 10.0^_linefit(Float64.(dec), log10.(env[dec.+1])).slope :
+        est.decay_rate
     else
         10.0^geo.slope
     end
     slow = !est.plateau_found && rate >= rate_threshold
-    return (resolved = true, offending = algebraic || slow, decay_rate = rate,
-        algebraic_exponent = exponent, model_rss_ratio = ratio, plateau_found = est.plateau_found,
-        n_points = n)
+    return (
+        resolved = true,
+        offending = algebraic || slow,
+        decay_rate = rate,
+        algebraic_exponent = exponent,
+        model_rss_ratio = ratio,
+        plateau_found = est.plateau_found,
+        n_points = n,
+    )
 end
 
 """

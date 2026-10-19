@@ -187,7 +187,14 @@ function estimate_noise_floor(
 
     plateau_max = maximum(view(env, idx[best.cut+1:m]))
     usable = Int(x[best.cut])
-    return NoiseFloorEstimate(plateau_max, plateau_max / cmax, usable, 10.0^best.line.slope, true, env)
+    return NoiseFloorEstimate(
+        plateau_max,
+        plateau_max / cmax,
+        usable,
+        10.0^best.line.slope,
+        true,
+        env,
+    )
 end
 
 estimate_noise_floor(pol::ApproxPoly; kwargs...) =
@@ -216,7 +223,13 @@ function chop_polynomial(pol::ApproxPoly; safety::Real = 1.0, kwargs...)
     est = estimate_noise_floor(pol; kwargs...)
     nnz0 = count(!iszero, pol.coeffs)
     if !est.plateau_found
-        return (polynomial = pol, estimate = est, original_nnz = nnz0, new_nnz = nnz0, l2_ratio = 1.0)
+        return (
+            polynomial = pol,
+            estimate = est,
+            original_nnz = nnz0,
+            new_nnz = nnz0,
+            l2_ratio = 1.0,
+        )
     end
     # sparsify_polynomial zeroes |c| < threshold; nextfloat makes the floor itself go too.
     thr = nextfloat(safety * est.floor)

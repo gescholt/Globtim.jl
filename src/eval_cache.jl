@@ -49,7 +49,8 @@ mutable struct CachedObjective{F}
     misses::Int
 end
 
-CachedObjective(f) = CachedObjective{typeof(f)}(f, Dict{Vector{Float64},Float64}(), ReentrantLock(), 0, 0)
+CachedObjective(f) =
+    CachedObjective{typeof(f)}(f, Dict{Vector{Float64},Float64}(), ReentrantLock(), 0, 0)
 
 _cache_key(x::AbstractVector{Float64}) = Vector{Float64}(x)
 _cache_key(x::Float64) = Float64[x]

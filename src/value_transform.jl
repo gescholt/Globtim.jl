@@ -43,8 +43,10 @@ struct AsinhTransform <: AbstractValueTransform
     scale::Float64
     shift::Float64
     function AsinhTransform(scale::Real; shift::Real = 0.0)
-        scale > 0 || throw(ArgumentError("AsinhTransform: scale must be positive, got $scale"))
-        isfinite(shift) || throw(ArgumentError("AsinhTransform: shift must be finite, got $shift"))
+        scale > 0 ||
+            throw(ArgumentError("AsinhTransform: scale must be positive, got $scale"))
+        isfinite(shift) ||
+            throw(ArgumentError("AsinhTransform: shift must be finite, got $shift"))
         new(Float64(scale), Float64(shift))
     end
 end
@@ -62,8 +64,10 @@ struct LogTransform <: AbstractValueTransform
     shift::Float64
     floor::Float64
     function LogTransform(shift::Real; floor::Real)
-        floor > 0 || throw(ArgumentError("LogTransform: floor must be positive, got $floor"))
-        isfinite(shift) || throw(ArgumentError("LogTransform: shift must be finite, got $shift"))
+        floor > 0 ||
+            throw(ArgumentError("LogTransform: floor must be positive, got $floor"))
+        isfinite(shift) ||
+            throw(ArgumentError("LogTransform: shift must be finite, got $shift"))
         new(Float64(shift), Float64(floor))
     end
 end
@@ -86,7 +90,8 @@ by hand on a misfit landscape. Prefer `AsinhTransform` for misfits.
 struct SqrtTransform <: AbstractValueTransform
     shift::Float64
     function SqrtTransform(shift::Real)
-        isfinite(shift) || throw(ArgumentError("SqrtTransform: shift must be finite, got $shift"))
+        isfinite(shift) ||
+            throw(ArgumentError("SqrtTransform: shift must be finite, got $shift"))
         new(Float64(shift))
     end
 end
@@ -198,7 +203,9 @@ function fit_value_transform(
     floor_quantile::Real = 0.05,
 )
     kind in (:asinh, :log, :sqrt, :identity) || throw(
-        ArgumentError("fit_value_transform: kind must be :asinh, :log, :sqrt or :identity, got :$kind"),
+        ArgumentError(
+            "fit_value_transform: kind must be :asinh, :log, :sqrt or :identity, got :$kind",
+        ),
     )
     0 < quantile <= 1 || throw(ArgumentError("quantile must lie in (0, 1], got $quantile"))
     0 < floor_quantile <= 1 ||

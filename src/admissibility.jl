@@ -33,7 +33,8 @@ end
 function Base.showerror(io::IO, e::InadmissibleGridError)
     parts = String[]
     e.n_nonfinite > 0 && push!(parts, "$(e.n_nonfinite) non-finite")
-    e.n_penalty > 0 && push!(parts, "$(e.n_penalty) at the penalty value $(e.penalty_value)")
+    e.n_penalty > 0 &&
+        push!(parts, "$(e.n_penalty) at the penalty value $(e.penalty_value)")
     e.n_above_cap > 0 && push!(parts, "$(e.n_above_cap) with |f| > $(e.max_abs_value)")
     print(
         io,
@@ -60,7 +61,8 @@ function grid_admissibility(
     rtol::Real = 1e-3,
     atol::Real = 1e-9,
 )
-    max_abs_value > 0 || throw(ArgumentError("max_abs_value must be > 0, got $max_abs_value"))
+    max_abs_value > 0 ||
+        throw(ArgumentError("max_abs_value must be > 0, got $max_abs_value"))
     pv = penalty_value === nothing ? nothing : Float64(penalty_value)
     cap = Float64(max_abs_value)
     n_nonfinite = 0
@@ -97,7 +99,12 @@ function check_grid_admissibility(
     max_abs_value::Real = Inf,
     kwargs...,
 )
-    a = grid_admissibility(F; penalty_value = penalty_value, max_abs_value = max_abs_value, kwargs...)
+    a = grid_admissibility(
+        F;
+        penalty_value = penalty_value,
+        max_abs_value = max_abs_value,
+        kwargs...,
+    )
     a.admissible || throw(
         InadmissibleGridError(
             a.n_total,

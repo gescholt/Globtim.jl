@@ -154,7 +154,9 @@ The Morse index when it is decided (`index_low == index_high`); throws otherwise
 """
 function morse_index(c::IndexClassification)
     c.index_low == c.index_high || throw(
-        ArgumentError("morse_index: point is ambiguous (index in $(c.index_low):$(c.index_high))"),
+        ArgumentError(
+            "morse_index: point is ambiguous (index in $(c.index_low):$(c.index_high))",
+        ),
     )
     return c.index_low
 end
@@ -189,14 +191,19 @@ function classify_with_index(
 )::Vector{IndexClassification}
     rel_tol >= 0 || throw(ArgumentError("rel_tol must be ≥ 0, got $rel_tol"))
     abs_tol >= 0 || throw(ArgumentError("abs_tol must be ≥ 0, got $abs_tol"))
-    grad_norms === nothing || length(grad_norms) == length(hessians) || throw(
-        ArgumentError("grad_norms has $(length(grad_norms)) entries for $(length(hessians)) Hessians"),
-    )
+    grad_norms === nothing ||
+        length(grad_norms) == length(hessians) ||
+        throw(
+            ArgumentError(
+                "grad_norms has $(length(grad_norms)) entries for $(length(hessians)) Hessians",
+            ),
+        )
     out = Vector{IndexClassification}(undef, length(hessians))
     for (i, H) in enumerate(hessians)
         g = grad_norms === nothing ? NaN : Float64(grad_norms[i])
         if any(x -> !isfinite(x), H)
-            out[i] = IndexClassification(:error, 0, size(H, 1), size(H, 1), NaN, NaN, NaN, g)
+            out[i] =
+                IndexClassification(:error, 0, size(H, 1), size(H, 1), NaN, NaN, NaN, g)
             continue
         end
         λ = eigvals(Symmetric(Matrix{Float64}(H)))
@@ -217,7 +224,16 @@ function classify_with_index(
         else
             :saddle
         end
-        out[i] = IndexClassification(class, n_neg, n_neg + n_band, n_band, band, min_abs, hnorm, g)
+        out[i] = IndexClassification(
+            class,
+            n_neg,
+            n_neg + n_band,
+            n_band,
+            band,
+            min_abs,
+            hnorm,
+            g,
+        )
     end
     return out
 end

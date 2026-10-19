@@ -48,7 +48,11 @@ function surrogate_gradient_residuals(
     elseif size(grid, 1) == n
         false
     else
-        throw(DimensionMismatch("fit grid $(size(grid)) has no extent equal to the dimension $n"))
+        throw(
+            DimensionMismatch(
+                "fit grid $(size(grid)) has no extent equal to the dimension $n",
+            ),
+        )
     end
     n_grid = points_as_rows ? size(grid, 1) : size(grid, 2)
     G = 0.0
@@ -135,9 +139,25 @@ A copy of `pol` with its coefficient vector replaced (same support, degree, fram
 basis and normalisation), for evaluating a sparsified polynomial as a surrogate.
 """
 function _with_coeffs(pol::ApproxPoly{T,S}, coeffs::Vector{T}) where {T,S}
-    length(coeffs) == length(pol.coeffs) ||
-        throw(DimensionMismatch("coefficient vector has $(length(coeffs)) entries, the polynomial $(length(pol.coeffs))"))
-    return ApproxPoly{T,S}(coeffs, pol.support, pol.degree, pol.nrm, pol.N, pol.scale_factor,
-        pol.center, pol.grid, pol.z, pol.basis, pol.precision, pol.normalized,
-        pol.power_of_two_denom, pol.cond_vandermonde)
+    length(coeffs) == length(pol.coeffs) || throw(
+        DimensionMismatch(
+            "coefficient vector has $(length(coeffs)) entries, the polynomial $(length(pol.coeffs))",
+        ),
+    )
+    return ApproxPoly{T,S}(
+        coeffs,
+        pol.support,
+        pol.degree,
+        pol.nrm,
+        pol.N,
+        pol.scale_factor,
+        pol.center,
+        pol.grid,
+        pol.z,
+        pol.basis,
+        pol.precision,
+        pol.normalized,
+        pol.power_of_two_denom,
+        pol.cond_vandermonde,
+    )
 end
