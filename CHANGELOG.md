@@ -4,6 +4,18 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Changed (Christoffel fits solve by QR; LinearSolve dropped, bead hdgw.5, 2026-10-19)
+
+- `christoffel_fit_chebyshev` and `christoffel_subdomain_fit` solve the weighted least
+  squares by QR on the weighted Vandermonde (`√W·V \ √W·f`) instead of LU on the normal
+  equations `VᵀWV`, which squared the condition number; this is the switch `Main_Gen`
+  made for the tensor-grid path. The reported condition number is now `κ(√W·V)` under
+  the field `kappa` on both functions (`christoffel_fit_chebyshev` used to return
+  `kappa_G = κ(VᵀWV) = kappa²`; the subdomain fit returned the Gram κ under the name
+  `kappa`, so a Christoffel leaf's `cond_vandermonde` was the square of a tensor leaf's).
+  The one `LinearSolve` call site is gone with it: **`LinearSolve` is no longer a
+  dependency of Globtim** and is no longer listed in the ledger's versioned packages.
+
 ### Changed (NelderMead tolerances in `refine.jl`, bead hdgw.1, 2026-10-19)
 
 - `analyze_critical_points` and `enhanced_bfgs_refinement` run `Optim.NelderMead`, whose

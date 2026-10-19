@@ -35,7 +35,7 @@ julia> Pkg.test()
 
 #### Issue 2: Conda Environment Interference
 
-**Symptom**: Precompilation errors with LinearSolve, Sparspak, or other packages with binary dependencies.
+**Symptom**: Precompilation errors with HomotopyContinuation, OpenBLAS-backed packages, or other packages with binary dependencies.
 
 **Cause**: Conda's binary libraries (BLAS, LAPACK, MKL) conflict with Julia's package binaries.
 

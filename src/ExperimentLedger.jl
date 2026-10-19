@@ -86,7 +86,6 @@ const VERSIONED_PACKAGES = (
     "DynamicPolynomials",
     "MultivariatePolynomials",
     "ForwardDiff",
-    "LinearSolve",
 )
 
 """

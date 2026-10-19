@@ -13,7 +13,6 @@ using TimerOutputs
 using DataFrames
 using Optim
 using Dates
-using LinearSolve
 using TOML
 
 @enum PrecisionType begin

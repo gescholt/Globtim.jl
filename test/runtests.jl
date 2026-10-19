@@ -441,3 +441,8 @@ end
 with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_rational_solver.jl") do
     include("test_rational_solver.jl")
 end
+
+# hdgw.5: Christoffel weighted LS by QR on √W·V; LinearSolve dropped
+with_timeout(TIMEOUT_TESTFILE, label = "test_christoffel_fit.jl") do
+    include("test_christoffel_fit.jl")
+end

@@ -127,7 +127,9 @@ end
 Fit a degree-`d` total-degree polynomial approximant to `f: [-1,1]^n → ℝ`
 via Christoffel-preconditioned weighted least squares.
 
-Returns `(coeffs, Λdata, l2_residual, kappa_G, K_used, m, wall_s)`.
+Returns `(coeffs, Λdata, l2_residual, kappa, K_used, m, wall_s)`, where `kappa` is
+the condition number of the weighted Vandermonde `√W·V` (the solve is a QR on it;
+`kappa_G = κ(VᵀWV) = kappa²` was what the former normal-equations path reported).
 
 `coeffs[j]` is the coefficient of `∏_k T_{α_k}(x_k)` for multi-index
 `α = Λdata[j, :]` — the same coefficient convention as the rest of globtim,
@@ -166,16 +168,15 @@ function christoffel_fit_chebyshev(
         F[i] = Float64(f(@view S[i, :]))
     end
 
-    # Weighted LS — left-multiply rows of V, F by sqrt(W) then solve normal eq.
+    # Weighted LS — left-multiply rows of V, F by sqrt(W), then QR on the weighted
+    # Vandermonde (`\` on a tall matrix). The former LU on the normal equations
+    # G_w = Vw'Vw squared the condition number, the failure mode Main_Gen.jl removed
+    # by switching to QR on V (bead hdgw.5). κ reported is κ(Vw), as on that path.
     Vw = sqrt_w .* V                      # K × m
     Fw = sqrt_w .* F                      # K
-    G_w = Vw' * Vw                        # m × m
-    rhs = Vw' * Fw                        # m
 
-    kappa_G = LinearAlgebra.cond(G_w)
-    prob = LinearSolve.LinearProblem(G_w, rhs)
-    sol = LinearSolve.solve(prob, LinearSolve.LUFactorization())
-    coeffs = sol.u
+    kappa = LinearAlgebra.cond(Vw)
+    coeffs = Vw \ Fw
 
     # Weighted RMS residual (matches globtim's per-grid L² convention modulo
     # the weight normalisation; exact comparison with the tensor-grid baseline
@@ -188,7 +189,7 @@ function christoffel_fit_chebyshev(
         coeffs = coeffs,
         Λdata = Λdata,
         l2_residual = l2_residual,
-        kappa_G = kappa_G,
+        kappa = kappa,
         K_used = K,
         m = m,
         wall_s = wall_s,
@@ -232,7 +233,9 @@ Returns NamedTuple:
 - `l2_error::Float64`         — sqrt((1/K) Σ residual²) — MC estimate of
   ‖f-p‖_{L²(μ_arcsine)}
 - `relative_l2_error::Float64` — l2_error / sqrt((1/K) Σ f²)
-- `kappa::Float64`            — κ(weighted Gram)
+- `kappa::Float64`            — κ(√W·V), the weighted Vandermonde the QR solve runs on
+  (the tensor-grid leaf path reports the same quantity; the former value was
+  κ(VᵀWV) = kappa²)
 - `K_used::Int`               — number of samples
 - `m::Int`                    — polynomial-space dimension
 - `wall_s::Float64`           — total wall (eval + fit)
@@ -332,10 +335,10 @@ function christoffel_subdomain_fit(
     V = lambda_vandermonde_original(Lambda, S_norm; basis = :chebyshev)  # K × m
     Vw = sqrt_w .* V
     Fw = sqrt_w .* f_values
-    G_w = Vw' * Vw
-    rhs = Vw' * Fw
-    kappa_G = LinearAlgebra.cond(G_w)
-    coeffs = G_w \ rhs
+    # QR on the weighted Vandermonde, not LU on the Gram matrix (κ² — bead hdgw.5);
+    # κ(Vw) is what the tensor-grid leaf path reports as `cond_vandermonde` too.
+    kappa = LinearAlgebra.cond(Vw)
+    coeffs = Vw \ Fw
 
     # Residual evaluated at the Christoffel samples (plain MC estimator of
     # ‖f - p‖_{L²(μ_arcsine)}; consistent because samples are from μ_arcsine).
@@ -357,7 +360,7 @@ function christoffel_subdomain_fit(
         Lambda = Lambda,
         l2_error = l2_error,
         relative_l2_error = rel_l2,
-        kappa = kappa_G,
+        kappa = kappa,
         K_used = K,
         m = m,
         wall_s = wall_s,
