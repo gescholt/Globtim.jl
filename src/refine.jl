@@ -316,9 +316,9 @@ This function performs detailed analysis of critical points found by polynomial 
 - `max_iters_in_optim=50`: Maximum iterations for BFGS optimization
 - `enable_hessian=true`: Enable Hessian-based classification
 - `hessian_tol_zero=1e-8`: Tolerance for zero eigenvalues in Hessian analysis
-- `bfgs_g_tol=1e-8`: Gradient tolerance for BFGS optimization
-- `bfgs_f_abstol=1e-8`: Absolute function tolerance for BFGS optimization
-- `bfgs_x_abstol=0.0`: Absolute parameter tolerance for BFGS optimization
+- `bfgs_g_tol=1e-8`: accepted for API compatibility; the refiner is NelderMead and has no gradient test
+- `bfgs_f_abstol=1e-8`: NelderMead's stopping tolerance — the standard deviation of `f` over the
+  simplex vertices, its only stopping test (the name predates the switch from BFGS to NelderMead)
 
 # Returns
 - `Tuple{DataFrame, DataFrame}`: (enhanced_df, minimizers_df)
@@ -442,7 +442,6 @@ function _refine_critical_points!(
     max_iters_in_optim::Int = 100,
     tol_dist::Float64 = 0.025,
     bfgs_f_abstol::Float64 = 1e-8,
-    bfgs_x_abstol::Float64 = 0.0,
     verbose::Bool = true,
 )
     for i in 1:nrow(df)
@@ -450,6 +449,9 @@ function _refine_critical_points!(
             verbose && println("Processing point $i of $(nrow(df))")
             x0 = [df[i, Symbol("x$j")] for j in 1:n_dims]
 
+            # Optim's NelderMead has exactly one stopping test, the spread of f over
+            # the simplex, read from the g_abstol slot; the f_tol / x_tol this call
+            # used to pass were never consulted (bead hdgw.1).
             res = Logging.with_logger(Logging.NullLogger()) do
                 Optim.optimize(
                     f,
@@ -458,8 +460,7 @@ function _refine_critical_points!(
                     Optim.Options(
                         show_trace = false,
                         iterations = max_iters_in_optim,
-                        f_tol = bfgs_f_abstol,
-                        x_tol = bfgs_x_abstol,
+                        g_abstol = bfgs_f_abstol,
                     ),
                 )
             end
@@ -677,7 +678,6 @@ TimerOutputs.@timeit_debug _TO function analyze_critical_points(
     hessian_tol_zero = 1e-8,
     bfgs_g_tol = 1e-8,
     bfgs_f_abstol = 1e-8,
-    bfgs_x_abstol = 0.0,
 )
     n_dims = count(col -> startswith(string(col), "x"), names(df))
 
@@ -708,7 +708,6 @@ TimerOutputs.@timeit_debug _TO function analyze_critical_points(
             max_iters_in_optim,
             tol_dist = Float64(tol_dist),
             bfgs_f_abstol = Float64(bfgs_f_abstol),
-            bfgs_x_abstol = Float64(bfgs_x_abstol),
             verbose,
         )
     else
@@ -796,7 +795,10 @@ end
                            config::BFGSConfig = BFGSConfig();
                            expected_minimum::Union{Vector{Float64}, Nothing} = nothing)
 
-Perform enhanced BFGS refinement with comprehensive hyperparameter tracking.
+Perform refinement with comprehensive hyperparameter tracking. Despite the name
+(kept for API stability) the optimizer is `Optim.NelderMead`; the per-point
+tolerance `config.standard_tolerance` / `config.high_precision_tolerance` is its
+simplex-spread stop.
 
 # Arguments
 - `initial_points`: Vector of starting points for refinement
@@ -835,7 +837,10 @@ function enhanced_bfgs_refinement(
         start_time = time()
 
         # Run optimization with selected parameters (with warning suppression)
-        # Using NelderMead (gradient-free) for robustness with expensive objectives
+        # Using NelderMead (gradient-free) for robustness with expensive objectives.
+        # Its only stopping test is the spread of f over the simplex, read from
+        # g_abstol; `tolerance_used` is that stop (it was only reported before, while
+        # the f_tol / x_tol passed here were never consulted — bead hdgw.1).
         result = Logging.with_logger(Logging.NullLogger()) do
             Optim.optimize(
                 objective_function,
@@ -843,8 +848,7 @@ function enhanced_bfgs_refinement(
                 Optim.NelderMead(),
                 Optim.Options(
                     iterations = config.max_iterations,
-                    f_tol = config.f_abs_tol,
-                    x_tol = config.x_tol,
+                    g_abstol = tolerance_used,
                     show_trace = config.show_trace,
                     store_trace = true,
                     extended_trace = true,

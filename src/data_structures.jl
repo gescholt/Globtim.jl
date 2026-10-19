@@ -191,15 +191,18 @@ end
 """
     BFGSConfig
 
-Configuration structure for enhanced BFGS refinement with hyperparameter tracking.
+Configuration structure for `enhanced_bfgs_refinement` (an `Optim.NelderMead`
+refinement despite the name, kept for API stability) with hyperparameter tracking.
+
+NelderMead has one stopping test, the standard deviation of `f` over the simplex
+vertices; `standard_tolerance` / `high_precision_tolerance` set it per point. The
+former `f_abs_tol` / `x_tol` fields were removed: Optim's NelderMead never read them.
 
 # Fields
-- `standard_tolerance::Float64`: Standard gradient tolerance (default: 1e-8)
-- `high_precision_tolerance::Float64`: High precision tolerance (default: 1e-12)
+- `standard_tolerance::Float64`: Simplex-spread stop when |f| ≥ `precision_threshold` (default: 1e-8)
+- `high_precision_tolerance::Float64`: Simplex-spread stop when |f| < `precision_threshold` (default: 1e-12)
 - `precision_threshold::Float64`: When to switch to high precision (default: 1e-6)
-- `max_iterations::Int`: Maximum BFGS iterations (default: 100)
-- `f_abs_tol::Float64`: Absolute function tolerance (default: 1e-20)
-- `x_tol::Float64`: Parameter change tolerance (default: 1e-12)
+- `max_iterations::Int`: Maximum NelderMead iterations (default: 100)
 - `show_trace::Bool`: Display optimization trace (default: false)
 - `track_hyperparameters::Bool`: Enable detailed tracking (default: true)
 """
@@ -208,8 +211,6 @@ mutable struct BFGSConfig
     high_precision_tolerance::Float64
     precision_threshold::Float64
     max_iterations::Int
-    f_abs_tol::Float64
-    x_tol::Float64
     show_trace::Bool
     track_hyperparameters::Bool
 
@@ -218,8 +219,6 @@ mutable struct BFGSConfig
         high_precision_tolerance = 1e-12,
         precision_threshold = 1e-6,
         max_iterations = 100,
-        f_abs_tol = 1e-20,
-        x_tol = 1e-12,
         show_trace = false,
         track_hyperparameters = true,
     )
@@ -228,8 +227,6 @@ mutable struct BFGSConfig
             high_precision_tolerance,
             precision_threshold,
             max_iterations,
-            f_abs_tol,
-            x_tol,
             show_trace,
             track_hyperparameters,
         )

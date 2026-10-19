@@ -4,6 +4,19 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Changed (NelderMead tolerances in `refine.jl`, bead hdgw.1, 2026-10-19)
+
+- `analyze_critical_points` and `enhanced_bfgs_refinement` run `Optim.NelderMead`, whose
+  only stopping test is the standard deviation of `f` over the simplex (Optim reads it from
+  `g_abstol`). Both passed the deprecated `f_tol` / `x_tol` instead, which NelderMead never
+  consults, so the effective stop was always Optim's default `1e-8`. They now pass the
+  tolerance they advertise: `bfgs_f_abstol` (default `1e-8`, unchanged behaviour) and the
+  per-point `standard_tolerance` / `high_precision_tolerance` of `BFGSConfig` (the
+  high-precision branch, `1e-12` below `|f| < 1e-6`, was only being reported before).
+  `bfgs_x_abstol` and the `BFGSConfig` fields `f_abs_tol` / `x_tol` are removed: no
+  NelderMead test reads them. The `BFGS*` names stay for API stability; their docstrings now
+  say NelderMead.
+
 ### Changed (N4 fixes and N5 on the tree path, 2026-10-16)
 
 - **`surrogate_residual_tol` is forwarded on the monomial path** of
