@@ -4,6 +4,14 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Changed (Christoffel fits factor once, bead hdgw.25, 2026-10-20)
+
+- `christoffel_fit_chebyshev` and `christoffel_subdomain_fit` take `kappa` from the R
+  factor of the pivoted QR that solves the fit (`qr(√W·V, ColumnNorm())`, which is what
+  `\` runs on a tall matrix) instead of a separate `cond(√W·V)` SVD of the K × m matrix.
+  Coefficients are bitwise unchanged and `kappa` equal to rounding; the fit at
+  13832 × 1001 drops from 1.77 s to 1.30 s (1 BLAS thread).
+
 ### Changed (Christoffel fits solve by QR; LinearSolve dropped, bead hdgw.5, 2026-10-19)
 
 - `christoffel_fit_chebyshev` and `christoffel_subdomain_fit` solve the weighted least
