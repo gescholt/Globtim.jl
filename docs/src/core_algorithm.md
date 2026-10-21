@@ -113,7 +113,6 @@ Each critical point is used as a starting point for local optimization:
 df_enhanced, df_min = analyze_critical_points(
     f, df, TR,
     max_iters_in_optim=100,     # BFGS iterations
-    bfgs_g_tol=1e-8,           # Gradient tolerance
     bfgs_f_abstol=1e-8,        # Function tolerance
     tol_dist=0.025             # Clustering distance
 )
@@ -148,5 +147,5 @@ TR = TestInput(f, dim=2, center=[0,0], sample_range=[2.0, 1.0])
 
 Key tolerances affecting results:
 - `tol_dist`: Distance for clustering critical points (default: 0.025)
-- `bfgs_g_tol`: Gradient tolerance for refinement (default: 1e-8)
+- `bfgs_f_abstol`: NelderMead's simplex-spread stop for refinement (default: 1e-8); `bfgs_g_tol` is refused, NelderMead has no gradient test
 - `hessian_tol_zero`: Zero eigenvalue threshold (default: 1e-8)

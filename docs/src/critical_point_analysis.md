@@ -134,7 +134,6 @@ Fine-tune the analysis with specific tolerances:
 df_enhanced, df_min = analyze_critical_points(
     f, df, TR,
     tol_dist=0.01,              # Tighter clustering
-    bfgs_g_tol=1e-10,          # Higher precision
     bfgs_f_abstol=1e-12,       # Function tolerance
     hessian_tol_zero=1e-10     # Eigenvalue threshold
 )

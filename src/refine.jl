@@ -316,7 +316,9 @@ This function performs detailed analysis of critical points found by polynomial 
 - `max_iters_in_optim=50`: Maximum iterations for BFGS optimization
 - `enable_hessian=true`: Enable Hessian-based classification
 - `hessian_tol_zero=1e-8`: Tolerance for zero eigenvalues in Hessian analysis
-- `bfgs_g_tol=1e-8`: accepted for API compatibility; the refiner is NelderMead and has no gradient test
+- `bfgs_g_tol=nothing`: must stay `nothing`. The refiner is NelderMead and has no gradient
+  test, so any value is an `ArgumentError` rather than a silently ignored setting; the
+  stopping tolerance is `bfgs_f_abstol`
 - `bfgs_f_abstol=1e-8`: NelderMead's stopping tolerance — the standard deviation of `f` over the
   simplex vertices, its only stopping test (the name predates the switch from BFGS to NelderMead)
 
@@ -676,9 +678,14 @@ TimerOutputs.@timeit_debug _TO function analyze_critical_points(
     enable_gradient_computation = true,
     enable_bfgs_refinement = true,
     hessian_tol_zero = 1e-8,
-    bfgs_g_tol = 1e-8,
+    bfgs_g_tol = nothing,
     bfgs_f_abstol = 1e-8,
 )
+    bfgs_g_tol === nothing || throw(
+        ArgumentError(
+            "analyze_critical_points: bfgs_g_tol = $bfgs_g_tol has no effect; the refiner is Optim.NelderMead, which has no gradient test. Its only stop is the simplex spread of f, set through bfgs_f_abstol",
+        ),
+    )
     n_dims = count(col -> startswith(string(col), "x"), names(df))
 
     # Initialize result columns
@@ -764,7 +771,9 @@ Analyze Optim result to determine why optimization stopped.
 - `config`: BFGSConfig structure
 
 # Returns
-- `Symbol`: Convergence reason (:gradient, :f_tol, :x_tol, :iterations, etc.)
+- `Symbol`: Convergence reason (:gradient, :f_tol, :x_tol, :iterations, etc.). For an
+  unbounded `Optim.NelderMead` result the g slot holds its simplex-spread stop (the standard
+  deviation of `f` over the simplex), which is reported as `:f_tol`, not `:gradient`.
 """
 function determine_convergence_reason(
     result::Optim.OptimizationResults,
@@ -774,7 +783,12 @@ function determine_convergence_reason(
     if Optim.converged(result)
         # Check which convergence criterion was met
         if Optim.g_converged(result)
-            return :gradient
+            # NelderMead reuses the g slot for its simplex spread of f (nelder_mead.jl
+            # assess_convergence): a function-value stop, not a gradient one.
+            is_nm =
+                result isa Optim.MultivariateOptimizationResults &&
+                result.method isa Optim.NelderMead
+            return is_nm ? :f_tol : :gradient
         elseif Optim.f_converged(result)
             return :f_tol
         elseif Optim.x_converged(result)

@@ -446,3 +446,8 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_christoffel_fit.jl") do
     include("test_christoffel_fit.jl")
 end
+
+# hdgw.24: refine.jl NelderMead stop labelled :f_tol; bfgs_g_tol refused
+with_timeout(TIMEOUT_TESTFILE, label = "test_refine_nm_labels.jl") do
+    include("test_refine_nm_labels.jl")
+end
