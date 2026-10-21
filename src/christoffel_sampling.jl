@@ -80,7 +80,8 @@ and assign each point the Christoffel weight `w_i = m / K_Λ(x_i)`.
 Returns the sample matrix (row = sample, column = dim — matches the
 `N × n_dim` convention `lambda_vandermonde_original` expects) and the
 **square-root** of the weights (suitable for left-multiplication on V and F
-to build the weighted normal equations).
+to build the weighted least-squares system `√W·V c ≈ √W·F`, which the fits solve
+by QR on `√W·V`).
 
 This is the "μ-sampling + Christoffel reweighting" variant — a slightly weaker
 guarantee than the Cohen-Migliorati 2017 optimal-density sampling (which would
@@ -120,6 +121,24 @@ function christoffel_K_default(m::Int; oversampling_c::Float64 = 3.0)
 end
 
 """
+    _christoffel_qr_solve(Vw, Fw) -> (coeffs, kappa)
+
+Weighted least squares `Vw \\ Fw` and `κ₂(Vw)` from one factorization. `F = qr(Vw,
+ColumnNorm())` is exactly what `\\` runs on a non-square matrix (pivoted QR,
+min-norm with rank detection), so `F \\ Fw` is bit-identical to `Vw \\ Fw`. Since
+`Vw·P = Q·R` with `Q` orthonormal, `κ₂(Vw) = κ₂(R)`: the SVD runs on the m × m
+factor instead of the K × m matrix. On the lv_christoffel_depth_probe arm
+(13832 × 1001, 1 BLAS thread) this cuts the fit from 1.77 s (`cond(Vw)` + `\\`) to
+1.30 s with identical coefficients and κ equal to within 4e-16 (bead hdgw.25).
+Unpivoted QR would be faster still but has no rank detection, and the rank of a
+random Christoffel design is not known in advance.
+"""
+function _christoffel_qr_solve(Vw::AbstractMatrix, Fw::AbstractVector)
+    F = LinearAlgebra.qr(Vw, LinearAlgebra.ColumnNorm())
+    return F \ Fw, LinearAlgebra.cond(F.R)
+end
+
+"""
     christoffel_fit_chebyshev(f, n::Int, d::Int;
                               K=nothing, oversampling_c=3.0,
                               rng=default_rng()) -> NamedTuple
@@ -136,8 +155,8 @@ the condition number of the weighted Vandermonde `√W·V` (the solve is a QR on
 so the result can feed `construct_chebyshev_approx` / HC unchanged.
 
 This is the Phase-1 standalone fit (no `MainGenerate` plumbing yet). The
-Phase-2 audit-driver wiring will reuse `christoffel_random_sample_chebyshev`
-and the weighted-normal-equations solve directly.
+Phase-2 audit-driver wiring (`christoffel_subdomain_fit`) reuses
+`christoffel_random_sample_chebyshev` and the same QR solve on `√W·V`.
 """
 function christoffel_fit_chebyshev(
     f,
@@ -175,8 +194,7 @@ function christoffel_fit_chebyshev(
     Vw = sqrt_w .* V                      # K × m
     Fw = sqrt_w .* F                      # K
 
-    kappa = LinearAlgebra.cond(Vw)
-    coeffs = Vw \ Fw
+    coeffs, kappa = _christoffel_qr_solve(Vw, Fw)
 
     # Weighted RMS residual (matches globtim's per-grid L² convention modulo
     # the weight normalisation; exact comparison with the tensor-grid baseline
@@ -200,11 +218,11 @@ end
 #
 # The audit driver (`adaptive_refine` → `process_subdomain` → `estimate_subdomain_error`)
 # builds a (2d+1)^n tensor-Chebyshev grid per leaf, evaluates f at affine-
-# mapped physical coords, then fits via unweighted normal equations.
+# mapped physical coords, then fits by unweighted least squares (QR on V).
 #
 # `christoffel_subdomain_fit` is the drop-in alternative: it Christoffel-
 # samples on the subdomain's normalized `[-1,1]^n`, evaluates f at the same
-# affine-mapped physical coords, and fits via weighted normal equations.
+# affine-mapped physical coords, and fits by weighted least squares (QR on √W·V).
 # Returns the same (coeffs, Lambda, samples_n×n_dim, f_values, l2, rel_l2,
 # kappa) shape that `construct_polynomial_on_subdomain` consumers expect.
 #
@@ -337,8 +355,7 @@ function christoffel_subdomain_fit(
     Fw = sqrt_w .* f_values
     # QR on the weighted Vandermonde, not LU on the Gram matrix (κ² — bead hdgw.5);
     # κ(Vw) is what the tensor-grid leaf path reports as `cond_vandermonde` too.
-    kappa = LinearAlgebra.cond(Vw)
-    coeffs = Vw \ Fw
+    coeffs, kappa = _christoffel_qr_solve(Vw, Fw)
 
     # Residual evaluated at the Christoffel samples (plain MC estimator of
     # ‖f - p‖_{L²(μ_arcsine)}; consistent because samples are from μ_arcsine).
