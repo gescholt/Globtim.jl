@@ -245,6 +245,12 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         # fit keeps all: its small q is a real near-pole feature); 0 = keep all;
         # n_qfiltered counts the dropped
         "qfilter" => 0.0,
+        # polynomial Christoffel arms only (bead 8f4p.7.18 edge misses): fit on the box
+        # enlarged by `fit_pad` (half-width × (1 + fit_pad)), and refine the surrogate
+        # critical points up to `outer_margin` outside the box (max-norm, box units);
+        # verification stays on the original box. 0 = the standard arm.
+        "fit_pad" => 0.0,
+        "outer_margin" => 0.0,
         # HC start system of the polynomial arms: :auto (polyhedral for n ≥ 3) or
         # :total_degree — the polyhedral mixed-cell computation overflows at n = 12, degree 4
         "start_system" => :auto,
@@ -366,6 +372,14 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         elseif a == "--qfilter"             # e.g. --qfilter 0.1
             cfg["qfilter"] = parse(Float64, argv[i+1])
             cfg["qfilter"] >= 0 || error("--qfilter must be ≥ 0")
+            i += 1
+        elseif a == "--fit-pad"             # e.g. --fit-pad 0.1
+            cfg["fit_pad"] = parse(Float64, argv[i+1])
+            cfg["fit_pad"] >= 0 || error("--fit-pad must be ≥ 0")
+            i += 1
+        elseif a == "--outer-margin"        # e.g. --outer-margin 0.1
+            cfg["outer_margin"] = parse(Float64, argv[i+1])
+            cfg["outer_margin"] >= 0 || error("--outer-margin must be ≥ 0")
             i += 1
         elseif a == "--face-samples"        # e.g. --face-samples 11
             cfg["face_samples"] = parse(Int, argv[i+1])
@@ -697,8 +711,8 @@ end
 # ── one configuration ───────────────────────────────────────────────────────
 
 # one refined row per in-box surrogate critical point (the CSV row)
-function refined_row(o::Objective, lo, hi, xs, xo, y, idx_s)
-    r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = o.gradtol)
+function refined_row(o::Objective, lo, hi, xs, xo, y, idx_s; margin::Real = 0.05)
+    r = refine_on_f(o.f, xo, lo, hi; ad = o.ad, tol = o.gradtol, margin = margin)
     return (;
         x_surrogate = xs,
         x_original = xo,
@@ -928,10 +942,13 @@ on f, and the `census`. Always admissible.
 """
 function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothing, truth = nothing,
         dedup_tol = 1e-3, capture_radius = 0.05, warm::Bool = true, start_system::Symbol = :auto,
-        solver::Symbol = :hc)
+        solver::Symbol = :hc, fit_pad::Real = 0.0, outer_margin::Real = 0.0)
     lo, hi = box(o)
     n = o.dim
     Λ = SupportGen(n, (:one_d_for_all, D))
+    arm.sampling == :grid && fit_pad > 0 && error("--fit-pad applies to Christoffel arms only")
+    # surrogate coordinates of the fit box = box coordinates / (1 + fit_pad)
+    ρ = 1 + fit_pad
     if arm.sampling == :grid
         t_fit = @elapsed pol = Constructor(TR, D)
         coeffs, basis, normalized = pol.coeffs, pol.basis, pol.normalized
@@ -941,9 +958,11 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
     else
         K = ceil(Int, arm.per_dof * Λ.size[1])
         # TR.objective: what the surrogates fit (f, or its --target transform)
-        t_fit = @elapsed fit = christoffel_polynomial_fit(o, Λ, K, Xoshiro(arm.seed); f = TR.objective)
+        o_fit = fit_pad == 0 ? o : Objective(o.key, o.name, o.f, o.dim, o.center, o.range * ρ; ad = o.ad, gradtol = o.gradtol)
+        t_fit = @elapsed fit = christoffel_polynomial_fit(o_fit, Λ, K, Xoshiro(arm.seed); f = TR.objective)
         coeffs, basis, normalized = fit.coeffs, :chebyshev, false
-        surrogate = u -> dot(coeffs, Globtim._tensor_basis_values(Λ, u, :chebyshev, false))
+        # in box coordinates u (the fit is in u / ρ)
+        surrogate = u -> dot(coeffs, Globtim._tensor_basis_values(Λ, u ./ ρ, :chebyshev, false))
         nrm, rms, n_evals, GN = fit.nrm, fit.rms, K, -1
     end
     x, _ = Globtim._rational_polyvars(n)
@@ -962,18 +981,20 @@ function run_polynomial(o::Objective, TR, D; arm = GRID_ARM, validation = nothin
     st = stats_ref[]
     t_solve_warm = warm ? (@elapsed solve_polynomial_system(x, n, D, coeffs; basis = basis, normalized = normalized,
         start_system = start_system, solver = solver)) : NaN
-    pts = [Vector{Float64}(real.(s)) for s in raw if all(-1 .<= real.(s) .<= 1)]
+    # candidates in box coordinates: the box, plus `outer_margin` beyond each face
+    # (a minimizer near a face whose surrogate partner fell just outside it)
+    pts = [Vector{Float64}(real.(s) .* ρ) for s in raw if all(abs.(real.(s) .* ρ) .<= 1 + outer_margin)]
     # the surrogate's Morse index in surrogate coordinates: the affine map to the
     # box scales by positive factors, which leaves the inertia unchanged
     t_refine = @elapsed rows = map(pts) do xs
-        xo = to_original_coordinates(xs, TR.sample_range, TR.center)
+        xo = to_original_coordinates(xs, o.range, o.center)
         refined_row(o, lo, hi, xs, xo, surrogate(xs),
-            count(<(0), eigvals(Symmetric(ForwardDiff.hessian(surrogate, xs)))))
+            count(<(0), eigvals(Symmetric(ForwardDiff.hessian(surrogate, xs)))); margin = 0.05 + outer_margin)
     end
     cz = census(rows, lo, hi; truth = truth, dedup_tol = dedup_tol, capture_radius = capture_radius)
     return (;
         kind = "polynomial",
-        label = "D=$D" * arm_tag(arm),
+        label = "D=$D" * arm_tag(arm) * poly_tag(fit_pad, outer_margin),
         base_label = "D=$D",
         sampling = String(arm.sampling),
         per_dof = arm.per_dof,
@@ -1018,6 +1039,9 @@ end
 # ── gate ────────────────────────────────────────────────────────────────────
 
 # one-line census: candidates → distinct / tight, spurious, and recall when a truth set exists
+# label suffix of a polynomial arm with --fit-pad / --outer-margin (empty for the standard arm)
+poly_tag(fit_pad, outer_margin) = (fit_pad > 0 ? " pad$(fit_pad)" : "") * (outer_margin > 0 ? " out$(outer_margin)" : "")
+
 function census_line(cz)
     s = @sprintf("%d cand → %d distinct, %d tight, %d spurious", cz.n_inbox, cz.n_distinct, cz.n_tight, cz.n_spurious)
     cz.truth === nothing && return s
@@ -1337,6 +1361,8 @@ function main(
     extra_report = nothing,
 )
     cfg = parse_args(argv; root = root, default_objectives = sort(collect(keys(objectives))), bead = bead)
+    (cfg["fit_pad"] > 0 || cfg["outer_margin"] > 0) && !isempty(cfg["rational"]) &&
+        error("--fit-pad / --outer-margin apply to polynomial arms only; pass --rational none")
     outdir = normpath(cfg["outdir"])
     mkpath(outdir)
     t0 = time()
@@ -1408,11 +1434,11 @@ function main(
             flush(stdout)          # progress is visible in a Slurm log (stdout to a file is block-buffered)
         end
         for D in cfg["polynomial"], arm in arms
-            label = "D=$D" * arm_tag(arm)
+            label = "D=$D" * arm_tag(arm) * poly_tag(cfg["fit_pad"], cfg["outer_margin"])
             @printf("  polynomial %-14s ... ", label)
             c = try
                 run_polynomial(o, TR, D; arm = arm, validation = validation, start_system = cfg["start_system"],
-                    solver = cfg["poly_solver"], ckw...)
+                    solver = cfg["poly_solver"], fit_pad = cfg["fit_pad"], outer_margin = cfg["outer_margin"], ckw...)
             catch e
                 failed_cell(o, "polynomial", label, D, 0, sprint(showerror, e); truth = truth_pts, arm = arm)
             end
