@@ -4,6 +4,19 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-18
+
+### Fixed
+
+- `box_strata_census` solved faces with three or more free variables from HC's polyhedral
+  start system, which loses paths on a few percent of solves: on `Σ yᵢ⁴ − yᵢ²` in 3-D,
+  25 of 300 solves returned 26, 24, 18 or 9 of the 27 interior critical points, and the
+  census still reported `exact = true`. Every face now uses the total-degree start (300
+  of 300 at one and at four threads), and a face with a failed HC path makes the census
+  not `exact` (new field `n_failed_faces`).
+- Documentation: `dyadic_quantize` is listed in the API reference (an unresolved
+  cross-reference stopped the 1.5.0 docs build).
+
 ## [1.5.0] - 2026-11-18
 
 ### Changed (NelderMead labels in `refine.jl`, bead hdgw.24, 2026-10-20)

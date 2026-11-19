@@ -72,9 +72,10 @@ the variables `x` directly.
 
 # Returns
 `(; sum, ok, exact, points, n_counted, n_interior, n_boundary_counted, n_ambiguous,
-n_singular_faces, n_degenerate_faces, n_faces)`:
+n_singular_faces, n_degenerate_faces, n_failed_faces, n_faces)`:
 - `sum`: Σ(−1)^index over counted points; `ok = exact && sum == 1`.
-- `exact`: no ambiguous point, no face with singular HC endpoints, no face whose
+- `exact`: no ambiguous point, no face with singular HC endpoints, no face with a failed
+  HC path (`n_failed_faces`: a root of that face may be missing), no face whose
   gradient system has an identically-zero equation (p independent of a free variable on
   that face: the stationary set is not isolated).
 - `points`: every in-face critical point of every stratum as
@@ -108,6 +109,7 @@ function box_strata_census(
     total = 0
     n_singular_faces = 0
     n_degenerate_faces = 0
+    n_failed_faces = 0
     digits_ = zeros(Int, n)
     for code in 0:(3^n-1)
         k = code
@@ -146,10 +148,16 @@ function box_strata_census(
             sols, st = _solve_rational_hc(
                 eqs,
                 x[free];
-                start_system = length(free) >= 3 ? :polyhedral : :total_degree,
+                # Total-degree start on every face. HC's polyhedral tracker loses paths
+                # now and then (Σ yᵢ⁴ − yᵢ² in 3-D: 25 of 300 solves returned 26, 24, 18
+                # or 9 of the 27 roots), and a face polynomial of a fitted surrogate is
+                # dense, so the mixed volume buys nothing over the Bézout count here.
+                start_system = :total_degree,
                 compile = false,
             )
             st.n_singular > 0 && (n_singular_faces += 1)
+            # a failed path is a root that may be missing: the census cannot close
+            st.n_path_failures > 0 && (n_failed_faces += 1)
             for s in sols
                 y = Vector{Float64}(real.(s)) .+ shift
                 all(abs.(y) .<= 1 + edge_tol) || continue
@@ -214,7 +222,11 @@ function box_strata_census(
     end
 
     n_ambiguous = count(q -> q.status == :ambiguous, points)
-    exact = n_ambiguous == 0 && n_singular_faces == 0 && n_degenerate_faces == 0
+    exact =
+        n_ambiguous == 0 &&
+        n_singular_faces == 0 &&
+        n_degenerate_faces == 0 &&
+        n_failed_faces == 0
     n_counted = count(q -> q.counted, points)
     n_interior = count(q -> q.counted && q.stratum_dim == n, points)
     return (;
@@ -228,6 +240,7 @@ function box_strata_census(
         n_ambiguous = n_ambiguous,
         n_singular_faces = n_singular_faces,
         n_degenerate_faces = n_degenerate_faces,
+        n_failed_faces = n_failed_faces,
         n_faces = 3^n,
     )
 end
