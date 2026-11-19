@@ -136,18 +136,18 @@ reproduced here. Three consequences of the statement:
 ## What the proof covers, and what the package does
 
 | Step | In the theorem | In the package |
-|:--|:--|:--|
-| Class of ``f`` | Morse, ``C^m``, with known ``\lambda`` and ``\kappa`` | any function that can be evaluated; ``\lambda`` and ``\kappa`` are usually unknown |
-| Samples | ``k`` independent draws from ``\mu``, ``k`` from the inequality above | by default the tensor Chebyshev grid with `GN + 1` nodes per axis; scattered and Christoffel-weighted samples are available |
-| Degree | determined by ``\kappa``, ``\lambda``, ``\varepsilon``, ``\eta`` | chosen by the user, or swept upward until the reported error stops improving |
-| Critical points of ``w`` | assumed computed, all of them | homotopy continuation (numerical; a path can fail, see [Solvers](solvers.md)) or msolve (symbolic) |
-| Conclusion | the minimizers of ``w`` capture those of ``f`` | candidates, then refinement on ``f`` and a check at each refined point |
-| Boundary | critical points are interior by hypothesis | minima on the boundary of the box exist in practice; `box_strata_census` counts them |
+| :-- | :-- | :-- |
+| Function | Morse, of class ``C^m``; ``\lambda`` and ``\kappa`` known | anything that can be evaluated; ``\lambda`` and ``\kappa`` unknown |
+| Samples | ``k`` independent draws from ``\mu`` | tensor Chebyshev grid, `GN + 1` nodes per axis (default); scattered or Christoffel-weighted samples |
+| Degree | fixed by ``\kappa``, ``\lambda``, ``\varepsilon``, ``\eta`` | chosen by the user, or raised until the reported error stops improving |
+| Critical points | all of them, assumed computed | homotopy continuation (a path can fail, see [Solvers](solvers.md)) or msolve |
+| Conclusion | minimizers of ``w`` capture those of ``f`` | candidates, each refined and checked on ``f`` |
+| Boundary | none: critical points are interior | boundary minima occur; `box_strata_census` counts them |
 
 Because ``\lambda`` and ``\kappa`` are not known for a function given by evaluations,
 the theorem is used as a statement about the regime in which the method works, not as
-a certificate for a particular run. What certifies a particular run is the last row
-but one: each returned point is checked on ``f``. That check establishes that the
+a certificate for a particular run. What certifies a particular run is the row
+"Conclusion": each returned point is checked on ``f``. That check establishes that the
 returned points are critical points of ``f``. It does not establish that none is
 missing; completeness of a run rests on the fit being accurate enough, which the
 reported error indicates and does not prove.
