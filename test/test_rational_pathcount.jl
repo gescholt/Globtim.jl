@@ -124,7 +124,15 @@ end
             q = sum(randn(rng, ComplexF64) * mono(β) for β in SN)
             eqs = vcat(p - y * q, HomotopyContinuation.differentiate(p, x) .- y .* HomotopyContinuation.differentiate(q, x))
             F = HomotopyContinuation.System(eqs; variables = vcat(x, [y]))
+            # HC's polyhedral tracker loses a path now and then (147 of 148 on one shape in
+            # one run of this suite): the count is asserted on a solve with no failed path,
+            # and three solves in a row with a failed path fail the test.
             R = HomotopyContinuation.solve(F; start_system = :polyhedral, show_progress = false)
+            for _ in 1:2
+                HomotopyContinuation.nfailed(R) == 0 && break
+                R = HomotopyContinuation.solve(F; start_system = :polyhedral, show_progress = false)
+            end
+            @test HomotopyContinuation.nfailed(R) == 0
             @test HomotopyContinuation.ntracked(R) == MV
             @test HomotopyContinuation.nsolutions(R) == C   # = MV iff M ≠ N
             @test HomotopyContinuation.nsingular(R) == 0
