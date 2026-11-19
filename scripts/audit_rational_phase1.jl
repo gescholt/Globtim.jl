@@ -198,7 +198,7 @@ end
 arm_tag(arm) = arm.sampling == :grid ? "" : @sprintf(" %gm #%d", arm.per_dof, arm.seed)
 
 function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "B", "C", "D"],
-    bead = "globopt_merged-8f4p.7")
+    bead = "8f4p.7")
     cfg = Dict{String,Any}(
         "objectives" => default_objectives,
         # the ledger record's issue_id: the driver's bead, or --bead for a run
@@ -295,7 +295,7 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
         elseif a == "--supersedes"
             cfg["supersedes"] = String.(split(argv[i+1], ","))
             i += 1
-        elseif a == "--bead"                # e.g. --bead globopt_merged-8f4p.7.9
+        elseif a == "--bead"                # e.g. --bead 8f4p.7.9
             cfg["bead"] = argv[i+1]
             i += 1
         elseif a == "--target"              # raw | log | cauchy
@@ -391,7 +391,7 @@ function parse_args(argv; root = "rational_phase1", default_objectives = ["A", "
     end
     if cfg["outdir"] === nothing
         stamp = Dates.format(now(), "yyyymmddTHHMMSS")
-        # two jobs started in the same second must not share a directory (korok
+        # two jobs started in the same second must not share a directory (cluster job
         # 1035874/1035875 did, and one overwrote the other's artifacts)
         suffix = haskey(ENV, "SLURM_JOB_ID") ? "_job" * ENV["SLURM_JOB_ID"] : "_pid" * string(getpid())
         cfg["outdir"] = joinpath(
@@ -1355,7 +1355,7 @@ function main(
     objectives = OBJECTIVES,
     root = "rational_phase1",
     slug = "rational_phase1_audit",
-    bead = "globopt_merged-8f4p.7",
+    bead = "8f4p.7",
     extended_keys = ["B"],
     brief = "docs/RATIONAL_SURROGATE_PHASE1_BRIEF.md",
     extra_report = nothing,

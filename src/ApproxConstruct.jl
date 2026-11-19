@@ -135,7 +135,7 @@ end
 
 # @timeit_debug: records nothing unless TimerOutputs.enable_debug_timings(Globtim) is on. The
 # scattered-point fits (christoffel_subdomain_fit) call this from adaptive_refine's parallel leaf
-# tasks, and the global TimerOutput is not thread-safe (korok 948633, 1203749, 1203752).
+# tasks, and the global TimerOutput is not thread-safe (cluster job 948633, 1203749, 1203752).
 TimerOutputs.@timeit_debug _TO function lambda_vandermonde_original(
     Lambda::NamedTuple,
     S;

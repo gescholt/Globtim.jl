@@ -4,6 +4,16 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-18
+
+### Changed (NelderMead labels in `refine.jl`, bead hdgw.24, 2026-10-20)
+
+- `analyze_critical_points` refuses a non-default `bfgs_g_tol` with an `ArgumentError`:
+  the refiner is `Optim.NelderMead`, which has no gradient test, and the keyword was
+  accepted and silently ignored before.
+- `determine_convergence_reason` reports the NelderMead simplex-spread stop as `:f_tol`
+  (it was reported as `:gradient`, because Optim returns that stop in its `g` slot).
+
 ### Changed (Christoffel fits factor once, bead hdgw.25, 2026-10-20)
 
 - `christoffel_fit_chebyshev` and `christoffel_subdomain_fit` take `kappa` from the R

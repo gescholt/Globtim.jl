@@ -110,7 +110,7 @@ function chebyshev_anchor(
     # Start point inside the box with a small imaginary part: generic for monodromy (a
     # nonsingular Jacobian is all it needs) and keeps T_j(x₀) of order one. A point of
     # modulus > 1 makes T_j grow like |x₀|^j — 1e5 at degree 16 — and the projected pair's
-    # residual then only vanishes relative to that scale (korok 1113956 failed here).
+    # residual then only vanishes relative to that scale (cluster job 1113956 failed here).
     x0 = complex.(2 .* rand(rng, K.n) .- 1, 0.05 .* randn(rng, K.n))
     A = Globtim.gradient_basis_matrix(K, x0)
     c = randn(rng, ComplexF64, K.m)

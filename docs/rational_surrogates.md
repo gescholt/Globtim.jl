@@ -188,7 +188,7 @@ How HC represents the family (`compile = :auto`): families with more than
 default compiled straight-line program (`:mixed`). The compile is serial
 codegen on one function the size of the family and grows much faster than
 the parameter count: `(8,8,4)` (13 365 parameters) was still inside LLVM
-register allocation after 10 h on korok 1104280, while an interpreted
+register allocation after 10 h on cluster job 1104280, while an interpreted
 evaluation costs only ~1.5–2× a compiled one per call. The representation is
 fixed once per shape (`fixed(F; compile)`) and shared by the anchor and every
 track; `--rational-compile mixed | false` in the audit script forces it.
@@ -207,8 +207,8 @@ against 0.011 s warm (baseline from-scratch: 7.4 s cold on A), with identical
 paths, real solutions and in-box points — GO. The flags `--solver parametric
 --anchor monodromy` of `experiments/sandbox/rational_trajectories/rational_tree.jl`
 and `rational_solver = :parametric` of `solve_tree_leaves` run the tree leaves
-through the same cache; benchmark 2 (korok 1039183–88 re-run) is stage `b1.2`
-of `experiments/sandbox/rational_phase3/submit_korok.sh`.
+through the same cache; benchmark 2 (cluster job 1039183–88 re-run) is stage `b1.2`
+of the phase-3 benchmark scripts.
 
 ## The `q > 0` requirement
 

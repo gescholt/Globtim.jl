@@ -5,7 +5,7 @@ using Globtim: Subdomain, estimate_subdomain_error, select_cut_dimension
 # bead 0lhz.3: `select_cut_dimension` scores each axis by the variance of the
 # residual along 1-D grid lines (points sharing every other coordinate). A
 # christoffel design has no such lines, so every axis scored 0.0 and `argmax`
-# returned axis 1 at every level: the k000 christoffel arm (korok 975743) bisected
+# returned axis 1 at every level: the k000 christoffel arm (cluster job 975743) bisected
 # axis 1 nine times, its 512 leaves had half-widths (0.0016, 0.9, 0.8, 0.9), and no
 # leaf ever left the root box's error. Scattered designs now use the variance of
 # binned residual means along each axis; tensor designs are unchanged.
@@ -57,7 +57,7 @@ using Globtim: Subdomain, estimate_subdomain_error, select_cut_dimension
     end
 
     @testset "a parallel christoffel tree builds (no shared-timer race)" begin
-        # korok 1203749 / 1203752: parallel leaf tasks of a christoffel tree died in
+        # cluster job 1203749 / 1203752: parallel leaf tasks of a christoffel tree died in
         # lambda_vandermonde_original's global TimerOutput ("Vector can not be resized
         # concurrently", "array must be non-empty"). Many small concurrent fits.
         if Threads.nthreads() < 2

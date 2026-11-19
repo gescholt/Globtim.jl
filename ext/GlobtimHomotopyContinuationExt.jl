@@ -120,7 +120,7 @@ const _RAT_PARAM_MISSES = Ref(0)
 # under `compile = :auto`; smaller ones take HC's default `:mixed` (compiled
 # straight-line program). The compile is serial Julia/LLVM codegen on one function
 # whose size is the term count of the family: (8,8,4) with 13 365 parameters was
-# still in LLVM register allocation after 10 h on korok 1104280, while interpreted
+# still in LLVM register allocation after 10 h on cluster job 1104280, while interpreted
 # evaluation costs only ~1.5–2× a compiled one per call (bench in
 # docs/research/rational_surrogates_phase3.md, B1.3).
 const _RAT_PARAM_COMPILE_MAX_PARAMS = 2000

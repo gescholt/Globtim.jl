@@ -75,7 +75,7 @@ monomials), then each fit `(a, b)` in `fits` is a parameter homotopy from `θ₀
 straight-line program), `false` (interpreted), or `:auto` (default): interpreted when
 the family has more than `_RAT_PARAM_COMPILE_MAX_PARAMS` = 2000 parameters. The compile
 is serial codegen on one function the size of the family and grows faster than the
-parameter count — (8,8,4), 13 365 parameters, had not finished after 10 h on korok
+parameter count — (8,8,4), 13 365 parameters, had not finished after 10 h on cluster job
 1104280 — while interpreted evaluation costs ~1.5–2× a compiled one per call.
 Fixed once per shape and shared by the anchor and every track.
 
@@ -270,7 +270,7 @@ paths go to infinity. The solution count is then
 
 i.e. the formula above with the multiplier N replaced by N − 1. Measured by
 polyhedral solves at (1,4,4), (2,3,3), (2,4,4), (3,4,4), (2,6,6), (3,6,6) and by
-monodromy at (4,6,6) (3 125 of the formula's 3 625; korok 1203659, 2026-10-16).
+monodromy at (4,6,6) (3 125 of the formula's 3 625; cluster job 1203659, 2026-10-16).
 This function returns the solution count, which is what the monodromy target and
 the parametric solver's start set need; polyhedral `ntracked` exceeds it at M = N. The formula is a cost model: `M` sets the exponent,
 `N` only the multiplier. `N = 0` is the polynomial case, (M−1)^n (the Bézout

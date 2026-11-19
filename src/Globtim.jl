@@ -27,7 +27,7 @@ end
 # nothing is recorded unless `TimerOutputs.enable_debug_timings(Globtim)` is
 # called. The timer is one global stack and TimerOutputs is not thread-safe:
 # with `@timeit`, concurrent fits in adaptive_refine(; parallel = true) pushed
-# and popped it from several tasks and crashed (pop! on an empty array, korok
+# and popped it from several tasks and crashed (pop! on an empty array, cluster
 # job 948633, bead 7kdo). Enable the timings for serial runs only;
 # `_check_timer_thread_safety` refuses the parallel paths while they are on.
 const _TO = TimerOutputs.TimerOutput()

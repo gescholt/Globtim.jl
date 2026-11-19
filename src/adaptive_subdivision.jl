@@ -636,7 +636,7 @@ function select_cut_dimension(subdomain::Subdomain)
     # SCATTERED DESIGNS (christoffel sampling, or any non-tensor sample set): no two
     # points share their other coordinates, so every group above is a singleton, every
     # score is 0.0 and `argmax` returns axis 1 unconditionally. A tree then bisects
-    # axis 1 at every level and its leaf error never falls: korok 975743 (bead 0lhz.3)
+    # axis 1 at every level and its leaf error never falls: cluster job 975743 (bead 0lhz.3)
     # ended with 512 depth-9 leaves of half-widths (0.0016, 0.9, 0.8, 0.9), all at the
     # root box's error, while the same sampler on cubic boxes converges like the tensor
     # grid does. The scattered analogue of "variance of the residual along d with the

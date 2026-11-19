@@ -3,7 +3,7 @@ using Globtim
 
 # Bead 7kdo: adaptive_refine(; parallel = true) fits leaves in Threads.@spawn tasks,
 # and every fit pushed and popped the one global TimerOutputs stack `_TO`. With
-# JULIA_NUM_THREADS > 1 that corrupted the stack (korok job 948633: pop! on an
+# JULIA_NUM_THREADS > 1 that corrupted the stack (cluster job 948633: pop! on an
 # empty array from lambda_vandermonde_original). The timed sections are now
 # `@timeit_debug`, off unless enabled, and the parallel paths refuse to run while
 # they are on.
