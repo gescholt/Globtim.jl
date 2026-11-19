@@ -329,7 +329,7 @@ if HAS_MSOLVE
     # ─── RANGE-07: 3D range search — certified interval filtering ────────────
 
     @testset "RANGE-07: 3D search_bounds — msolve" begin
-        f = Sphere
+        f = Globtim.Sphere
         TR = TestInput(
             f,
             dim = 3,
@@ -365,7 +365,7 @@ if HAS_MSOLVE
     end
 
     @testset "RANGE-07: 3D search_bounds — HC midpoint filter" begin
-        f = Sphere
+        f = Globtim.Sphere
         TR = TestInput(
             f,
             dim = 3,

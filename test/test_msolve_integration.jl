@@ -213,7 +213,7 @@ if HAS_MSOLVE
     end
 
     @testset "MSOLVE-04: 3D timing sweep" begin
-        benchmarks_3d = [("Levy", Levy, (-10.0, 10.0)), ("Sphere", Sphere, (-5.12, 5.12))]
+        benchmarks_3d = [("Levy", Levy, (-10.0, 10.0)), ("Sphere", Globtim.Sphere, (-5.12, 5.12))]
         degrees_3d = [4, 6]
 
         println("\n", "="^75)
@@ -263,7 +263,7 @@ if HAS_MSOLVE
 
     @testset "MSOLVE-04: 4D timing sweep" begin
         # 4D at degree 4 only — higher degrees push msolve into minutes.
-        benchmarks_4d = [("Sphere", Sphere, (-5.12, 5.12))]
+        benchmarks_4d = [("Sphere", Globtim.Sphere, (-5.12, 5.12))]
 
         println("\n", "="^75)
         @printf(
