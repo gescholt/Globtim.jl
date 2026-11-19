@@ -489,7 +489,12 @@ function solve_rational_critical_points(
         out.per_fit[1]
     else
         sys = rational_critical_system(R)
-        _solve_rational_hc(sys.eqs, sys.vars; start_system = method, max_retries = hc_retries)
+        _solve_rational_hc(
+            sys.eqs,
+            sys.vars;
+            start_system = method,
+            max_retries = hc_retries,
+        )
     end
 
     points = Vector{Vector{Float64}}()
