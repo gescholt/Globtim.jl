@@ -34,7 +34,7 @@ pol = Constructor(TR, degree, basis=:legendre)
 
 **Advantages:**
 - Orthogonal with respect to uniform weight
-- Nodes do not cluster at boundaries (unlike Chebyshev), which may reduce endpoint sensitivity
+- Gauss–Legendre nodes also cluster towards the endpoints (the same arcsine density as Chebyshev's in the limit), somewhat less at a given degree
 - Natural for probability-weighted problems
 
 **Grid points:** Zeros of Legendre polynomials

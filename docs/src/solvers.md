@@ -121,6 +121,15 @@ solutions = solve_polynomial_system(
 )
 ```
 
+A caution on the polyhedral start. Homotopy continuation gives up on a path now and
+then, and a failed path is a solution that may be missing. On a 27-root test system the
+polyhedral start lost at least one path in 25 of 300 solves; the total-degree start in
+none of 300. `solve_rational_critical_points`, `certify_positive_denominator` and
+`box_strata_census` repeat a solve that reports failed paths and expose what is left
+(`n_path_failures`). `solve_polynomial_system` does not check for failed paths: where
+the complete list matters, solve twice and compare, or pass
+`start_system=:total_degree`.
+
 ### Coefficient sparsification before solving (`sparsify_threshold`)
 
 Zeroing out small surrogate coefficients before constructing the polynomial yields a

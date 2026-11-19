@@ -11,12 +11,19 @@
 
 Finding all local minima of a continuous function over a bounded domain is fundamentally hard. Standard optimization algorithms (gradient descent, BFGS, etc.) find *one* local minimum from a given starting point — but how do you know there isn't a better one elsewhere?
 
-Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system with finitely many solutions (bounded by Bezout's theorem), which can be computed numerically via homotopy continuation or exactly via symbolic methods. Each solution seeds a local refinement on the original function, searching for local minima across the entire domain — not just the nearest one. The procedure is agnostic of what method is used in the refinement step — refinement is a pluggable component that should be adapted to each particular problem.
+Globtim solves this by replacing your function with a polynomial approximation. Setting the gradient of the polynomial to zero gives a polynomial system which, generically, has finitely many solutions (at most (d−1)ⁿ for degree d in n variables), and all of them can be computed, numerically via homotopy continuation or symbolically. Each solution seeds a local refinement on the original function, searching for local minima across the entire domain — not just the nearest one. The procedure is agnostic of what method is used in the refinement step — refinement is a pluggable component that should be adapted to each particular problem.
 
 ```
 f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine on f(x)    -->  Candidate minima
            (Chebyshev/Legendre)   (HomotopyContinuation.jl)  (any local method)
 ```
+
+**What is proved.** For a Morse function on a box, with the degree and the number of
+samples chosen according to an explicit trade-off, the local minimizers of the
+approximant lie within a prescribed distance of *every* local minimizer of the function,
+with high probability (Safey El Din, Scholten, Trélat, 2026; see [Citation](#citation)).
+The documentation page [The Method](https://gescholt.github.io/Globtim.jl/dev/the_method/)
+states the theorem and says which steps of the package lie outside it.
 
 ## How it works
 
@@ -36,7 +43,7 @@ integration all go through the same pipeline.
 | | | |
 |:--|:--|:--|
 | ![Analytic benchmarks](docs/src/assets/showcase/analytic.png) | ![ODE parameter estimation](docs/src/assets/showcase/ode_parameter_estimation.png) | ![CR3BP transfers](docs/src/assets/showcase/cr3bp_transfers.png) |
-| **Analytic benchmarks**<br>Closed-form objectives where the critical set is known and the method is exact. | **ODE parameter estimation**<br>Rational ODE models fitted to data, over valleys spanning six orders of magnitude. | **CR3BP transfers**<br>Pontryagin extremals of a low-thrust transfer, as zeros of a shooting residual. |
+| **Analytic benchmarks**<br>Closed-form objectives where the critical set is known and the output can be checked against it. | **ODE parameter estimation**<br>Rational ODE models fitted to data, over valleys spanning six orders of magnitude. | **CR3BP transfers**<br>Pontryagin extremals of a low-thrust transfer, as zeros of a shooting residual. |
 
 ## Installation
 
@@ -81,7 +88,7 @@ TR = TestInput(f, dim=2, center=[0.0, 0.0], sample_range=1.2)
 pol = Constructor(TR, 8, precision=AdaptivePrecision)
 println("L2-norm approximation error: $(pol.nrm)")
 
-# Find all critical points
+# All critical points of the polynomial approximant: candidates for those of f
 @polyvar x[1:2]
 solutions = solve_polynomial_system(x, pol)
 df = process_crit_pts(solutions, f, TR)
@@ -136,8 +143,8 @@ method = "NelderMead"
 
 Two orthogonal polynomial bases are supported:
 
-- **`:chebyshev`** (default): Chebyshev polynomials — standard choice, well-tested
-- **`:legendre`**: Legendre polynomials — uniform distribution of nodes along each coordinate axis
+- **`:chebyshev`** (default): Chebyshev polynomials, orthogonal for the weight ∏ (1 − xᵢ²)^(−1/2)
+- **`:legendre`**: Legendre polynomials, orthogonal for the uniform weight on the box
 
 ```julia
 pol = Constructor(TR, 8, basis=:chebyshev, precision=AdaptivePrecision)  # Default
@@ -168,7 +175,7 @@ Two solvers are available for computing critical points:
 
 ## Ecosystem
 
-Globtim is part of a three-package ecosystem:
+Globtim is the core of a family of packages (a fourth, [DynamicObjectives](https://github.com/gescholt/DynamicObjectives.jl), supplies ODE-based objectives):
 
 Globtim and GlobtimPostProcessing are in the General registry; GlobtimPlots is
 installed from its public repository:

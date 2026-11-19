@@ -6,7 +6,7 @@ Critical point analysis is performed **after** the polynomial approximation step
 
 The analysis proceeds in two steps:
 
-1. **Refinement**: Each polynomial critical point serves as a starting point for local optimization (BFGS) on the original function f(x), converging to a true critical point
+1. **Refinement**: Each polynomial critical point serves as a starting point for a local method (Nelder–Mead) on the original function f(x), converging to a true critical point
 
 2. **Classification**: The Hessian matrix at each refined point is computed using automatic differentiation ([ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/)), and eigenvalue analysis determines whether the point is a minimum, maximum, saddle, or degenerate
 
@@ -84,7 +84,7 @@ df_enhanced.function_value_cluster      # Similar function values
 ```julia
 # Refinement metrics
 df_enhanced.gradient_norm              # ||∇f|| at critical point
-df_enhanced.steps                      # BFGS iterations used
+df_enhanced.steps                      # iterations of the local method
 df_enhanced.converged                  # Convergence success
 df_enhanced.point_improvement          # ||x_refined - x_initial||
 df_enhanced.value_improvement          # |f(x_refined) - f(x_initial)|
@@ -97,7 +97,7 @@ For the unique minimizers in `df_min`:
 ```julia
 # Basin of attraction statistics
 df_min.basin_points                    # Number of converging points
-df_min.average_convergence_steps       # Mean BFGS iterations
+df_min.average_convergence_steps       # mean iterations of the local method
 df_min.region_coverage_count          # Spatial regions covered
 df_min.gradient_norm_at_min          # Gradient verification
 ```

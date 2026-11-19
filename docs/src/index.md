@@ -1,6 +1,6 @@
 # Globtim.jl Documentation
 
-[![Julia 1.11](https://img.shields.io/badge/julia-1.11+-blue.svg)](https://julialang.org/downloads/)
+[![Julia 1.12](https://img.shields.io/badge/julia-1.12+-blue.svg)](https://julialang.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/gescholt/Globtim.jl/blob/main/LICENSE)
 
 **Global optimization of continuous functions via polynomial approximation**
@@ -14,17 +14,17 @@ Finding all local minima of a continuous function over a bounded domain is funda
 Globtim solves this by replacing your function with a polynomial approximation. Why polynomials?
 
 1. **Smooth functions are well-approximated by polynomials** — Chebyshev and Legendre bases provide well-conditioned polynomial approximations whose accuracy improves with degree for smooth functions
-2. **Polynomial critical points can be enumerated** — Setting ∇p(x) = 0 gives a polynomial system with finitely many solutions (bounded by Bezout's theorem), which can be computed numerically via homotopy continuation or exactly via symbolic methods
-3. **Refinement on the original function** — Each polynomial critical point seeds a local optimization (BFGS) on the original function, which can converge to a nearby true critical point
+2. **Polynomial critical points can be enumerated** — Setting ∇p(x) = 0 gives a polynomial system which, generically, has finitely many solutions (at most (d−1)ⁿ for degree d in n variables, Bézout's bound); they can all be computed, numerically via homotopy continuation or symbolically
+3. **Refinement on the original function** — Each polynomial critical point seeds a local method (Nelder–Mead by default; any local method can be used) on the original function, which can converge to a nearby true critical point
 
 The result: a systematic search for local minima across the entire domain, not just the nearest one.
 
-The method comes with a **global-capture guarantee**: for Morse functions on a compact domain, the returned points provably contain and separate *every* local minimizer at the target precision (with high probability), under an explicit degree/sample/noise trade-off. This is established in the foundational paper — see [Citation](#Citation).
+The method comes with a **global-capture guarantee**: for Morse functions on a compact domain, the local minimizers of the approximant lie within a target precision of *every* local minimizer of the function, with high probability, under an explicit trade-off between degree, number of samples and evaluation noise. [The Method](the_method.md) states the theorem, its hypotheses, and which steps of the package lie outside it; the proof is in the foundational paper — see [Citation](#Citation).
 
 ## Algorithm Overview
 
 ```
-f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine with BFGS  -->  Candidate minima
+f(x)  -->  Polynomial p(x)  -->  Solve grad(p) = 0  -->  Refine on f(x)  -->  Verified critical points
            (Chebyshev/Legendre)   (HomotopyContinuation.jl)
 ```
 

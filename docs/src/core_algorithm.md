@@ -1,6 +1,6 @@
 # Core Algorithm
 
-Globtim's approach to global optimization consists of three main phases:
+Globtim's approach to global optimization consists of three main phases. This page shows the code for each; the mathematical statement of the method and of its guarantee is on [The Method](the_method.md).
 
 ![Globtim — algorithm overview](assets/algorithm_overview.svg)
 
@@ -23,7 +23,7 @@ pol = Constructor(
 )
 ```
 
-The sampling points are chosen to minimize approximation error and avoid Runge's phenomenon.
+The nodes of these grids cluster towards the faces of the box, which keeps the least-squares problem well conditioned as the degree grows (equispaced nodes do not: Runge's phenomenon).
 
 ### Approximation Quality
 
@@ -43,8 +43,8 @@ The L2-norm can be computed using either Riemann sums or high-accuracy quadratur
 
 Two basis types are supported:
 
-- **Chebyshev polynomials** (default): Standard choice for polynomial approximation; near-minimax property
-- **Legendre polynomials**: Alternative basis with different convergence properties
+- **Chebyshev polynomials** (default): orthogonal for the weight ∏ (1 − xᵢ²)^(−1/2), the measure of the capture theorem
+- **Legendre polynomials**: orthogonal for the uniform weight on the box
 
 ## 2. Critical Point Finding
 
@@ -103,17 +103,17 @@ This function:
 
 ## 3. Refinement and Classification
 
-The polynomial critical points are approximate. The final phase refines them using BFGS optimization.
+The critical points of the polynomial are candidates for critical points of `f`. The final phase refines each of them with a local method on `f` itself: Nelder–Mead in `analyze_critical_points` (the keyword names below keep a historical `bfgs_` prefix).
 
-### BFGS Refinement
+### Refinement
 
 Each critical point is used as a starting point for local optimization:
 
 ```julia
 df_enhanced, df_min = analyze_critical_points(
     f, df, TR,
-    max_iters_in_optim=100,     # BFGS iterations
-    bfgs_f_abstol=1e-8,        # Function tolerance
+    max_iters_in_optim=100,     # iterations of the local method
+    bfgs_f_abstol=1e-8,        # Nelder–Mead stop: spread of f over the simplex
     tol_dist=0.025             # Clustering distance
 )
 ```

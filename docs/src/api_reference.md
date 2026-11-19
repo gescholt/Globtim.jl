@@ -22,7 +22,7 @@ solve_polynomial_system
 process_crit_pts
 ```
 
-`analyze_critical_points(f, df, TR; enable_hessian=true, tol_dist=0.025)` runs BFGS refinement and
+`analyze_critical_points(f, df, TR; enable_hessian=true, tol_dist=0.025)` runs the local refinement (Nelder–Mead) and
 (optionally) Hessian-based classification over the critical points in `df`, returning
 `(df_enhanced, df_min)`. Enhanced statistical tables and CSV/Markdown/LaTeX export are provided by
 [GlobtimPostProcessing](https://github.com/gescholt/GlobtimPostProcessing.jl), which consumes the
