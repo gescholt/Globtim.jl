@@ -62,6 +62,7 @@ analyze_sparsification_tradeoff
 truncate_polynomial_adaptive
 to_exact_monomial_basis
 exact_polynomial_coefficients
+dyadic_quantize
 ```
 
 ## Grid construction
