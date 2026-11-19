@@ -105,7 +105,11 @@ Base.showerror(io::IO, ::_TestHCMissingErr) = print(
 
     @testset "N5 on the tree path: polish on each leaf's surrogate, dedup, provenance" begin
         f(x) = (x[1] - 0.3)^2 + (x[2] - 0.1)^2
-        tree = Globtim.adaptive_refine(f, [(-1.0, 1.0), (-1.0, 1.0)], 4;
+        # Degree 2, the degree of f: the gradient system is linear and has exactly one root
+        # on every platform. At degree 4 the cubic and quartic coefficients of the fit are
+        # rounding noise, and whether the gradient system's extra roots are real is decided
+        # by that noise (Windows CI: three real roots, two of them at 1e6 to 1e7).
+        tree = Globtim.adaptive_refine(f, [(-1.0, 1.0), (-1.0, 1.0)], 2;
             max_depth = 1, max_leaves = 4, parallel = false)
         n_leaves = count(id -> tree.subdomains[id].polynomial !== nothing,
                          vcat(tree.converged_leaves, tree.active_leaves))
