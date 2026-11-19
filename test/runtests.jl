@@ -438,7 +438,11 @@ end
 with_timeout(TIMEOUT_TESTFILE, label = "test_rational_pathcount.jl") do
     include("test_rational_pathcount.jl")
 end
-with_timeout(TIMEOUT_HC_COMPLETENESS, label = "test_rational_solver.jl") do
+# The rational solver file compiles several lifted systems and a monodromy anchor: 3 min
+# on the Linux runner, and past the 420 s limit on the macOS runner (x64 Julia on Apple
+# silicon), where it has to be given room rather than be cut off mid-solve.
+const TIMEOUT_RATIONAL_SOLVER = 1500
+with_timeout(TIMEOUT_RATIONAL_SOLVER, label = "test_rational_solver.jl") do
     include("test_rational_solver.jl")
 end
 

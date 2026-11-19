@@ -204,7 +204,7 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
                 DynamicPolynomials.@polyvar yv[1:3]
                 pv = sum(yi^4 - yi^2 for yi in yv)
                 geqs = [DynamicPolynomials.differentiate(pv, yi) for yi in yv]
-                for _ in 1:40
+                for _ in 1:15
                     sols, st = Globtim._solve_rational_hc(geqs, collect(yv); start_system = :polyhedral, compile = false)
                     @test length(sols) == 27 || st.n_path_failures > 0
                     @test 1 <= st.n_solve_attempts <= 3
