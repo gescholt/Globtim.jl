@@ -5,7 +5,10 @@
 
     n = 3
     d = 4
-    TR = TestInput(Rosenbrock, dim = n, center = zeros(n), GN = 10, sample_range = 1.0)
+    # Box [-1.5, 1.5]^3: the minimum (1, 1, 1) is interior. On [-1, 1]^3 it sat on the corner
+    # and the in-box filter kept or dropped it on rounding at 1e-12 (a rare failure of the
+    # `>= 1` checks below).
+    TR = TestInput(Rosenbrock, dim = n, center = zeros(n), GN = 10, sample_range = 1.5)
     pol = Constructor(TR, d, basis = :chebyshev, normalized = true)
     @polyvar x[1:n]
 
