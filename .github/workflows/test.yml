@@ -1,12 +1,33 @@
 name: Runtests
 
+# Linux on every push that touches code; Linux, macOS and Windows together on a manual
+# run (`gh workflow run Runtests`), which is the check made before a version is
+# registered. The repository is public, so no runner is billed: the point is to keep
+# the three-system run for the moment its result is used.
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'CITATION.bib'
+      - 'LICENSE'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'CITATION.bib'
+      - 'LICENSE'
+  workflow_dispatch:
+
+# a newer run of the same kind on the same branch makes the one in progress pointless
+# (a manual three-system run and a push run do not cancel each other)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   JULIA_NUM_THREADS: 4
@@ -15,28 +36,20 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
-      # one system's failure must not cancel the other two: a platform-specific
-      # failure is only visible when every job runs to the end
+      # one system's failure must not cancel the others: a platform-specific failure is
+      # only visible when every job runs to the end
       fail-fast: false
       matrix:
         julia-version: ['1.12']
-        julia-arch: [x64]
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        # setup-julia installs the runner's own architecture (macOS-latest: Apple silicon)
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["ubuntu-latest", "macOS-latest", "windows-latest"]' || '["ubuntu-latest"]') }}
 
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.julia-version }}
-      - uses: actions/cache@v4
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
+      # packages, artifacts and precompiled code (the suite's time is mostly compilation)
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
