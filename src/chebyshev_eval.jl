@@ -42,7 +42,9 @@ struct TaylorScalar{N,T<:Number}
     TaylorScalar{N,T}(a::NTuple{N,T}) where {N,T<:Number} = new{N,T}(a)
 end
 
-TaylorScalar{N}(a::NTuple{N,T}) where {N,T} = TaylorScalar{N,T}(a)
+# The coefficient type is read from the first entry, not bound as a type parameter: for
+# N = 0 an `NTuple{N,T}` signature leaves T unbound (Aqua's unbound_args check).
+TaylorScalar{N}(a::NTuple{N,Any}) where {N} = TaylorScalar{N,typeof(first(a))}(a)
 TaylorScalar{N,T}(x::Number) where {N,T} =
     TaylorScalar{N,T}(ntuple(i -> i == 1 ? convert(T, x) : zero(T), Val(N)))
 function TaylorScalar{N,T}(v::AbstractVector) where {N,T}
