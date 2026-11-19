@@ -196,6 +196,25 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
                 @test rational_hessian_index(R, x) == fd_index(f_pole3, o)
             end
 
+            @testset "a solve that loses a path is repeated and never silent" begin
+                # ∇(Σ yᵢ⁴ − yᵢ²) = 0 has 27 real roots; the polyhedral start loses paths
+                # on a few percent of solves (25 of 300 measured). Deterministic claims:
+                # a solve either returns all 27 or reports failed paths, and it makes
+                # between 1 and 1 + max_retries attempts.
+                DynamicPolynomials.@polyvar yv[1:3]
+                pv = sum(yi^4 - yi^2 for yi in yv)
+                geqs = [DynamicPolynomials.differentiate(pv, yi) for yi in yv]
+                for _ in 1:40
+                    sols, st = Globtim._solve_rational_hc(geqs, collect(yv); start_system = :polyhedral, compile = false)
+                    @test length(sols) == 27 || st.n_path_failures > 0
+                    @test 1 <= st.n_solve_attempts <= 3
+                    st.n_solve_attempts > 1 && st.n_path_failures == 0 && @test length(sols) == 27
+                end
+                _, st0 = Globtim._solve_rational_hc(geqs, collect(yv); start_system = :polyhedral, compile = false, max_retries = 0)
+                @test st0.n_solve_attempts == 1
+                @test_throws ArgumentError Globtim._solve_rational_hc(geqs, collect(yv); max_retries = -1)
+            end
+
             @testset "product form is not zero-dimensional in 3D" begin
                 # q∇p − p∇q = 0 vanishes on {p = q = 0}: HC must report singular /
                 # non-isolated endpoints there, which is why the lifted form is used
@@ -215,6 +234,7 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
             @test c.ok
             @test c.qmin > 0
             @test c.n_faces == 9
+            @test c.n_failed_faces == 0   # exact requires every face solve to keep all its paths
             @test c.qmin <= R84.qmin_grid + 1e-12
             # the exact minimum lies below every sample and close to a dense lattice's
             lat = range(-1.0, 1.0; length = 401)
@@ -328,7 +348,16 @@ nearest_dist(x, S) = isempty(S) ? Inf : minimum(norm(x - s) for s in S)
 
             # the same accepted set, the same rejection counts, under both methods
             function same_census(R; tol)
+                # the counts are compared on a from-scratch solve that lost no path: HC's
+                # polyhedral tracker gives up on one now and then (7 of 8 outside roots in
+                # one CI run), the solve retries inside, and a third layer here keeps the
+                # comparison off that event
                 rp = solve_rational_critical_points(R; method = :polyhedral)
+                for _ in 1:2
+                    rp.n_path_failures == 0 && break
+                    rp = solve_rational_critical_points(R; method = :polyhedral)
+                end
+                @test rp.n_path_failures == 0
                 rq = solve_rational_critical_points(R; method = :parametric, anchor_dir = anchor_dir)
                 @test sets_match(rp.points, rq.points; tol = tol)
                 @test rp.n_rejected_q == rq.n_rejected_q

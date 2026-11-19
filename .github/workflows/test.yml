@@ -15,6 +15,9 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      # one system's failure must not cancel the other two: a platform-specific
+      # failure is only visible when every job runs to the end
+      fail-fast: false
       matrix:
         julia-version: ['1.12']
         julia-arch: [x64]

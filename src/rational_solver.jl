@@ -23,14 +23,21 @@ import JLD2
 using MultivariatePolynomials: terms, monomial, coefficient, degree
 
 """
-    _solve_rational_hc(eqs, vars; start_system = :polyhedral, compile = nothing) -> (sols, stats)
+    _solve_rational_hc(eqs, vars; start_system = :polyhedral, compile = nothing,
+                       max_retries = 2) -> (sols, stats)
 
 Solve the square polynomial system `eqs` in the variables `vars` (a
 `Vector{<:DynamicPolynomials.Variable}`, the `x` variables followed by `y`) with
 HomotopyContinuation and return the real solutions (as `Vector{Vector{Float64}}`,
 each of length `length(vars)`) together with a `stats` NamedTuple
-`(; start_system, n_paths, n_solutions, n_singular, n_real)`. `compile` is passed
-to HC's `solve` when given (`false`: interpret the system, for many small solves).
+`(; start_system, n_paths, n_solutions, n_singular, n_real, n_path_failures,
+n_at_infinity, n_solve_attempts)`. `compile` is passed to HC's `solve` when given
+(`false`: interpret the system, for many small solves).
+
+A solve in which HC gave up on a path (a root that may be missing) is repeated, up to
+`max_retries` more times; the attempt with the fewest failed paths is returned,
+`n_path_failures` is its count and `n_solve_attempts` the number of solves made.
+`max_retries = 0` is a single solve.
 
 Implemented in GlobtimHomotopyContinuationExt — requires `using HomotopyContinuation`.
 """
@@ -423,6 +430,9 @@ for a missing extension).
 - `compile = :auto` (`:parametric` only): `:mixed` (compiled straight-line program, HC's
   default), `false` (interpreted) or `:auto` — interpreted above 2000 family parameters,
   where the serial compile runs for hours (see `_solve_rational_hc_parametric`).
+- `hc_retries = 2` (`:polyhedral` and `:total_degree` only): a solve with failed paths
+  is repeated up to this many more times and the attempt with the fewest failures is
+  kept (`stats.n_solve_attempts`); `0` is a single solve.
 - `verbose = 0`.
 
 # Returns
@@ -434,8 +444,10 @@ n_singular, raw, stats)`:
 - `index`: Morse index of each accepted point (`rational_hessian_index`).
 - `n_paths`, `n_singular`: HC path count and singular endpoints (a nonzero
   `n_singular` on the lifted system deserves a look).
-- `n_path_failures`: paths HC gave up on (step size, iteration cap); 0 on every
-  well-conditioned fit, and the brief's B1.2 test asserts it. Under `:parametric`
+- `n_path_failures`: paths HC gave up on (step size, iteration cap) in the solve
+  returned, after the retries of `hc_retries`; a nonzero value means a critical point
+  may be missing. 0 under `:parametric` on every well-conditioned fit, and the brief's
+  B1.2 test asserts it. Under `:parametric`
   the `C − n_solutions` remaining paths went to infinity (`stats.n_at_infinity`),
   which a non-generic fit (sparsified, degenerate leading coefficients) does legitimately.
 - `n_outside`: real solutions outside the box.
@@ -452,6 +464,7 @@ function solve_rational_critical_points(
     anchor_dir::Union{Nothing,AbstractString} = _default_rational_anchor_dir(),
     verbose::Int = 0,
     compile::Union{Symbol,Bool} = :auto,
+    hc_retries::Int = 2,
 )
     method in (:polyhedral, :total_degree, :parametric) || throw(
         ArgumentError(
@@ -476,7 +489,7 @@ function solve_rational_critical_points(
         out.per_fit[1]
     else
         sys = rational_critical_system(R)
-        _solve_rational_hc(sys.eqs, sys.vars; start_system = method)
+        _solve_rational_hc(sys.eqs, sys.vars; start_system = method, max_retries = hc_retries)
     end
 
     points = Vector{Vector{Float64}}()
@@ -552,7 +565,9 @@ critical-point census, not a nicety.
   - `N ≥ 3` (only for `n ≤ 8`): one HomotopyContinuation solve of `∇_F q = 0` per
     face, on `q` in monomials (`rational_critical_system`). `exact = false` when a
     face solve reports singular endpoints (a degenerate or positive-dimensional
-    stationary set, which HC does not enumerate); `ok` then stays `false`.
+    stationary set, which HC does not enumerate) or still has a failed path after the
+    solve's retries (`n_failed_faces`: a stationary point of that face may be
+    missing); `ok` then stays `false`.
 - `:bernstein`: `q > tau` proved when `bernstein_lower_bound(R; degree =
   bernstein_degree)` exceeds `tau`; `qmin` is that lower bound, not the minimum.
 - `:sampling`: the interior stationary points plus a lattice of `face_samples`
@@ -560,7 +575,7 @@ critical-point census, not a nicety.
   between lattice points is missed (the Phase-1 stand-in).
 
 Returns `(; ok, qmin, argmin, method, exact, n_interior_candidates,
-n_boundary_samples, n_faces, n_singular_faces)` with `ok = exact && qmin > tau` and
+n_boundary_samples, n_faces, n_singular_faces, n_failed_faces)` with `ok = exact && qmin > tau` and
 `argmin` in surrogate coordinates (`NaN`s for `:bernstein`).
 """
 function certify_positive_denominator(
@@ -594,6 +609,7 @@ function certify_positive_denominator(
             n_boundary_samples = 0,
             n_faces = 0,
             n_singular_faces = 0,
+            n_failed_faces = 0,
         )
     elseif method == :sampling
         return _certify_sampling(R, tau, face_samples, start_system)
@@ -702,6 +718,7 @@ function _certify_quadratic(R::ApproxRational, tau::Real)
         n_boundary_samples = 0,
         n_faces = 3^n,
         n_singular_faces = 0,
+        n_failed_faces = 0,
     )
 end
 
@@ -713,6 +730,7 @@ function _certify_face_recursion(R::ApproxRational, tau::Real)
     argmin = fill(NaN, n)
     n_interior = 0
     n_singular_faces = 0
+    n_failed_faces = 0
     digits_ = zeros(Int, n)
     for code in 0:(3^n-1)
         k = code
@@ -741,6 +759,9 @@ function _certify_face_recursion(R::ApproxRational, tau::Real)
                 compile = false,
             )
             st.n_singular > 0 && (n_singular_faces += 1)
+            # a failed path (after the entry point's retries) is a stationary point
+            # of q on this face that may be missing: no certificate
+            st.n_path_failures > 0 && (n_failed_faces += 1)
             for s in sols
                 y = Vector{Float64}(real.(s))
                 all(abs.(y) .<= 1 + 1e-10) || continue
@@ -758,7 +779,7 @@ function _certify_face_recursion(R::ApproxRational, tau::Real)
             end
         end
     end
-    exact = n_singular_faces == 0
+    exact = n_singular_faces == 0 && n_failed_faces == 0
     return (;
         ok = exact && qmin > tau,
         qmin = qmin,
@@ -769,6 +790,7 @@ function _certify_face_recursion(R::ApproxRational, tau::Real)
         n_boundary_samples = 0,
         n_faces = 3^n,
         n_singular_faces = n_singular_faces,
+        n_failed_faces = n_failed_faces,
     )
 end
 
@@ -842,5 +864,6 @@ function _certify_sampling(
         n_boundary_samples = n_boundary,
         n_faces = 0,
         n_singular_faces = 0,
+        n_failed_faces = 0,
     )
 end

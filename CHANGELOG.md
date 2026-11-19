@@ -4,6 +4,30 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-11-18
+
+### Fixed
+
+- A HomotopyContinuation solve that gives up on a path may be missing a root, and the
+  polyhedral start does so on a few percent of solves. The generic solve behind
+  `solve_rational_critical_points` (`:polyhedral`, `:total_degree`),
+  `certify_positive_denominator` and `box_strata_census` now repeats such a solve, up to
+  twice, and keeps the attempt with the fewest failed paths; `stats.n_solve_attempts`
+  records the number of solves and `n_path_failures` what is left.
+  `solve_rational_critical_points` takes `hc_retries = 2` (`0`: a single solve).
+- `certify_positive_denominator` (face recursion, `N ≥ 3`) is not `exact`, hence not
+  `ok`, when a face solve still has a failed path: a stationary point of the
+  denominator on that face may be missing (new field `n_failed_faces`, present with
+  value 0 on the other methods).
+
+### Changed
+
+- Tests: the polyhedral-against-parametric comparison and the generic path-count test
+  compare counts on a solve with no failed path; the N5 tree-path test fits its
+  quadratic at degree 2 (at degree 4 the gradient system's extra roots were decided by
+  rounding noise and differed on Windows). The test workflow no longer cancels the
+  other systems when one fails.
+
 ## [1.5.1] - 2026-11-18
 
 ### Fixed

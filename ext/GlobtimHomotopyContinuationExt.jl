@@ -83,13 +83,26 @@ function Globtim._solve_rational_hc(
     vars::AbstractVector;
     start_system::Symbol = :polyhedral,
     compile::Union{Nothing,Bool,Symbol} = nothing,
+    max_retries::Int = 2,
 )
+    max_retries >= 0 || throw(ArgumentError("max_retries must be ≥ 0, got $max_retries"))
     sys = System(eqs; variables = vars)
     # compile = false interprets the system instead of compiling a straight-line
     # program: the denominator certificate solves one small system per face of
     # the box, where compilation would dominate; nothing keeps HC's default
     ckw = compile === nothing ? (;) : (; compile = compile)
+    # A failed path is a root that may be missing, and HC's tracker gives up on one in
+    # a few percent of polyhedral solves (Σ yᵢ⁴ − yᵢ² in 3-D: 25 of 300). Each solve
+    # draws its own random constants, so a repeat is an independent trial: solve again
+    # while a path failed, keep the attempt with the fewest failures, and report what
+    # is left in n_path_failures.
     hc_result = solve(sys; start_system = start_system, show_progress = false, ckw...)
+    n_attempts = 1
+    while nfailed(hc_result) > 0 && n_attempts <= max_retries
+        again = solve(sys; start_system = start_system, show_progress = false, ckw...)
+        n_attempts += 1
+        nfailed(again) < nfailed(hc_result) && (hc_result = again)
+    end
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
     stats = (;
         start_system = start_system,
@@ -99,6 +112,7 @@ function Globtim._solve_rational_hc(
         n_real = length(rl_sol),
         n_path_failures = nfailed(hc_result),
         n_at_infinity = nat_infinity(hc_result),
+        n_solve_attempts = n_attempts,
     )
     return rl_sol, stats
 end
