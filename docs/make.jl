@@ -1,5 +1,11 @@
 push!(LOAD_PATH, "../src/")
-using Documenter, Globtim
+using Documenter, DocumenterCitations, Globtim
+
+# References are generated from the package's own CITATION.bib (one source for the README,
+# the citation file and the docs): `[key](@cite)` in a page links to the entry on the
+# References page, which carries the DOI link.
+const BIBLIOGRAPHY =
+    CitationBibliography(joinpath(@__DIR__, "..", "CITATION.bib"); style = :authoryear)
 
 # Self-contained docs: this environment depends ONLY on Globtim (+ Documenter),
 # so the site builds on the public Globtim.jl mirror without the sibling
@@ -11,6 +17,7 @@ using Documenter, Globtim
 makedocs(
     sitename = "Globtim.jl Documentation",
     modules = [Globtim],
+    plugins = [BIBLIOGRAPHY],
     repo = "github.com/gescholt/Globtim.jl",
     format = Documenter.HTML(
         repolink = "https://github.com/gescholt/Globtim.jl",
@@ -58,6 +65,7 @@ makedocs(
             "glued_objectives.md",
         ],
         "API Reference" => "api_reference.md",
+        "References" => "references.md",
     ],
     checkdocs = :none,
     draft = false,   # execute @example blocks (verified, real output)

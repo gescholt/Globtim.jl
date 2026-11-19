@@ -85,8 +85,7 @@ to nothing; the count of verified points and their displacements are read togeth
 
 ## What is proved
 
-The guarantee is Theorem 1 of Safey El Din, Scholten and Trélat (2026), see
-[Citation](index.md#Citation). Its setting:
+The guarantee is Theorem 1 of [safeyeldin2026probabilistic](@citet). Its setting:
 
 - ``f`` is a *Morse function* of class ``C^m`` on ``K``: all its critical points lie
   in the interior of ``K`` and have a nondegenerate Hessian. Such a function has
