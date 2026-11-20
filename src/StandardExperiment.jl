@@ -1747,7 +1747,13 @@ in which case the key is left out (as `tagsave` did).
 function _git_describe(dir::AbstractString)
     Sys.which("git") === nothing && return nothing
     out = IOBuffer()
-    proc = run(pipeline(ignorestatus(`git -C $dir describe --always --dirty`); stdout = out, stderr = devnull))
+    proc = run(
+        pipeline(
+            ignorestatus(`git -C $dir describe --always --dirty`);
+            stdout = out,
+            stderr = devnull,
+        ),
+    )
     s = strip(String(take!(out)))
     return proc.exitcode == 0 && !isempty(s) ? String(s) : nothing
 end
