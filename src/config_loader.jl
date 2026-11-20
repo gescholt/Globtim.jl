@@ -124,7 +124,7 @@ Base.@kwdef struct ExperimentPipelineConfig
     grid_scoring_catalogue_files::Union{Nothing,Vector{String}} = nothing
 
     # [screening] — optional screen_and_probe parameters
-    # Drives the `pkg/DynamicObjectives/scripts/run_screening.jl` entry point;
+    # Drives the `experiments/drivers/run_screening.jl` entry point;
     # `model_factory` must resolve through DynamicObjectives.MODEL_REGISTRY.
     screening_model_factory::Union{Nothing,String} = nothing
     screening_ic::Union{Nothing,Vector{Float64}} = nothing
