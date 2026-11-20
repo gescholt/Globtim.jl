@@ -31,7 +31,9 @@ function Globtim._solve_hc(
     return_system,
     start_system,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
+    hc_retries::Int = 2,
 )
+    hc_retries >= 0 || throw(ArgumentError("hc_retries must be ≥ 0, got $hc_retries"))
     pol = Globtim.main_nd(
         x,
         n,
@@ -52,12 +54,26 @@ function Globtim._solve_hc(
 
     grad = differentiate.(pol, x)
     sys = System(grad)
+    # A failed path is a critical point that may be missing. HC's polyhedral tracker
+    # gives up on one in a few percent of solves (Σ yᵢ⁴ − yᵢ² in 3-D: 25 of 300, losing
+    # 1 to 18 of the 27 real roots). Each solve draws its own random start constants, so
+    # a repeat is an independent trial: solve again while a path failed, keep the attempt
+    # with the fewest failures (same rule as `_solve_rational_hc`).
     hc_result = solve(sys, start_system = actual_start, show_progress = false)
+    n_attempts = 1
+    while nfailed(hc_result) > 0 && n_attempts <= hc_retries
+        again = solve(sys, start_system = actual_start, show_progress = false)
+        n_attempts += 1
+        nfailed(again) < nfailed(hc_result) && (hc_result = again)
+    end
+    n_fail = nfailed(hc_result)
     rl_sol = real_solutions(hc_result; only_real = true, multiple_results = false)
+    n_fail > 0 &&
+        @warn "solve_polynomial_system: $n_fail HC path(s) still failed after $n_attempts solve(s) ($actual_start start, $(ntracked(hc_result)) paths); critical points may be missing. Try start_system = :total_degree or a larger hc_retries."
 
     # Out-channel for solve statistics: how many paths the chosen
-    # start system actually tracked, vs solutions found. Filled only when the
-    # caller passes a Ref — the return contract is unchanged.
+    # start system actually tracked, vs solutions found, and how many paths were lost.
+    # Filled only when the caller passes a Ref — the return contract is unchanged.
     if path_stats_ref !== nothing
         path_stats_ref[] = (;
             start_system = actual_start,
@@ -65,6 +81,9 @@ function Globtim._solve_hc(
             n_solutions = nsolutions(hc_result),
             n_singular = nsingular(hc_result),
             n_real = length(rl_sol),
+            n_path_failures = n_fail,
+            n_at_infinity = nat_infinity(hc_result),
+            n_solve_attempts = n_attempts,
         )
     end
 

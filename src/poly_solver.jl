@@ -56,6 +56,15 @@ Find all critical points of a polynomial approximation by solving the gradient s
 - `normalized::Bool=true`: Whether to use normalized basis polynomials
 - `power_of_two_denom::Bool=false`: For rational precision, ensures denominators are powers of 2
 - `return_system::Bool=false`: If true, also return the polynomial system information (`:hc` only)
+- `start_system::Symbol=:auto`: HC start system (`:auto` = `:polyhedral` for n ≥ 3, else
+  `:total_degree`). `:hc` only.
+- `hc_retries::Int=2` (`:hc` only): a solve in which HC gave up on a path (a critical point
+  that may be missing) is repeated up to this many times and the attempt with the fewest
+  failed paths is kept; `0` is a single solve. Failed paths left after the retries are
+  logged with `@warn` and reported as `n_path_failures` in `path_stats_ref`.
+- `path_stats_ref` (`:hc` only): a `Ref{Any}` that receives a named tuple of solve
+  statistics — `start_system`, `paths_tracked`, `n_solutions`, `n_singular`, `n_real`,
+  `n_path_failures`, `n_at_infinity`, `n_solve_attempts` (plus the sparsification counts).
 - `msolve_threads::Int=1`: Number of threads for msolve (`:msolve` only)
 - `msolve_coeff_tol::Float64=0.0`: (`:msolve` only) relative tolerance for
   [`dyadic_quantize`](@ref): coefficients are rounded onto a common grid `2^-b` with
@@ -108,6 +117,7 @@ TimerOutputs.@timeit_debug _TO function solve_polynomial_system(
     msolve_coeff_tol::Float64 = 0.0,
     search_bounds::Union{Vector{Tuple{Float64,Float64}},Nothing} = nothing,
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
+    hc_retries::Int = 2,
 )
     # Optional coefficient sparsification: zero out small coefficients before
     # constructing the DynamicPolynomials polynomial. DynamicPolynomials automatically
@@ -129,6 +139,7 @@ TimerOutputs.@timeit_debug _TO function solve_polynomial_system(
             return_system,
             start_system,
             path_stats_ref,
+            hc_retries,
         )
         # Enrich the solve stats with the truncation facts known at this level
         #: support size before/after sparsification.
@@ -486,6 +497,7 @@ function solve_polynomial_system_from_approx(
     path_stats_ref::Union{Nothing,Base.RefValue{Any}} = nothing,
     representation::Symbol = :monomial,
     surrogate_residual_tol::Real = 1e-4,
+    hc_retries::Int = 2,
 )::Vector{Vector{Float64}}
     representation in (:monomial, :chebyshev) || throw(
         ArgumentError(
@@ -525,6 +537,7 @@ function solve_polynomial_system_from_approx(
         search_bounds = search_bounds,
         path_stats_ref = path_stats_ref,
         surrogate_residual_tol = surrogate_residual_tol,
+        hc_retries = hc_retries,
     )
 end
 

@@ -4,6 +4,19 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-11-19
+
+### Fixed
+
+- `solve_polynomial_system` (the main critical-point solve, `solver = :hc`) neither
+  checked nor reported HomotopyContinuation paths it gave up on, so with the polyhedral
+  start (`start_system = :auto` for n ≥ 3) a solve could return fewer critical points
+  than the system has and say nothing. It now repeats such a solve, up to `hc_retries`
+  times (default 2; `0`: a single solve), keeps the attempt with the fewest failed
+  paths, logs a warning when a failed path is left, and reports `n_path_failures`,
+  `n_at_infinity` and `n_solve_attempts` in `path_stats_ref`.
+  `solve_polynomial_system_from_approx` forwards `hc_retries`.
+
 ## [1.5.2] - 2026-11-18
 
 ### Fixed
