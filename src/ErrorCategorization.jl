@@ -10,11 +10,9 @@ Provides systematic distinction between interface bugs and mathematical failures
 module ErrorCategorization
 
 using DataFrames
-using JSON3
 using Printf
 using Statistics
 using Dates
-using StatsBase
 
 export ErrorCategory,
     ErrorClassification,
@@ -456,7 +454,11 @@ function generate_error_report(error_df::DataFrame)::Dict{String,Any}
             append!(all_patterns, split(patterns_str, ", "))
         end
     end
-    pattern_counts = sort(collect(countmap(all_patterns)), by = x -> x[2], rev = true)
+    pattern_tally = Dict{String,Int}()
+    for pat in all_patterns
+        pattern_tally[pat] = get(pattern_tally, pat, 0) + 1
+    end
+    pattern_counts = sort(collect(pattern_tally), by = x -> x[2], rev = true)
 
     # Generate recommendations
     recommendations = generate_recommendations(error_df, category_counts)

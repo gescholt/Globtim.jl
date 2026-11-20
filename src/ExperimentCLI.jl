@@ -6,7 +6,7 @@ Provides flexible CLI parsing for experiment scripts with support for:
 - Named arguments (--key=value)
 - Environment variables (ENV["KEY"])
 - Type validation and range checking
-- Integration with DrWatson @dict
+- Dict(pairs(params)) / NamedTuple conversion of ExperimentParams
 
 Usage patterns:
     # Positional (backwards compatible)
@@ -137,38 +137,11 @@ struct ExperimentParams
     end
 end
 
-# Make ExperimentParams compatible with ConstructionBase/Accessors
-# Override setproperties to use keyword constructor (avoids positional args issue)
-import ConstructionBase
+# ConstructionBase.setproperties for ExperimentParams (so Accessors' @set works) is in
+# the GlobtimConstructionBaseExt extension; it loads with `using ConstructionBase`
+# (or Accessors).
 
-function ConstructionBase.setproperties(obj::ExperimentParams, patch::NamedTuple)
-    # Get all current field values as keyword arguments
-    current = (;
-        domain_size = obj.domain_size,
-        GN = obj.GN,
-        degree_range = obj.degree_range,
-        max_time = obj.max_time,
-        basis = obj.basis,
-        optim_f_tol = obj.optim_f_tol,
-        optim_x_tol = obj.optim_x_tol,
-        max_iterations = obj.max_iterations,
-        enable_gradient_computation = obj.enable_gradient_computation,
-        enable_hessian_computation = obj.enable_hessian_computation,
-        enable_bfgs_refinement = obj.enable_bfgs_refinement,
-        truncation_threshold = obj.truncation_threshold,
-        truncation_mode = obj.truncation_mode,
-        degree_timeout_seconds = obj.degree_timeout_seconds,
-        msolve_timeout_seconds = obj.msolve_timeout_seconds,
-    )
-
-    # Merge patch into current values
-    merged = merge(current, patch)
-
-    # Call keyword constructor (preserves all validation)
-    return ExperimentParams(; merged...)
-end
-
-# Make ExperimentParams compatible with DrWatson @dict and NamedTuple operations.
+# Make ExperimentParams compatible with Dict and NamedTuple operations.
 # Returns a proper Pairs iterator (not a bare NamedTuple) so that Dict(pairs(ep)) works.
 Base.pairs(p::ExperimentParams) = pairs((
     domain_size = p.domain_size,

@@ -19,7 +19,6 @@ using DataFrames
 using CSV
 using Statistics
 using Dates
-using JSON3
 
 # Canonical result types are imported when this file is included in Globtim.jl
 # They are: ValidationResult, CSVLoadResult, BoundaryResult, DefenseResult

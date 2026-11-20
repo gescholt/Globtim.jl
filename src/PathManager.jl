@@ -18,7 +18,7 @@ Design Principles:
 module PathManager
 
 using Dates
-using JSON
+using JSON3
 
 export PathConfig,
     get_project_root,
@@ -860,7 +860,7 @@ function register_experiment(output_dir::String, metadata::Dict{String,Any})::St
 
     # Write to file
     open(session_file, "w") do io
-        JSON.print(io, data, 2)
+        JSON3.pretty(io, data)
     end
 
     @info "Experiment session registered" session_file = session_file
@@ -909,7 +909,7 @@ function update_experiment_progress(
         )
     else
         # Read existing data
-        data = JSON.parsefile(session_file)
+        data = JSON3.read(read(session_file, String), Dict{String,Any})
     end
 
     # Update progress
@@ -927,7 +927,7 @@ function update_experiment_progress(
 
     # Write back atomically
     open(session_file, "w") do io
-        JSON.print(io, data, 2)
+        JSON3.pretty(io, data)
     end
 end
 
@@ -963,7 +963,7 @@ function finalize_experiment(output_dir::String, success::Bool, message::String 
     end
 
     # Read existing data
-    data = JSON.parsefile(session_file)
+    data = JSON3.read(read(session_file, String), Dict{String,Any})
 
     # Update status
     data["status"] = success ? "completed" : "failed"
@@ -975,7 +975,7 @@ function finalize_experiment(output_dir::String, success::Bool, message::String 
 
     # Write back
     open(session_file, "w") do io
-        JSON.print(io, data, 2)
+        JSON3.pretty(io, data)
     end
 
     @info "Experiment finalized" status = data["status"] output_dir = output_dir

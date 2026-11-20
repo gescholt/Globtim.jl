@@ -7,7 +7,6 @@ The primary config type is `ExperimentPipelineConfig` in `config_loader.jl`.
 This module provides supporting exception types and validation constants.
 """
 
-using JSON3
 using TOML
 
 # ============================================================================

@@ -7,7 +7,7 @@ ONLY raw critical points from HomotopyContinuation.
 Provides standardized experiment execution that:
 - Eliminates code duplication across experiment templates
 - Exports raw critical points to CSV (no refinement in globtim)
-- Integrates with existing infrastructure (hooks, CLI, DrWatson)
+- Integrates with existing infrastructure (hooks, CLI)
 - Supports 1-arg and 2-arg objective functions (auto-detection)
 - Captures rich error context for post-processing analysis
 
@@ -64,7 +64,6 @@ using DynamicPolynomials
 using Printf, Dates, Statistics
 using CSV, DataFrames
 using JSON3
-using DrWatson
 using JLD2
 using LinearAlgebra
 
@@ -1627,22 +1626,27 @@ function create_experiment_summary(
     degree_range = collect(experiment_config.degree_range)
     domain_size_param = experiment_config.domain_size
     max_time = experiment_config.max_time
-    params_dict = @dict GN degree_range domain_size_param max_time
+    params_dict = Dict{Symbol,Any}(
+        :GN => GN,
+        :degree_range => degree_range,
+        :domain_size_param => domain_size_param,
+        :max_time => max_time,
+    )
 
     # Build experiment summary
     timestamp = Dates.format(now(), "yyyymmdd_HHMMSS")
     experiment_id = basename(output_dir)
 
-    summary = @dict(
-        experiment_id,
-        experiment_definition,
-        solver_config,
-        params_dict,
-        results_summary,
-        total_critical_points,
-        total_time,
-        timestamp,
-        output_dir
+    summary = Dict{Symbol,Any}(
+        :experiment_id => experiment_id,
+        :experiment_definition => experiment_definition,
+        :solver_config => solver_config,
+        :params_dict => params_dict,
+        :results_summary => results_summary,
+        :total_critical_points => total_critical_points,
+        :total_time => total_time,
+        :timestamp => timestamp,
+        :output_dir => output_dir,
     )
 
     # Add user-provided metadata
@@ -1720,10 +1724,32 @@ function save_experiment_summary(summary::Dict, output_dir::String)
         JSON3.pretty(f, sanitized_summary)
     end
 
-    # Save JLD2 with Git provenance (DrWatson) - convert symbols to strings for JLD2
+    # Save JLD2 with Git provenance - convert symbols to strings for JLD2
     jld2_path = joinpath(output_dir, "results_summary.jld2")
     summary_for_jld2 = Dict{String,Any}(string(k) => v for (k, v) in summary)
-    tagsave(jld2_path, summary_for_jld2; warn = false)
+    commit = _git_describe(dirname(Base.active_project()))
+    commit === nothing || (summary_for_jld2["gitcommit"] = commit)
+    JLD2.jldopen(jld2_path, "w") do f
+        for (k, v) in summary_for_jld2
+            f[k] = v
+        end
+    end
+end
+
+"""
+    _git_describe(dir) -> Union{String,Nothing}
+
+`git describe --always --dirty` of the repository containing `dir` (the active project),
+the same `gitcommit` value the summary file carried when it was written with DrWatson's
+`tagsave`; `nothing` when `dir` is not inside a git repository or git is not installed,
+in which case the key is left out (as `tagsave` did).
+"""
+function _git_describe(dir::AbstractString)
+    Sys.which("git") === nothing && return nothing
+    out = IOBuffer()
+    proc = run(pipeline(ignorestatus(`git -C $dir describe --always --dirty`); stdout = out, stderr = devnull))
+    s = strip(String(take!(out)))
+    return proc.exitcode == 0 && !isempty(s) ? String(s) : nothing
 end
 
 """

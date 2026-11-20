@@ -248,6 +248,10 @@ with_timeout(TIMEOUT_TESTFILE, label = "test_experiment_cli.jl") do
     include("test_experiment_cli.jl")
 end
 
+with_timeout(TIMEOUT_TESTFILE, label = "test_slim_deps.jl") do
+    include("test_slim_deps.jl")
+end
+
 with_timeout(TIMEOUT_TESTFILE, label = "test_relative_tolerance.jl") do
     include("test_relative_tolerance.jl")
 end

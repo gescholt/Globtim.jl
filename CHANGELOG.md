@@ -4,6 +4,17 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Fewer hard dependencies: DrWatson, StatsBase and JSON are no longer dependencies.
+  `results_summary.jld2` is written with JLD2 directly, with the same string keys and a
+  `gitcommit` entry (`git describe --always --dirty` of the active project) when the
+  project is in a git checkout, as DrWatson's `tagsave` wrote it; PathManager's session
+  files are read and written with JSON3.
+- ConstructionBase is a weak dependency: `ConstructionBase.setproperties` for
+  `ExperimentParams` (used by Accessors' `@set`) lives in the `GlobtimConstructionBaseExt`
+  extension and loads with `using ConstructionBase` or `using Accessors`.
+
 ## [1.5.3] - 2026-11-19
 
 ### Fixed
