@@ -4,6 +4,8 @@ All notable changes to Globtim.jl will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-19
+
 ### Changed
 
 - Fewer hard dependencies: DrWatson, StatsBase and JSON are no longer dependencies.
